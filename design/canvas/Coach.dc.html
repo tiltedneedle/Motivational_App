@@ -1,0 +1,72 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..600;1,6..72,300..500&family=Instrument+Sans:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; font-family: "Instrument Sans", "Helvetica Neue", Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #7FA9E0; } a:hover { color: #FFC466; }
+    .serif { font-family: "Newsreader", Georgia, "Times New Roman", serif; }
+    .mono { font-family: "Geist Mono", Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+    .eyebrow { font-family: "Geist Mono", Menlo, Consolas, monospace; font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; }
+    .grain { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .07 0'/></filter><rect width='140' height='140' filter='url(%23n)'/></svg>"); }
+    .grain-photo { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .13 0'/></filter><rect width='140' height='140' filter='url(%23n)'/></svg>"); }
+    .contours { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='390' height='420' viewBox='0 0 390 420' fill='none' stroke='rgb(255,255,255)' stroke-opacity='.05' stroke-width='1'><path d='M-20 80 C 80 40, 200 120, 300 70 S 420 60, 460 90'/><path d='M-20 130 C 80 90, 200 170, 300 120 S 420 110, 460 140'/><path d='M-20 180 C 80 140, 200 220, 300 170 S 420 160, 460 190'/><path d='M-20 230 C 80 190, 200 270, 300 220 S 420 210, 460 240'/><path d='M-20 280 C 80 240, 200 320, 300 270 S 420 260, 460 290'/><path d='M-20 330 C 80 290, 200 370, 300 320 S 420 310, 460 340'/><path d='M-20 380 C 80 340, 200 420, 300 370 S 420 360, 460 390'/></svg>"); background-repeat: no-repeat; }
+
+    @keyframes rise { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes sunrise { from { transform: translateY(70px) scale(0.85); opacity: 0.4; } to { transform: translateY(0) scale(1); opacity: 1; } }
+    @keyframes glow { 0%, 100% { opacity: 0.85; } 50% { opacity: 1; } }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    @keyframes drift { 0% { transform: translateX(-30px); } 100% { transform: translateX(30px); } }
+    @keyframes twinkle { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
+    @keyframes kenburns { from { transform: scale(1.0); } to { transform: scale(1.08); } }
+    @keyframes draw { to { stroke-dashoffset: 0; } }
+    @keyframes travel { to { offset-distance: 64%; } }
+    @keyframes fillring { to { stroke-dashoffset: 0; } }
+    @keyframes pop { 0% { transform: scale(0.6); opacity: 0; } 70% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+    @keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+    @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+    .rise { animation: rise 1s cubic-bezier(.22,.7,.2,1) both; }
+    .sun-rise { animation: sunrise 2.4s cubic-bezier(.2,.8,.2,1) both, glow 5s ease-in-out 2.4s infinite; }
+    .rays { animation: spin 140s linear infinite; }
+    .mist { animation: drift 16s ease-in-out infinite alternate; }
+    .kb { animation: kenburns 30s ease-out both; }
+    .draw { stroke-dasharray: 1200; stroke-dashoffset: 1200; animation: draw 2.2s cubic-bezier(.4,.1,.2,1) .6s both; }
+    .draw-short { stroke-dasharray: 400; stroke-dashoffset: 400; animation: draw 1.6s cubic-bezier(.4,.1,.2,1) .8s both; }
+    .pop { animation: pop .9s cubic-bezier(.2,.9,.3,1.2) both; }
+    .breathe { animation: breathe 4s ease-in-out infinite; }
+    .shimmer { background-image: linear-gradient(100deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.35) 50%, rgba(255,255,255,0) 70%); background-size: 200% 100%; animation: shimmer 3.5s ease-in-out 1.6s infinite; }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; } }
+
+  </style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #0F1219; color: #ECEEF2;">
+  <div style="position: absolute; left: -120px; top: -160px; width: 460px; height: 380px; background: radial-gradient(closest-side, rgba(244,198,166,0.38), rgba(244,198,166,0));"></div>
+  <div class="grain" style="position: absolute; left: 0; top: 0; width: 390px; height: 260px;"></div>
+  <div class="contours" style="position: absolute; left: 0; top: 420px; width: 390px; height: 420px;"></div>
+  <div style="position: absolute; left: 22px; right: 22px; top: 22px; display: flex; justify-content: space-between; align-items: center; animation: rise 1s cubic-bezier(.22,.7,.2,1) 0.1s both;">
+    <div class="eyebrow" style="opacity: 0.85;">Dawn brief · Tue 8 Sept</div>
+    <div style="display: flex; align-items: center; gap: 10px;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFC466" stroke-width="1.7" stroke-linecap="round"><path d="M3 15h18"></path><path d="M7 15a5 5 0 0 1 10 0"></path></svg><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ECEEF2" stroke-opacity="0.7" stroke-width="1.6" stroke-linecap="round"><path d="M11 5L6 9H3v6h3l5 4V5z"></path><path d="M15.5 8.5a5 5 0 0 1 0 7"></path></svg></div>
+  </div>
+  <div class="serif" style="position: absolute; left: 22px; right: 22px; top: 70px; font-style: italic; font-weight: 300; font-size: 34px; line-height: 39px; letter-spacing: -0.012em; font-variation-settings: 'opsz' 72; text-wrap: balance; animation: rise 1s cubic-bezier(.22,.7,.2,1) 0.4s both;">You ran on the day you were sick. That's the one I'll remember.</div>
+  <div style="position: absolute; left: 22px; right: 22px; top: 222px; display: flex; flex-direction: column;">
+    <div style="display: flex; gap: 16px; padding: 13px 0; border-top: 1px solid rgba(255,255,255,0.12);  animation: rise 1s cubic-bezier(.22,.7,.2,1) 0.7s both;"><div class="eyebrow" style="width: 74px; flex: 0 0 auto; color: #FFC466; padding-top: 4px;">Yesterday</div><div style="font-size: 15px; line-height: 22px; color: #DDE3EA;">Two of three moves, plus the two‑minute stretch at 11 pm. You sealed the day at <span class="mono">71</span>, up from <span class="mono">64</span>. The physio is booked for Thursday.</div></div>
+    <div style="display: flex; gap: 16px; padding: 13px 0; border-top: 1px solid rgba(255,255,255,0.12);  animation: rise 1s cubic-bezier(.22,.7,.2,1) 0.85s both;"><div class="eyebrow" style="width: 74px; flex: 0 0 auto; color: #FFC466; padding-top: 4px;">Today</div><div style="font-size: 15px; line-height: 22px; color: #DDE3EA;">Start with the ten‑minute run, before the pitch. The pitch will eat the morning if you let it, and the run makes it better.</div></div>
+    <div style="display: flex; gap: 16px; padding: 13px 0; border-top: 1px solid rgba(255,255,255,0.12); border-bottom: 1px solid rgba(255,255,255,0.12); animation: rise 1s cubic-bezier(.22,.7,.2,1) 1.0s both;"><div class="eyebrow" style="width: 74px; flex: 0 0 auto; color: #FFC466; padding-top: 4px;">If</div><div style="font-size: 15px; line-height: 22px; color: #DDE3EA;">If it's raining at 7, then the stairwell, ten floors, twice. Same shoes, same ten minutes.</div></div>
+    <div class="pop" style="margin-top: 16px; display: flex; align-items: center; gap: 10px; align-self: flex-start; padding: 9px 14px 9px 10px; border-radius: 999px; background: rgba(255,196,102,0.14); color: #FFC466; border: 1px solid rgba(255,196,102,0.25); animation-delay: 1.4s;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4 10-10"></path></svg><div style="font-size: 13px; font-weight: 700;">Run set as your first move</div></div>
+  </div>
+  <div style="position: absolute; left: 22px; right: 22px; bottom: 112px; display: flex; gap: 8px; flex-wrap: wrap; animation: rise 1s cubic-bezier(.22,.7,.2,1) 1.5s both;"><div style="font-size: 13px; padding: 9px 13px; border-radius: 999px; border: 1px solid rgba(236,238,242,0.22); background: rgba(255,255,255,0.03);">I'm stuck</div><div style="font-size: 13px; padding: 9px 13px; border-radius: 999px; border: 1px solid rgba(236,238,242,0.22); background: rgba(255,255,255,0.03);">I don't feel like it</div><div style="font-size: 13px; padding: 9px 13px; border-radius: 999px; border: 1px solid rgba(236,238,242,0.22); background: rgba(255,255,255,0.03);">Something changed</div><div style="font-size: 13px; padding: 9px 13px; border-radius: 999px; border: 1px solid rgba(236,238,242,0.22); background: rgba(255,255,255,0.03);">Celebrate with me</div></div>
+  <div style="position: absolute; left: 22px; right: 22px; bottom: 28px; display: flex; align-items: center; gap: 12px; height: 60px; padding: 0 8px 0 20px; border-radius: 999px; background: rgba(20,24,34,0.9); border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 12px 40px rgba(0,0,0,0.35); animation: rise 1s cubic-bezier(.22,.7,.2,1) 1.6s both;">
+    <div style="flex: 1 1 auto; font-size: 16px; color: #6F7785;">Talk to the coach</div>
+    <div style="width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(160deg, #FFD58A, #F5A93B); display: flex; align-items: center; justify-content: center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0F1219" stroke-width="1.7" stroke-linecap="round"><rect x="9" y="4" width="6" height="11" rx="3"></rect><path d="M6 11a6 6 0 0 0 12 0M12 17v3"></path></svg></div>
+  </div>
+</div>
+</x-dc>
+
+</body>
+</html>

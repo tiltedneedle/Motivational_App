@@ -1,0 +1,572 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: "Outfit", "Helvetica Neue", Arial, sans-serif; -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
+    a { color: #17181C; } a:hover { color: #EA4B2E; }
+    .label { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+    .stone { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; }
+    .stone::after { content: ""; position: absolute; left: 20%; top: 12%; width: 30%; height: 18%; border-radius: 50%; background: rgba(255,255,255,0.72); filter: blur(2px); transform: rotate(-18deg); }
+    .c-coral  { background: radial-gradient(circle at 32% 26%, #FFDCCF 0%, #FF8A66 24%, #EA4B2E 60%, #7A1D10 100%); box-shadow: inset -5px -7px 12px rgba(0,0,0,0.38), inset 3px 3px 6px rgba(255,255,255,0.35); }
+    .c-teal   { background: radial-gradient(circle at 32% 26%, #D6FAF4 0%, #4FDCCB 24%, #169A89 60%, #0A4A42 100%); box-shadow: inset -5px -7px 12px rgba(0,0,0,0.38), inset 3px 3px 6px rgba(255,255,255,0.35); }
+    .c-violet { background: radial-gradient(circle at 32% 26%, #EAE3FF 0%, #A98FFF 24%, #6D4BE8 60%, #2E1F7A 100%); box-shadow: inset -5px -7px 12px rgba(0,0,0,0.38), inset 3px 3px 6px rgba(255,255,255,0.35); }
+    .c-amber  { background: radial-gradient(circle at 32% 26%, #FFF3D2 0%, #FFC85E 24%, #F09A12 60%, #7A4A05 100%); box-shadow: inset -5px -7px 12px rgba(0,0,0,0.38), inset 3px 3px 6px rgba(255,255,255,0.35); }
+    .big.c-coral { box-shadow: inset -10px -13px 24px rgba(0,0,0,0.38), inset 6px 6px 12px rgba(255,255,255,0.35); }
+    .socket { position: relative; border-radius: 50%; background: radial-gradient(circle at 50% 42%, rgba(23,24,28,0.16) 0%, rgba(23,24,28,0.07) 55%, rgba(23,24,28,0.0) 72%); box-shadow: inset 0 3px 6px rgba(23,24,28,0.16), inset 0 -2px 3px rgba(255,255,255,0.7); cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+    .lift { position: absolute; border-radius: 50%; will-change: transform; }
+    .eased { transition: transform .55s cubic-bezier(.2,.9,.3,1.35), filter .45s ease, box-shadow .5s ease, opacity .4s ease; }
+    .glint { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; transition: opacity .35s ease .1s, transform .45s cubic-bezier(.2,.9,.3,1.35) .1s; pointer-events: none; }
+    .rowtext { transition: color .35s ease; }
+    .bar { transform-origin: left; transition: transform .8s cubic-bezier(.3,.1,.2,1); }
+    .ring { transform: rotate(-90deg); }
+    .seg { transition: stroke .35s ease, opacity .35s ease; }
+    .skiphint { position: absolute; left: 50%; transform: translateX(-50%); top: 100%; margin-top: 4px; white-space: nowrap; font-size: 11px; font-weight: 600; color: #6B6E76; transition: opacity .2s ease; pointer-events: none; }
+    @keyframes up { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes pop { 0% { opacity: 0; transform: scale(0.6) translateY(10px); } 65% { opacity: 1; transform: scale(1.06) translateY(-2px); } 100% { transform: scale(1) translateY(0); } }
+    @keyframes shine { 0% { transform: translateX(-160%) rotate(20deg); } 100% { transform: translateX(260%) rotate(20deg); } }
+    .up { animation: up .7s cubic-bezier(.2,.8,.2,1) backwards; }
+    .pop { animation: pop .8s cubic-bezier(.2,.9,.25,1.15) both; }
+    .sheen { position: absolute; top: -20%; bottom: -20%; left: 0; width: 34%; background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.38) 50%, rgba(255,255,255,0) 100%); animation: shine 5.5s ease-in-out 1.4s infinite; }
+    .tab { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 6px 10px; cursor: pointer; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
+    .tab svg { transition: stroke .25s ease, transform .35s cubic-bezier(.2,.9,.3,1.4); }
+    .tab:active svg { transform: scale(.88); }
+    .dot { width: 5px; height: 5px; border-radius: 50%; background: #EA4B2E; transition: transform .35s cubic-bezier(.2,.9,.3,1.4), opacity .25s; }
+    .chip { font-size: 13px; font-weight: 600; padding: 9px 14px; border-radius: 999px; background: #FFFFFF; box-shadow: 0 6px 16px -10px rgba(23,24,28,0.3); cursor: pointer; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; transition: background .25s, color .25s, transform .2s, opacity .3s; }
+    .chip:active { transform: scale(.96); }
+    .chip.on { background: #17181C; color: #FFFFFF; box-shadow: 0 3px 0 #000; }
+    .scene { position: absolute; inset: 0; transition: filter .9s ease, transform 1.2s cubic-bezier(.2,.8,.2,1); transform-origin: 50% 60%; }
+    @keyframes kenburns { from { transform: scale(1.0); } to { transform: scale(1.07); } }
+    @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes bubble { from { opacity: 0; transform: translateY(10px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    @keyframes blink { 0%, 80%, 100% { opacity: .25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-2px); } }
+    .kb { animation: kenburns 30s ease-out both; }
+    .fadein { animation: fadein .5s ease both; }
+    .bubble { animation: bubble .45s cubic-bezier(.2,.8,.2,1) both; }
+    .tdot { width: 6px; height: 6px; border-radius: 50%; background: #6B6E76; animation: blink 1.1s ease-in-out infinite; }
+    .score { display: inline-block; transition: transform .35s cubic-bezier(.2,.9,.3,1.5); transform-origin: left bottom; }
+    .plus { cursor: pointer; -webkit-tap-highlight-color: transparent; transition: transform .45s cubic-bezier(.2,.9,.3,1.4); }
+    .plus:active { transform: scale(.94); }
+    .scrim { position: absolute; inset: 0; z-index: 21; background: rgba(23,24,28,0.38); transition: opacity .35s ease; }
+    .sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 21; border-radius: 32px 32px 0 0; background: #F8F7F4; box-shadow: 0 -20px 60px -20px rgba(23,24,28,0.4); padding: 14px 22px 112px; transition: transform .55s cubic-bezier(.2,.9,.3,1.08); }
+    .gpick { position: relative; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: transform .35s cubic-bezier(.2,.9,.3,1.4); }
+    .gpick .stone { position: absolute; left: 8px; top: 8px; width: 28px; height: 28px; inset: auto; transition: filter .3s; }
+    .gring { position: absolute; inset: 0; border-radius: 50%; border: 2.5px solid #17181C; transition: transform .35s cubic-bezier(.2,.9,.3,1.4), opacity .25s; }
+    .field { display: flex; align-items: center; height: 52px; padding: 0 18px; border-radius: 16px; background: #FFFFFF; box-shadow: inset 0 0 0 1px rgba(23,24,28,0.08); }
+    .field input { flex: 1 1 auto; border: 0; outline: 0; background: transparent; font: inherit; font-size: 16px; color: #17181C; min-width: 0; }
+    .field input::placeholder { color: #A3A6AD; }
+    .toast { position: absolute; left: 22px; right: 22px; top: 14px; z-index: 23; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 8px 12px 18px; border-radius: 999px; background: #17181C; color: #FFFFFF; box-shadow: 0 4px 0 #000, 0 18px 40px -16px rgba(23,24,28,0.5); transition: transform .45s cubic-bezier(.2,.9,.3,1.3), opacity .3s ease; }
+    .later { max-height: 240px; overflow-y: auto; overflow-x: hidden; padding: 18px 8px 0; margin: -18px -8px 0; scrollbar-width: none; }
+    .later::-webkit-scrollbar { display: none; }
+    @keyframes rowin { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+  </style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: radial-gradient(120% 90% at 18% 0%, #F8F7F4 0%, #EEEDEA 46%, #E4E3DF 100%); color: #17181C;">
+
+  <div class="up" style="position: absolute; left: 22px; right: 22px; top: 20px; display: flex; justify-content: space-between; align-items: center; animation-delay: .05s;">
+    <div class="label" style="opacity: 0.6;">Tue 8 Sept</div>
+    <div class="label" style="opacity: 0.6;">Day 251 · Return #4</div>
+  </div>
+  <div class="up" style="position: absolute; left: 22px; right: 22px; top: 52px; font-size: 34px; line-height: 38px; font-weight: 700; letter-spacing: -0.03em; animation-delay: .15s;">Good morning, Maya.</div>
+  <div class="up" style="position: absolute; left: 22px; right: 22px; top: 96px; font-size: 17px; line-height: 23px; color: #6B6E76; animation-delay: .25s;">{{ dayLine }}</div>
+
+  <!-- Goals: stones with polish rings -->
+  <div style="position: absolute; left: 22px; right: 22px; top: 148px; display: flex; justify-content: space-between;">
+    <sc-for list="{{ goals }}" as="g" hint-placeholder-count="4">
+      <div class="up" onClick="{{ g.open }}" style="display: flex; flex-direction: column; align-items: center; gap: 8px; animation-delay: {{ g.delay }}; cursor: pointer; -webkit-tap-highlight-color: transparent;">
+        <div style="position: relative; width: 68px; height: 68px; display: flex; align-items: center; justify-content: center;">
+          <svg class="ring" width="68" height="68" viewBox="0 0 68 68" style="position: absolute; inset: 0;"><circle cx="34" cy="34" r="32" stroke="rgba(23,24,28,0.08)" stroke-width="4" fill="none"></circle><circle cx="34" cy="34" r="32" stroke="{{ g.hex }}" stroke-width="4" stroke-linecap="round" fill="none" style="stroke-dasharray: 201; stroke-dashoffset: {{ g.dash }}; transition: stroke-dashoffset .9s cubic-bezier(.3,.1,.2,1);"></circle></svg>
+          <div class="pop" style="position: relative; width: 46px; height: 46px; animation-delay: {{ g.delay }}; transition: opacity .2s; {{ g.chipStyle }}"><div class="stone {{ g.cls }}" style="transition: filter .6s ease; {{ g.polish }}"><div class="sheen"></div></div></div>
+        </div>
+        <div style="font-size: 12px; font-weight: 500; color: #6B6E76;">{{ g.name }}</div>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- Now: the stone is the control (tap to seat, drag up to park) -->
+  <div class="up" style="position: absolute; left: 18px; right: 18px; top: 270px; background: #FFFFFF; border-radius: 28px; box-shadow: 0 1px 2px rgba(23,24,28,0.04), 0 18px 40px -18px rgba(23,24,28,0.22); padding: 20px 20px 20px 22px; display: flex; align-items: center; gap: 16px; animation-delay: .55s;">
+    <div style="flex: 1 1 auto; display: flex; flex-direction: column; gap: 6px; min-width: 0;">
+      <div class="label" style="color: #EA4B2E;">{{ now.eyebrow }}</div>
+      <div class="rowtext" style="font-size: 28px; line-height: 32px; font-weight: 600; letter-spacing: -0.025em; {{ now.textStyle }}">{{ now.title }}</div>
+      <div style="font-size: 14px; line-height: 19px; color: #6B6E76;">{{ now.hint }}</div>
+    </div>
+    <div class="socket" onPointerDown="{{ now.down }}" onPointerMove="{{ now.move }}" onPointerUp="{{ now.upEv }}" onPointerCancel="{{ now.upEv }}" style="width: 84px; height: 84px; flex: 0 0 auto; {{ now.z }}">
+      <div class="lift {{ now.eased }}" style="left: 10px; top: 10px; width: 64px; height: 64px; {{ now.lift }} {{ now.shadow }}">
+        <div class="stone big c-coral" style="transition: filter .45s ease; {{ now.polish }}"><div class="sheen"></div></div>
+        <div class="glint" style="{{ now.glint }}"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 1px 2px rgba(0,0,0,0.35));"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></div>
+      </div>
+      <div class="skiphint" style="{{ now.skipHint }}">Not today</div>
+    </div>
+  </div>
+
+  <!-- Later: small stones in sockets; a routine sinks step by step -->
+  <div style="position: absolute; left: 22px; right: 22px; top: 434px; display: flex; flex-direction: column;">
+    <div class="up" style="display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 6px; animation-delay: .75s;"><div class="label" style="color: #A3A6AD;">Later today</div><div class="label" style="color: #A3A6AD;">{{ leftLabel }}</div></div>
+    <div class="later">
+    <sc-for list="{{ moves }}" as="m" hint-placeholder-count="4">
+      <div class="up" style="display: flex; align-items: center; gap: 14px; height: {{ m.rowH }}; border-top: 1px solid rgba(23,24,28,0.12); animation-delay: {{ m.delay }}; {{ m.rowStyle }}">
+        <div class="socket" onPointerDown="{{ m.down }}" onPointerMove="{{ m.move }}" onPointerUp="{{ m.upEv }}" onPointerCancel="{{ m.upEv }}" style="width: 36px; height: 36px; flex: 0 0 auto; {{ m.z }}">
+          <sc-if value="{{ m.isRoutine }}" hint-placeholder-val="{{ false }}">
+            <svg class="ring" width="36" height="36" viewBox="0 0 36 36" style="position: absolute; left: 0; top: 0; overflow: visible;">
+              <circle class="seg" cx="18" cy="18" r="17" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="31.6 75.2" stroke-dashoffset="0" style="{{ m.seg1 }}"></circle>
+              <circle class="seg" cx="18" cy="18" r="17" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="31.6 75.2" stroke-dashoffset="-35.6" style="{{ m.seg2 }}"></circle>
+              <circle class="seg" cx="18" cy="18" r="17" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="31.6 75.2" stroke-dashoffset="-71.2" style="{{ m.seg3 }}"></circle>
+            </svg>
+          </sc-if>
+          <div class="lift {{ m.eased }}" style="left: 6px; top: 6px; width: 24px; height: 24px; {{ m.lift }} {{ m.shadow }}">
+            <div class="stone {{ m.cls }}" style="transition: filter .45s ease; {{ m.polish }}"></div>
+            <div class="glint" style="{{ m.glint }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></div>
+          </div>
+          <div class="skiphint" style="{{ m.skipHint }}">Not today</div>
+        </div>
+        <div style="flex: 1 1 auto; display: flex; flex-direction: column; gap: 2px; min-width: 0;">
+          <div class="rowtext" style="font-size: 17px; font-weight: 500; line-height: 22px; {{ m.textStyle }}">{{ m.title }}</div>
+          <sc-if value="{{ m.isRoutine }}" hint-placeholder-val="{{ false }}">
+            <div style="font-size: 12.5px; line-height: 16px; color: #A3A6AD;">{{ m.steps }}</div>
+          </sc-if>
+        </div>
+        <div style="font-size: 13px; color: #A3A6AD; font-weight: 500; white-space: nowrap;">{{ m.meta }}</div>
+      </div>
+    </sc-for>
+    </div>
+  </div>
+
+  <!-- Consistency -->
+  <div class="up" style="position: absolute; left: 22px; right: 22px; top: 676px; display: flex; align-items: center; justify-content: space-between; animation-delay: 1.2s;">
+    <div style="display: flex; flex-direction: column;"><div class="label" style="color: #A3A6AD;">Consistency</div><div style="font-size: 40px; line-height: 40px; font-weight: 700; letter-spacing: -0.03em;"><span class="score" style="{{ scoreStyle }}">{{ score }}</span> <span style="font-size: 14px; color: #1E9E5A; font-weight: 600; letter-spacing: 0;">{{ delta }}</span></div></div>
+    <div style="width: 150px; height: 10px; border-radius: 5px; background: rgba(23,24,28,0.08); overflow: hidden;"><div class="bar" style="width: 100%; height: 100%; border-radius: 5px; background: linear-gradient(90deg, #FF8A66, #EA4B2E); {{ barStyle }}"></div></div>
+  </div>
+
+  <!-- Envision tab -->
+  <sc-if value="{{ envOn }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; z-index: 20; background: radial-gradient(120% 90% at 18% 0%, #F8F7F4 0%, #EEEDEA 46%, #E4E3DF 100%);">
+      <div class="up" style="position: absolute; left: 22px; right: 22px; top: 20px; display: flex; justify-content: space-between; align-items: center; animation-delay: .02s;"><div class="label" style="opacity: 0.6;">The practice · Scene {{ env.n }} of 3</div><div class="label" style="opacity: 0.6;">{{ env.status }}</div></div>
+      <div class="up" onClick="{{ env.next }}" style="position: absolute; left: 18px; right: 18px; top: 54px; height: 460px; border-radius: 34px; overflow: hidden; box-shadow: 0 30px 60px -22px rgba(23,24,28,0.5), 0 2px 4px rgba(23,24,28,0.06); cursor: pointer; -webkit-tap-highlight-color: transparent; animation-delay: .1s; background: #D8D6D0;">
+        <sc-if value="{{ env.isKitchen }}" hint-placeholder-val="{{ true }}">
+          <div class="scene fadein" style="{{ env.toneStyle }}"><img class="kb" src="scene-kitchen.jpeg" alt="" style="width: 100%; height: 100%; object-fit: cover; object-position: 50% 40%; display: block; transform-origin: 50% 35%;"></div>
+        </sc-if>
+        <sc-if value="{{ env.isRunner }}" hint-placeholder-val="{{ false }}">
+          <div class="scene fadein" style="{{ env.toneStyle }}"><img class="kb" src="scene-runner.jpeg" alt="" style="width: 100%; height: 100%; object-fit: cover; object-position: 50% 45%; display: block; transform-origin: 50% 35%;"></div>
+        </sc-if>
+        <sc-if value="{{ env.isGrad }}" hint-placeholder-val="{{ false }}">
+          <div class="scene fadein" style="background: {{ env.bg }}; {{ env.toneStyle }}"><div style="position: absolute; left: 20px; top: 20px; padding: 6px 10px; border-radius: 999px; background: rgba(23,24,28,0.35); backdrop-filter: blur(10px); color: #FFFFFF; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;">Scene · rendering</div></div>
+        </sc-if>
+        <div style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(23,24,28,0) 55%, rgba(23,24,28,0.55) 100%); pointer-events: none;"></div>
+        <div style="position: absolute; left: 20px; bottom: 34px; color: #FFFFFF; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; pointer-events: none;">{{ env.title }}</div>
+        <div style="position: absolute; left: 18px; right: 18px; bottom: 16px; display: flex; gap: 6px; pointer-events: none;">
+          <sc-for list="{{ env.bars }}" as="b" hint-placeholder-count="3"><div style="height: 4px; flex: 1 1 0; border-radius: 2px; background: rgba(255,255,255,0.4); overflow: hidden;"><div style="height: 100%; width: 100%; background: #FFFFFF; transform-origin: left; transition: transform .5s cubic-bezier(.2,.8,.2,1); {{ b.style }}"></div></div></sc-for>
+        </div>
+      </div>
+      <div style="position: absolute; left: 306px; top: 470px; z-index: 2;"><div class="pop" style="position: relative; width: 64px; height: 64px; animation-delay: .5s;"><div class="stone {{ env.cls }}" style="box-shadow: inset -8px -10px 16px rgba(0,0,0,0.38), inset 4px 4px 8px rgba(255,255,255,0.35), 0 12px 32px -8px rgba(23,24,28,0.45); transition: background .5s;"><div class="sheen"></div></div></div></div>
+      <div class="up" style="position: absolute; left: 22px; right: 22px; top: 538px; font-size: 21px; line-height: 28px; font-weight: 500; letter-spacing: -0.015em; text-wrap: pretty; animation-delay: .35s;">{{ env.text }}</div>
+      <div class="up" style="position: absolute; left: 22px; right: 22px; top: 664px; font-size: 13px; color: #A3A6AD; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; animation-delay: .5s;">{{ env.caption }}</div>
+      <div class="up" style="position: absolute; left: 22px; right: 22px; top: 700px; display: flex; gap: 8px; animation-delay: .6s;">
+        <sc-for list="{{ env.tones }}" as="tn" hint-placeholder-count="3"><div class="chip {{ tn.on }}" onClick="{{ tn.pick }}" style="white-space: nowrap;">{{ tn.text }}</div></sc-for>
+        <div style="flex: 1 1 auto;"></div>
+        <div class="chip {{ env.wallCls }}" onClick="{{ env.wall }}" style="white-space: nowrap;">{{ env.wallText }}</div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- Coach tab -->
+  <sc-if value="{{ coachOn }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; z-index: 20; background: radial-gradient(120% 90% at 18% 0%, #F8F7F4 0%, #EEEDEA 46%, #E4E3DF 100%);">
+      <div class="up" style="position: absolute; left: 22px; right: 22px; top: 20px; display: flex; justify-content: space-between; align-items: center; animation-delay: .02s;"><div class="label" style="opacity: 0.6;">Dawn brief · Tue 8 Sept</div><div class="label" style="opacity: 0.6;">06:30</div></div>
+      <div class="up" style="position: absolute; left: 22px; top: 56px; display: flex; align-items: center; gap: 14px; animation-delay: .1s;">
+        <div class="pop" style="position: relative; width: 56px; height: 56px; animation-delay: .15s;"><div class="stone" style="background: radial-gradient(circle at 32% 26%, #FFFFFF 0%, #F3F1EC 24%, #CFCBC2 60%, #8E8A80 100%); box-shadow: inset -7px -9px 14px rgba(0,0,0,0.38), inset 3px 3px 7px rgba(255,255,255,0.35), 0 11px 28px -7px rgba(120,116,108,0.35);"><div class="sheen"></div></div></div>
+        <div style="display: flex; flex-direction: column;"><div style="font-size: 15px; font-weight: 600;">Your coach</div><div style="font-size: 13px; color: #A3A6AD;">{{ coach.sub }}</div></div>
+      </div>
+      <div class="up" style="position: absolute; left: 22px; right: 22px; top: 132px; font-size: 28px; line-height: 33px; font-weight: 700; letter-spacing: -0.03em; animation-delay: .25s;">You ran on the day you were sick. That's the one I'll remember.</div>
+      <sc-if value="{{ coach.briefOpen }}" hint-placeholder-val="{{ true }}">
+        <div class="up" style="position: absolute; left: 18px; right: 18px; top: 236px; background: #FFFFFF; border-radius: 28px; box-shadow: 0 1px 2px rgba(23,24,28,0.04), 0 18px 40px -18px rgba(23,24,28,0.22); padding: 6px 20px; animation-delay: .4s;">
+          <div style="display: flex; gap: 14px; padding: 10px 0; border-bottom: 1px solid rgba(23,24,28,0.08);"><div class="label" style="width: 76px; flex: 0 0 auto; color: #EA4B2E; padding-top: 3px; font-size: 11px;">Yesterday</div><div style="font-size: 14px; line-height: 19px;">Two of three moves, plus the two‑minute stretch at 11 pm. Sealed at 71, up from 64. The physio is booked for Thursday.</div></div>
+          <div style="display: flex; gap: 14px; padding: 10px 0; border-bottom: 1px solid rgba(23,24,28,0.08);"><div class="label" style="width: 76px; flex: 0 0 auto; color: #EA4B2E; padding-top: 3px; font-size: 11px;">Today</div><div style="font-size: 14px; line-height: 19px;">Start with the ten‑minute run, before the pitch. The pitch will eat the morning if you let it, and the run makes it better.</div></div>
+          <div style="display: flex; gap: 14px; padding: 10px 0;"><div class="label" style="width: 76px; flex: 0 0 auto; color: #EA4B2E; padding-top: 3px; font-size: 11px;">If</div><div style="font-size: 14px; line-height: 19px;">If it's raining at 7, then the stairwell, ten floors, twice. Same shoes, same ten minutes.</div></div>
+        </div>
+        <div class="pop" style="position: absolute; left: 22px; top: 526px; display: flex; align-items: center; gap: 8px; padding: 8px 14px 8px 10px; border-radius: 999px; background: rgba(30,158,90,0.10); color: #1E9E5A; animation-delay: .8s;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg><div style="font-size: 13px; font-weight: 600;">Run set as your first move</div></div>
+      </sc-if>
+      <sc-if value="{{ coach.threadOn }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ coach.reopen }}" class="bubble" style="position: absolute; left: 22px; top: 236px; display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; background: #FFFFFF; box-shadow: 0 6px 16px -10px rgba(23,24,28,0.3); font-size: 13px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent;"><div style="width: 8px; height: 8px; border-radius: 50%; background: #EA4B2E;"></div>Dawn brief · 3 notes</div>
+        <div style="position: absolute; left: 22px; right: 22px; top: 290px; bottom: 262px; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; overflow: hidden;">
+          <sc-for list="{{ coach.thread }}" as="m" hint-placeholder-count="2">
+            <div class="bubble" style="display: flex; {{ m.rowStyle }}"><div style="max-width: 82%; padding: 11px 15px; font-size: 15px; line-height: 21px; {{ m.style }}">{{ m.text }}</div></div>
+          </sc-for>
+          <sc-if value="{{ coach.typing }}" hint-placeholder-val="{{ false }}">
+            <div class="bubble" style="display: flex;"><div style="display: flex; gap: 5px; align-items: center; padding: 14px 16px; border-radius: 20px 20px 20px 6px; background: #FFFFFF; box-shadow: 0 6px 16px -10px rgba(23,24,28,0.3);"><div class="tdot"></div><div class="tdot" style="animation-delay: .15s;"></div><div class="tdot" style="animation-delay: .3s;"></div></div></div>
+          </sc-if>
+        </div>
+      </sc-if>
+      <div class="up" style="position: absolute; left: 22px; right: 22px; bottom: 172px; display: flex; gap: 8px; flex-wrap: wrap; animation-delay: .7s;">
+        <sc-for list="{{ coach.chips }}" as="c" hint-placeholder-count="4"><div class="chip" onClick="{{ c.ask }}" style="{{ c.style }}">{{ c.text }}</div></sc-for>
+      </div>
+      <div class="up" style="position: absolute; left: 22px; right: 22px; bottom: 104px; display: flex; align-items: center; gap: 12px; height: 56px; padding: 0 8px 0 20px; border-radius: 999px; background: #FFFFFF; box-shadow: 0 1px 2px rgba(23,24,28,0.05), 0 14px 30px -14px rgba(23,24,28,0.3); animation-delay: .8s;"><div style="flex: 1 1 auto; font-size: 16px; color: #A3A6AD;">Talk to the coach</div><div style="width: 42px; height: 42px; border-radius: 50%; background: #17181C; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 0 #000;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"><rect x="9" y="4" width="6" height="11" rx="3"></rect><path d="M6 11a6 6 0 0 0 12 0M12 17v3"></path></svg></div></div>
+    </div>
+  </sc-if>
+
+  <!-- Goal view: slides over Today when a goal chip is tapped -->
+  <sc-if value="{{ goalOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; z-index: 25; background: radial-gradient(120% 90% at 18% 0%, #F8F7F4 0%, #EEEDEA 46%, #E4E3DF 100%); {{ goalLayerStyle }}">
+      <div style="position: absolute; left: 22px; right: 22px; top: 20px; display: flex; justify-content: space-between; align-items: center;">
+        <div onClick="{{ closeGoal }}" class="label" style="display: flex; align-items: center; gap: 6px; opacity: 0.7; cursor: pointer; -webkit-tap-highlight-color: transparent; padding: 6px 0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#17181C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>Today</div>
+        <div class="label" style="opacity: 0.6;">{{ goal.domain }}</div>
+      </div>
+      <div style="position: absolute; left: 22px; right: 118px; top: 64px; display: flex; flex-direction: column; gap: 6px; {{ goalTextStyle }}">
+        <div class="label" style="color: {{ goal.hex }};">{{ goal.due }}</div>
+        <div style="font-size: 32px; line-height: 36px; font-weight: 700; letter-spacing: -0.03em; text-wrap: balance;">{{ goal.title }}</div>
+        <div style="font-size: 15px; line-height: 21px; color: #6B6E76;">{{ goal.sub }}</div>
+      </div>
+      <div style="position: absolute; left: 22px; right: 22px; top: 232px; height: 230px; border-radius: 30px; overflow: hidden; box-shadow: 0 24px 50px -20px rgba(23,24,28,0.45), 0 2px 4px rgba(23,24,28,0.06); {{ goalCardStyle }}">
+        <sc-if value="{{ goal.hasPhoto }}" hint-placeholder-val="{{ true }}">
+          <img src="scene-runner.jpeg" alt="" style="width: 100%; height: 100%; object-fit: cover; object-position: 50% 45%; display: block;">
+        </sc-if>
+        <sc-if value="{{ goal.noPhoto }}" hint-placeholder-val="{{ false }}">
+          <div style="width: 100%; height: 100%; background: {{ goal.sceneBg }}; display: flex; align-items: flex-end; padding: 18px 20px; box-sizing: border-box;"><div style="font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.9);">Vision scene · generating from your words</div></div>
+        </sc-if>
+        <div style="position: absolute; left: 16px; top: 14px; padding: 6px 10px; border-radius: 999px; background: rgba(23,24,28,0.55); backdrop-filter: blur(10px); color: #FFFFFF; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;">Scene · {{ goal.sceneDate }}</div>
+      </div>
+      <div style="position: absolute; left: 18px; right: 18px; top: 486px; background: #FFFFFF; border-radius: 28px; box-shadow: 0 1px 2px rgba(23,24,28,0.04), 0 18px 40px -18px rgba(23,24,28,0.22); padding: 16px 20px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; {{ goalStatsStyle }}">
+        <div style="display: flex; flex-direction: column; gap: 2px;"><div style="font-size: 26px; font-weight: 700; letter-spacing: -0.03em;">{{ goal.s1 }}</div><div class="label" style="color: #A3A6AD; font-size: 10.5px;">{{ goal.l1 }}</div></div>
+        <div style="display: flex; flex-direction: column; gap: 2px; border-left: 1px solid rgba(23,24,28,0.08); padding-left: 12px;"><div style="font-size: 26px; font-weight: 700; letter-spacing: -0.03em; color: {{ goal.hex }};">{{ goal.s2 }}</div><div class="label" style="color: #A3A6AD; font-size: 10.5px;">{{ goal.l2 }}</div></div>
+        <div style="display: flex; flex-direction: column; gap: 2px; border-left: 1px solid rgba(23,24,28,0.08); padding-left: 12px;"><div style="font-size: 26px; font-weight: 700; letter-spacing: -0.03em;">{{ goal.s3 }}</div><div class="label" style="color: #A3A6AD; font-size: 10.5px;">{{ goal.l3 }}</div></div>
+      </div>
+      <div style="position: absolute; left: 22px; right: 22px; top: 590px; display: flex; flex-direction: column; gap: 10px; {{ goalPathStyle }}">
+        <div style="display: flex; justify-content: space-between;"><div class="label" style="color: #A3A6AD;">The path</div><div class="label" style="color: {{ goal.hex }};">You are here</div></div>
+        <div style="position: relative; height: 22px;">
+          <div style="position: absolute; left: 0; right: 0; top: 10px; height: 3px; border-radius: 2px; background: rgba(23,24,28,0.10);"></div>
+          <div style="position: absolute; left: 0; top: 10px; height: 3px; border-radius: 2px; background: {{ goal.hex }}; width: {{ goal.pathW }}; transition: width .9s cubic-bezier(.3,.1,.2,1);"></div>
+          <div style="position: absolute; left: 46%; top: 6px; width: 11px; height: 11px; margin-left: -5px; border-radius: 50%; background: #FFFFFF; border: 2px solid #17181C; box-sizing: border-box;"></div>
+          <div style="position: absolute; left: 84%; top: 6px; width: 11px; height: 11px; margin-left: -5px; border-radius: 50%; background: #FFFFFF; border: 2px solid #17181C; box-sizing: border-box;"></div>
+          <div style="position: absolute; right: 0; top: 6px; width: 11px; height: 11px; border-radius: 50%; background: #17181C;"></div>
+          <div style="position: absolute; top: 4px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: {{ goal.hex }}; box-shadow: 0 2px 6px {{ goal.hex }}66, 0 0 0 3px #F3F2EF; left: {{ goal.pathW }}; transition: left .9s cubic-bezier(.3,.1,.2,1);"></div>
+        </div>
+        <div style="font-size: 14px; line-height: 19px; color: #6B6E76;">{{ goal.next }}</div>
+      </div>
+      <div onClick="{{ closeGoal }}" style="position: absolute; left: 22px; right: 22px; bottom: 30px; height: 60px; border-radius: 999px; background: #17181C; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 600; box-shadow: 0 5px 0 #000, 0 22px 34px -12px rgba(23,24,28,0.30); cursor: pointer; -webkit-tap-highlight-color: transparent; {{ goalCtaStyle }}">Back to today</div>
+    </div>
+  </sc-if>
+  <!-- The flying stone: travels from its chip to the goal header and back -->
+  <sc-if value="{{ flyerOn }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; left: 0; top: 0; width: 46px; height: 46px; z-index: 30; pointer-events: none; {{ flyerStyle }}"><div class="stone {{ flyerCls }}" style="{{ flyerPolish }}"><div class="sheen"></div></div></div>
+  </sc-if>
+
+  <!-- New move sheet -->
+  <sc-if value="{{ sheetOn }}" hint-placeholder-val="{{ false }}">
+    <div class="scrim" onClick="{{ sheet.close }}" style="{{ sheet.scrimStyle }}"></div>
+    <div class="sheet" style="{{ sheet.panelStyle }}">
+      <div style="width: 40px; height: 5px; border-radius: 3px; background: rgba(23,24,28,0.14); margin: 0 auto 16px;"></div>
+      <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px;"><div style="font-size: 24px; font-weight: 700; letter-spacing: -0.03em;">New move</div><div class="label" style="color: #A3A6AD;">{{ sheet.goalName }}</div></div>
+      <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+        <sc-for list="{{ sheet.goals }}" as="g" hint-placeholder-count="4">
+          <div class="gpick" onClick="{{ g.pick }}" style="{{ g.style }}"><div class="gring" style="{{ g.ring }}"></div><div class="stone {{ g.cls }}" style="{{ g.polish }}"></div></div>
+        </sc-for>
+      </div>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;">
+        <sc-for list="{{ sheet.suggest }}" as="s" hint-placeholder-count="3"><div class="chip {{ s.on }}" onClick="{{ s.pick }}" style="white-space: nowrap;">{{ s.text }}</div></sc-for>
+      </div>
+      <div class="field" style="margin-bottom: 14px;"><input placeholder="Or say it in your own words" value="{{ sheet.title }}" onInput="{{ sheet.type }}"></div>
+      <div style="display: flex; gap: 8px; margin-bottom: 16px; align-items: center;">
+        <div class="label" style="color: #A3A6AD; margin-right: 4px;">Takes</div>
+        <sc-for list="{{ sheet.durs }}" as="d" hint-placeholder-count="4"><div class="chip {{ d.on }}" onClick="{{ d.pick }}" style="padding: 7px 12px;">{{ d.text }}</div></sc-for>
+      </div>
+      <div onClick="{{ sheet.add }}" style="height: 58px; border-radius: 999px; background: #17181C; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 600; box-shadow: 0 5px 0 #000; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: opacity .25s, transform .2s; {{ sheet.addStyle }}">{{ sheet.addLabel }}</div>
+    </div>
+  </sc-if>
+  <!-- Toast -->
+  <sc-if value="{{ toastOn }}" hint-placeholder-val="{{ false }}">
+    <div class="toast" style="{{ toast.style }}"><div style="font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ toast.text }}</div><sc-if value="{{ toast.hasUndo }}" hint-placeholder-val="{{ true }}"><div onClick="{{ toast.undo }}" style="flex: 0 0 auto; padding: 7px 14px; border-radius: 999px; background: #FFFFFF; color: #17181C; font-size: 13px; font-weight: 700; cursor: pointer; -webkit-tap-highlight-color: transparent;">Undo</div></sc-if></div>
+  </sc-if>
+
+  <!-- Tab bar -->
+  <div class="up" style="position: absolute; left: 18px; right: 18px; bottom: 22px; z-index: 22; display: flex; gap: 10px; align-items: center; animation-delay: .95s;">
+    <div style="flex: 1 1 auto; height: 64px; border-radius: 32px; background: rgba(255,255,255,0.92); backdrop-filter: blur(20px); box-shadow: 0 1px 2px rgba(23,24,28,0.05), 0 18px 40px -16px rgba(23,24,28,0.30); display: flex; justify-content: space-around; align-items: center; padding: 0 6px;">
+      <div class="tab" onClick="{{ tabs.today.go }}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="{{ tabs.today.color }}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"></circle><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"></path></svg><div class="dot" style="{{ tabs.today.dot }}"></div></div>
+      <div class="tab" onClick="{{ tabs.goals.go }}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="{{ tabs.goals.color }}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"></circle><circle cx="12" cy="12" r="3.2"></circle></svg><div class="dot" style="{{ tabs.goals.dot }}"></div></div>
+      <div class="tab" onClick="{{ tabs.envision.go }}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="{{ tabs.envision.color }}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="14" rx="3.5"></rect><path d="M3.5 15.5l4.5-4.5 4 4 3-3 5.5 5.5"></path></svg><div class="dot" style="{{ tabs.envision.dot }}"></div></div>
+      <div class="tab" onClick="{{ tabs.coach.go }}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="{{ tabs.coach.color }}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4H6.5A2.5 2.5 0 0 1 4 13.5z"></path></svg><div class="dot" style="{{ tabs.coach.dot }}"></div></div>
+    </div>
+    <div class="plus" onClick="{{ plusTap }}" style="width: 64px; height: 64px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #FF9A78 0%, #EA4B2E 60%, #B92E14 100%); box-shadow: 0 5px 0 #8E2411, 0 22px 34px -12px rgba(234,75,46,0.55), inset 0 1px 0 rgba(255,255,255,0.35); display: flex; align-items: center; justify-content: center; flex: 0 0 auto; {{ plusStyle }}">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    // status: 'todo' | 'done' | 'skip'; steps: completed steps for routines; drag: { id, startY, dy, moved }
+    this.state = {
+      items: {
+        run:     { status: 'todo' },
+        pitch:   { status: 'todo' },
+        savings: { status: 'todo' },
+        wind:    { status: 'todo', steps: 1 },
+        dad:     { status: 'done' },
+      },
+      drag: null,
+      view: 'today', goalIdx: 0, fly: null,
+      tab: 'today', scene: 0, tone: null, wall: false, thread: [], typing: false, briefOpen: true,
+      extra: [], sheet: null, toast: null, bump: false, booted: false,   // view: today | goal | closing; fly: null | 'start' | 'end'
+    };
+  }
+  componentDidMount() { setTimeout(() => this.setState({ booted: true }), 1900); }
+  bumpScore() {
+    this.setState({ bump: true });
+    clearTimeout(this._bumpT); this._bumpT = setTimeout(() => this.setState({ bump: false }), 320);
+  }
+  showToast(text, undoId) {
+    clearTimeout(this._toastT);
+    this.setState({ toast: { text, undoId: undoId || null, on: false } });
+    setTimeout(() => { if (this.state.toast) this.setState({ toast: Object.assign({}, this.state.toast, { on: true }) }); }, 20);
+    this._toastT = setTimeout(() => this.hideToast(), 3400);
+  }
+  hideToast() {
+    clearTimeout(this._toastT);
+    if (!this.state.toast) return;
+    this.setState({ toast: Object.assign({}, this.state.toast, { on: false }) });
+    setTimeout(() => this.setState({ toast: null }), 400);
+  }
+  setItem(id, patch) {
+    this.setState({ items: Object.assign({}, this.state.items, { [id]: Object.assign({}, this.state.items[id], patch) }) });
+  }
+  renderVals() {
+    const S = this.state, drag = S.drag;
+    const baseDefs = [
+      { id: 'run',     cls: 'c-coral',  hex: '#EA4B2E', title: 'Ten‑minute run',              meta: '10 min', goal: 0 },
+      { id: 'pitch',   cls: 'c-violet', hex: '#6D4BE8', title: 'Write 300 words of the pitch', meta: '45 min', goal: 2 },
+      { id: 'savings', cls: 'c-teal',   hex: '#169A89', title: 'Move £50 to savings',          meta: '2 min',  goal: 1 },
+      { id: 'wind',    cls: 'c-amber',  hex: '#F09A12', title: 'Wind‑down routine',            meta: '',       goal: 3, routine: ['Stretch', 'Tea', 'Lights out'] },
+      { id: 'dad',     cls: 'c-coral',  hex: '#EA4B2E', title: 'Call Dad',                     meta: '',       goal: 0 },
+    ];
+    const defs = [baseDefs[0]].concat(S.extra, baseDefs.slice(1));
+    const build = (d, big) => {
+      const it = S.items[d.id];
+      const isRoutine = !!d.routine;
+      const total = isRoutine ? d.routine.length : 1;
+      const stepsDone = isRoutine ? (it.status === 'done' ? total : (it.steps || 0)) : (it.status === 'done' ? 1 : 0);
+      const frac = stepsDone / total;
+      const dragging = drag && drag.id === d.id;
+      const raise = big ? 12 : 8;
+      let lift, shadow, polish, eased = 'eased', skipHint = 'opacity: 0;';
+      if (dragging) {
+        const dy = Math.max(-64, Math.min(8, drag.dy));
+        lift = `transform: translateY(${(-raise * (1 - frac)) + dy}px) scale(1.06);`;
+        shadow = `box-shadow: 0 ${big ? 22 : 14}px ${big ? 26 : 16}px -${big ? 6 : 3}px rgba(23,24,28,0.40);`;
+        eased = '';
+        skipHint = dy < -40 ? 'opacity: 1;' : 'opacity: 0;';
+      } else if (it.status === 'skip') {
+        lift = `transform: translateY(-${big ? 16 : 11}px) translateX(${big ? 24 : 17}px) rotate(14deg) scale(0.92); opacity: 0.72;`;
+        shadow = `box-shadow: 0 ${big ? 10 : 6}px ${big ? 14 : 8}px -3px rgba(23,24,28,0.25);`;
+      } else if (it.status === 'done') {
+        lift = 'transform: translateY(0) scale(1);';
+        shadow = `box-shadow: 0 ${big ? 3 : 2}px ${big ? 6 : 4}px rgba(23,24,28,0.28);`;
+      } else {
+        lift = `transform: translateY(-${(raise * (1 - frac)).toFixed(1)}px) scale(1.02);`;
+        shadow = `box-shadow: 0 ${Math.round((big ? 18 : 10) * (1 - frac) + 3)}px ${Math.round((big ? 22 : 12) * (1 - frac) + 5)}px -${big ? 6 : 3}px rgba(23,24,28,0.38);`;
+      }
+      const sat = it.status === 'skip' ? 0.3 : (0.55 + 0.5 * frac);
+      polish = `filter: saturate(${sat.toFixed(2)}) brightness(${(0.96 + 0.07 * frac).toFixed(2)}) ${it.status === 'skip' ? 'grayscale(0.3)' : ''};`;
+      const glint = it.status === 'done' ? 'opacity: 1; transform: scale(1);' : 'opacity: 0; transform: scale(0.5);';
+      const textStyle = it.status === 'done' ? 'text-decoration: line-through; color: #A3A6AD;' : (it.status === 'skip' ? 'color: #A3A6AD;' : '');
+      const segStyle = (i) => `stroke: ${i < stepsDone ? d.hex : 'rgba(23,24,28,0.12)'};`;
+      // Drag bookkeeping lives on the instance so a fast first move is never lost between renders.
+      const down = (e) => {
+        try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) {}
+        this._drag = { id: d.id, startY: e.clientY, dy: 0, moved: false };
+        this.setState({ drag: Object.assign({}, this._drag) });
+      };
+      const move = (e) => {
+        const dr = this._drag; if (!dr || dr.id !== d.id) return;
+        const dy = e.clientY - dr.startY;
+        dr.dy = dy; dr.moved = dr.moved || Math.abs(dy) > 6;
+        this.setState({ drag: Object.assign({}, dr) });
+      };
+      const upEv = (e) => {
+        const dr = this._drag; if (!dr || dr.id !== d.id) return;
+        this._drag = null;
+        const cur = this.state.items[d.id];
+        let patch = null;
+        if (dr.moved && dr.dy < -40) {
+          patch = { status: cur.status === 'skip' ? 'todo' : 'skip' };
+        } else if (!dr.moved) {
+          if (cur.status === 'skip') patch = { status: 'todo' };
+          else if (cur.status === 'done') patch = isRoutine ? { status: 'todo', steps: 0 } : { status: 'todo' };
+          else if (isRoutine) { const n = (cur.steps || 0) + 1; patch = n >= total ? { status: 'done', steps: total } : { steps: n }; }
+          else patch = { status: 'done' };
+        }
+        const items = patch ? Object.assign({}, this.state.items, { [d.id]: Object.assign({}, cur, patch) }) : this.state.items;
+        this.setState({ items, drag: null });
+        if (patch) {
+          this.bumpScore();
+          if (patch.status === 'skip') this.showToast(d.title + ' · not today', d.id);
+          else if (this.state.toast && this.state.toast.undoId === d.id) this.hideToast();
+        }
+      };
+      const steps = isRoutine ? d.routine.map((s, i) => (i < stepsDone ? '✓ ' + s : (i === stepsDone && it.status !== 'skip' ? '▸ ' + s : s))).join('   ') : '';
+      const meta = it.status === 'done' ? 'done' : (it.status === 'skip' ? 'not today' : (isRoutine ? `${stepsDone}/${total}` : d.meta));
+      const z = dragging ? 'z-index: 20;' : (it.status === 'skip' ? 'z-index: 5;' : 'z-index: 1;');
+      return Object.assign({}, d, { isRoutine, status: it.status, stepsDone, frac, lift, shadow, polish, eased, glint, textStyle, skipHint, z,
+        seg1: segStyle(0), seg2: segStyle(1), seg3: segStyle(2), steps, meta, rowH: isRoutine ? '62px' : '52px', down, move, upEv });
+    };
+    const now = build(defs[0], true);
+    now.eyebrow = 'Now · Half marathon';
+    now.hint = now.status === 'done' ? 'Seated. The stone gets a little brighter.' : (now.status === 'skip' ? 'Parked for today. Tap to bring it back.' : 'Tap to seat the stone. Drag it up for not today.');
+    const moves = defs.slice(1).map((d, i) => Object.assign(build(d, false), { delay: d.fresh ? '0s' : `${0.85 + i * 0.08}s`, rowStyle: d.fresh ? 'animation: rowin .5s cubic-bezier(.2,.8,.2,1) both;' : (S.booted ? 'animation: none;' : '') }));
+    const doneCount = defs.filter(d => S.items[d.id].status === 'done').length;
+    const routineFrac = S.items.wind.status === 'done' ? 1 : (S.items.wind.steps || 0) / 3;
+    const score = Math.round(59 + doneCount * 3 + (S.items.wind.status === 'done' ? 0 : routineFrac * 3));
+    const left = defs.filter(d => S.items[d.id].status === 'todo').length;
+    const goalsBase = [
+      { name: 'Half marathon',  cls: 'c-coral',  hex: '#EA4B2E', pct: 0.34, delay: '.35s' },
+      { name: 'Emergency fund', cls: 'c-teal',   hex: '#169A89', pct: 0.62, delay: '.42s' },
+      { name: 'The pitch',      cls: 'c-violet', hex: '#6D4BE8', pct: 0.18, delay: '.49s' },
+      { name: 'Sleep by 11',    cls: 'c-amber',  hex: '#F09A12', pct: 0.80, delay: '.56s' },
+    ];
+    const openGoal = (gi) => () => {
+      if (this.state.view !== 'today') return;
+      this.setState({ view: 'goal', goalIdx: gi, fly: 'start' });
+      setTimeout(() => { if (this.state.view === 'goal') this.setState({ fly: 'end' }); }, 30);
+    };
+    const closeGoal = () => {
+      if (this.state.view !== 'goal') return;
+      this.setState({ view: 'closing', fly: 'start' });
+      setTimeout(() => { if (this.state.view === 'closing') this.setState({ view: 'today', fly: null }); }, 620);
+    };
+    const goals = goalsBase.map((g, gi) => {
+      const bonus = defs.filter(d => d.goal === gi).reduce((acc, d) => acc + (S.items[d.id].status === 'done' ? 0.06 : (d.routine ? ((S.items[d.id].steps || 0) / 3) * 0.06 : 0)), 0);
+      const pct = Math.min(1, g.pct + bonus);
+      return Object.assign({}, g, { open: openGoal(gi), chipStyle: (S.view !== 'today' && S.goalIdx === gi) ? 'opacity: 0;' : 'opacity: 1;', pct, dash: (201 * (1 - pct)).toFixed(1), polish: `filter: saturate(${(0.7 + 0.35 * pct).toFixed(2)}) brightness(${(0.97 + 0.04 * pct).toFixed(2)});` });
+    });
+    // Tabs
+    const tab = S.tab;
+    const setTab = (name) => () => { if (this.state.view !== 'today' || this.state.tab === name) return; this.setState({ tab: name }); };
+    const mkTab = (name, go) => ({ color: tab === name ? '#17181C' : '#A3A6AD', dot: tab === name ? 'opacity: 1; transform: scale(1);' : 'opacity: 0; transform: scale(0);', go });
+    const tabs = { today: mkTab('today', setTab('today')), goals: mkTab('goals', () => { if (this.state.tab !== 'today') this.setState({ tab: 'today' }); setTimeout(() => openGoal(0)(), this.state.tab !== 'today' ? 120 : 0); }), envision: mkTab('envision', setTab('envision')), coach: mkTab('coach', setTab('coach')) };
+
+    // Envision
+    const scenes = [
+      { title: 'The kitchen at 6:40', kind: 'photo', src: 'scene-kitchen.jpeg', pos: '50% 40%', cls: 'c-coral', text: 'It\'s 6:40 and the kitchen is still blue. You lace the left shoe first, like always. Ten minutes, you tell yourself, and the door is already open.', from: 'the kitchen at 6:40, before anyone\'s up' },
+      { title: 'Race morning', kind: 'photo', src: 'scene-runner.jpeg', pos: '50% 45%', cls: 'c-coral', text: 'Mist on the field and your number pinned crooked. You are not fast. You are here, which was the whole point.', from: 'the half, foggy, me at the start line' },
+      { title: 'Rent day, calm', kind: 'grad', bg: 'linear-gradient(160deg, #4FDCCB 0%, #169A89 55%, #0A4A42 100%)', cls: 'c-teal', text: 'The first of the month and you don\'t open the banking app. You already know. That is what three months of room feels like.', from: 'not checking the balance on the 1st' },
+    ];
+    const sc = scenes[S.scene];
+    const toneDefs = [
+      { text: 'Warmer', style: 'filter: sepia(.3) saturate(1.3) brightness(1.04);', note: 'Re‑rendered warmer · golden hour' },
+      { text: 'Simpler', style: 'filter: saturate(.5) contrast(.92) brightness(1.05);', note: 'Re‑rendered simpler · quieter palette' },
+      { text: 'Closer', style: 'transform: scale(1.14);', note: 'Re‑rendered closer · your own street' },
+    ];
+    const toneSel = toneDefs.find(x => x.text === S.tone) || null;
+    const env = {
+      n: S.scene + 1, status: toneSel ? 'Re‑rendered' : 'Generated', title: sc.title, isKitchen: sc.src === 'scene-kitchen.jpeg', isRunner: sc.src === 'scene-runner.jpeg', isGrad: sc.kind === 'grad', bg: sc.bg || '', cls: sc.cls, text: sc.text,
+      caption: toneSel ? toneSel.note + ' · tap to undo' : 'From your words: “' + sc.from + '”',
+      toneStyle: toneSel ? toneSel.style : '',
+      bars: scenes.map((x, i) => ({ style: i <= S.scene ? 'transform: scaleX(1);' : 'transform: scaleX(0);' })),
+      next: () => this.setState({ scene: (this.state.scene + 1) % scenes.length, tone: null, wall: false }),
+      tones: toneDefs.map(x => ({ text: x.text, on: S.tone === x.text ? 'on' : '', pick: () => this.setState({ tone: this.state.tone === x.text ? null : x.text }) })),
+      wallCls: S.wall ? '' : 'on', wallText: S.wall ? 'Saved ✓' : 'Wallpaper', wall: () => this.setState({ wall: !this.state.wall }),
+    };
+
+    // Coach
+    const replies = {
+      'I\'m stuck': 'Then make it smaller. Two minutes of calves, on the floor, now. I\'ll count it.',
+      'I don\'t feel like it': 'You didn\'t feel like it on day 118 either. You went. Shoes by the door, ten minutes. That\'s the whole ask.',
+      'Something changed': 'Tell me what changed and I\'ll redraw the week tonight. Nothing you built is lost.',
+      'Celebrate with me': 'Day 251. Four returns. You are not the person who started this. Say it out loud.',
+    };
+    const ask = (q) => () => {
+      if (this.state.typing) return;
+      this.setState({ thread: this.state.thread.concat([{ who: 'me', text: q }]), typing: true, briefOpen: false });
+      setTimeout(() => this.setState({ thread: this.state.thread.concat([{ who: 'coach', text: replies[q] }]), typing: false }), 1100);
+    };
+    const coach = {
+      sub: S.thread.length ? 'Listening' : 'Remembers 251 days',
+      briefOpen: S.briefOpen, threadOn: !S.briefOpen,
+      reopen: () => this.setState({ briefOpen: true, thread: [], typing: false }),
+      thread: S.thread.slice(-4).map(m => ({ text: m.text, rowStyle: m.who === 'me' ? 'justify-content: flex-end;' : 'justify-content: flex-start;', style: m.who === 'me' ? 'background: #17181C; color: #FFFFFF; border-radius: 20px 20px 6px 20px; box-shadow: 0 3px 0 #000;' : 'background: #FFFFFF; color: #17181C; border-radius: 20px 20px 20px 6px; box-shadow: 0 6px 16px -10px rgba(23,24,28,0.3);' })),
+      typing: S.typing,
+      chips: Object.keys(replies).map(q => ({ text: q, ask: ask(q), style: S.typing ? 'opacity: .5;' : '' })),
+    };
+
+    // New move sheet
+    const sh = S.sheet;
+    const suggestions = [
+      ['Ten‑minute walk', 'Foam roll', 'Book the physio'],
+      ['Move £20', 'Cancel a subscription', 'Check the standing order'],
+      ['Outline the opening', 'Read a section aloud', 'Cut 100 words'],
+      ['Phone on the shelf at 10:40', 'Stretch before bed', 'No screens after 10'],
+    ];
+    const setSheet = (patch) => this.setState({ sheet: Object.assign({}, this.state.sheet, patch) });
+    const closeSheet = () => { if (!this.state.sheet) return; setSheet({ in: false }); setTimeout(() => this.setState({ sheet: null }), 480); };
+    const openSheet = () => { if (this.state.sheet || this.state.view !== 'today') return; if (this.state.tab !== 'today') this.setState({ tab: 'today' }); this.setState({ sheet: { in: false, goal: 0, title: '', dur: '10 min' } }); setTimeout(() => this.state.sheet && setSheet({ in: true }), 30); };
+    const plusTap = () => { if (this.state.sheet) closeSheet(); else openSheet(); };
+    const sheet = sh ? {
+      scrimStyle: sh.in ? 'opacity: 1;' : 'opacity: 0;',
+      panelStyle: sh.in ? 'transform: translateY(0);' : 'transform: translateY(110%);',
+      close: closeSheet,
+      goalName: goalsBase[sh.goal].name,
+      goals: goalsBase.map((g, gi) => ({ cls: g.cls, polish: gi === sh.goal ? 'filter: saturate(1.05);' : 'filter: saturate(.6) brightness(1.02);', style: gi === sh.goal ? 'transform: scale(1.08);' : 'transform: scale(1);', ring: gi === sh.goal ? 'opacity: 1; transform: scale(1);' : 'opacity: 0; transform: scale(.7);', pick: () => setSheet({ goal: gi, title: '' }) })),
+      suggest: suggestions[sh.goal].map(s => ({ text: s, on: sh.title === s ? 'on' : '', pick: () => setSheet({ title: sh.title === s ? '' : s }) })),
+      title: sh.title,
+      type: (e) => setSheet({ title: e.target.value }),
+      durs: ['2 min', '10 min', '25 min', '45 min'].map(x => ({ text: x, on: sh.dur === x ? 'on' : '', pick: () => setSheet({ dur: x }) })),
+      addStyle: sh.title.trim() ? 'opacity: 1;' : 'opacity: .35; pointer-events: none;',
+      addLabel: sh.title.trim() ? 'Add to today' : 'Pick or write a move',
+      add: () => {
+        const cur = this.state.sheet; if (!cur || !cur.title.trim()) return;
+        const g = goalsBase[cur.goal];
+        const id = 'x' + Date.now();
+        const def = { id, cls: g.cls, hex: g.hex, title: cur.title.trim(), meta: cur.dur, goal: cur.goal, fresh: true };
+        this.setState({ extra: [def].concat(this.state.extra), items: Object.assign({}, this.state.items, { [id]: { status: 'todo' } }) });
+        closeSheet(); this.bumpScore(); this.showToast('Added · ' + def.title);
+        setTimeout(() => this.setState({ extra: this.state.extra.map(x => x.id === id ? Object.assign({}, x, { fresh: false }) : x) }), 900);
+      },
+    } : null;
+    const toast = S.toast ? {
+      text: S.toast.text, hasUndo: !!S.toast.undoId,
+      style: S.toast.on ? 'opacity: 1; transform: translateY(0);' : 'opacity: 0; transform: translateY(-28px);',
+      undo: () => { const id = this.state.toast && this.state.toast.undoId; if (id) this.setItem(id, { status: 'todo' }); this.hideToast(); this.bumpScore(); },
+    } : null;
+
+    // Goal view + flyer
+    const gi = S.goalIdx, gsel = goals[gi];
+    const details = [
+      { domain: 'Goal · Health', title: 'Lahore half marathon', sub: '…and feel at home in my body again.', due: 'March 2027 · 179 days', sceneDate: 'Race morning', s1: '3.2', l1: 'km longest', s2: '26', l2: 'days to M1', s3: '14', l3: 'evidence', next: 'Next: three 15‑minute walk‑runs this week, then 5 km without stopping by 4 Oct.', hasPhoto: true },
+      { domain: 'Goal · Money', title: 'Three months of breathing room', sub: 'An emergency fund I never have to think about.', due: 'June 2027 · 271 days', sceneDate: 'Rent day, calm', s1: '£3.1k', l1: 'saved', s2: '62%', l2: 'of target', s3: '31', l3: 'evidence', next: 'Next: move £50 every Friday; review the standing order on the 1st.', hasPhoto: false, sceneBg: 'linear-gradient(160deg, #4FDCCB 0%, #169A89 55%, #0A4A42 100%)' },
+      { domain: 'Goal · Craft', title: 'Ship the pitch', sub: 'Say the idea in a way that makes people lean in.', due: 'Oct 2026 · 24 days', sceneDate: 'The room leans in', s1: '2.1k', l1: 'words', s2: '18%', l2: 'of draft', s3: '6', l3: 'evidence', next: 'Next: 300 words a day before the inbox; read one section aloud on Friday.', hasPhoto: false, sceneBg: 'linear-gradient(160deg, #A98FFF 0%, #6D4BE8 55%, #2E1F7A 100%)' },
+      { domain: 'Goal · Mind', title: 'Sleep by eleven', sub: 'Mornings that start on my side.', due: 'Ongoing · 80% this month', sceneDate: 'Sunday, 6:40', s1: '11:14', l1: 'avg lights out', s2: '80%', l2: 'nights kept', s3: '24', l3: 'evidence', next: 'Next: the wind‑down routine every night; phone on the shelf at 10:40.', hasPhoto: false, sceneBg: 'linear-gradient(160deg, #FFC85E 0%, #F09A12 55%, #7A4A05 100%)' },
+    ];
+    const goal = Object.assign({}, details[gi], { hex: gsel.hex, noPhoto: !details[gi].hasPhoto, pathW: `${Math.round(gsel.pct * 100)}%` });
+    const goalOpen = S.view === 'goal' || S.view === 'closing';
+    const opening = S.view === 'goal' && S.fly === 'end';
+    const rise = (delay) => opening
+      ? `opacity: 1; transform: translateY(0); transition: opacity .45s ease ${delay}s, transform .6s cubic-bezier(.2,.8,.2,1) ${delay}s;`
+      : 'opacity: 0; transform: translateY(16px); transition: opacity .18s ease, transform .18s ease;';
+    // chip stone centre: chips are 68 wide, spread across 346px; stone is 46 inside
+    const chipX = 22 + gi * ((346 - 68) / 3) + 11, chipY = 148 + 11;
+    const flyerAtChip = `transform: translate(${chipX.toFixed(1)}px, ${chipY}px) scale(1) rotate(0deg); transition: transform .62s cubic-bezier(.3,.9,.25,1.08);`;
+    const flyerAtHeader = `transform: translate(296px, 86px) scale(1.74) rotate(-12deg); transition: transform .62s cubic-bezier(.3,.9,.25,1.08);`;
+    return {
+      goals, now, moves, score,
+      goalOpen, closeGoal, goal, tabs, env, coach, envOn: tab === 'envision', coachOn: tab === 'coach',
+      sheetOn: !!sh, sheet, toastOn: !!S.toast, toast, plusTap, plusStyle: sh ? 'transform: rotate(45deg);' : 'transform: rotate(0deg);', scoreStyle: S.bump ? 'transform: scale(1.14);' : 'transform: scale(1);',
+      goalLayerStyle: (S.view === 'goal') ? 'opacity: 1; transition: opacity .3s ease;' : 'opacity: 0; transition: opacity .28s ease .3s;',
+      goalTextStyle: rise(0.12), goalCardStyle: rise(0.22), goalStatsStyle: rise(0.32), goalPathStyle: rise(0.42), goalCtaStyle: rise(0.48),
+      flyerOn: S.fly !== null, flyerCls: gsel.cls, flyerPolish: gsel.polish,
+      flyerStyle: (S.fly === 'end') ? flyerAtHeader : flyerAtChip,
+      delta: `+${score - 59 + 1}`,
+      barStyle: `transform: scaleX(${(score / 100).toFixed(2)});`,
+      leftLabel: left === 0 ? 'all placed' : `${left} left`,
+      dayLine: left === 0 ? 'Every stone placed. Seal the day when you’re ready.' : 'The ten‑minute version counts today.'
+    };
+  }
+}
+</script>
+</body>
+</html>

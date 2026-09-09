@@ -1,0 +1,17 @@
+{
+  "name": "morrow",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@11.5.2",
+  "scripts": {
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm --filter @morrow/core test",
+    "test:e2e": "node scripts/e2e.mjs",
+    "web": "pnpm --filter mobile web",
+    "lint": "pnpm -r lint"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2",
+    "playwright": "^1.56.0"
+  }
+}

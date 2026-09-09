@@ -1,0 +1,67 @@
+{
+  "source": "https://notbor.ing",
+  "tokens": {
+    "spacing": {
+      "scale": [8, 10, 20, 30, 40, 60, 100],
+      "base_unit": 10
+    },
+    "typography": {
+      "families": ["Founders Grotesk", "JetBrains Mono"],
+      "scale": [
+        { "role": "hero", "size": "76px", "weight": "700", "family": "Founders Grotesk", "lineHeight": "76px" },
+        { "role": "h3", "size": "44px", "weight": "600", "family": "Founders Grotesk", "lineHeight": "52.8px" },
+        { "role": "body", "size": "36px", "weight": "600", "family": "Founders Grotesk", "lineHeight": "36px" },
+        { "role": "nav", "size": "22px", "weight": "600", "family": "Founders Grotesk" },
+        { "role": "label", "size": "12px", "weight": "400", "family": "JetBrains Mono", "letterSpacing": "0.5px", "transform": "uppercase" }
+      ]
+    },
+    "colors": [
+      { "role": "background", "value": "#FFFFFF" },
+      { "role": "band-grey", "value": "#ECECEC" },
+      { "role": "band-grey-2", "value": "#E0E0E0" },
+      { "role": "band-accent", "value": "#FFB200" },
+      { "role": "text-primary", "value": "#000000" },
+      { "role": "text-secondary", "value": "#232323" },
+      { "role": "text-label", "value": "#AAAAAA" },
+      { "role": "button", "value": "#000000" }
+    ],
+    "radius": ["0px", "4px"],
+    "shadows": [],
+    "image_ratios": [
+      { "usage": "app-icon", "ratio": "1:1" },
+      { "usage": "artist-series", "ratio": "1:1" },
+      { "usage": "blog-thumbnail", "ratio": "1:1" }
+    ],
+    "grid": { "max_width": "1200px", "columns": 3, "gutter": "60px", "column": "360px" }
+  },
+  "taste": [
+    {
+      "name": "Depth lives in the objects, not the chrome",
+      "trigger": "When presenting apps whose whole identity is 3D, tactile and haptic",
+      "decision": "Chose flat page chrome (zero box-shadows, 4px radius only on buttons, pure-grey bands) over glass, gradients or shadowed cards",
+      "reason": "Because the rendered objects must be the only things with dimension; if the page itself had depth the products would stop reading as physical",
+      "evidence": ["0 box-shadow declarations in 8000 sampled elements", "border-radius 4px on buttons only", "3D app icons and Artist Series cubes rendered at 1440×1440, 1:1", "greys #ECECEC / #E0E0E0 untinted"]
+    },
+    {
+      "name": "Body copy at poster size",
+      "trigger": "When the message is a manifesto ('Playful software for life's boring routines') rather than documentation",
+      "decision": "Chose 36px/36px semibold body under 76px/76px headings over a conventional 16–18px body with 1.5 line-height",
+      "reason": "Because a reader should take in one thought per viewport, the way a poster is read from across a room; fewer words per screen is the price",
+      "evidence": ["p 36px 600 line-height 36px", "h1/h2 76px 700 line-height 1.0", "h3 44px 600", "max-width none on body text"]
+    },
+    {
+      "name": "Catalog labels in mono",
+      "trigger": "When every app, skin and article needs metadata (name, tagline, number)",
+      "decision": "Chose JetBrains Mono 12px uppercase +0.5px 'SKNx009 / ISSUE 013' codes in #AAAAAA over marketing badges, tags or colored chips",
+      "reason": "Because a parts-catalog voice frames the apps as objects you collect, and the grey mono recedes so the grotesk headline stays the only loud thing",
+      "evidence": ["12px appears on 66 text nodes, the most common size", "mono caption triplet NAME / TAGLINE / SKU centered under each 1:1 image", "footer links in the same 12px mono #B6B5B5"]
+    },
+    {
+      "name": "Color bands instead of dividers",
+      "trigger": "When sectioning a 10,900px page with product, artist and blog content",
+      "decision": "Chose full-bleed color bands (#FFF, #ECECEC, #FFB200) with 100px internal padding and zero rules over hairline dividers, cards or whitespace-only gaps",
+      "reason": "Because a band change reads like turning a page, and the one amber band gives the scroll a landmark without putting color on a button",
+      "evidence": ["#ECECEC covers 57% of sampled area, #FFB200 13.9%", "100px is the third most common spacing value (26 nodes)", "sectionGaps: none detected, bands abut", "buttons are black-on-white, never amber"]
+    }
+  ]
+}

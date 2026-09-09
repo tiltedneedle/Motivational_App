@@ -1,0 +1,368 @@
+{
+  "url": "https://notbor.ing/",
+  "title": "!Boring Software",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "errors": [],
+  "colors": {
+    "pageBackground": "rgb(255, 255, 255)",
+    "backgroundColors": [
+      {
+        "value": "rgb(255, 255, 255)",
+        "count": 2,
+        "areaPct": 15.5
+      },
+      {
+        "value": "rgb(236, 236, 236)",
+        "count": 2,
+        "areaPct": 57
+      },
+      {
+        "value": "rgb(0, 0, 0)",
+        "count": 1,
+        "areaPct": 0.2
+      },
+      {
+        "value": "rgb(224, 224, 224)",
+        "count": 1,
+        "areaPct": 13.5
+      },
+      {
+        "value": "rgb(255, 178, 0)",
+        "count": 1,
+        "areaPct": 13.9
+      }
+    ],
+    "textColors": [
+      {
+        "value": "rgb(0, 0, 0)",
+        "count": 65
+      },
+      {
+        "value": "rgb(170, 170, 170)",
+        "count": 18
+      },
+      {
+        "value": "rgb(35, 35, 35)",
+        "count": 15
+      },
+      {
+        "value": "rgb(182, 181, 181)",
+        "count": 5
+      },
+      {
+        "value": "rgb(255, 255, 255)",
+        "count": 1
+      },
+      {
+        "value": "rgb(180, 180, 180)",
+        "count": 1
+      }
+    ],
+    "accentCandidates": [
+      {
+        "value": "rgb(0, 0, 238)",
+        "count": 24
+      },
+      {
+        "value": "rgb(0, 0, 0)",
+        "count": 7
+      },
+      {
+        "value": "rgb(182, 181, 181)",
+        "count": 5
+      },
+      {
+        "value": "rgb(255, 255, 255)",
+        "count": 2
+      },
+      {
+        "value": "rgb(51, 51, 51)",
+        "count": 1
+      }
+    ]
+  },
+  "typography": {
+    "uniqueFamilies": [
+      {
+        "value": "Arial",
+        "count": 193
+      },
+      {
+        "value": "Jet Brains",
+        "count": 76
+      },
+      {
+        "value": "Founders Grotesk",
+        "count": 36
+      }
+    ],
+    "headings": {
+      "h3": {
+        "size": "44px",
+        "weight": "600",
+        "lineHeight": "52.8px",
+        "letterSpacing": "normal",
+        "family": "Founders Grotesk"
+      },
+      "h1": {
+        "size": "76px",
+        "weight": "700",
+        "lineHeight": "76px",
+        "letterSpacing": "normal",
+        "family": "Founders Grotesk"
+      },
+      "h2": {
+        "size": "76px",
+        "weight": "700",
+        "lineHeight": "76px",
+        "letterSpacing": "normal",
+        "family": "Founders Grotesk"
+      }
+    },
+    "body": {
+      "size": "36px",
+      "weight": "600",
+      "lineHeight": "36px",
+      "family": "Founders Grotesk",
+      "maxWidth": "none"
+    },
+    "sizeDistribution": [
+      {
+        "value": "12px",
+        "count": 66
+      },
+      {
+        "value": "44px",
+        "count": 15
+      },
+      {
+        "value": "24px",
+        "count": 7
+      },
+      {
+        "value": "36px",
+        "count": 6
+      },
+      {
+        "value": "16px",
+        "count": 5
+      },
+      {
+        "value": "76px",
+        "count": 4
+      },
+      {
+        "value": "22px",
+        "count": 2
+      }
+    ],
+    "weightDistribution": [
+      {
+        "value": "700",
+        "count": 52
+      },
+      {
+        "value": "400",
+        "count": 35
+      },
+      {
+        "value": "600",
+        "count": 18
+      }
+    ]
+  },
+  "effects": {
+    "radii": [
+      {
+        "value": "4px",
+        "count": 2
+      },
+      {
+        "value": "8px",
+        "count": 1
+      }
+    ],
+    "shadows": [],
+    "transitions": [
+      "all",
+      "background-color 0.3s"
+    ]
+  },
+  "spacingDistribution": [
+    {
+      "value": "10px",
+      "count": 33
+    },
+    {
+      "value": "40px",
+      "count": 28
+    },
+    {
+      "value": "100px",
+      "count": 26
+    },
+    {
+      "value": "60px",
+      "count": 6
+    },
+    {
+      "value": "30px",
+      "count": 6
+    },
+    {
+      "value": "8px",
+      "count": 6
+    },
+    {
+      "value": "20px",
+      "count": 5
+    },
+    {
+      "value": "15px",
+      "count": 3
+    },
+    {
+      "value": "12px",
+      "count": 2
+    },
+    {
+      "value": "1000px",
+      "count": 2
+    },
+    {
+      "value": "90px",
+      "count": 1
+    },
+    {
+      "value": "5px",
+      "count": 1
+    },
+    {
+      "value": "280px",
+      "count": 1
+    },
+    {
+      "value": "13px",
+      "count": 1
+    },
+    {
+      "value": "16px",
+      "count": 1
+    }
+  ],
+  "buttons": [],
+  "layout": {
+    "bodyPadding": "0px",
+    "containerMaxWidth": "none",
+    "containerPadding": "0px",
+    "containerWidth": "0px"
+  },
+  "cards": [],
+  "images": [
+    {
+      "src": "https://cdn.prod.website-files.com/5f3f4593fbaf55b6554787f3/6232cb70c5487644c1096820_andy-doodle-col",
+      "naturalWidth": 350,
+      "naturalHeight": 350,
+      "ratio": "1.00:1",
+      "renderedWidth": "0px",
+      "role": "thumbnail"
+    },
+    {
+      "src": "https://cdn.prod.website-files.com/5f3f4593fbaf55b6554787f3/6232cb70c5487644c1096820_andy-doodle-col",
+      "naturalWidth": 350,
+      "naturalHeight": 350,
+      "ratio": "1.00:1",
+      "renderedWidth": "0px",
+      "role": "thumbnail"
+    },
+    {
+      "src": "https://cdn.prod.website-files.com/5f3f4593fbaf55b6554787f3/6232cb70c5487644c1096820_andy-doodle-col",
+      "naturalWidth": 350,
+      "naturalHeight": 350,
+      "ratio": "1.00:1",
+      "renderedWidth": "66px",
+      "role": "thumbnail"
+    },
+    {
+      "src": "https://cdn.prod.website-files.com/5f52cb73016fed9a30bb4d95/683e7a72dae5efecdef1f769_app-camera.png",
+      "naturalWidth": 1440,
+      "naturalHeight": 1440,
+      "ratio": "1.00:1",
+      "renderedWidth": "320px",
+      "role": "feature"
+    },
+    {
+      "src": "https://cdn.prod.website-files.com/5f52cb73016fed9a30bb4d95/647f9a9df9ba1e4faf8a24d0_app-vibes.jpg",
+      "naturalWidth": 1440,
+      "naturalHeight": 1440,
+      "ratio": "1.00:1",
+      "renderedWidth": "320px",
+      "role": "feature"
+    },
+    {
+      "src": "https://cdn.prod.website-files.com/5f52cb73016fed9a30bb4d95/647f9aa92c22e3ae57b4e157_app-habits.jpg",
+      "naturalWidth": 1440,
+      "naturalHeight": 1440,
+      "ratio": "1.00:1",
+      "renderedWidth": "320px",
+      "role": "feature"
+    },
+    {
+      "src": "https://cdn.prod.website-files.com/5f52cb73016fed9a30bb4d95/647f9abf8131d054a7493a64_app-weather.jpg",
+      "naturalWidth": 1440,
+      "naturalHeight": 1440,
+      "ratio": "1.00:1",
+      "renderedWidth": "320px",
+      "role": "feature"
+    },
+    {
+      "src": "https://cdn.prod.website-files.com/5f52cb73016fed9a30bb4d95/647f9acbfa3d90fc486a570b_app-timer.jpg",
+      "naturalWidth": 1440,
+      "naturalHeight": 1440,
+      "ratio": "1.00:1",
+      "renderedWidth": "320px",
+      "role": "feature"
+    },
+    {
+      "src": "https://cdn.prod.website-files.com/5f52cb73016fed9a30bb4d95/647f9ab4bdee29d02895c76a_app-calc.jpg",
+      "naturalWidth": 1440,
+      "naturalHeight": 1440,
+      "ratio": "1.00:1",
+      "renderedWidth": "320px",
+      "role": "feature"
+    }
+  ],
+  "spacingSamples": [
+    {
+      "tag": "h2",
+      "margin": "0px 0px 20px",
+      "padding": "0px",
+      "gap": "normal"
+    },
+    {
+      "tag": "h3",
+      "margin": "0px 0px 10px",
+      "padding": "0px",
+      "gap": "normal"
+    },
+    {
+      "tag": "p",
+      "margin": "8px 0px 10px",
+      "padding": "0px",
+      "gap": "normal"
+    }
+  ],
+  "sectionGaps": [],
+  "grid": {
+    "columns": 3,
+    "gap": "60px",
+    "template": "360px 360px 360px",
+    "selector": "div.grid_3-columns.blog"
+  },
+  "gridCount": 6,
+  "focusVisible": true,
+  "reducedMotion": false
+}

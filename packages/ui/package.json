@@ -1,0 +1,25 @@
+{
+  "name": "@morrow/ui",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@morrow/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "*",
+    "react-native": "*",
+    "react-native-svg": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2",
+    "@types/react": "~19.1.0",
+    "react": "19.1.0",
+    "react-native": "0.82.0",
+    "react-native-svg": "15.12.1"
+  }
+}

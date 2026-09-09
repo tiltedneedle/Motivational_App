@@ -1,0 +1,28 @@
+{
+  "artboards": [
+    { "file": "Welcome.dc.html",   "title": "Welcome",                 "x": 0,    "y": 0,    "w": 390, "h": 844 },
+    { "file": "Interview.dc.html", "title": "The Interview · taps",    "x": 470,  "y": 0,    "w": 390, "h": 844 },
+    { "file": "Fifteen.dc.html",   "title": "The Fifteen",             "x": 940,  "y": 0,    "w": 390, "h": 844 },
+    { "file": "Heard.dc.html",     "title": "What I heard",            "x": 1410, "y": 0,    "w": 390, "h": 844 },
+    { "file": "Stone.dc.html",     "title": "A stone · Strategies",    "x": 0,    "y": 964,  "w": 390, "h": 844 },
+    { "file": "SealBook.dc.html",  "title": "Seal the Book",           "x": 470,  "y": 964,  "w": 390, "h": 844 },
+    { "file": "Book.dc.html",      "title": "The Book · Sunday",       "x": 940,  "y": 964,  "w": 390, "h": 844 },
+    { "file": "Portrait.dc.html",  "title": "Portrait",                "x": 1410, "y": 964,  "w": 390, "h": 844 },
+    { "file": "Blueprint.dc.html", "title": "Blueprint · source lines","x": 0,    "y": 1928, "w": 390, "h": 844 },
+    { "file": "Main.dc.html",      "title": "Today · The Horizon",     "x": 470,  "y": 1928, "w": 390, "h": 844 },
+    { "file": "Envision.dc.html",  "title": "Envision · the other road","x": 940, "y": 1928, "w": 390, "h": 844 },
+    { "file": "Coach.dc.html",     "title": "Coach · quotes the Book", "x": 1410, "y": 1928, "w": 390, "h": 844 },
+    { "file": "Seal.dc.html",      "title": "Seal the day",            "x": 0,    "y": 2892, "w": 390, "h": 844 },
+    { "file": "Review.dc.html",    "title": "Horizon review",          "x": 470,  "y": 2892, "w": 390, "h": 844 },
+    { "file": "Almanac.dc.html",   "title": "Almanac",                 "x": 940,  "y": 2892, "w": 390, "h": 844 },
+    { "file": "Paywall.dc.html",   "title": "Paywall",                 "x": 1410, "y": 2892, "w": 390, "h": 844 },
+    { "file": "Brand.dc.html",     "title": "Identity sheet",          "x": 0,    "y": 3856, "w": 390, "h": 844 }
+  ],
+  "annotations": [
+    { "id": "direction", "x": 1880, "y": 0, "w": 360, "text": "Landscape v5: the first direction, rebuilt for the self-authoring product.\n\nThe idea that changed: the sun rises when the user writes. In the Fifteen the sun climbs the arc over fifteen minutes of writing; on Today each goal is a sun-arc filled to its fraction; the seal ring fills when you hold. Every glow is earned.\n\nThree voices in type: Newsreader italic for the future self, Newsreader roman only for the user's own words (the Fifteen, the stones, the Book, quotes in the brief), Instrument Sans for the interface, Geist Mono for readouts.\n\nNew screens for the product: the Interview is tap-only with the clarity sun; the Fifteen; What I heard; the analysis stone; Seal the Book; the Book as a paper page in the dark; Blueprint moves show the user's source line; the coach's brief quotes the Book; Envision has The other road." },
+    { "id": "motion", "x": 1880, "y": 964, "w": 360, "text": "Motion map (Reanimated + Skia):\n· Welcome: sunrise 2.4 s spring, glow pulse after.\n· Interview: the sun travels the arc as clarity rises (2.6 s per answer).\n· The Fifteen: the sun climbs from below the ridge over 15 minutes; the arc fills at the same rate; caret blinks; idle dims the sun.\n· Stone: the gold underline draws under the user's line; the sun-dot pops when seated.\n· Seal the Book: ring fills over 1.6 s while held; the Book rises from the ridge and turns to face you.\n· Blueprint / Path: strokes draw, nodes pop in sequence.\n· Seal the day: ring fills over 1.6 s, haptic ramp.\n· Scenes: 30 s Ken Burns; narrative at 0.9 s.\nReduced motion turns all of it off." },
+    { "id": "photos", "x": 470, "y": 3856, "w": 360, "text": "Photographs stand in for generated scenes (Unsplash licence: Tyler Criso, Kevin Bessat). In the product each scene is generated from the user's Impact lines, graded to this palette and grained. The other road renders the shadow write in a colder grade, on request only." },
+    { "id": "versus", "x": 940, "y": 3856, "w": 360, "text": "Versus Studio (the current direction): Studio makes goals physical stones you seat with your thumb; Landscape makes the day a sky you raise the sun into. Both share the product, the copy and the flows. Studio is calmer and more tactile; Landscape is more cinematic and photographs better in a store listing. The archived v4 is untouched at design/archive/v4-landscape." }
+  ],
+  "launch": { "view": "canvas" }
+}

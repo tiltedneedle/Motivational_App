@@ -1,0 +1,445 @@
+import { describe, expect, it } from 'vitest';
+import {
+  AREAS,
+  CHIPS,
+  HELPLINES,
+  addAnother,
+  addCustomArea,
+  answer,
+  beginBranches,
+  buildDawnBrief,
+  clarity,
+  consistencyScore,
+  contentGuard,
+  dayValue,
+  detectReturns,
+  dropDraft,
+  followUpPrompt,
+  framingSet,
+  guessLine,
+  initialInterview,
+  isReturning,
+  minVersionOf,
+  nextNudge,
+  polish,
+  proposeIdentityLine,
+  question,
+  reading,
+  replyToChip,
+  returnsLetter,
+  ringFraction,
+  screen,
+  scoreSpecificity,
+  seeds,
+  splitFirstMoves,
+  startWriting,
+  targetSeconds,
+  tick,
+  toggleArea,
+  totalQuestions,
+  wordCount,
+  type DaySummary,
+  type GoalAnalysis,
+} from '../src/index';
+import { dayOf, sequentialIds } from '../src/ids';
+
+describe('the Interview', () => {
+  it('runs entirely on taps and ends with a named goal', () => {
+    let s = initialInterview();
+    expect(question(s).multi).toBe(true);
+    s = toggleArea(s, 'health');
+    s = beginBranches(s);
+    expect(question(s).prompt).toBe(AREAS[0]!.question);
+    s = answer(s, 'Finish a race');
+    expect(question(s).prompt).toBe('How far?');
+    s = answer(s, 'A half marathon');
+    expect(question(s).prompt).toBe('By when?');
+    s = answer(s, 'Six months');
+    expect(s.stage).toBe('admire');
+    s = answer(s, 'A friend');
+    expect(s.stage).toBe('summary');
+    expect(s.drafts).toHaveLength(1);
+    expect(s.drafts[0]!.title).toBe('Half marathon');
+    expect(s.drafts[0]!.horizon).toBe('Six months');
+  });
+
+  it('lets a custom answer skip the follow-up, exactly as specified', () => {
+    let s = initialInterview();
+    s = toggleArea(s, 'money');
+    s = beginBranches(s);
+    s = answer(s, 'Stop the overdraft fees', true);
+    expect(question(s).prompt).toBe('By when?');
+    s = answer(s, 'Three months');
+    expect(s.drafts[0]!.title).toBe('Stop the overdraft fees');
+    expect(s.drafts[0]!.custom).toBe(true);
+  });
+
+  it('adds a custom area with its own branch set', () => {
+    let s = initialInterview();
+    s = addCustomArea(s, 'Guitar');
+    expect(s.picked).toHaveLength(1);
+    s = beginBranches(s);
+    expect(question(s).prompt).toContain('Guitar');
+    s = answer(s, 'Do it every week');
+    s = answer(s, 'Three times');
+    s = answer(s, 'A year');
+    expect(s.drafts[0]!.title).toBe('Guitar, three times a week');
+    expect(s.drafts[0]!.domain).toBe('custom');
+  });
+
+  it('caps at eight areas', () => {
+    let s = initialInterview();
+    for (const a of AREAS) s = toggleArea(s, a.id);
+    s = addCustomArea(s, 'One');
+    s = addCustomArea(s, 'Two');
+    s = addCustomArea(s, 'Three');
+    expect(s.picked.length).toBeLessThanOrEqual(8);
+  });
+
+  it('will not begin with nothing picked', () => {
+    const s = initialInterview();
+    expect(beginBranches(s)).toBe(s);
+  });
+
+  it('builds its guess only from the user picks', () => {
+    let s = initialInterview();
+    s = toggleArea(s, 'health');
+    s = toggleArea(s, 'money');
+    expect(guessLine(s)).toBe('Something about health, money…');
+  });
+
+  it('drops a goal and forgets its area', () => {
+    let s = initialInterview();
+    s = toggleArea(s, 'health');
+    s = beginBranches(s);
+    s = answer(s, 'Finish a race');
+    s = answer(s, '5 km');
+    s = answer(s, 'A year');
+    s = answer(s, 'A friend');
+    const id = s.drafts[0]!.id;
+    s = dropDraft(s, id);
+    expect(s.drafts).toHaveLength(0);
+    expect(s.picked).toHaveLength(0);
+  });
+
+  it('keeps earlier picks when adding another goal', () => {
+    let s = initialInterview();
+    s = toggleArea(s, 'health');
+    s = beginBranches(s);
+    s = answer(s, 'Sleep properly');
+    s = answer(s, 'Seven hours');
+    s = answer(s, 'Six months');
+    s = answer(s, 'A friend');
+    s = addAnother(s);
+    expect(s.stage).toBe('areas');
+    expect(s.drafts).toHaveLength(1);
+  });
+
+  it('reports clarity between the floor and one', () => {
+    let s = initialInterview();
+    expect(clarity(s)).toBeGreaterThanOrEqual(0.08);
+    s = toggleArea(s, 'mind');
+    s = beginBranches(s);
+    expect(clarity(s)).toBeLessThan(1);
+    expect(totalQuestions(s)).toBe(5);
+  });
+
+  it('hands the Fifteen seeds that are the user own answers', () => {
+    let s = initialInterview();
+    s = toggleArea(s, 'health');
+    s = beginBranches(s);
+    s = answer(s, 'Finish a race');
+    s = answer(s, 'A half marathon');
+    s = answer(s, 'Six months');
+    s = answer(s, 'A friend');
+    expect(seeds(s)).toEqual(['Half marathon']);
+  });
+});
+
+describe('specificity', () => {
+  it('accepts a line with a clock time and a place without a follow-up', () => {
+    const r = scoreSpecificity('Tuesday, Thursday, Saturday at 6:40, out the back door');
+    expect(r.hasTime).toBe(true);
+    expect(r.needsFollowUp).toBe(false);
+    expect(r.score).toBeGreaterThan(0.5);
+  });
+
+  it('asks once when a line has no time', () => {
+    const r = scoreSpecificity('go running more');
+    expect(r.needsFollowUp).toBe(true);
+    expect(followUpPrompt('strategies')).toBe('When, exactly, and where?');
+  });
+
+  it('treats an empty line as needing everything', () => {
+    expect(scoreSpecificity('').score).toBe(0);
+  });
+
+  it('never exceeds one', () => {
+    const r = scoreSpecificity(
+      'Every Monday and Thursday at 6:40 in the kitchen for 30 minutes, three times a week, £50 ' + 'x'.repeat(3000),
+    );
+    expect(r.score).toBeLessThanOrEqual(1);
+  });
+});
+
+describe('framings', () => {
+  it('varies the motives question by domain', () => {
+    expect(framingSet('motives', 'money').question).not.toBe(framingSet('motives', 'health').question);
+  });
+
+  it('offers three or four framings and the program own prompts for the full track', () => {
+    for (const kind of ['motives', 'impact', 'strategies', 'obstacles', 'monitoring'] as const) {
+      const set = framingSet(kind, 'craft');
+      expect(set.framings.length).toBeGreaterThanOrEqual(3);
+      expect(set.framings.length).toBeLessThanOrEqual(4);
+      expect(set.fullPrompts.length).toBeGreaterThanOrEqual(4);
+    }
+  });
+});
+
+describe('the Fifteen', () => {
+  it('counts a starter session at ten minutes and a full one at fifteen', () => {
+    expect(targetSeconds('ideal', 'starter')).toBe(900);
+    expect(targetSeconds('shadow', 'starter')).toBe(480);
+    expect(targetSeconds('shadow', 'full')).toBe(900);
+  });
+
+  it('nudges only after eight idle seconds, and never repeats itself', () => {
+    let s = startWriting('ideal', 'starter');
+    s = tick(s, 5000, false);
+    expect(s.nudge).toBeNull();
+    s = tick(s, 4000, false);
+    expect(s.nudge).not.toBeNull();
+    expect(s.nudgeCount).toBe(1);
+    const first = s.nudge!;
+    expect(nextNudge(first)).not.toBe(first);
+  });
+
+  it('clears the nudge the moment writing resumes', () => {
+    let s = startWriting('ideal', 'starter');
+    s = tick(s, 9000, false);
+    expect(s.nudge).not.toBeNull();
+    s = tick(s, 100, true);
+    expect(s.nudge).toBeNull();
+    expect(s.idleMs).toBe(0);
+  });
+
+  it('closes itself when the ring completes', () => {
+    let s = startWriting('ideal', 'starter');
+    s = tick(s, 900_000, true);
+    expect(s.closed).toBe(true);
+    expect(ringFraction(s)).toBe(1);
+  });
+
+  it('shows depth as polish, never a word count the user can game', () => {
+    expect(polish(0)).toBe(0);
+    expect(polish(350)).toBeGreaterThan(polish(100));
+    expect(polish(5000)).toBe(1);
+    expect(wordCount('  one two   three ')).toBe(3);
+  });
+});
+
+describe('consistency', () => {
+  const day = (d: string, over: Partial<DaySummary> = {}): DaySummary => ({
+    day: d,
+    planned: 3,
+    done: 3,
+    skipped: 0,
+    partial: 0,
+    evidenceCount: 1,
+    sealedAt: `${d}T21:00:00.000Z`,
+    moodWord: 'Steady',
+    proof: 'ten floors, twice',
+    gladOf: null,
+    ...over,
+  });
+
+  it('gives a perfect week a high score', () => {
+    const days = ['2026-09-03', '2026-09-04', '2026-09-05', '2026-09-06', '2026-09-07', '2026-09-08'].map((d) => day(d));
+    expect(consistencyScore(days, '2026-09-09')).toBeGreaterThan(90);
+  });
+
+  it('counts a two-minute version fully and a not-today as half', () => {
+    expect(dayValue({ planned: 2, done: 0, partial: 2, skipped: 0, evidenceCount: 0 })).toBe(1);
+    expect(dayValue({ planned: 2, done: 0, partial: 0, skipped: 2, evidenceCount: 0 })).toBe(0.5);
+  });
+
+  it('does not punish a day with no plan but with evidence', () => {
+    expect(dayValue({ planned: 0, done: 0, partial: 0, skipped: 0, evidenceCount: 1 })).toBe(1);
+  });
+
+  it('never resets to zero after a gap', () => {
+    const days = [day('2026-09-01'), day('2026-09-02')];
+    expect(consistencyScore(days, '2026-09-09')).toBeGreaterThan(0);
+  });
+
+  it('detects a return after two or more missed days', () => {
+    const days = [day('2026-09-01'), day('2026-09-06')];
+    const returns = detectReturns(days, '2026-09-09');
+    expect(returns).toHaveLength(1);
+    expect(returns[0]!.gapDays).toBe(4);
+  });
+
+  it('knows when the user is returning right now', () => {
+    const days = [day('2026-09-01')];
+    const r = isReturning(days, '2026-09-09');
+    expect(r.returning).toBe(true);
+    expect(r.gapDays).toBe(7);
+  });
+
+  it('reads the trend without ever saying broken', () => {
+    const days = ['2026-09-05', '2026-09-06', '2026-09-07', '2026-09-08'].map((d) => day(d));
+    const r = reading(days, '2026-09-09');
+    expect(r.score).toBeGreaterThan(0);
+    expect(r.baselineHigh).toBeGreaterThanOrEqual(r.baselineLow);
+  });
+});
+
+describe('safety', () => {
+  it('catches crisis language and routes to resources', () => {
+    for (const t of ['I want to kill myself', 'i want to die', "there's no reason to go on"]) {
+      const r = screen(t);
+      expect(r.risk).toBe('crisis');
+      expect(r.action).toBe('resources');
+    }
+  });
+
+  it('softens on concern without stopping the sitting', () => {
+    const r = screen('I hate myself for missing again');
+    expect(r.risk).toBe('concern');
+    expect(r.action).toBe('soften');
+  });
+
+  it('lets ordinary hard writing through', () => {
+    expect(screen('It was a terrible year and I gave up in March').risk).toBe('none');
+  });
+
+  it('logs a category and never the words', () => {
+    const r = screen('I have been bingeing at night');
+    expect(r.category).toBe('disordered-eating');
+    expect(JSON.stringify(r)).not.toContain('bingeing');
+  });
+
+  it('refuses calorie targets, dosing and financial products', () => {
+    expect(contentGuard('keep me under 900 calories').allowed).toBe(false);
+    expect(contentGuard('what dose should I take').allowed).toBe(false);
+    expect(contentGuard('which stock should i buy').allowed).toBe(false);
+    expect(contentGuard('book the physio on Thursday').allowed).toBe(true);
+  });
+
+  it('ships helplines for the launch regions', () => {
+    expect(HELPLINES.map((h) => h.region)).toContain('US');
+    expect(HELPLINES.map((h) => h.region)).toContain('PK');
+  });
+});
+
+describe('the coach', () => {
+  const analyses: GoalAnalysis[] = [
+    {
+      id: 'a2',
+      goalId: 'g1',
+      kind: 'obstacles',
+      track: 'starter',
+      framingId: 'o-runout',
+      line: "it's raining at 7",
+      line2: 'take the stairwell, ten floors, twice',
+      specificity: 0.7,
+      followupShown: false,
+      writtenAt: '2026-09-09T20:00:00.000Z',
+    },
+  ];
+
+  it('quotes the user own if-then when they are stuck', () => {
+    const r = replyToChip('stuck', {
+      book: null,
+      analyses,
+      moves: [],
+      days: [],
+      today: '2026-09-09',
+      returns: 0,
+      persona: 'gentle',
+    });
+    expect(r.text).toContain('stairwell');
+    expect(r.quotedSpans.length).toBeGreaterThan(0);
+  });
+
+  it('asks a question rather than inventing encouragement when it has nothing to quote', () => {
+    const r = replyToChip('dont-feel', {
+      book: null,
+      analyses: [],
+      moves: [],
+      days: [],
+      today: '2026-09-09',
+      returns: 0,
+      persona: 'straight',
+    });
+    expect(r.quotedSpans).toHaveLength(0);
+    expect(r.text).toMatch(/\?$/);
+  });
+
+  it('offers four chips', () => {
+    expect(CHIPS).toHaveLength(4);
+  });
+
+  it('writes a dawn brief that quotes the Book', () => {
+    const brief = buildDawnBrief(
+      {
+        day: '2026-09-09',
+        book: {
+          id: 'b1',
+          version: 1,
+          title: 'A year of the back door',
+          track: 'starter',
+          sealedAt: '2026-09-08T22:41:00.000Z',
+          firstSentence: "It's 6:40 and the kitchen is still blue",
+          ideal: 'x',
+          shadow: null,
+          chapters: [],
+          iWill: 'I will be out the back door',
+          authorshipRatio: 1,
+          diff: null,
+        },
+        yesterday: null,
+        moves: [],
+        analyses,
+        persona: 'gentle',
+        score: 71,
+        previousScore: 64,
+        raining: true,
+      },
+      sequentialIds(),
+    );
+    expect(brief.today).toContain('the kitchen is still blue');
+    expect(brief.quotedSpans.length).toBeGreaterThan(0);
+    expect(brief.ifThen).toContain('It is raining');
+  });
+
+  it('writes a returns letter with no streak language', () => {
+    const { body } = returnsLetter(null, 5, 4);
+    expect(body).toContain('Return #4');
+    expect(body.toLowerCase()).not.toContain('streak');
+  });
+});
+
+describe('helpers', () => {
+  it('splits a multi-day strategy line into dated moves', () => {
+    const moves = splitFirstMoves('Tuesday, Thursday, Saturday at 6:40, out the back door');
+    expect(moves).toHaveLength(3);
+    expect(moves[0]).toContain('Tuesday');
+  });
+
+  it('cuts a two-minute version from the user verb', () => {
+    expect(minVersionOf('run ten minutes at 6:40')).toContain('run');
+  });
+
+  it('proposes an identity line only from the user own words', () => {
+    const line = proposeIdentityLine("I am out the back door before the kettle boils, every Tuesday");
+    expect(line).toContain('out the back door');
+    expect(proposeIdentityLine('')).toBe('');
+  });
+
+  it('assigns 1am to yesterday when the day boundary is 3am', () => {
+    expect(dayOf(new Date('2026-09-09T01:30:00'), 3)).toBe('2026-09-08');
+    expect(dayOf(new Date('2026-09-09T09:30:00'), 3)).toBe('2026-09-09');
+  });
+});

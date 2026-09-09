@@ -1,0 +1,118 @@
+/**
+ * Settings, export and delete (PRD §7.12). Everything is exportable and
+ * everything is deletable, in the app, without asking anyone.
+ */
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { Alert, Platform, ScrollView, Share, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { bookToText } from '@morrow/core';
+import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, day } from '@morrow/ui';
+import { useLatestBook, useMorrow } from '../src/store';
+
+export default function Settings() {
+  const router = useRouter();
+  const state = useMorrow((s) => s);
+  const setProfile = useMorrow((s) => s.setProfile);
+  const reset = useMorrow((s) => s.reset);
+  const book = useLatestBook();
+  const [confirming, setConfirming] = useState(false);
+
+  const exportAll = async () => {
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      profile: state.profile,
+      goals: state.goals,
+      analyses: state.analyses,
+      texts: state.texts,
+      books: state.books,
+      plans: state.plans,
+      evidence: state.evidence,
+      days: state.days,
+    };
+    const message = book ? `${bookToText(book)}\n\n---\n${JSON.stringify(payload, null, 2)}` : JSON.stringify(payload, null, 2);
+    try {
+      await Share.share({ message, title: 'Morrow export' });
+    } catch {
+      // Sharing can be unavailable; the data is still on the device.
+    }
+  };
+
+  return (
+    <Studio testID="screen-settings">
+      <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12 }}>
+          <TextButton testID="settings-back" label="← Today" onPress={() => router.replace('/today')} />
+          <Label>You</Label>
+        </View>
+
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18, gap: 22 }}>
+          <Statement>What Morrow knows about you.</Statement>
+          <Body>
+            {state.texts.length} pieces of writing, {state.goals.length} goals, {state.analyses.length} lines, {state.books.length}{' '}
+            {state.books.length === 1 ? 'edition' : 'editions'} of the Book. All of it on this device.
+          </Body>
+
+          <View style={{ gap: 10 }}>
+            <Label>Depth</Label>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {(['starter', 'full'] as const).map((t) => (
+                <Chip
+                  key={t}
+                  testID={`settings-track-${t}`}
+                  label={t === 'starter' ? 'Starter' : 'Full'}
+                  selected={state.profile.track === t}
+                  onPress={() => setProfile({ track: t })}
+                />
+              ))}
+            </View>
+            <Body style={{ fontSize: 13 }}>Nothing you have written is lost by switching.</Body>
+          </View>
+
+          <View style={{ gap: 10 }}>
+            <Label>How you are spoken to</Label>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {(['gentle', 'straight', 'fierce'] as const).map((p) => (
+                <Chip
+                  key={p}
+                  testID={`settings-persona-${p}`}
+                  label={`${p[0]!.toUpperCase()}${p.slice(1)}`}
+                  selected={state.profile.persona === p}
+                  onPress={() => setProfile({ persona: p })}
+                />
+              ))}
+            </View>
+          </View>
+
+          <Rule />
+          <View style={{ gap: 10 }}>
+            <Label>Your data</Label>
+            <InkButton testID="settings-export" label="Export everything" onPress={exportAll} />
+            {confirming ? (
+              <View style={{ gap: 8, backgroundColor: day.surface, padding: 16, borderRadius: 18 }}>
+                <Body style={{ color: day.ink }}>
+                  This deletes your writing, your goals and every edition of the Book on this device. It cannot be undone.
+                </Body>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Chip testID="settings-delete-cancel" label="Keep it" onPress={() => setConfirming(false)} />
+                  <Chip
+                    testID="settings-delete-confirm"
+                    label="Delete everything"
+                    selected
+                    onPress={() => {
+                      reset();
+                      setConfirming(false);
+                      router.replace('/');
+                    }}
+                  />
+                </View>
+              </View>
+            ) : (
+              <TextButton testID="settings-delete" label="Delete everything" onPress={() => setConfirming(true)} />
+            )}
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </Studio>
+  );
+}

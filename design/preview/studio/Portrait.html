@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: "Outfit", "Helvetica Neue", Arial, sans-serif; -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
+    a { color: #17181C; } a:hover { color: #EA4B2E; }
+    .label { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+
+    @keyframes up { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes pop { 0% { opacity: 0; transform: scale(0.6) translateY(10px); } 65% { opacity: 1; transform: scale(1.06) translateY(-2px); } 100% { transform: scale(1) translateY(0); } }
+    @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+    @keyframes shadowbob { 0%, 100% { transform: scaleX(1); opacity: .9; } 50% { transform: scaleX(0.86); opacity: .6; } }
+    @keyframes shine { 0% { transform: translateX(-160%) rotate(20deg); } 100% { transform: translateX(260%) rotate(20deg); } }
+    @keyframes draw { to { stroke-dashoffset: 0; } }
+    @keyframes drawto { to { stroke-dashoffset: var(--end); } }
+    @keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+    @keyframes kenburns { from { transform: scale(1.0); } to { transform: scale(1.07); } }
+    @keyframes focus { from { filter: blur(10px); } to { filter: blur(3px); } }
+    .up { animation: up .7s cubic-bezier(.2,.8,.2,1) both; }
+    .pop { animation: pop .8s cubic-bezier(.2,.9,.25,1.15) both; }
+    .bob { animation: bob 4.5s ease-in-out infinite; }
+    .shadowbob { animation: shadowbob 4.5s ease-in-out infinite; }
+    .pulse { animation: pulse 3.6s ease-in-out infinite; }
+    .kb { animation: kenburns 30s ease-out both; }
+    .draw { animation: draw 1.6s cubic-bezier(.4,.1,.2,1) .7s both; }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; } }
+
+  </style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: radial-gradient(120% 90% at 18% 0%, #F8F7F4 0%, #EEEDEA 46%, #E4E3DF 100%); color: #17181C;">
+  <div style="position: absolute; left: 22px; right: 22px; top: 20px; display: flex; justify-content: space-between; align-items: center; color: #17181C; animation: up .7s cubic-bezier(.2,.8,.2,1) 0.05s both;"><div class="label" style="opacity: 0.6;">Your goal portrait</div><div class="label" style="opacity: 0.6;">Health</div></div>
+  <div style="position: absolute; left: 50%; top: 70px; margin-left: -80px;"><div style="position: relative; width: 160px; height: 160px; animation: pop .8s cubic-bezier(.2,.9,.25,1.15) 0.2s both; ">
+      <div class="bob" style="position: absolute; inset: 0;">
+        <div style="position: absolute; inset: 0; border-radius: 50%; overflow: hidden; background: radial-gradient(circle at 32% 26%, #FFDCCF 0%, #FF8A66 24%, #EA4B2E 60%, #7A1D10 100%); box-shadow: inset -20px -22px 40px rgba(0,0,0,0.38), inset 10px 10px 20px rgba(255,255,255,0.35), 0 32px 80px -20px rgba(234,75,46,0.45); ">
+          <div style="position: absolute; left: 20%; top: 12%; width: 30%; height: 18%; border-radius: 50%; background: rgba(255,255,255,0.7); filter: blur(6px); transform: rotate(-18deg);"></div>
+          <div style="position: absolute; top: -20%; bottom: -20%; left: 0; width: 34%; background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.35) 50%, rgba(255,255,255,0) 100%); animation: shine 5.5s ease-in-out 1.4s infinite;"></div>
+        </div>
+      </div>
+    </div></div>
+  <div class="shadowbob" style="position: absolute; left: 50%; top: 254px; width: 150px; height: 30px; margin-left: -75px; border-radius: 50%; background: radial-gradient(closest-side, rgba(23,24,28,0.28), rgba(23,24,28,0)); filter: blur(6px);"></div>
+  <div style="position: absolute; left: 22px; right: 22px; top: 300px; text-align: center; font-size: 32px; line-height: 37px; font-weight: 700; letter-spacing: -0.03em; text-wrap: balance; animation: up .7s cubic-bezier(.2,.8,.2,1) 0.5s both;">Run the Lahore half marathon in March, and feel at home in my body again.</div>
+  <div style="position: absolute; left: 30px; right: 30px; top: 462px; text-align: center; font-size: 17px; line-height: 24px; color: #6B6E76; animation: up .7s cubic-bezier(.2,.8,.2,1) 0.65s both;">“I'm tired of being the person who cancels.” <span style="color: #A3A6AD;">— you, Tuesday</span></div>
+  <div style="position: absolute; left: 18px; right: 18px; top: 540px;">
+    <div style="background: #FFFFFF; border-radius: 28px; box-shadow: 0 1px 2px rgba(23,24,28,0.04), 0 18px 40px -18px rgba(23,24,28,0.22);  animation: up .7s cubic-bezier(.2,.8,.2,1) 0.8s both;"><div style="padding: 18px 20px; display: flex; flex-direction: column; gap: 12px;">
+      <div style="display: flex; flex-direction: column; gap: 4px;"><div class="label" style="color: #EA4B2E;">Becoming</div><div style="font-size: 18px; line-height: 24px; font-weight: 600; letter-spacing: -0.015em;">Someone who keeps the small promise on the ordinary day.</div></div>
+      <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 1px solid rgba(23,24,28,0.08);"><div style="display: flex; flex-direction: column; gap: 2px;"><div class="label" style="color: #A3A6AD;">First move · Wed 9</div><div style="font-size: 16px; font-weight: 500;">Walk‑run ten minutes after coffee</div></div><div style="font-size: 12px; color: #A3A6AD; font-weight: 600; white-space: nowrap;">+2 this week</div></div>
+    </div></div>
+  </div>
+  <div style="position: absolute; left: 22px; right: 22px; bottom: 30px; display: flex; flex-direction: column; gap: 8px;">
+    <div style="height: 60px; border-radius: 999px; background: #17181C; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; box-shadow: 0 5px 0 #000000, 0 22px 34px -12px rgba(23,24,28,0.30), inset 0 1px 0 rgba(255,255,255,0.18); animation: up .7s cubic-bezier(.2,.8,.2,1) 1.0s both;">Make this my Blueprint</div>
+    <div style="height: 40px; display: flex; align-items: center; justify-content: center; font-size: 15px; color: #6B6E76; animation: up .7s cubic-bezier(.2,.8,.2,1) 1.1s both;">Not quite, change a line</div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

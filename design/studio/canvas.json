@@ -1,0 +1,137 @@
+{
+  "artboards": [
+    {
+      "file": "Welcome.dc.html",
+      "title": "Welcome",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Main.dc.html",
+      "title": "Today",
+      "x": 470,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "is_interactive": true
+    },
+    {
+      "file": "Interview.dc.html",
+      "title": "The Interview",
+      "x": 940,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "is_interactive": true
+    },
+    {
+      "file": "Portrait.dc.html",
+      "title": "Goal Portrait",
+      "x": 1410,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Blueprint.dc.html",
+      "title": "Blueprint",
+      "x": 0,
+      "y": 964,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Goal.dc.html",
+      "title": "Goal",
+      "x": 470,
+      "y": 964,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Envision.dc.html",
+      "title": "Envision \u00b7 Scene",
+      "x": 940,
+      "y": 964,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Coach.dc.html",
+      "title": "Coach \u00b7 Dawn brief",
+      "x": 1410,
+      "y": 964,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Review.dc.html",
+      "title": "Horizon review",
+      "x": 0,
+      "y": 1928,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Seal.dc.html",
+      "title": "Seal the day",
+      "x": 470,
+      "y": 1928,
+      "w": 390,
+      "h": 844,
+      "is_interactive": true
+    },
+    {
+      "file": "Almanac.dc.html",
+      "title": "Almanac",
+      "x": 940,
+      "y": 1928,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Paywall.dc.html",
+      "title": "Paywall",
+      "x": 1410,
+      "y": 1928,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Brand.dc.html",
+      "title": "Identity sheet",
+      "x": 0,
+      "y": 2892,
+      "w": 390,
+      "h": 844
+    }
+  ],
+  "annotations": [
+    {
+      "id": "direction",
+      "x": 1880,
+      "y": 0,
+      "w": 360,
+      "text": "Studio direction\n\nA softly lit studio ground, white surfaces, ink controls with a bottom edge you can press into. Every goal is a stone: a dimensional sphere coloured by its domain (coral health, teal money, violet craft, amber mind); the coach is a pearl. Stones get polished as goals are kept.\n\nOne typeface (Outfit). Springy motion: stones float and catch the light, rings draw, buttons pop in. Night studio only for the seal ritual.\n\nLandscape and Poster are archived in design/archive with their own links."
+    },
+    {
+      "id": "photos",
+      "x": 1880,
+      "y": 964,
+      "w": 360,
+      "text": "Photographs stand in for generated scenes (Unsplash licence: Tyler Criso, Kevin Bessat), shown as prints with a slight tilt."
+    },
+    {
+      "id": "prototype",
+      "x": 470,
+      "y": -250,
+      "w": 390,
+      "text": "Prototype: Today, The Interview and Seal the day are live (press \u25b7 on the artboard).\n\nInterview: every answer is a tap. Pick the parts of life that are pulling at you, then each one gets two or three multiple\u2011choice questions and becomes a goal stone in the tray. \u201cSomething else\u2026\u201d opens a field only when no answer fits. Drop or add goals at the end.\n\nToday: tap a stone to seat it; drag a stone upward and let go to park it as \u201cnot today\u201d; the wind\u2011down routine sinks one step per tap. Tap a goal at the top and its stone flies into the Goal screen; Back flies it home.\n\nTabs: Envision (tap the print for the next scene, tap a tone to re\u2011render it, Wallpaper to save) and Coach (tap a reply chip and the coach answers; the brief folds away). The target tab opens the Now goal.\n\nThe + button opens the New move sheet: pick a goal stone, a suggestion or your own words, how long it takes, and it lands at the top of Later today. Parking a stone shows an Undo toast; Consistency bumps as it changes.\n\nSeal: pick a word, then press and hold the bar for about two seconds. Let go early and it drains back."
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}

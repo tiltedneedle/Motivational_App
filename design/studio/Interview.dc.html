@@ -1,0 +1,302 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: "Outfit", "Helvetica Neue", Arial, sans-serif; -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
+    a { color: #17181C; } a:hover { color: #EA4B2E; }
+    .label { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+    .stone { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; }
+    .stone::after { content: ""; position: absolute; left: 20%; top: 12%; width: 30%; height: 18%; border-radius: 50%; background: rgba(255,255,255,0.72); filter: blur(2px); transform: rotate(-18deg); }
+    .c-coral  { background: radial-gradient(circle at 32% 26%, #FFDCCF 0%, #FF8A66 24%, #EA4B2E 60%, #7A1D10 100%); box-shadow: inset -5px -7px 12px rgba(0,0,0,0.38), inset 3px 3px 6px rgba(255,255,255,0.35); }
+    .c-teal   { background: radial-gradient(circle at 32% 26%, #D6FAF4 0%, #4FDCCB 24%, #169A89 60%, #0A4A42 100%); box-shadow: inset -5px -7px 12px rgba(0,0,0,0.38), inset 3px 3px 6px rgba(255,255,255,0.35); }
+    .c-violet { background: radial-gradient(circle at 32% 26%, #EAE3FF 0%, #A98FFF 24%, #6D4BE8 60%, #2E1F7A 100%); box-shadow: inset -5px -7px 12px rgba(0,0,0,0.38), inset 3px 3px 6px rgba(255,255,255,0.35); }
+    .c-amber  { background: radial-gradient(circle at 32% 26%, #FFF3D2 0%, #FFC85E 24%, #F09A12 60%, #7A4A05 100%); box-shadow: inset -5px -7px 12px rgba(0,0,0,0.38), inset 3px 3px 6px rgba(255,255,255,0.35); }
+    .c-rose   { background: radial-gradient(circle at 32% 26%, #FFE3EC 0%, #FF8FB0 24%, #E23A6E 60%, #6E1230 100%); box-shadow: inset -5px -7px 12px rgba(0,0,0,0.38), inset 3px 3px 6px rgba(255,255,255,0.35); }
+    .c-moss   { background: radial-gradient(circle at 32% 26%, #E6F5D6 0%, #A9DC7A 24%, #5E9E2E 60%, #244A0E 100%); box-shadow: inset -5px -7px 12px rgba(0,0,0,0.38), inset 3px 3px 6px rgba(255,255,255,0.35); }
+    .c-pearl  { background: radial-gradient(circle at 32% 26%, #FFFFFF 0%, #F3F1EC 24%, #CFCBC2 60%, #8E8A80 100%); box-shadow: inset -5px -7px 12px rgba(0,0,0,0.38), inset 3px 3px 6px rgba(255,255,255,0.35); }
+    .sheen { position: absolute; top: -20%; bottom: -20%; left: 0; width: 34%; background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.38) 50%, rgba(255,255,255,0) 100%); animation: shine 5.5s ease-in-out 1.4s infinite; }
+    .opt { display: flex; align-items: center; gap: 14px; height: 54px; padding: 0 8px 0 16px; border-radius: 999px; background: #FFFFFF; box-shadow: 0 1px 2px rgba(23,24,28,0.04), 0 10px 24px -14px rgba(23,24,28,0.25); cursor: pointer; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; transition: background .2s, color .2s, transform .2s cubic-bezier(.2,.9,.3,1.4), box-shadow .2s; }
+    .opt:active { transform: scale(.98); }
+    .opt.on { background: #17181C; color: #FFFFFF; box-shadow: 0 4px 0 #000, 0 14px 30px -14px rgba(23,24,28,0.45); }
+    .opt.on .badge { background: rgba(255,255,255,0.16); color: #FFFFFF; }
+    .opt.ghost { background: transparent; box-shadow: inset 0 0 0 1.5px rgba(23,24,28,0.18); color: #6B6E76; }
+    .opt.ghost .badge { background: transparent; box-shadow: inset 0 0 0 1.5px rgba(23,24,28,0.18); }
+    .badge { width: 26px; height: 26px; border-radius: 50%; background: rgba(23,24,28,0.06); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #6B6E76; flex: 0 0 auto; transition: background .2s, color .2s; }
+    .tick { width: 26px; height: 26px; border-radius: 50%; flex: 0 0 auto; margin-left: auto; display: flex; align-items: center; justify-content: center; transition: transform .3s cubic-bezier(.2,.9,.3,1.5), opacity .2s; }
+    .field { display: flex; align-items: center; gap: 8px; height: 54px; padding: 0 6px 0 18px; border-radius: 999px; background: #FFFFFF; box-shadow: inset 0 0 0 1.5px #17181C; }
+    .field input { flex: 1 1 auto; border: 0; outline: 0; background: transparent; font: inherit; font-size: 16px; color: #17181C; min-width: 0; }
+    .field input::placeholder { color: #A3A6AD; }
+    .ink { height: 56px; border-radius: 999px; background: #17181C; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 600; box-shadow: 0 5px 0 #000, 0 18px 30px -12px rgba(23,24,28,0.4); cursor: pointer; -webkit-tap-highlight-color: transparent; transition: opacity .25s, transform .2s; }
+    .ink:active { transform: translateY(2px); box-shadow: 0 3px 0 #000; }
+    .ring { transform: rotate(-90deg); }
+    .arc { transition: stroke-dashoffset .8s cubic-bezier(.3,.1,.2,1); }
+    .slot { width: 30px; height: 30px; border-radius: 50%; position: relative; flex: 0 0 auto; }
+    .slot.empty { box-shadow: inset 0 0 0 1.5px rgba(23,24,28,0.18); }
+    .slot.cur { box-shadow: inset 0 0 0 1.5px #17181C; }
+    .slot .stone { left: 4px; top: 4px; width: 22px; height: 22px; inset: auto; }
+    .pearlbig { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; background: radial-gradient(circle at 32% 26%, #FFFFFF 0%, #F3F1EC 24%, #CFCBC2 60%, #8E8A80 100%); box-shadow: inset -7px -9px 14px rgba(0,0,0,0.38), inset 3px 3px 7px rgba(255,255,255,0.35), 0 11px 28px -7px rgba(120,116,108,0.35); }
+    .q { transition: opacity .22s ease, transform .22s ease; }
+    @keyframes up { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes pop { 0% { opacity: 0; transform: scale(0.6) translateY(10px); } 65% { opacity: 1; transform: scale(1.06) translateY(-2px); } 100% { transform: scale(1) translateY(0); } }
+    @keyframes shine { 0% { transform: translateX(-160%) rotate(20deg); } 100% { transform: translateX(260%) rotate(20deg); } }
+    @keyframes think { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-4px) rotate(6deg); } }
+    @keyframes qin { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: translateX(0); } }
+    .up { animation: up .6s cubic-bezier(.2,.8,.2,1) backwards; }
+    .pop { animation: pop .8s cubic-bezier(.2,.9,.25,1.15) both; }
+    .think { animation: think 3.2s ease-in-out infinite; }
+    .qin { animation: qin .45s cubic-bezier(.2,.8,.2,1) both; }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+  </style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: radial-gradient(120% 90% at 18% 0%, #F8F7F4 0%, #EEEDEA 46%, #E4E3DF 100%); color: #17181C;">
+  <div class="up" style="position: absolute; left: 22px; right: 22px; top: 20px; display: flex; justify-content: space-between; align-items: center; animation-delay: .05s;">
+    <div class="label" style="opacity: 0.6;">The interview</div>
+    <div class="label" style="opacity: 0.6;">{{ counter }}</div>
+  </div>
+
+  <!-- Coach pearl with the clarity ring, and its running guess -->
+  <div class="up" style="position: absolute; left: 22px; right: 22px; top: 54px; display: flex; align-items: center; gap: 14px; animation-delay: .15s;">
+    <div style="position: relative; width: 68px; height: 68px; flex: 0 0 auto;">
+      <svg class="ring" width="68" height="68" viewBox="0 0 68 68" style="position: absolute; inset: 0;"><circle cx="34" cy="34" r="32" stroke="rgba(23,24,28,0.08)" stroke-width="3.5" fill="none"></circle><circle class="arc" cx="34" cy="34" r="32" stroke="#EA4B2E" stroke-width="3.5" stroke-linecap="round" fill="none" style="stroke-dasharray: 201; stroke-dashoffset: {{ dash }};"></circle></svg>
+      <div class="think" style="position: absolute; left: 10px; top: 10px; width: 48px; height: 48px;"><div class="pearlbig"><div class="sheen"></div></div></div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+      <div class="label" style="color: #A3A6AD;">{{ clarity }}% clarity</div>
+      <div style="font-size: 15px; line-height: 20px; color: #6B6E76; font-style: italic;">{{ guess }}</div>
+    </div>
+  </div>
+
+  <!-- The question and its choices -->
+  <div class="q" style="position: absolute; left: 22px; right: 22px; top: 148px; bottom: 150px; {{ qStyle }}">
+    <div class="qin" style="font-size: 30px; line-height: 35px; font-weight: 700; letter-spacing: -0.03em; text-wrap: balance; margin-bottom: 20px;">{{ question }}</div>
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <sc-for list="{{ options }}" as="o" hint-placeholder-count="5">
+        <div class="opt up {{ o.cls }}" onClick="{{ o.pick }}" style="animation-delay: {{ o.delay }}; {{ o.style }}">
+          <div class="badge">{{ o.letter }}</div>
+          <div style="font-size: 17px; font-weight: 500; flex: 1 1 auto;">{{ o.text }}</div>
+          <sc-if value="{{ o.showTick }}" hint-placeholder-val="{{ false }}"><div class="tick" style="{{ o.tickStyle }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></div></sc-if>
+        </div>
+      </sc-for>
+      <sc-if value="{{ customOpen }}" hint-placeholder-val="{{ false }}">
+        <div class="field up" style="animation-delay: 0s;"><input placeholder="{{ customHint }}" value="{{ customText }}" onInput="{{ customType }}"><div onClick="{{ customUse }}" style="height: 42px; padding: 0 16px; border-radius: 999px; background: #17181C; color: #FFFFFF; display: flex; align-items: center; font-size: 14px; font-weight: 600; box-shadow: 0 3px 0 #000; cursor: pointer; {{ customUseStyle }}">Use this</div></div>
+      </sc-if>
+    </div>
+  </div>
+
+  <!-- Summary -->
+  <sc-if value="{{ doneOn }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; left: 22px; right: 22px; top: 148px; bottom: 110px; overflow: hidden;">
+      <div class="qin" style="font-size: 30px; line-height: 35px; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 18px;">Here's what I heard.</div>
+      <div style="display: flex; flex-direction: column;">
+        <sc-for list="{{ goalRows }}" as="g" hint-placeholder-count="2">
+          <div class="up" style="display: flex; align-items: center; gap: 14px; padding: 12px 0; border-top: 1px solid rgba(23,24,28,0.12); animation-delay: {{ g.delay }};">
+            <div style="position: relative; width: 40px; height: 40px; flex: 0 0 auto;"><div class="stone {{ g.cls }}"><div class="sheen"></div></div></div>
+            <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 auto;"><div style="font-size: 18px; font-weight: 600; letter-spacing: -0.01em;">{{ g.title }}</div><div style="font-size: 13px; color: #6B6E76;">{{ g.sub }}</div></div>
+            <div onClick="{{ g.remove }}" class="label" style="color: #A3A6AD; cursor: pointer; padding: 6px;">Drop</div>
+          </div>
+        </sc-for>
+        <div onClick="{{ addAnother }}" class="up" style="display: flex; align-items: center; gap: 14px; padding: 14px 0; border-top: 1px solid rgba(23,24,28,0.12); cursor: pointer; animation-delay: .5s;"><div class="slot empty"></div><div style="font-size: 15px; font-weight: 500; color: #6B6E76;">Add another goal</div></div>
+      </div>
+    </div>
+    <div class="up" style="position: absolute; left: 22px; right: 22px; bottom: 30px; animation-delay: .6s;"><div class="ink" onClick="{{ finish }}">{{ finishLabel }}</div></div>
+  </sc-if>
+
+  <!-- Bottom: Continue (multi-select) or the goal tray -->
+  <sc-if value="{{ continueOn }}" hint-placeholder-val="{{ false }}">
+    <div class="up" style="position: absolute; left: 22px; right: 22px; bottom: 30px; animation-delay: .5s;"><div class="ink" onClick="{{ continueTap }}" style="{{ continueStyle }}">{{ continueLabel }}</div></div>
+  </sc-if>
+  <sc-if value="{{ trayOn }}" hint-placeholder-val="{{ true }}">
+    <div style="position: absolute; left: 22px; right: 22px; bottom: 30px; display: flex; flex-direction: column; gap: 10px;">
+      <div style="display: flex; justify-content: space-between;"><div class="label" style="color: #A3A6AD;">Your goals</div><div class="label" style="color: #A3A6AD;">{{ trayCount }}</div></div>
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <sc-for list="{{ tray }}" as="s" hint-placeholder-count="3"><div class="slot {{ s.cls }}"><sc-if value="{{ s.filled }}" hint-placeholder-val="{{ true }}"><div class="stone {{ s.stone }} pop"></div></sc-if></div></sc-for>
+        <div style="font-size: 13px; color: #6B6E76; margin-left: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ trayHint }}</div>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ finishedOn }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; background: radial-gradient(120% 90% at 18% 0%, #F8F7F4 0%, #EEEDEA 46%, #E4E3DF 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 0 40px; text-align: center;">
+      <div class="pop" style="display: flex; gap: 14px;"><sc-for list="{{ finalStones }}" as="fs" hint-placeholder-count="2"><div style="position: relative; width: 56px; height: 56px;"><div class="stone {{ fs.cls }}"><div class="sheen"></div></div></div></sc-for></div>
+      <div class="up" style="font-size: 30px; line-height: 35px; font-weight: 700; letter-spacing: -0.03em; animation-delay: .2s;">Building your portrait…</div>
+      <div class="up" style="font-size: 15px; line-height: 21px; color: #6B6E76; animation-delay: .35s;">{{ finalLine }}</div>
+      <div onClick="{{ restart }}" class="label up" style="color: #A3A6AD; cursor: pointer; margin-top: 12px; animation-delay: .6s;">Start over (prototype)</div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { stage: 'domains', picked: [], customDomains: [], di: 0, qi: 0, a1: null, a2: null, goals: [], customOpen: false, customText: '', flash: null, entered: false, leaving: false, finished: false, count: 1 };
+    this.DOMAINS = [
+      { id: 'health', name: 'Health', cls: 'c-coral', q: 'In six months, what would feel like a win?', options: [
+        { t: 'Finish a race', q: 'How far?', opts: ['5 km', '10 km', 'A half marathon', 'A marathon'], title: (b) => (b === 'A half marathon' ? 'Half marathon' : b === 'A marathon' ? 'Marathon' : b + ' race') },
+        { t: 'Feel strong', q: 'What does strong look like?', opts: ['Lift my own weight', 'Stairs without thinking', 'An hour on the floor with the kids'], title: (b) => b },
+        { t: 'Sleep properly', q: 'What is the one number?', opts: ['Lights out by 11', 'Seven hours', 'No phone in bed'], title: (b) => b },
+        { t: 'Move every day', q: 'How long, on a normal day?', opts: ['Ten minutes', 'Twenty minutes', 'Half an hour'], title: (b) => b + ' a day' },
+      ] },
+      { id: 'money', name: 'Money', cls: 'c-teal', q: 'What would breathing room look like?', options: [
+        { t: 'An emergency fund', q: 'How many months of it?', opts: ['One month', 'Three months', 'Six months'], title: (b) => b + ' of breathing room' },
+        { t: 'Clear a debt', q: 'Which one first?', opts: ['The card', 'The overdraft', 'The loan'], title: (b) => 'Clear ' + b.toLowerCase() },
+        { t: 'Save for something', q: 'For what?', opts: ['A trip', 'A home', 'A course'], title: (b) => 'Save for ' + b.toLowerCase() },
+        { t: 'Earn more', q: 'How?', opts: ['A raise', 'A side project', 'A new job'], title: (b) => b },
+      ] },
+      { id: 'craft', name: 'Work & craft', cls: 'c-violet', q: 'What do you want to have made?', options: [
+        { t: 'A pitch or a talk', q: 'Where will it land?', opts: ['Investors', 'My team', 'A stage'], title: (b) => 'Ship the pitch' + (b === 'A stage' ? ' on stage' : '') },
+        { t: 'A book or a long piece', q: 'How long?', opts: ['An essay', 'A short book', 'The whole thing'], title: (b) => 'Finish ' + b.toLowerCase() },
+        { t: 'A portfolio', q: 'How many pieces?', opts: ['Three', 'Six', 'Ten'], title: (b) => 'A ' + b.toLowerCase() + '‑piece portfolio' },
+        { t: 'A skill I am learning', q: 'Which one?', opts: ['A language', 'An instrument', 'Code', 'Drawing'], title: (b) => 'Learn ' + b.toLowerCase().replace('a ', '').replace('an ', '') },
+      ] },
+      { id: 'mind', name: 'Mind & sleep', cls: 'c-amber', q: 'What would quieter feel like?', options: [
+        { t: 'Sleep by eleven', q: 'How many nights a week?', opts: ['Most nights', 'Every weeknight', 'Every night'], title: () => 'Sleep by eleven' },
+        { t: 'A daily practice', q: 'Which kind?', opts: ['Sitting still', 'Writing', 'Prayer', 'A walk'], title: (b) => b + ', daily' },
+        { t: 'Less phone', q: 'What is the rule?', opts: ['Not in bed', 'Not at meals', 'Not before nine'], title: (b) => 'Phone ' + b.toLowerCase() },
+        { t: 'Fewer spirals', q: 'When do they hit?', opts: ['At night', 'Sunday evenings', 'Before work'], title: (b) => 'Calm ' + b.toLowerCase() },
+      ] },
+      { id: 'people', name: 'People', cls: 'c-rose', q: 'Who is this about?', options: [
+        { t: 'Family', q: 'What would change?', opts: ['A weekly call', 'A real visit', 'Being there more'], title: (b) => b + ' with family' },
+        { t: 'A partner', q: 'What would change?', opts: ['A night a week', 'Saying it out loud', 'Planning something'], title: (b) => b + ' together' },
+        { t: 'Friends', q: 'What would change?', opts: ['Seeing them monthly', 'Replying the same day', 'One trip'], title: (b) => b },
+        { t: 'New people', q: 'Where?', opts: ['A club', 'A class', 'Work'], title: (b) => 'New people at ' + b.toLowerCase() },
+      ] },
+      { id: 'home', name: 'Home', cls: 'c-moss', q: 'What is the picture?', options: [
+        { t: 'A calm space', q: 'Start where?', opts: ['The bedroom', 'The desk', 'The kitchen'], title: (b) => 'A calm ' + b.toLowerCase().replace('the ', '') },
+        { t: 'A move', q: 'How far?', opts: ['Across town', 'Another city', 'Another country'], title: (b) => 'Move ' + b.toLowerCase() },
+        { t: 'Cooking again', q: 'How often?', opts: ['Twice a week', 'Most nights', 'Sundays'], title: (b) => 'Cook ' + b.toLowerCase() },
+        { t: 'A garden', q: 'What kind?', opts: ['Herbs on the sill', 'A balcony', 'A real bed'], title: (b) => b },
+      ] },
+    ];
+    this.WHEN = ['Three months', 'Six months', 'A year', 'No deadline'];
+    this.CUSTOM_CLS = ['c-pearl', 'c-rose', 'c-moss', 'c-violet'];
+  }
+  componentDidMount() { this._enterT = setTimeout(() => this.setState({ entered: true }), 900); }
+  componentWillUnmount() { clearTimeout(this._enterT); clearTimeout(this._flashT); clearTimeout(this._leaveT); }
+  domainList() {
+    return this.DOMAINS.concat(this.state.customDomains);
+  }
+  pickedDomains() { const all = this.domainList(); return this.state.picked.map(id => all.find(d => d.id === id)).filter(Boolean); }
+  // advance with a slide transition; patch is applied when the old question has left
+  go(patch) {
+    clearTimeout(this._leaveT);
+    this.setState({ leaving: true, flash: null, customOpen: false, customText: '' });
+    this._leaveT = setTimeout(() => {
+      this.setState(Object.assign({ leaving: false, entered: false, count: this.state.count + 1 }, patch));
+      clearTimeout(this._enterT); this._enterT = setTimeout(() => this.setState({ entered: true }), 700);
+    }, 220);
+  }
+  answer(text, isCustom) {
+    const S = this.state; const doms = this.pickedDomains(); const d = doms[S.di];
+    const proceed = () => {
+      if (S.qi === 0) {
+        const opt = d.options.find(o => o.t === text);
+        if (!opt || isCustom) this.go({ a1: { t: text, custom: true }, qi: 2 });   // custom answers skip the follow‑up
+        else this.go({ a1: opt, qi: 1 });
+      } else if (S.qi === 1) {
+        this.go({ a2: text, qi: 2 });
+      } else {
+        const when = text;
+        const title = S.a1.custom ? S.a1.t : (S.a2 ? S.a1.title(S.a2) : S.a1.t);
+        const goal = { title, cls: d.cls, domain: d.name, when, id: d.id };
+        const goals = S.goals.concat([goal]);
+        if (S.di + 1 < doms.length) this.go({ goals, di: S.di + 1, qi: 0, a1: null, a2: null });
+        else this.go({ goals, stage: 'done', qi: 0, a1: null, a2: null });
+      }
+    };
+    this.setState({ flash: text });
+    clearTimeout(this._flashT); this._flashT = setTimeout(proceed, 240);
+  }
+  renderVals() {
+    const S = this.state;
+    const all = this.domainList();
+    const doms = this.pickedDomains();
+    const letters = 'ABCDEFGH';
+    const entered = S.entered;
+    const delayFor = (i) => entered ? '0s' : `${0.12 + i * 0.06}s`;
+    const noAnim = entered ? 'animation: none;' : '';
+    let question = '', options = [], customHint = 'Say it your way', guess = '', continueOn = false, continueLabel = '', continueStyle = '', trayOn = true;
+    const totalQ = 1 + Math.max(1, S.picked.length) * 3;
+    let answered = 0;
+    if (S.stage === 'domains') {
+      question = 'Which parts of life are pulling at you right now?';
+      options = all.map((d, i) => {
+        const on = S.picked.indexOf(d.id) >= 0;
+        return { text: d.name, letter: letters[i], cls: on ? 'on' : '', delay: delayFor(i), style: noAnim, showTick: true,
+          tickStyle: on ? 'opacity: 1; transform: scale(1); background: rgba(255,255,255,0.16);' : 'opacity: 0; transform: scale(.5);',
+          pick: () => { const p = this.state.picked.slice(); const k = p.indexOf(d.id); if (k >= 0) p.splice(k, 1); else p.push(d.id); this.setState({ picked: p }); } };
+      });
+      options.push({ text: 'Something else…', letter: '+', cls: 'ghost', delay: delayFor(all.length), style: noAnim, showTick: false, tickStyle: '', pick: () => this.setState({ customOpen: !this.state.customOpen }) });
+      customHint = 'Name it in a word or two';
+      guess = S.picked.length === 0 ? 'Pick as many as are true. I will narrow it down from there.' : 'Something about ' + doms.map(d => d.name.toLowerCase()).join(', ') + '…';
+      continueOn = true; trayOn = false;
+      continueLabel = S.picked.length === 0 ? 'Pick at least one' : (S.picked.length === 1 ? 'Continue with one' : `Continue with ${S.picked.length}`);
+      continueStyle = S.picked.length === 0 ? 'opacity: .35; pointer-events: none;' : '';
+    } else if (S.stage === 'q') {
+      const d = doms[S.di];
+      answered = 1 + S.di * 3 + S.qi;
+      let list;
+      if (S.qi === 0) { question = d.q; list = d.options.map(o => o.t); customHint = 'Your own words'; }
+      else if (S.qi === 1) { question = S.a1.q; list = S.a1.opts; customHint = 'Your own answer'; }
+      else { question = 'By when?'; list = this.WHEN; customHint = 'A date or a season'; }
+      options = list.map((t, i) => ({ text: t, letter: letters[i], cls: S.flash === t ? 'on' : '', delay: delayFor(i), style: noAnim, showTick: false, tickStyle: '', pick: () => this.answer(t, false) }));
+      options.push({ text: 'Something else…', letter: '+', cls: S.customOpen ? 'on' : 'ghost', delay: delayFor(list.length), style: noAnim, showTick: false, tickStyle: '', pick: () => this.setState({ customOpen: !this.state.customOpen }) });
+      const bits = [d.name.toLowerCase()]; if (S.a1) bits.push(S.a1.t.toLowerCase()); if (S.a2) bits.push(S.a2.toLowerCase());
+      guess = S.qi === 0 ? `${d.name}. I'm listening…` : `I'm seeing ${bits.join(' → ')}…`;
+    } else {
+      answered = totalQ;
+      guess = S.goals.length === 1 ? 'One goal, held clearly.' : `${S.goals.length} goals. I think I've got you.`;
+      trayOn = false;
+    }
+    const clarity = Math.min(100, Math.round(8 + 92 * (answered / totalQ)));
+    const dash = (201 * (1 - clarity / 100)).toFixed(1);
+    const tray = doms.map((d, i) => {
+      const g = S.goals.find(x => x.id === d.id);
+      return { cls: g ? '' : (i === S.di ? 'cur' : 'empty'), filled: !!g, stone: d.cls };
+    });
+    const trayHint = S.stage === 'q' ? (S.goals.length ? S.goals[S.goals.length - 1].title : `${doms.length - S.goals.length} to shape`) : '';
+    const customUse = () => {
+      const text = this.state.customText.trim(); if (!text) return;
+      if (this.state.stage === 'domains') {
+        const id = 'custom' + (this.state.customDomains.length + 1);
+        const cd = { id, name: text, cls: this.CUSTOM_CLS[this.state.customDomains.length % 4], q: `What would a win look like for “${text}”?`, options: [
+          { t: 'Start it', q: 'What is the first real step?', opts: ['Book the time', 'Tell someone', 'Buy the thing'], title: () => 'Start: ' + text },
+          { t: 'Finish it', q: 'How far along are you?', opts: ['Barely started', 'Halfway', 'Nearly there'], title: () => 'Finish: ' + text },
+          { t: 'Do it every week', q: 'How many times?', opts: ['Once', 'Twice', 'Three times'], title: (b) => text + ', ' + b.toLowerCase() + ' a week' },
+        ] };
+        this.setState({ customDomains: this.state.customDomains.concat([cd]), picked: this.state.picked.concat([id]), customOpen: false, customText: '' });
+      } else {
+        this.answer(text, true);
+      }
+    };
+    return {
+      counter: S.stage === 'done' ? 'Done' : `Question ${S.count}`,
+      clarity, dash, guess, question, options,
+      qStyle: (S.stage === 'done' || S.finished) ? 'opacity: 0; pointer-events: none;' : (S.leaving ? 'opacity: 0; transform: translateX(-24px);' : 'opacity: 1; transform: translateX(0);'),
+      customOpen: S.customOpen, customHint, customText: S.customText,
+      customType: (e) => this.setState({ customText: e.target.value }),
+      customUse, customUseStyle: S.customText.trim() ? '' : 'opacity: .35; pointer-events: none;',
+      continueOn: continueOn && !S.finished, continueLabel, continueStyle,
+      continueTap: () => { if (!this.state.picked.length) return; this.go({ stage: 'q', di: 0, qi: 0, a1: null, a2: null }); },
+      trayOn: trayOn && !S.finished, tray, trayCount: `${S.goals.length} of ${doms.length}`, trayHint,
+      doneOn: S.stage === 'done' && !S.finished,
+      goalRows: S.goals.map((g, i) => ({ title: g.title, cls: g.cls, sub: `${g.domain} · ${g.when.toLowerCase() === 'no deadline' ? 'no deadline' : 'in ' + g.when.toLowerCase()}`, delay: `${0.1 + i * 0.08}s`, remove: () => this.setState({ goals: this.state.goals.filter(x => x !== g), picked: this.state.picked.filter(id => id !== g.id) }) })),
+      addAnother: () => this.go({ stage: 'domains' }),
+      finish: () => { if (this.state.goals.length) this.setState({ finished: true }); },
+      finishLabel: S.goals.length ? `Build my blueprint · ${S.goals.length} goal${S.goals.length === 1 ? '' : 's'}` : 'Add a goal first',
+      finishedOn: S.finished,
+      finalStones: S.goals.map(g => ({ cls: g.cls })),
+      finalLine: S.goals.map(g => g.title).join(' · '),
+      restart: () => this.setState({ stage: 'domains', picked: [], customDomains: [], di: 0, qi: 0, a1: null, a2: null, goals: [], customOpen: false, customText: '', flash: null, finished: false, count: 1 }),
+    };
+  }
+}
+</script>
+</body>
+</html>

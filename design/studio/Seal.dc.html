@@ -1,0 +1,130 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: "Outfit", "Helvetica Neue", Arial, sans-serif; -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
+    a { color: #FFFFFF; } a:hover { color: #EA4B2E; }
+    .label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+    .stone { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; background: radial-gradient(circle at 32% 26%, #FFDCCF 0%, #FF8A66 24%, #EA4B2E 60%, #7A1D10 100%); box-shadow: inset -14px -18px 34px rgba(0,0,0,0.4), inset 8px 8px 16px rgba(255,255,255,0.35); }
+    .stone::after { content: ""; position: absolute; left: 20%; top: 12%; width: 30%; height: 18%; border-radius: 50%; background: rgba(255,255,255,0.72); filter: blur(4px); transform: rotate(-18deg); }
+    .sheen { position: absolute; top: -20%; bottom: -20%; left: 0; width: 34%; background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.38) 50%, rgba(255,255,255,0) 100%); animation: shine 5.5s ease-in-out 1.6s infinite; }
+    .lift { position: absolute; border-radius: 50%; will-change: transform; }
+    .settle { transition: transform .9s cubic-bezier(.2,.9,.3,1.25), filter .8s ease; }
+    .track { transition: transform .12s linear; }
+    .slot { position: absolute; border-radius: 50%; background: radial-gradient(circle at 50% 45%, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.25) 55%, rgba(0,0,0,0) 72%); box-shadow: inset 0 6px 14px rgba(0,0,0,0.6), inset 0 -2px 4px rgba(255,255,255,0.06); }
+    .glow { position: absolute; border-radius: 50%; filter: blur(14px); transition: opacity .6s ease, transform .6s ease; }
+    .fill { transform-origin: left; }
+    .fill-drain { transition: transform .45s cubic-bezier(.3,.1,.2,1); }
+    .chip { cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background .25s, border-color .25s, color .25s; }
+    .holdbtn { cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+    @keyframes up { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+    @keyframes shine { 0% { transform: translateX(-160%) rotate(20deg); } 100% { transform: translateX(260%) rotate(20deg); } }
+    @keyframes tremble { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-1.2px); } 75% { transform: translateX(1.2px); } }
+    .up { animation: up .7s cubic-bezier(.2,.8,.2,1) backwards; }
+    .bob { animation: bob 4.5s ease-in-out infinite; }
+    .tremble { animation: tremble .18s linear infinite; }
+    @keyframes pulse { 0% { transform: scale(0.6); opacity: 0.9; } 100% { transform: scale(1.6); opacity: 0; } }
+    .pulse { position: absolute; left: 95px; top: 318px; width: 200px; height: 200px; border-radius: 50%; border: 2px solid rgba(255,138,102,0.8); animation: pulse 1.1s cubic-bezier(.2,.8,.2,1) .15s both; pointer-events: none; }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+  </style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: radial-gradient(120% 90% at 18% 0%, #23252C 0%, #17181C 50%, #0E0F12 100%); color: #FFFFFF;">
+  <div class="up" style="position: absolute; left: 22px; right: 22px; top: 20px; display: flex; justify-content: space-between; align-items: center; animation-delay: .05s;">
+    <div class="label" style="opacity: 0.6;">Seal the day · 22:14</div>
+    <div class="label" style="opacity: 0.6;">Day 251</div>
+  </div>
+  <div class="up" style="position: absolute; left: 22px; right: 40px; top: 56px; font-size: 34px; line-height: 38px; font-weight: 700; letter-spacing: -0.03em; text-wrap: balance; animation-delay: .2s;">{{ headline }}</div>
+
+  <!-- The day's stone above its slot; it lowers as you hold -->
+  <div class="glow" style="left: 85px; top: 250px; width: 220px; height: 120px; background: radial-gradient(closest-side, rgba(234,75,46,0.55), rgba(234,75,46,0)); {{ glowStyle }}"></div>
+  <div class="slot" style="left: 95px; top: 318px; width: 200px; height: 200px;"></div>
+  <sc-if value="{{ sealed }}" hint-placeholder-val="{{ false }}"><div class="pulse"></div><div class="pulse" style="animation-delay: .4s;"></div></sc-if>
+  <div class="slot" style="left: 115px; top: 338px; width: 160px; height: 160px; opacity: 0.6;"></div>
+  <div class="lift {{ liftClass }}" style="left: 105px; top: 150px; width: 180px; height: 180px; {{ liftStyle }}">
+    <div class="{{ bobClass }}" style="position: absolute; inset: 0;"><div class="stone"><div class="sheen"></div></div></div>
+  </div>
+
+  <div style="position: absolute; left: 22px; right: 22px; top: 470px; display: flex; flex-direction: column; gap: 14px;">
+    <div class="up" style="display: flex; flex-direction: column; gap: 8px; animation-delay: .7s;">
+      <div class="label" style="opacity: 0.55;">Today, in a word</div>
+      <div style="display: flex; gap: 8px;">
+        <sc-for list="{{ words }}" as="w" hint-placeholder-count="4">
+          <div class="chip" onClick="{{ w.pick }}" style="font-size: 14px; font-weight: 600; padding: 9px 14px; border-radius: 999px; border: 1px solid; {{ w.style }}">{{ w.text }}</div>
+        </sc-for>
+      </div>
+    </div>
+    <div class="up" style="display: flex; flex-direction: column; gap: 4px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.12); animation-delay: .85s;"><div class="label" style="opacity: 0.55;">One piece of proof</div><div style="font-size: 17px; line-height: 22px; font-weight: 500;">Two‑minute calves at 11 pm, on the bathroom floor.</div></div>
+    <div class="up" style="display: flex; flex-direction: column; gap: 4px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.12); animation-delay: 1s;"><div class="label" style="opacity: 0.55;">One thing you're glad of</div><div style="font-size: 16px; line-height: 22px; opacity: 0.45;">Type, or hold to speak…</div></div>
+  </div>
+
+  <div class="up" style="position: absolute; left: 22px; right: 22px; bottom: 30px; animation-delay: 1.2s;">
+    <div class="holdbtn" onPointerDown="{{ holdStart }}" onPointerUp="{{ holdEnd }}" onPointerCancel="{{ holdEnd }}" onPointerLeave="{{ holdEnd }}" style="position: relative; width: 100%; height: 60px;">
+      <div style="position: absolute; inset: 0; border-radius: 999px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14);"></div>
+      <div class="fill {{ fillClass }}" style="position: absolute; left: 0; top: 0; bottom: 0; width: 100%; border-radius: 999px; background: linear-gradient(90deg, #FF8A66, #EA4B2E); {{ fillStyle }}"></div>
+      <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #FFFFFF; font-size: 16px; font-weight: 600; pointer-events: none;">{{ buttonLabel }}</div>
+    </div>
+    <div class="label" style="text-align: center; margin-top: 10px; opacity: 0.45; font-size: 10.5px;">{{ helpLine }}</div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { sealed: false, word: 'Steady', hold: 0, holding: false };
+    this._timer = null; this._t0 = 0; this._hold = 0;
+    this.HOLD_MS = 1600;
+  }
+  componentWillUnmount() { if (this._timer) clearInterval(this._timer); }
+  renderVals() {
+    const s = this.state.sealed, h = this.state.hold, holding = this.state.holding;
+    const words = ['Calm', 'Tired', 'Proud', 'Steady'].map(text => ({
+      text,
+      style: text === this.state.word ? 'background: #EA4B2E; border-color: #EA4B2E; color: #FFFFFF;' : 'background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.14); color: #FFFFFF;',
+      pick: () => this.setState({ word: text })
+    }));
+    const holdStart = (e) => {
+      if (this.state.sealed) { this.setState({ sealed: false, hold: 0, holding: false }); return; }
+      try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) {}
+      if (this._timer) clearInterval(this._timer);
+      this._t0 = performance.now(); this._hold = 0;
+      this.setState({ holding: true, hold: 0 });
+      this._timer = setInterval(() => {
+        const p = Math.min(1, (performance.now() - this._t0) / this.HOLD_MS);
+        this._hold = p;
+        if (p >= 1) { clearInterval(this._timer); this._timer = null; this.setState({ sealed: true, holding: false, hold: 1 }); }
+        else this.setState({ hold: p });
+      }, 16);
+    };
+    const holdEnd = () => {
+      if (!this.state.holding) return;
+      if (this._timer) { clearInterval(this._timer); this._timer = null; }
+      this.setState({ holding: false, hold: 0 });
+    };
+    const drop = s ? 150 : Math.round(150 * h * 0.35);            // the stone lowers a little as you hold, then all the way when sealed
+    const sat = s ? 1.08 : (0.9 + 0.15 * h);
+    return {
+      words, holdStart, holdEnd, sealed: s,
+      headline: s ? 'Sealed. See you at dawn.' : (holding ? 'Keep holding…' : 'Quiet day. The stretch still counted.'),
+      liftStyle: `transform: translateY(${drop}px) scale(${s ? 0.86 : (1 - 0.05 * h).toFixed(3)}); filter: saturate(${sat.toFixed(2)}) brightness(${(1 + 0.04 * (s ? 1 : h)).toFixed(3)});`,
+      liftClass: holding ? 'track tremble' : 'settle',
+      bobClass: (s || holding) ? '' : 'bob',
+      glowStyle: s ? 'opacity: 1; transform: translateY(70px) scale(1.15);' : `opacity: ${(0.35 + 0.5 * h).toFixed(2)}; transform: translateY(${Math.round(70 * h * 0.35)}px) scale(${(1 + 0.1 * h).toFixed(2)});`,
+      fillStyle: `transform: scaleX(${s ? 1 : Math.max(0.02, h).toFixed(3)});`,
+      fillClass: holding ? '' : 'fill-drain',
+      buttonLabel: s ? 'Day 251 sealed · ' + this.state.word : (holding ? Math.round(h * 100) + '%' : 'Hold to seal'),
+      helpLine: s ? 'Tap to unseal (prototype)' : 'Press and keep holding for about two seconds'
+    };
+  }
+}
+</script>
+</body>
+</html>

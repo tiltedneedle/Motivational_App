@@ -1,0 +1,121 @@
+/**
+ * Studio tokens (PRD §8.3, §8.4, §8.7).
+ *
+ * Two grounds: the day studio and the night studio. The night studio is not
+ * "dark mode" — it is the room the writing and the seals happen in, and it is
+ * used at those moments whatever the system theme says.
+ */
+
+export const day = {
+  ground: '#F1F0EC',
+  groundTop: '#F8F7F4',
+  groundBottom: '#E4E3DF',
+  surface: '#FFFFFF',
+  surface2: '#EEEDE8',
+  ink: '#17181C',
+  ink2: '#6B6E76',
+  ink3: '#A3A6AD',
+  line: 'rgba(23,24,28,0.12)',
+  line2: 'rgba(23,24,28,0.06)',
+  scrim: 'rgba(23,24,28,0.38)',
+} as const;
+
+export const night = {
+  ground: '#17181C',
+  groundTop: '#23252C',
+  groundBottom: '#0E0F12',
+  surface: '#1E1F24',
+  surface2: '#26272D',
+  ink: '#F2F1ED',
+  ink2: '#B4B6BC',
+  ink3: '#7E8189',
+  line: 'rgba(255,255,255,0.14)',
+  line2: 'rgba(255,255,255,0.07)',
+  scrim: 'rgba(0,0,0,0.55)',
+} as const;
+
+export type Palette = typeof day;
+
+export const accent = {
+  coral: '#EA4B2E',
+  coralSoft: 'rgba(234,75,46,0.12)',
+  teal: '#169A89',
+  violet: '#6D4BE8',
+  amber: '#F09A12',
+  rose: '#E23A6E',
+  moss: '#5E9E2E',
+  pearl: '#CFCBC2',
+  success: '#1E9E5A',
+  destructive: '#B23A1E',
+} as const;
+
+export const space = [0, 4, 8, 12, 16, 22, 32, 48, 64] as const;
+
+export const radius = {
+  chip: 999,
+  field: 16,
+  sheet: 30,
+  card: 22,
+  print: 28,
+} as const;
+
+export const type = {
+  /** The interface and the coach. */
+  sans: 'Outfit_400Regular',
+  sansMedium: 'Outfit_500Medium',
+  sansSemi: 'Outfit_600SemiBold',
+  sansBold: 'Outfit_700Bold',
+  /** ONLY the user's own words. Nothing the app wrote is ever set in this. */
+  serif: 'Newsreader_400Regular',
+  serifItalic: 'Newsreader_400Regular_Italic',
+  serifMedium: 'Newsreader_500Medium',
+} as const;
+
+export const size = {
+  statement: 34,
+  h2: 28,
+  question: 22,
+  body: 17,
+  small: 15,
+  label: 12,
+  readout: 40,
+} as const;
+
+/** Springs and durations (PRD §8.5). Nothing bounces more than once. */
+export const motion = {
+  seat: { damping: 14, stiffness: 260, mass: 1 },
+  standard: { damping: 18, stiffness: 180, mass: 1 },
+  sheet: { damping: 24, stiffness: 120, mass: 1 },
+  fadeFast: 180,
+  fade: 240,
+  fadeSlow: 400,
+  holdMs: 1600,
+  stagger: 80,
+} as const;
+
+export const shadow = {
+  card: {
+    shadowColor: '#17181C',
+    shadowOpacity: 0.18,
+    shadowRadius: 40,
+    shadowOffset: { width: 0, height: 18 },
+    elevation: 6,
+  },
+  sheet: {
+    shadowColor: '#17181C',
+    shadowOpacity: 0.4,
+    shadowRadius: 60,
+    shadowOffset: { width: 0, height: -20 },
+    elevation: 16,
+  },
+  /** The pressable bottom edge on ink buttons. */
+  inkEdge: {
+    shadowColor: '#000000',
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 2,
+  },
+} as const;
+
+export const PHONE = { width: 390, height: 844 } as const;
