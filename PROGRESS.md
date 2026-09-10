@@ -15,7 +15,7 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 1. packages/core: domain model, stores (zustand + persist), engines
 - [x] 2. packages/ui: Studio tokens, Stone/Socket/Ring, HoldBar, Chip, Field, Sheet, text primitives
 - [x] 3. apps/mobile screens (all 16 routes)
-- [x] 4. Tests: 188 core + 33 contrast + 6 storage unit tests, 60 Playwright e2e checks, all green
+- [x] 4. Tests: 198 core + 33 contrast + 6 storage unit tests, 67 Playwright e2e checks, all green
 - [x] 5. supabase/: migrations with RLS and three structural authorship guards, edge functions
 - [x] 6. Hardening: the eight-lens audit's findings, worst first (see below) — 95 of 95
 - [x] 7. Research pass: libraries/versions; the migration against a real Postgres; prebuild
@@ -29,10 +29,11 @@ the app has been walked end to end in a browser on the built bundle rather than
 only tested. What is left needs a machine or a key this one does not have; see
 "Next steps".
 
-- The tree is green and committed: `pnpm verify` runs typecheck, 188 core
-  tests, 33 contrast measurements, 6 storage tests, the edge-function guards,
-  the SQL structural guards, 23 checks against a real Postgres, the serif
-  authorship guard, the web build and 60 end-to-end checks.
+- The tree is green and committed: `pnpm verify` runs the toolchain guard,
+  typecheck, 198 core tests, 33 contrast measurements, 6 storage tests, the
+  edge-function guards, the SQL structural guards, 23 checks against a real
+  Postgres, the serif authorship guard, the web build and 67 end-to-end
+  checks.
 - Three findings were **withdrawn, not fixed**: buildPlan does not construct
   plans its own validator rejects (verified across 560 combinations of strategy
   line, weekday and target date), and splitFirstMoves no longer eats the first
@@ -54,11 +55,12 @@ function guards, the SQL structural guards, the serif authorship guard, the web
 build, then the end-to-end suite. Nothing ships without it passing.
 
 ```
-pnpm test                       # 188 core + 33 contrast + 6 storage unit tests
+pnpm test:deps                  # one toolchain; the RN side left to Expo
+pnpm test                       # 198 core + 33 contrast + 6 storage unit tests
 pnpm test:sql                   # RLS on every table, the three authorship guards
 pnpm test:migration             # 23 checks against a real Postgres, via PGlite
 pnpm test:authorship            # nothing but the user's words in the serif
-pnpm build:web && pnpm test:e2e # 60 end-to-end checks, serves dist itself
+pnpm build:web && pnpm test:e2e # 67 end-to-end checks, serves dist itself
 node scripts/serve.mjs          # the built app on :8790, to walk it by hand
 cd apps/mobile && npx expo start
 ```
@@ -449,6 +451,68 @@ through it, and "no one" was not matched at all.
 Three e2e checks were added for the widths the suite's own 420 pt viewport
 cannot see, and both fixes were verified to fail without them before being kept.
 A guard that cannot fail is not a guard.
+
+### Writing the Fifteen from a blank install (2026-09-11)
+
+Cleared the device and went through the whole thing as a new person: Welcome,
+consent, the Interview, the doorway, the Fifteen, the read-back, ranking, ten
+stones across two goals, sealing the Book. Six more defects, all of them things
+only writing real sentences would surface:
+
+- **The read-back mislabelled the person's own writing.** "It is 6:40 and the
+  kitchen is still blue" came back as MIND & SLEEP. Two causes: `still` was a
+  stillness word, when in English it is almost always the adverb; and the tie
+  between mind and home was broken by the order the domains happen to be
+  written in the source file. The longer match wins now, and a genuine tie says
+  "something else" — saying nothing beats guessing out loud at what somebody's
+  sentence was about.
+- **A trailing `\w*` on each alternation read words out of the middle of
+  longer ones**: cardio as money (`card`), "the same" as people (`sam`),
+  billion as money (`bill`), restaurant as mind (`rest`).
+- **A quotation ended in a comma.** “I am out the back door before the kettle
+  boils,” — the comma before "and" belongs to the join, not to either half of
+  it. Trimming the tail leaves a verbatim substring, and there is a test that
+  says so.
+- **The Book never showed the title the person was asked to write.** Sitting 2
+  asks what is on the spine, stores it, prints it in the plain-text export, and
+  the Book itself did not. The framing chip was worse — it set the field's
+  placeholder and nothing else, so the opening they chose vanished the moment
+  they left the screen.
+- **PRD §11.6 requires "Morrow's coach is an AI" at first chat and in
+  Settings.** It was in neither.
+- **A line kept on the read-back but not named** is silently not a goal,
+  because the app does not get to name it. The screen now says so rather than
+  dropping what they just chose without explanation.
+
+### The toolchain, and two different nothings (2026-09-11)
+
+`apps/mobile` was typechecking with TypeScript 6.0.3 while `packages/core` and
+`packages/ui` used 5.9.3 — and mobile compiles those packages from source, so
+the same files were being checked by two compilers with two ideas of what is
+legal. Nothing had failed yet; it only meant `pnpm typecheck` could go green on
+a construct the app's own compiler would later reject. One version now, and
+`scripts/check-deps.mjs` is the guard, wired in as `verify`'s first step.
+
+`pnpm outdated` recommended six upgrades on the React Native side — react 19.3,
+react-native 0.87, gesture-handler 3.x, async-storage 3.x — while
+`npx expo install --check` said the tree was already correct. Those versions are
+ahead of what Expo SDK 57 supports and taking them breaks autolinking, so the
+guard also refuses a caret on any Expo-owned package: a tilde takes patches
+within the SDK's minor, a caret takes the next minor, and the next minor is the
+jump that breaks it. **TypeScript 7 and vitest 5 are both available and both
+deliberately not taken.**
+
+Two error paths were saying the wrong thing:
+
+- **`makeScene` returned `null` for two unrelated reasons** and Envision
+  printed the same message for both, so somebody who had written plenty was
+  told their writing was not enough because a request had failed.
+- **The error boundary said "export it first if you would rather be certain"
+  and offered no way to do it.** It now reads the blob straight off disk — not
+  through the store, which is one of the things that could be broken — and
+  spills it onto the screen when the platform has no share sheet, which is
+  every desktop browser. Verified live by giving the sealed Book a null chapter
+  list and pressing the button.
 
 ## Blocked on the user
 - Supabase project URL/anon key, Anthropic API key, fal.ai key, RevenueCat keys: needed to test real providers. Everything runs on local fallbacks without them.
