@@ -1,0 +1,32 @@
+# Local development: `supabase start`, then `supabase functions serve`.
+project_id = "morrow"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+
+[db]
+port = 54322
+major_version = 17
+
+[auth]
+enabled = true
+site_url = "morrow://"
+additional_redirect_urls = ["morrow://", "http://localhost:8081"]
+jwt_expiry = 3600
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+enable_confirmations = false
+
+# Every function needs a signed-in user. None of them are public.
+[functions.readback]
+verify_jwt = true
+
+[functions.safety]
+verify_jwt = true
+
+[functions.scene]
+verify_jwt = true

@@ -1,4 +1,4 @@
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { useFonts as useOutfit, Outfit_400Regular, Outfit_500Medium, Outfit_600SemiBold, Outfit_700Bold } from '@expo-google-fonts/outfit';
@@ -8,6 +8,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { day } from '@morrow/ui';
 import { useMorrow } from '../src/store';
 import { SafetyGate } from '../src/components/SafetyGate';
+import { ErrorBoundary } from '../src/components/ErrorBoundary';
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useOutfit({
@@ -19,6 +20,7 @@ export default function RootLayout() {
     Newsreader_400Regular_Italic,
     Newsreader_500Medium,
   });
+  const router = useRouter();
   const hydrated = useMorrow((s) => s.hydrated);
   const [slow, setSlow] = useState(false);
 
@@ -42,6 +44,7 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
+        <ErrorBoundary onReset={() => router.replace('/today')}>
         <Stack
           screenOptions={{
             headerShown: false,
@@ -49,6 +52,7 @@ export default function RootLayout() {
             animation: 'fade',
           }}
         />
+        </ErrorBoundary>
         {/* last in the tree, so it paints above whatever screen is showing */}
         <SafetyGate />
       </SafeAreaProvider>

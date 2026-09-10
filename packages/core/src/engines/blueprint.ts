@@ -141,7 +141,22 @@ export function buildPlan(input: BuildInput, opts: BlueprintOptions): Plan {
   // "Start with the first move" has to mean the one that comes soonest, not the
   // one the user happened to name first in their sentence.
   scheduledPieces.sort((a, b) => (a.scheduled < b.scheduled ? -1 : a.scheduled > b.scheduled ? 1 : 0));
-  const moves: Move[] = scheduledPieces.map(({ text, scheduled }, i) => {
+
+  // The repair the PRD asks for (§7.4: "repaired once, then a minimal plan is
+  // built from the user's lines"). Someone who writes "every Saturday" on a
+  // Sunday named a first move six days out, which the 48-hour rule would
+  // reject — and rejecting it means they seal their Book and get no plan at
+  // all. So open with the same line, tomorrow. It is still their sentence and
+  // still their source line; only the date is the app's, and the whole point
+  // of the rule is that the first step is close enough to actually happen.
+  const soonest = scheduledPieces[0];
+  if (soonest && daysBetween(opts.today, soonest.scheduled) > 2) {
+    scheduledPieces.unshift({ text: soonest.text, scheduled: addDays(opts.today, 1) });
+  }
+  // Never more than three in week one, counted after the repair.
+  const weekOnePieces = scheduledPieces.slice(0, 3);
+
+  const moves: Move[] = weekOnePieces.map(({ text, scheduled }, i) => {
     return {
       id: opts.newId('mv'),
       goalId: goal.id,

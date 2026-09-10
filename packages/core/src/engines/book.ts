@@ -67,6 +67,7 @@ export function buildChapters(input: BookInput): BookChapter[] {
       return {
         goalId: goal.id,
         name: goal.title,
+        ...(goal.titleAuthored === false ? { nameAuthored: false } : {}),
         horizon: goal.horizon,
         lines,
         memories: input.memories?.[goal.id] ?? [],
@@ -81,9 +82,14 @@ export function buildChapters(input: BookInput): BookChapter[] {
  * "I will", the goal names, any Quarry memories.
  *
  * What counts against: `line.generated` — any prose about this person's life
- * that they did not write. Today nothing fills that field, so a healthy Book
- * scores 1.0; the metric exists so that the day someone adds a "let me polish
- * that for you" feature, the seal starts refusing (PRD §11.1).
+ * that they did not write. That slot is the tripwire for the day someone adds
+ * a "let me polish that for you" feature: the seal starts refusing (PRD §11.1).
+ *
+ * What counts as neither: framing labels, and goal names taken from the fixed
+ * Interview bank rather than written by the person. Both come from a fixed
+ * bank, both are the same for everyone, and both are a few words long. They
+ * earn no credit, and weighing them against a paragraph would refuse honest
+ * Books over a title.
  *
  * Framing labels are deliberately NOT counted. They come from a fixed bank,
  * they are the same for everyone, and they are printed small and grey like a
@@ -95,7 +101,12 @@ export function authorshipRatio(input: BookInput, chapters: BookChapter[]): numb
   let generated = 0;
   user += input.ideal.length + (input.shadow?.length ?? 0) + input.iWill.length + input.title.length;
   for (const ch of chapters) {
-    user += ch.name.length;
+    // A goal named by tapping through the fixed bank is not the person's
+    // writing, so it earns them no credit here. Nor is it counted against
+    // them: it is a label, a few words long, and weighing it against a
+    // paragraph would refuse honest Books for the sake of a title. It simply
+    // does not count, exactly like a framing label.
+    if (ch.nameAuthored !== false) user += ch.name.length;
     for (const line of ch.lines) {
       user += line.text.length + (line.text2?.length ?? 0);
       generated += line.generated?.length ?? 0;

@@ -104,3 +104,22 @@ export function contentGuard(text: string): { allowed: boolean; redirect?: strin
   }
   return { allowed: true };
 }
+
+/**
+ * Whether a piece of writing may be handed back to the person.
+ *
+ * Writing done in crisis stays on the device — it is theirs, it exports with
+ * everything else, and deleting it is their decision, not ours. What must never
+ * happen is the app returning it to them as material: quoted in the read-back,
+ * sealed into the Book, mined for a Portrait, or read out in the morning. A
+ * person who wrote the worst sentence of their life at 2am should not meet it
+ * again over breakfast in a serif face, presented as the life they want.
+ */
+export function isQuotable(text: { safetyRisk?: SafetyRisk | null } | null | undefined): boolean {
+  return !!text && text.safetyRisk !== 'crisis';
+}
+
+/** The same rule over a list, for the places that seal or read back in bulk. */
+export function quotable<T extends { safetyRisk?: SafetyRisk | null }>(texts: readonly T[]): T[] {
+  return texts.filter(isQuotable);
+}

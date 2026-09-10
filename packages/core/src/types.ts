@@ -66,6 +66,14 @@ export const Goal = z.object({
   rank: z.number().int(),
   /** The span of the user's own writing this goal came from, if any. */
   sourceSpan: z.string().optional(),
+  /**
+   * Whether the person wrote this name themselves — typed it, or lifted it from
+   * their own writing — rather than tapping it out of the fixed bank. A bank
+   * title is the app's prose about their life, and the Book's authorship ratio
+   * counts it as such. Absent means authored, so Books sealed before this
+   * existed are unaffected.
+   */
+  titleAuthored: z.boolean().optional(),
   createdAt: z.string(),
 });
 export type Goal = z.infer<typeof Goal>;
@@ -206,6 +214,8 @@ export type BookChapterLine = z.infer<typeof BookChapterLine>;
 export const BookChapter = z.object({
   goalId: z.string(),
   name: z.string(),
+  /** Carried from the goal, so the ratio can see whose words the name is. */
+  nameAuthored: z.boolean().optional(),
   horizon: z.string(),
   lines: z.array(BookChapterLine),
   memories: z.array(z.string()).default([]),
@@ -253,6 +263,13 @@ export type Practice = z.infer<typeof Practice>;
 export const Evidence = z.object({
   id: z.string(),
   goalId: z.string().nullable(),
+  /**
+   * The move this row is proof of, when it is one. Undoing a move has to
+   * remove its own ledger row and no one else's — two moves can carry the
+   * same title on the same day, and matching on the words deleted the wrong
+   * one.
+   */
+  moveId: z.string().nullish(),
   kind: z.enum(['move', 'practice', 'milestone', 'capture', 'seal']),
   text: z.string(),
   day: z.string(),

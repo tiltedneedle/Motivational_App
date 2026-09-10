@@ -22,17 +22,29 @@ export default function SealBook() {
 
   const [error, setError] = useState<string | null>(null);
   const [sealed, setSealed] = useState(false);
+  /** Goals whose Blueprint could not be built from the lines they have. */
+  const [unplanned, setUnplanned] = useState<{ id: string; title: string; why: string }[]>([]);
 
   const onSeal = () => {
     const res = sealBook();
     if (!res.ok) {
       setError(res.error);
-      return;
+      // Tell the bar the seal was refused so it drains and can be held again.
+      return false;
     }
     setSealed(true);
-    // Build the Portrait and Blueprint for every goal that has the lines for it.
-    for (const g of goals) makePlan(g.id);
-    setTimeout(() => router.replace('/book'), 900);
+
+    // The Book is sealed either way — it is their writing and it is valid. But
+    // a goal whose plan could not be built used to fail in silence, and the
+    // person met the gap days later as an empty Today with no explanation.
+    const failed: { id: string; title: string; why: string }[] = [];
+    for (const g of goals) {
+      const built = makePlan(g.id);
+      if (!built.ok) failed.push({ id: g.id, title: g.title, why: built.error });
+    }
+    setUnplanned(failed);
+    if (failed.length === 0) setTimeout(() => router.replace('/book'), 900);
+    return true;
   };
 
   return (
@@ -69,6 +81,40 @@ export default function SealBook() {
             <Body testID="seal-error" style={{ color: '#FF8A6E' }}>
               {error}
             </Body>
+          ) : null}
+
+          {unplanned.length ? (
+            <View testID="seal-unplanned" style={{ gap: 12, borderTopWidth: 1, borderTopColor: night.line, paddingTop: 18 }}>
+              <Statement style={{ color: night.ink, fontSize: 22, lineHeight: 28 }}>
+                Your Book is sealed. {unplanned.length === 1 ? 'One goal' : `${unplanned.length} goals`} still
+                {unplanned.length === 1 ? ' needs' : ' need'} a first step.
+              </Statement>
+              <Body style={{ color: night.ink2 }}>
+                Nothing is lost. A plan is built out of the line you wrote about how you will do it, and{' '}
+                {unplanned.length === 1 ? 'this one has' : 'these have'} nothing in {unplanned.length === 1 ? 'it' : 'them'} to
+                start from yet.
+              </Body>
+              {unplanned.map((u) => (
+                <View key={u.id} style={{ gap: 4 }}>
+                  <Label style={{ color: night.ink }}>{u.title}</Label>
+                  <Label style={{ color: night.ink3 }}>{u.why}</Label>
+                </View>
+              ))}
+              <InkButton
+                testID="seal-fix-plan"
+                label={unplanned.length === 1 ? 'Write that line now' : 'Start with the first one'}
+                onPress={() => {
+                  const first = unplanned[0];
+                  if (first) router.replace(`/stone?goal=${first.id}&kind=strategies`);
+                }}
+              />
+              <InkButton
+                testID="seal-continue-anyway"
+                label="Read my Book first"
+                onPress={() => router.replace('/book')}
+                style={{ backgroundColor: 'transparent', borderWidth: 1.5, borderColor: night.line }}
+              />
+            </View>
           ) : null}
         </ScrollView>
 

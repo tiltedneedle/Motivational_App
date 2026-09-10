@@ -149,8 +149,39 @@ async function main() {
     check('a nudge appears after idle', nudge.length > 0, nudge);
     check('the nudge is a question', nudge.trim().endsWith('?') || nudge.toLowerCase().includes('keep going'), nudge);
 
+    // ---- the app is killed mid-sitting
+    // Fifteen minutes of writing is the most expensive thing a person gives
+    // this product. A backgrounded phone must not be able to take it, so the
+    // page is reloaded outright — the process is gone, only disk survives.
+    const beforeCrash = await page.locator('[data-testid="write-input"]').inputValue();
+    await page.goto(`${BASE}/write?kind=ideal`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(3000);
+    await page.waitForTimeout(1500);
+
+    const resume = page.locator('[data-testid="write-resume"]').first();
+    let survived = true;
+    try {
+      await resume.waitFor({ state: 'visible', timeout: 15_000 });
+    } catch {
+      survived = false;
+    }
+    check('an interrupted sitting is offered back', survived);
+
+    if (survived) {
+      await tap('write-resume');
+      await page.waitForTimeout(400);
+      const afterCrash = await page.locator('[data-testid="write-input"]').inputValue();
+      check(
+        'every word written before the crash is still there',
+        afterCrash === beforeCrash,
+        `${afterCrash.length} of ${beforeCrash.length} characters`,
+      );
+      const left = await text('write-remaining');
+      check('the ring picks up where it stopped, not at the top', !left.startsWith('15:00'), left);
+    }
+
     // fast-forward past the ten-minute floor
-    await page.clock.runFor(10 * 60 * 1000);
+    await page.clock.runFor(11 * 60 * 1000);
     await page.waitForTimeout(400);
     check('the room can be closed once the floor is met', await seen('write-close'));
     await tap('write-close');

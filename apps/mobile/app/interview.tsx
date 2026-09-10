@@ -93,6 +93,9 @@ export default function Interview() {
         domain: d.domain,
         ...(d.domainLabel ? { domainLabel: d.domainLabel } : {}),
         horizon: d.horizon,
+        // A custom answer is the person's own words; a tapped option is the
+        // bank's. The Book's authorship ratio needs to know which.
+        authored: d.custom,
       })),
     );
     router.push('/authoring');

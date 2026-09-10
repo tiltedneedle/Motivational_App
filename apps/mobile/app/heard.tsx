@@ -11,7 +11,7 @@ import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { domainMeta, type Span } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Statement, Stone, Studio, UserField, UserText, day } from '@morrow/ui';
-import { ai, useMorrow } from '../src/store';
+import { ai, latestText, useMorrow } from '../src/store';
 
 interface Row {
   span: Span;
@@ -29,7 +29,8 @@ export default function Heard() {
   const [leftOut, setLeftOut] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
 
-  const source = texts.find((t) => t.kind === 'ideal')?.body ?? '';
+  // The newest sitting that may be quoted. Never a crisis one.
+  const source = latestText(texts, 'ideal')?.body ?? '';
 
   useEffect(() => {
     let alive = true;
@@ -68,6 +69,8 @@ export default function Heard() {
     if (named.length) {
       addGoals(
         named.map((r) => ({
+          // Named by the person, on the read-back screen, in their own words.
+          authored: true,
           title: r.name.trim(),
           domain: r.span.domain,
           horizon: 'No deadline',

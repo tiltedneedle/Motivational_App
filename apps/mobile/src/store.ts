@@ -16,7 +16,9 @@ import {
   buildPortrait,
   dayOf,
   draftLockUntil,
+  draftOf,
   guarded,
+  isQuotable,
   newId,
   reading,
   screen,
@@ -38,8 +40,10 @@ import {
   type Profile,
   type SafetyRisk,
   type Scene,
+  type WritingDraft,
   type WritingKind,
   type WritingMode,
+  type WritingSessionState,
 } from '@morrow/core';
 
 export interface ToastState {
@@ -57,6 +61,10 @@ export interface MorrowState {
   goals: Goal[];
   analyses: GoalAnalysis[];
   texts: AuthoringText[];
+  /** In-flight sittings, one per kind. Written as the person types. */
+  drafts: Record<string, WritingDraft>;
+  /** True when the local store could not be read. Writing is unsafe. */
+  storageError: boolean;
   books: BookVersion[];
   portraits: Portrait[];
   plans: Plan[];
@@ -78,7 +86,7 @@ export interface MorrowState {
 
   // goals
   addGoals: (
-    drafts: { title: string; domain: DomainId; domainLabel?: string; horizon: string; sourceSpan?: string }[],
+    drafts: { title: string; domain: DomainId; domainLabel?: string; horizon: string; sourceSpan?: string; authored?: boolean }[],
   ) => void;
   renameGoal: (id: string, title: string) => void;
   dropGoal: (id: string) => void;
@@ -86,6 +94,8 @@ export interface MorrowState {
 
   // authoring
   saveText: (kind: WritingKind, body: string, mode: WritingMode, seconds: number) => AuthoringText | null;
+  saveDraft: (session: WritingSessionState) => void;
+  clearDraft: (kind: WritingKind) => void;
   writeAnalysis: (
     goalId: string,
     kind: AnalysisKind,
@@ -123,6 +133,8 @@ const EMPTY = {
   goals: [] as Goal[],
   analyses: [] as GoalAnalysis[],
   texts: [] as AuthoringText[],
+  drafts: {} as Record<string, WritingDraft>,
+  storageError: false,
   books: [] as BookVersion[],
   portraits: [] as Portrait[],
   plans: [] as Plan[],
@@ -165,6 +177,8 @@ export const useMorrow = create<MorrowState>()(
               goals[i] = {
                 ...existing,
                 ...(d.sourceSpan && !existing.sourceSpan ? { sourceSpan: d.sourceSpan } : {}),
+                // Naming it in their own words upgrades a bank title.
+                ...(d.sourceSpan || d.authored ? { titleAuthored: true } : {}),
                 ...(existing.horizon === 'No deadline' && d.horizon !== 'No deadline'
                   ? { horizon: d.horizon, targetDate: horizonToDate(d.horizon) }
                   : {}),
@@ -181,6 +195,7 @@ export const useMorrow = create<MorrowState>()(
               status: 'named',
               rank: goals.length,
               ...(d.sourceSpan ? { sourceSpan: d.sourceSpan } : {}),
+              titleAuthored: !!d.sourceSpan || d.authored === true,
               createdAt: new Date().toISOString(),
             });
           }
@@ -188,7 +203,8 @@ export const useMorrow = create<MorrowState>()(
         }),
 
       renameGoal: (id, title) =>
-        set((s) => ({ goals: s.goals.map((g) => (g.id === id ? { ...g, title: title.trim() } : g)) })),
+        // Typing a name makes it theirs.
+        set((s) => ({ goals: s.goals.map((g) => (g.id === id ? { ...g, title: title.trim(), titleAuthored: true } : g)) })),
 
       dropGoal: (id) =>
         set((s) => ({
@@ -217,12 +233,34 @@ export const useMorrow = create<MorrowState>()(
           safetyRisk: risk.risk,
           createdAt: new Date().toISOString(),
         };
-        set((s) => ({
-          texts: [...s.texts.filter((t) => t.kind !== kind || kind === 'addition'), text],
-          safetyPause: risk.risk === 'crisis' ? { risk: risk.risk, at: new Date().toISOString() } : s.safetyPause,
-        }));
+        set((s) => {
+          // The sitting is on disk properly now, so the crash-draft goes.
+          const { [kind]: _done, ...drafts } = s.drafts;
+          return {
+            // Append-only. The old code dropped any earlier sitting of the same
+            // kind, so opening the Fifteen a second time destroyed the first
+            // fifteen minutes with no warning and no undo. Writing is never
+            // overwritten here; the newest one is simply the one that is read.
+            texts: [...s.texts, text],
+            drafts,
+            safetyPause: risk.risk === 'crisis' ? { risk: risk.risk, at: new Date().toISOString() } : s.safetyPause,
+          };
+        });
         // A crisis result never returns the text onward for read-back.
         return risk.risk === 'crisis' ? null : text;
+      },
+
+      // Called on a timer while the room is open. It never runs the safety
+      // screen and never creates an AuthoringText: a draft is not a sitting.
+      saveDraft: (session) => {
+        set((s) => ({ drafts: { ...s.drafts, [session.kind]: draftOf(session) } }));
+      },
+
+      clearDraft: (kind) => {
+        set((s) => {
+          const { [kind]: _gone, ...drafts } = s.drafts;
+          return { drafts };
+        });
       },
 
       writeAnalysis: (goalId, kind, input) => {
@@ -257,9 +295,11 @@ export const useMorrow = create<MorrowState>()(
 
       sealBook: () => {
         const s = get();
-        const ideal = s.texts.find((t) => t.kind === 'ideal');
-        const shadow = s.texts.find((t) => t.kind === 'shadow');
-        const additions = s.texts.filter((t) => t.kind === 'addition').map((t) => t.body);
+        // Writing done in crisis stays on the device but is never sealed into
+        // the Book. It is theirs to keep and to export; it is not material.
+        const ideal = latestText(s.texts, 'ideal');
+        const shadow = latestText(s.texts, 'shadow');
+        const additions = s.texts.filter((t) => t.kind === 'addition' && isQuotable(t)).map((t) => t.body);
         try {
           const book = buildBookVersion(
             {
@@ -287,7 +327,7 @@ export const useMorrow = create<MorrowState>()(
       makePortraitAndPlan: (goalId) => {
         const s = get();
         const goal = s.goals.find((g) => g.id === goalId);
-        const ideal = s.texts.find((t) => t.kind === 'ideal')?.body ?? '';
+        const ideal = latestText(s.texts, 'ideal')?.body ?? '';
         if (!goal) return { ok: false, error: 'That goal is gone.' };
         const analyses = s.analyses.filter((a) => a.goalId === goalId);
         try {
@@ -326,13 +366,18 @@ export const useMorrow = create<MorrowState>()(
                   {
                     id: newId('ev'),
                     goalId: plans.find((p) => p.moves.some((m) => m.id === moveId))?.goalId ?? null,
+                    moveId,
                     kind: 'move' as const,
                     text: title,
                     day,
                     createdAt: new Date().toISOString(),
                   },
                 ]
-              : s.evidence.filter((e) => !(e.kind === 'move' && e.text === title && e.day === day));
+              : // Undo removes this move's own row. Matching on the title used to
+                // delete a different move that happened to be called the same thing.
+                s.evidence.filter((e) =>
+                  e.moveId ? e.moveId !== moveId : !(e.kind === 'move' && e.text === title && e.day === day),
+                );
           return { plans, evidence: ev, days: recomputeDay(s, plans, ev, day) };
         }),
 
@@ -354,7 +399,7 @@ export const useMorrow = create<MorrowState>()(
             effort: (minutes === '2 min' ? 'S' : minutes === '45 min' ? 'L' : 'M') as 'S' | 'M' | 'L',
             energy: 'low' as const,
             ifThen: null,
-            scheduledFor: todayISO(),
+            scheduledFor: dayOf(new Date(), s.profile.dayBoundaryHour),
             week: 1,
             status: 'todo' as const,
             completedAt: null,
@@ -438,12 +483,21 @@ export const useMorrow = create<MorrowState>()(
       name: 'morrow-v1',
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (s) => {
-        const { hydrated: _h, toast: _t, ...rest } = s as MorrowState & Record<string, unknown>;
+        const { hydrated: _h, toast: _t, storageError: _e, ...rest } = s as MorrowState & Record<string, unknown>;
         return rest as Partial<MorrowState>;
       },
-      onRehydrateStorage: () => (state) => {
+      onRehydrateStorage: () => (state, error) => {
+        if (error) {
+          // The disk is there but unreadable. Booting as a new user would be
+          // the worst possible response: the next write would overwrite a Book
+          // that is still on the device. So the app comes up refusing to save,
+          // and says so, rather than quietly starting the person's life again.
+          console.error('[morrow] could not read local storage', error);
+          useMorrow.setState({ hydrated: true, storageError: true });
+          return;
+        }
         state?.setToast(null);
-        useMorrow.setState({ hydrated: true });
+        useMorrow.setState({ hydrated: true, storageError: false });
       },
     },
   ),
@@ -451,13 +505,41 @@ export const useMorrow = create<MorrowState>()(
 
 // ---------------------------------------------------------------- helpers
 
+/**
+ * The sitting that speaks for a kind: the most recent one that may be quoted.
+ *
+ * `texts` is append-only, so a person who writes the Fifteen twice has both on
+ * the device. The Book reads the latest; the earlier one is still theirs and
+ * still exports.
+ */
+export function latestText(texts: AuthoringText[], kind: WritingKind): AuthoringText | null {
+  let best: AuthoringText | null = null;
+  for (const t of texts) {
+    if (t.kind !== kind || !isQuotable(t)) continue;
+    if (!best || t.createdAt >= best.createdAt) best = t;
+  }
+  return best;
+}
+
+
 function recomputeDay(
   s: MorrowState,
   plans: Plan[],
   evidence: Evidence[],
   day: string,
 ): Record<string, DaySummary> {
-  const moves = plans.flatMap((p) => p.moves).filter((m) => m.scheduledFor === day || m.status !== 'todo');
+  // A day counts what was due that day, plus anything actually finished that
+  // day. It used to count `status !== 'todo'`, which swept in every move ever
+  // completed — so the Consistency Score climbed toward 100 and could never
+  // fall, which is exactly the number the product must not be able to fake.
+  const boundary = s.profile.dayBoundaryHour;
+  const moves = plans
+    .flatMap((p) => p.moves)
+    .filter(
+      (m) =>
+        m.scheduledFor === day ||
+        (m.status === 'done' && m.completedAt && dayOf(new Date(m.completedAt), boundary) === day),
+    );
   const done = moves.filter((m) => m.status === 'done').length;
   const skipped = moves.filter((m) => m.status === 'skip').length;
   const planned = moves.length;
@@ -528,7 +610,15 @@ export function latestBook(s: MorrowState): BookVersion | null {
 export function todaysMoves(s: MorrowState) {
   const day = dayOf(new Date(), s.profile.dayBoundaryHour);
   const all = s.plans.flatMap((p) => p.moves);
-  const due = all.filter((m) => !m.scheduledFor || m.scheduledFor <= day || m.status !== 'todo');
+  const boundary = s.profile.dayBoundaryHour;
+  const touchedToday = (m: (typeof all)[number]) =>
+    m.status === 'done' && !!m.completedAt && dayOf(new Date(m.completedAt), boundary) === day;
+  // Due today or overdue and still open, plus what was finished today so the
+  // screen shows the day's work. Anything closed on an earlier day is history,
+  // not today — it used to stay on the list forever.
+  const due = all.filter(
+    (m) => (m.status === 'todo' && (!m.scheduledFor || m.scheduledFor <= day)) || m.scheduledFor === day || touchedToday(m),
+  );
   if (due.some((m) => m.status === 'todo')) {
     return due.sort((a, b) => a.order - b.order);
   }

@@ -5,11 +5,14 @@
  */
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { AppState, ScrollView, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   DOORWAY,
   canClose,
+  canResume,
+  draftWorthKeeping,
+  resumeWriting,
   formatRemaining,
   minSecondsToCount,
   polish,
@@ -35,16 +38,27 @@ export default function Write() {
 
   const track = useMorrow((s) => s.profile.track);
   const saveText = useMorrow((s) => s.saveText);
+  const saveDraft = useMorrow((s) => s.saveDraft);
+  const clearDraft = useMorrow((s) => s.clearDraft);
   const goals = useMorrow((s) => s.goals);
+  const draft = useMorrow((s) => s.drafts[kind]);
 
   const [phase, setPhase] = useState<'doorway' | 'writing' | 'closed'>('doorway');
   const [mode, setMode] = useState<WritingMode>('type');
   const [session, setSession] = useState<WritingSessionState>(() => startWriting(kind, track, 'type'));
+  const [endedEarly, setEndedEarly] = useState(false);
   const typingRef = useRef(false);
   const inputRef = useRef<TextInput>(null);
+  // The autosave reads the newest session without re-arming its timer on
+  // every keystroke, which would make the timer useless.
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
 
   const doorway = DOORWAY[kind];
   const seeds = goals.map((g) => g.title).slice(0, 4);
+  const resumable = draftWorthKeeping(draft);
 
   useEffect(() => {
     if (phase !== 'writing') return;
@@ -62,6 +76,39 @@ export default function Write() {
     if (session.closed && phase === 'writing') setPhase('closed');
   }, [session.closed, phase]);
 
+  // A sitting may be picked up once. Arriving on a draft that has already been
+  // resumed ends it — but what was written still counts, so the person lands on
+  // the read-back with their words rather than in an empty room.
+  useEffect(() => {
+    if (phase !== 'doorway' || !resumable || !draft || canResume(draft)) return;
+    setSession(resumeWriting(draft));
+    setEndedEarly(true);
+    setPhase('closed');
+  }, [phase, resumable, draft]);
+
+  // Autosave. Fifteen minutes is the most expensive thing a person gives this
+  // product, and a phone that gets killed in the background must not take it.
+  const flush = useCallback(() => {
+    if (phaseRef.current !== 'writing') return;
+    const live = sessionRef.current;
+    if (!live.body.trim() && live.elapsed < 5) return;
+    saveDraft(live);
+  }, [saveDraft]);
+
+  useEffect(() => {
+    if (phase !== 'writing') return;
+    const id = setInterval(flush, 4_000);
+    const sub = AppState.addEventListener('change', (next) => {
+      // Backgrounding is the moment the process can be reaped, so write now.
+      if (next !== 'active') flush();
+    });
+    return () => {
+      clearInterval(id);
+      sub.remove();
+      flush();
+    };
+  }, [phase, flush]);
+
   const onChange = useCallback((body: string) => {
     typingRef.current = true;
     setSession((s) => ({ ...s, body, idleMs: 0, nudge: null }));
@@ -69,6 +116,9 @@ export default function Write() {
 
   const close = () => {
     const saved = saveText(kind, session.body, mode, session.elapsed);
+    // saveText clears the draft on success; a crisis pause must clear it too,
+    // or the words come back the next time the room is opened.
+    clearDraft(kind);
     if (!saved) {
       // A crisis result pauses the sitting; the gate above shows the card.
       router.replace('/today');
@@ -104,18 +154,40 @@ export default function Write() {
             </View>
           </View>
           <View style={{ paddingBottom: 18, gap: 6 }}>
-            <InkButton
-              testID="write-begin"
-              label={`Begin · ${Math.round(targetSeconds(kind, track) / 60)} minutes`}
-              onPress={() => {
-                setSession(startWriting(kind, track, mode));
-                setPhase('writing');
-                setTimeout(() => inputRef.current?.focus(), 60);
-              }}
-            />
-            <Label style={{ color: night.ink3, textAlign: 'center' }}>
-              {mode === 'type' ? 'No editing. No going back.' : 'Talking counts as writing. Edit the transcript after.'}
-            </Label>
+            {resumable && draft && canResume(draft) ? (
+              <>
+                <InkButton
+                  testID="write-resume"
+                  label={`Carry on · ${formatRemaining(
+                    Math.max(0, targetSeconds(kind, track) - draft.elapsed),
+                  )} left`}
+                  onPress={() => {
+                    setSession(resumeWriting(draft));
+                    setMode(draft.mode);
+                    setPhase('writing');
+                    setTimeout(() => inputRef.current?.focus(), 60);
+                  }}
+                />
+                <Label style={{ color: night.ink3, textAlign: 'center' }}>
+                  {wordCount(draft.body)} words are still here. You can pick this up once.
+                </Label>
+              </>
+            ) : (
+              <>
+                <InkButton
+                  testID="write-begin"
+                  label={`Begin · ${Math.round(targetSeconds(kind, track) / 60)} minutes`}
+                  onPress={() => {
+                    setSession(startWriting(kind, track, mode));
+                    setPhase('writing');
+                    setTimeout(() => inputRef.current?.focus(), 60);
+                  }}
+                />
+                <Label style={{ color: night.ink3, textAlign: 'center' }}>
+                  {mode === 'type' ? 'No editing. No going back.' : 'Talking counts as writing. Edit the transcript after.'}
+                </Label>
+              </>
+            )}
           </View>
         </SafeAreaView>
       </Studio>
@@ -129,10 +201,12 @@ export default function Write() {
         <SafeAreaView style={{ flex: 1, paddingHorizontal: 22, justifyContent: 'center', gap: 24 }}>
           <Stone size={132} domain="health" polish={polish(words)} seated style={{ alignSelf: 'center' }} />
           <Statement style={{ color: night.ink, textAlign: 'center', fontSize: 28, lineHeight: 34 }}>
-            That is the most you have said about this in one go.
+            {endedEarly ? 'The room closed while you were away.' : 'That is the most you have said about this in one go.'}
           </Statement>
           <Body style={{ color: night.ink2, textAlign: 'center' }}>
-            Sealed as a draft for a day. You can read it, not edit it.
+            {endedEarly
+              ? `Every word you wrote is here — ${words} of them. A sitting can be picked up once, and this one already was, so it counts as it stands.`
+              : 'Sealed as a draft for a day. You can read it, not edit it.'}
           </Body>
           <InkButton testID="write-continue" label="Read it back to me" onPress={close} />
         </SafeAreaView>
@@ -186,12 +260,20 @@ export default function Write() {
           {seeds.length ? (
             <View style={{ width: 92, borderLeftWidth: 1, borderLeftColor: night.line, paddingLeft: 12, gap: 10 }}>
               <Label style={{ color: night.ink3 }}>Seeds</Label>
+              {/*
+                These are read, never inserted. Tapping one used to paste it
+                into the writing, which put words the person only *chose* from
+                a list into prose the Book then counts as theirs.
+              */}
               {seeds.map((s) => (
-                <Pressable key={s} testID={`seed-${s}`} onPress={() => onChange(`${session.body}${session.body ? ' ' : ''}${s}`)}>
-                  <UserText italic style={{ fontSize: 13, lineHeight: 17, color: night.ink3 }}>
-                    “{s}”
-                  </UserText>
-                </Pressable>
+                <UserText
+                  key={s}
+                  italic
+                  accessibilityLabel={`One of your goals: ${s}`}
+                  style={{ fontSize: 13, lineHeight: 17, color: night.ink3 }}
+                >
+                  “{s}”
+                </UserText>
               ))}
             </View>
           ) : null}

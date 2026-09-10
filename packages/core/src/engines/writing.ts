@@ -118,6 +118,68 @@ export function startWriting(kind: WritingKind, track: DepthTrack, mode: Writing
   };
 }
 
+/**
+ * What survives the app being killed mid-sitting.
+ *
+ * Fifteen minutes of writing is the most expensive thing a person gives this
+ * product, and a backgrounded phone must never be able to take it. The room
+ * writes one of these to disk as it goes; nothing else in the app reads it.
+ */
+export interface WritingDraft {
+  kind: WritingKind;
+  mode: WritingMode;
+  track: DepthTrack;
+  body: string;
+  elapsed: number;
+  /** True once the sitting has already been picked back up. */
+  pausedOnce: boolean;
+  updatedAt: string;
+}
+
+export function draftOf(s: WritingSessionState, updatedAt = new Date().toISOString()): WritingDraft {
+  return {
+    kind: s.kind,
+    mode: s.mode,
+    track: s.track,
+    body: s.body,
+    elapsed: s.elapsed,
+    pausedOnce: s.pausedOnce,
+    updatedAt,
+  };
+}
+
+/**
+ * A sitting may be picked up once. The second interruption ends it, and what
+ * was written still counts — the person is taken to the read-back with their
+ * words rather than back to an empty room.
+ */
+export function resumeWriting(d: WritingDraft): WritingSessionState {
+  return {
+    kind: d.kind,
+    mode: d.mode,
+    track: d.track,
+    body: d.body,
+    elapsed: d.elapsed,
+    idleMs: 0,
+    nudge: null,
+    nudgeCount: 0,
+    pausedOnce: true,
+    closed: d.elapsed >= targetSeconds(d.kind, d.track),
+  };
+}
+
+export function canResume(d: WritingDraft | null | undefined): boolean {
+  return !!d && !d.pausedOnce;
+}
+
+/** Enough of a sitting to be worth offering back. Below this it is a stray tap. */
+export const DRAFT_WORTH_KEEPING_SECONDS = 20;
+
+export function draftWorthKeeping(d: WritingDraft | null | undefined): boolean {
+  if (!d) return false;
+  return d.elapsed >= DRAFT_WORTH_KEEPING_SECONDS || wordCount(d.body) >= 15;
+}
+
 export function tick(s: WritingSessionState, deltaMs: number, typing: boolean): WritingSessionState {
   if (s.closed) return s;
   const elapsed = s.elapsed + deltaMs / 1000;

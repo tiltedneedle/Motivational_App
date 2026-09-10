@@ -94,20 +94,26 @@ export function splitFirstMoves(strategyLine: string): string[] {
   const line = (strategyLine ?? '').trim();
   if (!line) return [];
   const days = line.match(
-    /\b(mon|tues|wednes|thurs|fri|satur|sun)day\b/gi,
+    // `days?` so a person who writes "Mondays and Wednesdays" is understood to
+    // mean one habit on two days, rather than two unrelated moves.
+    /\b(mon|tues|wednes|thurs|fri|satur|sun)days?\b/gi,
   );
   if (days && days.length >= 2) {
     // "Tuesday, Thursday, Saturday at 6:40, out the back door" is one habit on
     // three days, so the day names come out of the body and become the schedule.
     const rest = line
-      .replace(/(mon|tues|wednes|thurs|fri|satur|sun)day(s)?/gi, '')
-      .replace(/^[\s,;:.and]+/i, '')
+      .replace(/\b(mon|tues|wednes|thurs|fri|satur|sun)day(s)?\b/gi, '')
+      // Alternation, not a character class: `[\s,;:.and]` is the set
+      // {a, n, d, punctuation, whitespace}, so it ate the first letter of the
+      // person's own sentence — "at 6:40, out the back door" was stored, and
+      // read back to them, as "t 6:40, out the back door".
+      .replace(/^(?:[\s,;:.]+|\b(?:and|then)\b)+/gi, '')
       .replace(/\s{2,}/g, ' ')
-      .replace(/^(and|,)\s*/i, '')
       .trim();
     const body = rest || line;
     return days.slice(0, 3).map((d) => {
-      const day = d.charAt(0).toUpperCase() + d.slice(1).toLowerCase();
+      const singular = d.replace(/s$/i, '');
+      const day = singular.charAt(0).toUpperCase() + singular.slice(1).toLowerCase();
       return `${day}: ${body}`.trim();
     });
   }

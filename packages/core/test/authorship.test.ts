@@ -7,9 +7,12 @@ import {
   AnthropicProvider,
   LocalProvider,
   buildBookVersion,
+  buildChapters,
   buildPlan,
   extractSpansLocally,
   guarded,
+  isQuotable,
+  quotable,
   MIN_AUTHORSHIP_RATIO,
   authorshipRatio,
   SealRefused,
@@ -298,5 +301,101 @@ describe('the Book', () => {
     const labelled = book.chapters.some((c) => c.lines.some((l) => l.framingLabel));
     expect(labelled).toBe(true);
     expect(book.authorshipRatio).toBe(1);
+  });
+});
+
+describe('writing done in crisis', () => {
+  const t = (safetyRisk: 'none' | 'concern' | 'crisis', body: string) => ({ kind: 'ideal' as const, body, safetyRisk });
+
+  it('is never handed back to the person who wrote it', () => {
+    expect(isQuotable(t('crisis', 'the worst sentence of my life'))).toBe(false);
+    expect(isQuotable(t('concern', 'I have been hard on myself'))).toBe(true);
+    expect(isQuotable(t('none', 'the kitchen is still blue'))).toBe(true);
+  });
+
+  it('treats a missing text as unquotable rather than assuming it is safe', () => {
+    expect(isQuotable(null)).toBe(false);
+    expect(isQuotable(undefined)).toBe(false);
+  });
+
+  it('filters a whole sitting list without dropping the ordinary ones', () => {
+    const all = [t('none', 'a'), t('crisis', 'b'), t('concern', 'c')];
+    const kept = quotable(all);
+    expect(kept).toHaveLength(2);
+    expect(kept.map((x) => x.body)).toEqual(['a', 'c']);
+  });
+});
+
+describe('the authorship ratio', () => {
+  const base = {
+    version: 1,
+    title: 'Untitled',
+    track: 'starter' as const,
+    iWill: 'start',
+    shadow: null,
+    memories: undefined,
+  };
+  const goal = (id: string, title: string, titleAuthored: boolean) => ({
+    id,
+    title,
+    domain: 'health' as const,
+    horizon: '1y',
+    targetDate: null,
+    status: 'authored' as const,
+    rank: 0,
+    titleAuthored,
+    createdAt: '2026-09-06T00:00:00.000Z',
+  });
+  const analysis = (goalId: string, line: string) => ({
+    id: `a-${goalId}`,
+    goalId,
+    kind: 'motives' as const,
+    framingLabel: null,
+    line,
+    line2: null,
+    paragraph: null,
+    specificity: 2,
+    createdAt: '2026-09-06T00:00:00.000Z',
+  });
+  const REAL =
+    "It's 6:40 and the kitchen is still blue. I lace the left shoe first, like always, and the door is already open before I have decided anything.";
+
+  it('gives no credit for a name the person only tapped out of the bank', () => {
+    const tapped = { ...base, ideal: REAL, goals: [goal('g1', 'Three months of breathing room', false)], analyses: [analysis('g1', 'Because I said I would.')] };
+    const typed = { ...base, ideal: REAL, goals: [goal('g1', 'Three months of breathing room', true)], analyses: [analysis('g1', 'Because I said I would.')] };
+    const massOf = (i: typeof tapped) => authorshipRatio(i as never, buildChapters(i as never));
+    // Both are honest Books, so both seal; the tapped name simply earns nothing.
+    expect(massOf(tapped)).toBe(1);
+    expect(massOf(typed)).toBe(1);
+    const tappedChapters = buildChapters(tapped as never);
+    expect(tappedChapters[0]?.nameAuthored).toBe(false);
+  });
+
+  it('refuses the seal the moment prose the person did not write reaches a chapter', () => {
+    const input = { ...base, ideal: REAL, goals: [goal('g1', 'Half marathon', true)], analyses: [analysis('g1', 'Because I said I would.')] };
+    const chapters = buildChapters(input as never);
+    // What a "let me polish that for you" feature would do.
+    const poisoned = chapters.map((c) => ({
+      ...c,
+      lines: c.lines.map((l) => ({
+        ...l,
+        generated:
+          'You have always been the kind of person who follows through, and this year that finally becomes visible to everyone around you.',
+      })),
+    }));
+    expect(authorshipRatio(input as never, poisoned)).toBeLessThan(MIN_AUTHORSHIP_RATIO);
+  });
+
+  it('still seals a short but real Book', () => {
+    const input = { ...base, ideal: REAL, goals: [goal('g1', 'Three months of breathing room', false)], analyses: [analysis('g1', 'Because I am tired of the first of the month deciding my mood.')] };
+    const book = buildBookVersion(input as never, (p: string) => `${p}-1`);
+    expect(book.authorshipRatio).toBeGreaterThanOrEqual(MIN_AUTHORSHIP_RATIO);
+  });
+
+  it('treats a Book sealed before the flag existed as the person own', () => {
+    const g = goal('g1', 'Half marathon', true);
+    const { titleAuthored: _drop, ...legacy } = g;
+    const input = { ...base, ideal: REAL, goals: [legacy], analyses: [analysis('g1', 'Because I said I would.')] };
+    expect(() => buildBookVersion(input as never, (p: string) => `${p}-1`)).not.toThrow();
   });
 });

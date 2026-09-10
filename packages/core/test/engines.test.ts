@@ -13,7 +13,13 @@ import {
   contentGuard,
   dayValue,
   detectReturns,
+  draftOf,
+  draftWorthKeeping,
   dropDraft,
+  validatePlan,
+  buildPlan,
+  resumeWriting,
+  canResume,
   followUpPrompt,
   framingSet,
   guessLine,
@@ -422,10 +428,33 @@ describe('the coach', () => {
 });
 
 describe('helpers', () => {
-  it('splits a multi-day strategy line into dated moves', () => {
+  it('lifts the day names into the schedule and leaves the sentence whole', () => {
     const moves = splitFirstMoves('Tuesday, Thursday, Saturday at 6:40, out the back door');
-    expect(moves).toHaveLength(3);
-    expect(moves[0]).toContain('Tuesday');
+    expect(moves).toEqual([
+      'Tuesday: at 6:40, out the back door',
+      'Thursday: at 6:40, out the back door',
+      'Saturday: at 6:40, out the back door',
+    ]);
+    // The other day names must not survive inside the body, and the person's
+    // own first word must not be eaten by the strip that removes them.
+    for (const m of moves) {
+      expect(m.slice(m.indexOf(':') + 1)).not.toMatch(/day/i);
+      // The body must begin with the person's own first word, not a fragment of it.
+      expect(m).toContain(': at 6:40, out the back door');
+    }
+  });
+
+  it('understands plural day names as one habit, not two unrelated moves', () => {
+    expect(splitFirstMoves('Mondays and Wednesdays, and then twenty minutes of scales')).toEqual([
+      'Monday: twenty minutes of scales',
+      'Wednesday: twenty minutes of scales',
+    ]);
+  });
+
+  it('leaves a single-day line exactly as the person wrote it', () => {
+    expect(splitFirstMoves('Saturday at 7am, park run with Sam')).toEqual([
+      'Saturday at 7am, park run with Sam',
+    ]);
   });
 
   it('cuts a two-minute version from the user verb', () => {
@@ -441,5 +470,108 @@ describe('helpers', () => {
   it('assigns 1am to yesterday when the day boundary is 3am', () => {
     expect(dayOf(new Date('2026-09-09T01:30:00'), 3)).toBe('2026-09-08');
     expect(dayOf(new Date('2026-09-09T09:30:00'), 3)).toBe('2026-09-09');
+  });
+});
+
+describe('a sitting that is interrupted', () => {
+  const sitting = () => {
+    let live = startWriting('ideal', 'full', 'type');
+    live = { ...live, body: 'I wake before the house does and the kitchen is already warm.' };
+    // Four minutes in.
+    for (let i = 0; i < 4 * 60; i += 1) live = tick(live, 1000, true);
+    return live;
+  };
+
+  it('keeps every word and the elapsed time across a crash', () => {
+    const live = sitting();
+    const draft = draftOf(live, '2026-09-10T09:00:00.000Z');
+    const back = resumeWriting(draft);
+    expect(back.body).toBe(live.body);
+    expect(Math.round(back.elapsed)).toBe(Math.round(live.elapsed));
+    expect(back.kind).toBe('ideal');
+    expect(back.track).toBe('full');
+  });
+
+  it('lets the sitting be picked up once and no more', () => {
+    const first = draftOf(sitting());
+    expect(canResume(first)).toBe(true);
+    const second = draftOf(resumeWriting(first));
+    expect(canResume(second)).toBe(false);
+  });
+
+  it('does not close a resumed sitting that still has time on the ring', () => {
+    const back = resumeWriting(draftOf(sitting()));
+    expect(back.closed).toBe(false);
+    expect(back.elapsed).toBeLessThan(targetSeconds('ideal', 'full'));
+  });
+
+  it('closes a resumed sitting whose ring had already run out', () => {
+    let live = startWriting('ideal', 'starter', 'type');
+    live = { ...live, elapsed: targetSeconds('ideal', 'starter') + 1 };
+    expect(resumeWriting(draftOf(live)).closed).toBe(true);
+  });
+
+  it('does not offer a stray tap back as an unfinished sitting', () => {
+    const stray = draftOf({ ...startWriting('ideal', 'full', 'type'), body: 'I', elapsed: 3 });
+    expect(draftWorthKeeping(stray)).toBe(false);
+    expect(draftWorthKeeping(null)).toBe(false);
+    expect(draftWorthKeeping(draftOf(sitting()))).toBe(true);
+  });
+
+  it('clears the nudge when a sitting comes back, so it does not resume mid-question', () => {
+    let live = startWriting('ideal', 'full', 'type');
+    live = { ...live, body: 'something' };
+    for (let i = 0; i < 12; i += 1) live = tick(live, 1000, false);
+    expect(live.nudge).not.toBeNull();
+    expect(resumeWriting(draftOf(live)).nudge).toBeNull();
+  });
+});
+
+describe('a plan whose first step the user put a week away', () => {
+  const goal = {
+    id: 'g1',
+    title: 'Run a half marathon',
+    domain: 'health' as const,
+    rank: 0,
+    status: 'authored' as const,
+    horizon: '1y',
+    targetDate: null,
+    createdAt: '2026-09-06T00:00:00.000Z',
+  };
+  const analyses = [
+    { id: 'a1', goalId: 'g1', kind: 'strategies' as const, framingLabel: null, line: 'Saturday at 7am, park run with Sam', line2: null, paragraph: null, specificity: 3, createdAt: '2026-09-06T00:00:00.000Z' },
+    { id: 'a2', goalId: 'g1', kind: 'monitoring' as const, framingLabel: null, line: 'The watch says 21.1', line2: null, paragraph: null, specificity: 3, createdAt: '2026-09-06T00:00:00.000Z' },
+  ];
+  let n = 0;
+  const newId = (p: string) => `${p}-${(n += 1)}`;
+
+  it('still builds, instead of leaving the person with no plan at all', () => {
+    // 2026-09-06 is a Sunday, so the next Saturday is six days out.
+    const plan = buildPlan({ goal, analyses } as never, { today: '2026-09-06', newId });
+    expect(plan.moves.length).toBeGreaterThan(0);
+    expect(validatePlan(plan, analyses as never, '2026-09-06')).toEqual([]);
+  });
+
+  it('opens within 48 hours and keeps the day the user actually named', () => {
+    const plan = buildPlan({ goal, analyses } as never, { today: '2026-09-06', newId });
+    const dates = plan.moves.map((m) => m.scheduledFor).sort();
+    expect(dates[0]).toBe('2026-09-07');
+    expect(dates).toContain('2026-09-12');
+  });
+
+  it('puts the user own words in the opening move, not the app own', () => {
+    const plan = buildPlan({ goal, analyses } as never, { today: '2026-09-06', newId });
+    const first = plan.moves.find((m) => m.scheduledFor === '2026-09-07');
+    expect(first?.title.toLowerCase()).toContain('park run');
+    expect(first?.sourceLineId).toBe('a1');
+  });
+
+  it('never puts more than three moves in the first week', () => {
+    const many = [
+      { ...analyses[0]!, line: 'Monday, Tuesday, Wednesday, Thursday and Friday at 6:40, out the back door' },
+      analyses[1]!,
+    ];
+    const plan = buildPlan({ goal, analyses: many } as never, { today: '2026-09-06', newId });
+    expect(plan.moves.filter((m) => m.week === 1).length).toBeLessThanOrEqual(3);
   });
 });

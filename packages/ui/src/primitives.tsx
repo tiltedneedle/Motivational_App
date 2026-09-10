@@ -57,12 +57,19 @@ type TextProps = {
   numberOfLines?: number;
   testID?: string;
   accessibilityRole?: 'header' | 'text';
+  /**
+   * What a screen reader says instead of the rendered characters. Needed
+   * wherever the visual form carries meaning the letters do not — a quoted
+   * fragment in a margin, a bare number, a time.
+   */
+  accessibilityLabel?: string;
 };
 
-export function Statement({ children, style, testID }: TextProps) {
+export function Statement({ children, style, testID, accessibilityLabel }: TextProps) {
   const { p } = usePalette();
   return (
     <Text
+      accessibilityLabel={accessibilityLabel}
       testID={testID}
       accessibilityRole="header"
       style={[
@@ -75,10 +82,11 @@ export function Statement({ children, style, testID }: TextProps) {
   );
 }
 
-export function Question({ children, style, testID }: TextProps) {
+export function Question({ children, style, testID, accessibilityLabel }: TextProps) {
   const { p } = usePalette();
   return (
     <Text
+      accessibilityLabel={accessibilityLabel}
       testID={testID}
       accessibilityRole="header"
       style={[{ fontFamily: fonts.sansMedium, fontSize: size.question, lineHeight: 29, color: p.ink }, style]}
@@ -88,10 +96,11 @@ export function Question({ children, style, testID }: TextProps) {
   );
 }
 
-export function Body({ children, style, numberOfLines, testID }: TextProps) {
+export function Body({ children, style, numberOfLines, testID, accessibilityLabel }: TextProps) {
   const { p } = usePalette();
   return (
     <Text
+      accessibilityLabel={accessibilityLabel}
       testID={testID}
       numberOfLines={numberOfLines}
       style={[{ fontFamily: fonts.sans, fontSize: size.body, lineHeight: 23, color: p.ink2 }, style]}
@@ -101,10 +110,11 @@ export function Body({ children, style, numberOfLines, testID }: TextProps) {
   );
 }
 
-export function Label({ children, style, testID }: TextProps) {
+export function Label({ children, style, testID, accessibilityLabel }: TextProps) {
   const { p } = usePalette();
   return (
     <Text
+      accessibilityLabel={accessibilityLabel}
       testID={testID}
       style={[
         {
@@ -132,10 +142,12 @@ export function UserText({
   italic = false,
   numberOfLines,
   testID,
+  accessibilityLabel,
 }: TextProps & { italic?: boolean }) {
   const { p } = usePalette();
   return (
     <Text
+      accessibilityLabel={accessibilityLabel}
       testID={testID}
       numberOfLines={numberOfLines}
       style={[
@@ -153,10 +165,11 @@ export function UserText({
   );
 }
 
-export function Readout({ children, style, testID }: TextProps) {
+export function Readout({ children, style, testID, accessibilityLabel }: TextProps) {
   const { p } = usePalette();
   return (
     <Text
+      accessibilityLabel={accessibilityLabel}
       testID={testID}
       style={[
         {
@@ -348,7 +361,12 @@ export function HoldBar({
 }: {
   label: string;
   doneLabel?: string;
-  onComplete: () => void;
+  /**
+   * Return `false` (or a promise of it) to refuse the seal. The bar then drains
+   * and can be held again. Without that, a refusal used to latch the control
+   * shut and strand the person on Seal the Book with nothing left to press.
+   */
+  onComplete: () => void | boolean | Promise<void | boolean>;
   durationMs?: number;
   done?: boolean;
   testID?: string;
@@ -357,32 +375,64 @@ export function HoldBar({
   const { p, dark } = usePalette();
   const fill = useRef(new Animated.Value(done ? 1 : 0)).current;
   const [holding, setHolding] = useState(false);
+  const [screenReader, setScreenReader] = useState(false);
   const anim = useRef<Animated.CompositeAnimation | null>(null);
   const completed = useRef(done);
+
+  useEffect(() => {
+    let live = true;
+    AccessibilityInfo.isScreenReaderEnabled().then((on) => {
+      if (live) setScreenReader(on);
+    }).catch(() => {});
+    const sub = AccessibilityInfo.addEventListener('screenReaderChanged', setScreenReader);
+    return () => {
+      live = false;
+      sub.remove();
+    };
+  }, []);
 
   useEffect(() => {
     completed.current = done;
     fill.setValue(done ? 1 : 0);
   }, [done, fill]);
 
+  /** Let go of the latch when the thing being sealed says no. */
+  const settle = useCallback(
+    (outcome: void | boolean | Promise<void | boolean>) => {
+      Promise.resolve(outcome)
+        .then((ok) => {
+          if (ok === false) {
+            completed.current = false;
+            setHolding(false);
+            Animated.timing(fill, { toValue: 0, duration: 450, useNativeDriver: false, easing: Easing.out(Easing.quad) }).start();
+          }
+        })
+        .catch(() => {
+          completed.current = false;
+          setHolding(false);
+          fill.setValue(0);
+        });
+    },
+    [fill],
+  );
+
   const start = useCallback(() => {
     if (completed.current) return;
     setHolding(true);
-    // Reduced motion still needs a hold, or the gesture stops meaning anything:
-    // it just skips the animated fill.
-    if (reducedMotion) {
-      anim.current = Animated.timing(fill, { toValue: 1, duration: durationMs, useNativeDriver: false, easing: Easing.linear });
-    } else {
-      anim.current = Animated.timing(fill, { toValue: 1, duration: durationMs, useNativeDriver: false, easing: Easing.linear });
-    }
+    // Reduced motion still needs the hold, or the gesture stops meaning
+    // anything. What it drops is the sweep: the bar steps rather than glides,
+    // so there is no travelling edge to follow.
+    anim.current = reducedMotion
+      ? Animated.timing(fill, { toValue: 1, duration: durationMs, useNativeDriver: false, easing: Easing.step0 })
+      : Animated.timing(fill, { toValue: 1, duration: durationMs, useNativeDriver: false, easing: Easing.linear });
     anim.current.start(({ finished }: { finished: boolean }) => {
       if (finished && !completed.current) {
         completed.current = true;
         setHolding(false);
-        onComplete();
+        settle(onComplete());
       }
     });
-  }, [durationMs, fill, onComplete, reducedMotion]);
+  }, [durationMs, fill, onComplete, reducedMotion, settle]);
 
   const cancel = useCallback(() => {
     if (completed.current) return;
@@ -391,26 +441,63 @@ export function HoldBar({
     Animated.timing(fill, { toValue: 0, duration: 450, useNativeDriver: false, easing: Easing.out(Easing.quad) }).start();
   }, [fill]);
 
+  /** Seal without the gesture. The one path assistive technology can take. */
+  const sealDirectly = useCallback(() => {
+    if (completed.current) return;
+    anim.current?.stop();
+    completed.current = true;
+    setHolding(false);
+    fill.setValue(1);
+    settle(onComplete());
+  }, [fill, onComplete, settle]);
+
+  /**
+   * Whether this activation came from a finger.
+   *
+   * A pointer press always fires onPressIn before onPress. An activation from
+   * TalkBack, from a switch, or from the Enter key arrives as a bare press with
+   * no press-in at all — and those are exactly the users who cannot hold. So a
+   * press with no press-in behind it seals, and a real tap still has to hold.
+   */
+  const fromPointer = useRef(false);
+
   const width = fill.interpolate({ inputRange: [0, 1], outputRange: ['2%', '100%'] });
 
   return (
     <Pressable
       testID={testID}
-      onPressIn={start}
+      onPressIn={() => {
+        fromPointer.current = true;
+        start();
+      }}
       onPressOut={cancel}
+      onPress={() => {
+        if (fromPointer.current) {
+          fromPointer.current = false;
+          return;
+        }
+        sealDirectly();
+      }}
       accessibilityRole="button"
       accessibilityLabel={done ? (doneLabel ?? label) : label}
-      accessibilityHint="Press and hold until the bar fills"
-      // Keyboard and screen-reader users cannot hold: a plain activation seals.
+      accessibilityHint={
+        screenReader ? 'Double tap to seal' : 'Press and hold until the bar fills'
+      }
+      accessibilityState={{ disabled: done }}
+      focusable
       onLongPress={undefined}
-      onAccessibilityTap={() => {
-        if (!completed.current) {
-          completed.current = true;
-          fill.setValue(1);
-          onComplete();
-        }
+      onAccessibilityTap={sealDirectly}
+      style={{
+        // A floor, not a ceiling: at 200% type the label has to be able to
+        // push the bar taller instead of being cut off inside it.
+        minHeight: 60,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderRadius: radius.chip,
+        overflow: 'hidden',
+        backgroundColor: p.surface2,
+        justifyContent: 'center',
       }}
-      style={{ height: 60, borderRadius: radius.chip, overflow: 'hidden', backgroundColor: p.surface2, justifyContent: 'center' }}
     >
       <Animated.View
         style={{
