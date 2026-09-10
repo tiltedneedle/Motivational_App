@@ -21,7 +21,9 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [ ] 7. Research pass: libraries/versions; improvements; repeat
 
 ## In flight
-- Working through the second audit's 37 findings, listed below. Four are closed.
+- Working through the second audit's 37 findings, listed below. The three
+  critical ones and both HoldBar findings are closed, along with the safety
+  cluster; the rest are medium and low and are listed unticked.
 - The tree is green and committed: `pnpm verify` runs typecheck, 112
   core tests, 30 contrast measurements, the edge-function guards, the SQL
   structural guards, the serif authorship guard, the web build and 40
@@ -348,6 +350,41 @@ The headline: **the storage-error path I added was destroying the data it existe
 - [ ] **medium** `apps/mobile/app/settings.tsx:23` — "Copy out what is open" exports everything except the writing that is open
 - [ ] **low** `packages/core/src/engines/blueprint.ts:377` — proposeReplan and applyReplan still have no test and no call site; the G-168 repair added the gate but not the tests it named
 - [ ] **low** `supabase/migrations/0001_init.sql:200` — evidence.move_id, the key undo correctness now depends on, has no column in the migration
+
+### Walking the app by hand (2026-09-10)
+
+`pnpm build:web` then `node scripts/serve.mjs` puts the built app on
+http://localhost:8790, and `.claude/launch.json` opens it in the browser pane.
+Every screen was opened and used: Welcome, consent, the Interview, the doorway,
+the writing room, Today, the Book, the Goal screen, Progress, Envision, the
+Coach, Settings, the practice builder, the runner, Seal the day.
+
+Everything works. The whole three-sitting flow runs, the Book seals, the plan
+lands on Today, the runner counts down and waits, and the ledger fills. Nine
+defects came out of looking that no test could have caught:
+
+- **The focus ring was Chrome's amber default**, wrapped around the writing
+  surface in the night studio, where it reads as a warning. Redrawn in the
+  product's coral; fields that already carry a coral underline show focus by
+  thickening that line instead of adding a box.
+- **Envision quoted people badly.** "You remember writing about the kitchen is
+  still." The detail extractor cut their sentence mid-phrase.
+- **The dawn brief lowercased a weekday** — "Start with tuesday: at 6:40" — and
+  punctuated on top of a quotation that already ended in a full stop.
+- **The Coach never built its own brief**, so arriving there first showed a
+  coach with nothing to say.
+- **Counts were not pluralised**: "1 pieces of writing, 1 goals".
+- **Dates were printed in their stored form**: "BY 2026-10-10".
+- **The practice builder clipped the person's own words** in each step field.
+- **Three `\b` escapes had become literal backspace bytes** in the coach engine
+  from a shell heredoc, which is why one fix silently did nothing. Swept the
+  tree; no others.
+
+Two of the loop's own habits are worth keeping after this: heredocs mangle
+escapes on this machine, so patch scripts go through the Write tool; and the
+browser pane being hidden means screenshots can show a stale frame, so read the
+DOM to confirm what is actually there.
+
 ## Blocked on the user
 - Supabase project URL/anon key, Anthropic API key, fal.ai key, RevenueCat keys: needed to test real providers. Everything runs on local fallbacks without them.
 

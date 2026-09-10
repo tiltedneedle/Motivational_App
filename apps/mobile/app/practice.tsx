@@ -155,12 +155,20 @@ export default function PracticeBuilder() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                   <Text style={{ fontFamily: fonts.sansSemi, fontSize: 13, color: day.ink2, width: 18 }}>{i + 1}</Text>
                   <View style={{ flex: 1 }}>
+                    {/*
+                      Multiline, because these are cut from the person's own
+                      sentence and a single line clipped them: "Tuesday: at
+                      6:40, out the back do…". Their words are the one thing on
+                      this screen that must not be trimmed to fit.
+                    */}
                     <UserField
                       testID={`practice-step-text-${i}`}
                       label={`Step ${i + 1}`}
                       value={s.text}
                       onChangeText={(t) => setStep(i, { text: t })}
                       placeholder="What you actually do"
+                      multiline
+                      minHeight={54}
                     />
                   </View>
                   <Pressable
