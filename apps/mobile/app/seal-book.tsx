@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import type { PaywallMoment } from '@morrow/core';
 import { Body, HoldBar, InkButton, Label, Statement, Stone, Studio, UserField, useReducedMotion, night } from '@morrow/ui';
 import { useGoals, useMorrow } from '../src/store';
 
@@ -23,7 +24,9 @@ export default function SealBook() {
   const [error, setError] = useState<string | null>(null);
   const [sealed, setSealed] = useState(false);
   /** Goals whose Blueprint could not be built from the lines they have. */
-  const [unplanned, setUnplanned] = useState<{ id: string; title: string; why: string }[]>([]);
+  const [unplanned, setUnplanned] = useState<{ id: string; title: string; why: string; moment?: PaywallMoment }[]>(
+    [],
+  );
 
   const onSeal = () => {
     const res = sealBook();
@@ -37,10 +40,12 @@ export default function SealBook() {
     // The Book is sealed either way — it is their writing and it is valid. But
     // a goal whose plan could not be built used to fail in silence, and the
     // person met the gap days later as an empty Today with no explanation.
-    const failed: { id: string; title: string; why: string }[] = [];
+    const failed: { id: string; title: string; why: string; moment?: PaywallMoment }[] = [];
     for (const g of goals) {
       const built = makePlan(g.id);
-      if (!built.ok) failed.push({ id: g.id, title: g.title, why: built.error });
+      if (!built.ok) {
+        failed.push({ id: g.id, title: g.title, why: built.error, ...(built.moment ? { moment: built.moment } : {}) });
+      }
     }
     setUnplanned(failed);
     if (failed.length === 0) setTimeout(() => router.replace('/book'), 900);
@@ -101,11 +106,24 @@ export default function SealBook() {
                   <Label style={{ color: night.ink3 }}>{u.why}</Label>
                 </View>
               ))}
+              {/*
+                A goal held back by the plan limit is a different thing from a
+                goal with no line to build from, and sending somebody to write
+                a Strategies line they have already written would be the app
+                lying about why it stopped.
+              */}
+              {unplanned[0]?.moment ? (
+                <InkButton
+                  testID="seal-see-plans"
+                  label="See what Pro adds"
+                  onPress={() => router.push(`/paywall?moment=${unplanned[0]!.moment}&from=/book`)}
+                />
+              ) : null}
               <InkButton
                 testID="seal-fix-plan"
                 label={unplanned.length === 1 ? 'Write that line now' : 'Start with the first one'}
                 onPress={() => {
-                  const first = unplanned[0];
+                  const first = unplanned.find((u) => !u.moment) ?? unplanned[0];
                   if (first) router.replace(`/stone?goal=${first.id}&kind=strategies`);
                 }}
               />

@@ -8,6 +8,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
 import { STORE_KEY, failureReason, guardedStorage, hasFailed } from './storage';
 import { syncNotices } from './notify';
+import { billing, type BillingResult, type PlanId } from './billing';
 import {
   DEFAULT_PROFILE,
   AnthropicProvider,
@@ -20,6 +21,8 @@ import {
   dueOn,
   logOf,
   FEWER_STEPS,
+  canBuildBlueprint,
+  canTakeCoachTurn,
   fewer,
   movesForDay,
   planNotices,
@@ -35,6 +38,9 @@ import {
   shouldOfferSupport,
   softenFrom,
   type RiskStamp,
+  type EntitlementContext,
+  type Gate,
+  type PaywallMoment,
   mergeGoalDrafts,
   newId,
   reading,
@@ -118,6 +124,12 @@ export interface MorrowState {
    * and tomorrow's brief would never know. This is that place.
    */
   concernAt: string | null;
+  /**
+   * Coach turns per day, for the free cap (PRD §13.3). Kept as a map rather
+   * than a counter with a date beside it, so a device that crosses midnight
+   * mid-conversation cannot end up counting yesterday's turns against today.
+   */
+  coachTurns: Record<string, number>;
   toast: ToastState | null;
   /** The coach's single invitation to the Full track, once ever. */
   fullTrackInvited: boolean;
@@ -157,7 +169,15 @@ export interface MorrowState {
   sealBook: () => { ok: true; book: BookVersion } | { ok: false; error: string };
 
   // plan
-  makePortraitAndPlan: (goalId: string) => { ok: true } | { ok: false; error: string };
+  /**
+   * Build the Portrait and the plan for a goal.
+   *
+   * `moment` is set when a paywall refused it, so the caller can raise exactly
+   * that moment rather than guessing which limit was hit.
+   */
+  makePortraitAndPlan: (
+    goalId: string,
+  ) => { ok: true } | { ok: false; error: string; moment?: PaywallMoment };
 
   // practices
   /**
@@ -231,6 +251,14 @@ export interface MorrowState {
   syncNotifications: () => Promise<{ scheduled: number; cancelled: number; silent: boolean }>;
   /** One step quieter (PRD §7.11's "Fewer" action). */
   fewerNotifications: () => void;
+
+  // money
+  /** Remember that a paywall moment has been shown. Once means once. */
+  markPaywallSeen: (moment: PaywallMoment) => void;
+  purchase: (plan: PlanId) => Promise<BillingResult>;
+  restore: () => Promise<BillingResult>;
+  /** Take one coach turn, or refuse with the moment that refused it. */
+  takeCoachTurn: () => Gate;
   makeBrief: () => Brief | null;
 
   // ui
@@ -304,6 +332,7 @@ const EMPTY = {
   briefs: [] as Brief[],
   safetyPause: null,
   concernAt: null,
+  coachTurns: {},
   toast: null,
   fullTrackInvited: false,
   bookTitle: '',
@@ -561,6 +590,20 @@ export const useMorrow = create<MorrowState>()(
         const goal = s.goals.find((g) => g.id === goalId);
         const ideal = latestText(s.texts, 'ideal')?.body ?? '';
         if (!goal) return { ok: false, error: 'That goal is gone.' };
+
+        // PRD §13.3: the free plan builds one Blueprint. Note what is *not*
+        // gated — the goal is still authored, the stones are still written, and
+        // the Book still seals with every one of them in it. What Pro buys is
+        // the plan the app builds out of those lines, never the right to write
+        // them down. A goal that already has a plan is always allowed to rebuild
+        // it, or a Monitoring line written later could never reach its own
+        // milestone.
+        const rebuilding = s.plans.some((p) => p.goalId === goalId);
+        if (!rebuilding) {
+          const day = dayOf(new Date(), s.profile.dayBoundaryHour);
+          const gate = canBuildBlueprint(entitlementOf(s, day));
+          if (!gate.allowed) return { ok: false, error: gate.reason, moment: gate.moment };
+        }
         const analyses = s.analyses.filter((a) => a.goalId === goalId);
         const existingPlan = s.plans.find((p) => p.goalId === goalId);
         const existingPortrait = s.portraits.find((p) => p.goalId === goalId);
@@ -982,6 +1025,35 @@ export const useMorrow = create<MorrowState>()(
           return { profile: { ...s.profile, mutedMoments: next, notificationsOff: off } };
         }),
 
+      markPaywallSeen: (moment) =>
+        set((s) => {
+          const seen = s.profile.paywallSeen ?? [];
+          return seen.includes(moment)
+            ? {}
+            : { profile: { ...s.profile, paywallSeen: [...seen, moment] } };
+        }),
+
+      purchase: async (plan) => {
+        const out = await billing().purchase(plan);
+        if (out.ok) set((s) => ({ profile: { ...s.profile, entitled: true } }));
+        return out;
+      },
+
+      restore: async () => {
+        const out = await billing().restore();
+        if (out.ok) set((s) => ({ profile: { ...s.profile, entitled: true } }));
+        return out;
+      },
+
+      takeCoachTurn: () => {
+        const s = get();
+        const day = dayOf(new Date(), s.profile.dayBoundaryHour);
+        const gate = canTakeCoachTurn(entitlementOf(s, day));
+        if (!gate.allowed) return gate;
+        set((st) => ({ coachTurns: { ...st.coachTurns, [day]: (st.coachTurns[day] ?? 0) + 1 } }));
+        return gate;
+      },
+
       noteConcern: () =>
         set((s) => ({ concernAt: dayOf(new Date(), s.profile.dayBoundaryHour) })),
 
@@ -1089,6 +1161,22 @@ export const useMorrow = create<MorrowState>()(
 );
 
 // ---------------------------------------------------------------- helpers
+
+/**
+ * What the entitlement rules need to know, gathered in one place.
+ *
+ * A Blueprint counts as built when a plan exists for that goal, which is the
+ * same thing the Goal screen shows. Deriving it rather than keeping a counter
+ * means the number cannot drift from what the person can actually see.
+ */
+export function entitlementOf(s: MorrowState, day: string): EntitlementContext {
+  return {
+    entitled: s.profile.entitled === true,
+    blueprintsBuilt: new Set(s.plans.map((p) => p.goalId)).size,
+    coachTurnsToday: s.coachTurns[day] ?? 0,
+    afterBlueprintShown: (s.profile.paywallSeen ?? []).includes('after-blueprint'),
+  };
+}
 
 /** Whole days from one `YYYY-MM-DD` to another. Negative if `to` is earlier. */
 function daysBetween(from: string, to: string): number {

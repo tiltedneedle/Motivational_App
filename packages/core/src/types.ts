@@ -452,6 +452,12 @@ export const Profile = z.object({
    */
   mutedMoments: z.array(z.string()).default([]),
   notificationsOff: z.boolean().default(false),
+  /**
+   * The paywall moments already shown (PRD §7.13). The unprompted one is
+   * "once after the Blueprint", and once means once — including across a
+   * relaunch, which is why it lives here rather than in a screen's state.
+   */
+  paywallSeen: z.array(z.string()).default([]),
 });
 export type Profile = z.infer<typeof Profile>;
 
@@ -471,6 +477,7 @@ export const DEFAULT_PROFILE: Profile = {
   supportOfferedAt: null,
   mutedMoments: [],
   notificationsOff: false,
+  paywallSeen: [],
 };
 
 // ---------------------------------------------------------------- domain meta

@@ -335,14 +335,42 @@ async function main() {
       check('no app prose was sealed into the Book', intruders.length === 0, intruders.join(' | '));
     }
 
-    // ---- Today
+    // ---- the one paywall moment, on the way to Today (PRD §7.13, §8.9)
+    //
+    // "Once after the Blueprint, soft, dismissible." It arrives here because
+    // this is the first time Today opens with a Blueprint behind it, and the
+    // rest of this suite is the proof that "Not now" costs nothing: everything
+    // after this point runs exactly as it did before the paywall existed.
     await tap('book-still-true');
-    await page.waitForTimeout(600);
+    await page.waitForTimeout(900);
+    const sawPaywall = await seen('screen-paywall');
+    check('the paywall arrives once, after the Blueprint', sawPaywall);
+    if (sawPaywall) {
+      check(
+        'and it opens with the line they wrote, not a pitch',
+        (await text('paywall-i-will')).includes('out the back door before the kettle boils'),
+        await text('paywall-i-will'),
+      );
+      check('the annual plan carries the per-month maths', (await text('plan-note')).includes('$4.17'));
+      check('the trial is a caption, never a countdown', (await text('plan-trial')).includes('7 days free'));
+      // Nothing was charged, and the screen says so rather than spinning.
+      await tap('paywall-continue');
+      await page.waitForTimeout(600);
+      check(
+        'Continue says plainly that purchases are not wired up in this build',
+        (await seen('paywall-problem')) && (await text('paywall-problem')).includes('nothing was charged'),
+        (await seen('paywall-problem')) ? await text('paywall-problem') : '(no message)',
+      );
+      await tap('paywall-not-now');
+      await page.waitForTimeout(600);
+    }
     check('today renders', await seen('screen-today'));
-    // The card carries the quotation and a caption under it, so take the
-    // quoted line itself and strip the typographic quote marks around it.
-    const bookLine = (await text('today-book-line')).split('\n')[0].trim();
-    const quoted = bookLine.replace(/^["'“”\s]+|["'“”\s]+$/g, '');
+    check('and Not now put them back where they were', !(await seen('screen-paywall')));
+    // The quotation has its own id. Reading the card's innerText and splitting
+    // on a newline made this depend on a line break the layout happens to
+    // produce, and it stopped producing one the moment another screen was
+    // pushed over the top of Today.
+    const quoted = (await text('today-book-quote')).replace(/^["'“”\s]+|["'“”\s]+$/g, '');
     const everythingWritten = `${IDEAL} I will be out the back door before the kettle boils`;
     // Asserting the element merely exists let an empty quotation pass.
     check(

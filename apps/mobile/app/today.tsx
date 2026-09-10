@@ -8,6 +8,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   consistencyCaption,
+  paywallMoment,
   dayOf,
   domainMeta,
   formatDay,
@@ -39,6 +40,7 @@ import {
 } from '@morrow/ui';
 import { MoveStone } from '../src/components/MoveStone';
 import {
+  entitlementOf,
   useConsistency,
   useGoals,
   useLatestBook,
@@ -66,6 +68,21 @@ export default function Today() {
 
   const today = dayOf(new Date(), state.profile.dayBoundaryHour);
   const intendedMoveId = state.days[today]?.intentionMoveId ?? null;
+
+  /**
+   * The one appearance nobody asked for: once, after the first Blueprint
+   * (PRD §7.13). Soft and dismissible, and "Not now" comes straight back here
+   * with nothing lost — which is what `from` is for.
+   *
+   * `paywallMoment` returns null for somebody entitled, somebody who has seen
+   * it, and anybody without a Blueprint yet, so this is every moment except
+   * exactly one.
+   */
+  const moment = paywallMoment(entitlementOf(state, today));
+  useEffect(() => {
+    if (!state.hydrated || !moment) return;
+    router.push(`/paywall?moment=${moment}&from=/today`);
+  }, [state.hydrated, moment, router]);
   const intendedMove = intendedMoveId
     ? state.plans.flatMap((p) => p.moves).find((m) => m.id === intendedMoveId)
     : undefined;
@@ -142,7 +159,12 @@ export default function Today() {
 
           {book ? (
             <Pressable testID="today-book-line" onPress={() => router.push('/book')} style={{ marginTop: 8 }}>
-              <UserText italic numberOfLines={2} style={{ fontSize: 17, lineHeight: 24, color: day.ink2 }}>
+              <UserText
+                testID="today-book-quote"
+                italic
+                numberOfLines={2}
+                style={{ fontSize: 17, lineHeight: 24, color: day.ink2 }}
+              >
                 “{book.firstSentence}”
               </UserText>
               <Label style={{ marginTop: 4 }}>You, in the Book</Label>

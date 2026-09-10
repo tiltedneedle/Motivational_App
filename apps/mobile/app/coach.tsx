@@ -17,6 +17,7 @@ import {
   replyToText,
   screen,
   type ChipId,
+  type PaywallMoment,
   fullTrackInvitation,
   type CoachReply,
 } from '@morrow/core';
@@ -35,10 +36,12 @@ export default function Coach() {
   const setToast = useMorrow((s) => s.setToast);
   const noteConcern = useMorrow((s) => s.noteConcern);
   const setIntention = useMorrow((s) => s.setIntention);
+  const takeCoachTurn = useMorrow((s) => s.takeCoachTurn);
   const inviteFullTrack = useMorrow((s) => s.inviteFullTrack);
 
   const [thread, setThread] = useState<{ who: 'me' | 'coach'; text: string }[]>([]);
   const [draft, setDraft] = useState('');
+  const [capped, setCapped] = useState<PaywallMoment | null>(null);
 
   // Today used to be the only screen that built the brief, so arriving here
   // first — from a notification, a deep link, or just the tab bar — showed a
@@ -105,6 +108,17 @@ export default function Coach() {
   const send = () => {
     const text = draft.trim();
     if (!text) return;
+    // The free plan's daily turns (PRD §13.3). Taken before anything else, so
+    // the cap cannot be walked past by writing something the guards refuse —
+    // and refused with a sentence rather than a dead Send button, because a
+    // control that silently does nothing is the worst way to say no.
+    const turn = takeCoachTurn();
+    if (!turn.allowed) {
+      setThread((t) => [...t, { who: 'me', text }, { who: 'coach', text: turn.reason }]);
+      setDraft('');
+      setCapped(turn.moment);
+      return;
+    }
     setDraft('');
     const risk = screen(text);
     if (risk.risk === 'crisis') {
@@ -276,6 +290,19 @@ export default function Coach() {
         </ScrollView>
 
         <View style={{ paddingBottom: 18, gap: 10 }}>
+          {/*
+            The daily cap, offered rather than enforced in silence. The coach
+            has already said what happened in the thread; this is the way on for
+            somebody who wants one, and there is no way to lose anything by
+            ignoring it.
+          */}
+          {capped ? (
+            <Chip
+              testID="coach-capped"
+              label="See what Pro adds"
+              onPress={() => router.push(`/paywall?moment=${capped}&from=/coach`)}
+            />
+          ) : null}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             {CHIPS.map((c) => (
               <Chip key={c.id} testID={`chip-${c.id}`} label={c.label} onPress={() => say(c.id, c.label)} />
