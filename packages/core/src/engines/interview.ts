@@ -450,9 +450,31 @@ export function addCustomArea(s: InterviewState, name: string): InterviewState {
   return { ...s, customAreas: [...s.customAreas, area], picked: [...s.picked, area.id] };
 }
 
+/**
+ * Move from picking areas to shaping them.
+ *
+ * The cursor lands on the first picked area that has not been shaped yet, not
+ * on zero. Picking more areas and coming back here used to re-ask every area
+ * the person had already answered and append a second draft for each, so
+ * "add another" quietly doubled their list.
+ */
 export function beginBranches(s: InterviewState): InterviewState {
   if (s.picked.length === 0) return s;
-  return { ...s, stage: 'branch', cursor: 0, answered: s.answered + 1, branchLabel: null, followAnswer: null };
+  const shaped = new Set(s.drafts.map((d) => d.areaId));
+  const next = s.picked.findIndex((id) => !shaped.has(id));
+  if (next === -1) {
+    // Everything picked has been shaped, so there is nothing left to ask.
+    return { ...s, stage: 'admire', branchLabel: null, followAnswer: null };
+  }
+  return {
+    ...s,
+    stage: 'branch',
+    cursor: next,
+    answered: s.answered + 1,
+    branchLabel: null,
+    followAnswer: null,
+    customBranch: null,
+  };
 }
 
 /** One tap. `custom` marks an answer the user typed. */
@@ -489,7 +511,11 @@ export function answer(s: InterviewState, value: string, custom = false): Interv
         custom: s.customBranch != null,
       };
       const drafts = [...s.drafts, draft];
-      const nextCursor = s.cursor + 1;
+      // Skip past anything already shaped, so a second pass through the
+      // Interview only asks about what is genuinely new.
+      const shaped = new Set(drafts.map((d) => d.areaId));
+      let nextCursor = s.cursor + 1;
+      while (nextCursor < s.picked.length && shaped.has(s.picked[nextCursor] as string)) nextCursor++;
       const more = nextCursor < s.picked.length;
       return {
         ...s,

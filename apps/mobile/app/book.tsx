@@ -3,17 +3,20 @@
  * Everything on it is in the serif because everything on it is theirs.
  */
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { Share, View } from 'react-native';
 import { ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ANALYSIS_TITLES, bookToText, pageCount } from '@morrow/core';
+import { ANALYSIS_TITLES, bookToText, ordinal, pageCount } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, UserText, day, night, radius } from '@morrow/ui';
 import { useLatestBook, useMorrow } from '../src/store';
 
 export default function BookScreen() {
   const router = useRouter();
   const book = useLatestBook();
+  // Kept: this one is read on Today, which is where it navigates to.
   const setToast = useMorrow((s) => s.setToast);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   if (!book) {
     return (
@@ -31,8 +34,11 @@ export default function BookScreen() {
     const text = bookToText(book);
     try {
       await Share.share({ message: text, title: book.title });
+      setExportError(null);
     } catch {
-      setToast({ text: 'Could not open the share sheet. The Book is safe here.', kind: 'info' });
+      // The Toast surface is only rendered by Today, so a message put there
+      // from this screen was written to something nobody was looking at.
+      setExportError('This device would not open the share sheet. Your Book is safe here, and Settings can export everything as text.');
     }
   };
 
@@ -42,7 +48,7 @@ export default function BookScreen() {
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10 }}>
           <TextButton testID="book-back" label="← Today" onPress={() => router.replace('/today')} />
           <Label style={{ color: night.ink3 }}>
-            First edition · {pageCount(book)} pages
+            {ordinal(book.version)} edition · {pageCount(book)} pages
           </Label>
         </View>
 
@@ -108,6 +114,12 @@ export default function BookScreen() {
             Sealed {book.sealedAt.slice(0, 10)} · written by you
           </Label>
         </ScrollView>
+
+        {exportError ? (
+          <Body testID="book-export-error" style={{ color: night.ink, paddingTop: 10 }}>
+            {exportError}
+          </Body>
+        ) : null}
 
         <View style={{ flexDirection: 'row', gap: 10, paddingVertical: 14 }}>
           <Chip testID="book-export" label="Export" onPress={onExport} />

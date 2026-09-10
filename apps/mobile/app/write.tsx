@@ -27,7 +27,7 @@ import {
   type WritingSessionState,
 } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Ring, Statement, Stone, Studio, UserText, accent, night, type as fonts } from '@morrow/ui';
-import { useMorrow } from '../src/store';
+import { latestText, useMorrow } from '../src/store';
 
 const TICK_MS = 250;
 
@@ -42,11 +42,16 @@ export default function Write() {
   const clearDraft = useMorrow((s) => s.clearDraft);
   const goals = useMorrow((s) => s.goals);
   const draft = useMorrow((s) => s.drafts[kind]);
+  // An earlier sitting that may still be quoted, so someone whose latest one
+  // was paused is not sent back to the beginning.
+  const hasEarlierWriting = useMorrow((s) => latestText(s.texts, 'ideal') !== null);
 
   const [phase, setPhase] = useState<'doorway' | 'writing' | 'closed'>('doorway');
   const [mode, setMode] = useState<WritingMode>('type');
   const [session, setSession] = useState<WritingSessionState>(() => startWriting(kind, track, 'type'));
   const [endedEarly, setEndedEarly] = useState(false);
+  /** The safety screen stopped this sitting going on to the read-back. */
+  const [paused, setPaused] = useState(false);
   const typingRef = useRef(false);
   const inputRef = useRef<TextInput>(null);
   // The autosave reads the newest session without re-arming its timer on
@@ -120,12 +125,16 @@ export default function Write() {
     // or the words come back the next time the room is opened.
     clearDraft(kind);
     if (!saved) {
-      // A crisis result pauses the sitting; the gate above shows the card.
-      router.replace('/today');
+      // A crisis result pauses the sitting. It used to send the person to
+      // Today with no explanation, and because their writing is not quotable
+      // the read-back had no source, so the Book became permanently
+      // unreachable — the app quietly ended for whoever needed it most.
+      // The pause stays a pause: the card comes up over this screen, and when
+      // they close it this screen says where they stand.
+      setPaused(true);
       return;
     }
-    if (kind === 'ideal') router.replace('/heard');
-    else router.replace('/heard');
+    router.replace('/heard');
   };
 
   if (phase === 'doorway') {
@@ -208,7 +217,39 @@ export default function Write() {
               ? `Every word you wrote is here — ${words} of them. A sitting can be picked up once, and this one already was, so it counts as it stands.`
               : 'Sealed as a draft for a day. You can read it, not edit it.'}
           </Body>
-          <InkButton testID="write-continue" label="Read it back to me" onPress={close} />
+          {paused ? (
+            <View style={{ gap: 10 }}>
+              <Body style={{ color: night.ink2, textAlign: 'center' }}>
+                What you wrote is on this device and nothing was sent anywhere. It is not going into the Book, and it
+                does not have to. You can write this one again whenever you want to.
+              </Body>
+              <InkButton
+                testID="write-again"
+                label="Write it again"
+                onPress={() => {
+                  setPaused(false);
+                  setSession(startWriting(kind, track, mode));
+                  setPhase('doorway');
+                }}
+              />
+              {hasEarlierWriting ? (
+                <InkButton
+                  testID="write-carry-on"
+                  label="Carry on with what I wrote before"
+                  onPress={() => router.replace('/heard')}
+                  style={{ backgroundColor: 'transparent', borderWidth: 1.5, borderColor: night.line }}
+                />
+              ) : null}
+              <InkButton
+                testID="write-later"
+                label="Not now"
+                onPress={() => router.replace('/today')}
+                style={{ backgroundColor: 'transparent', borderWidth: 1.5, borderColor: night.line }}
+              />
+            </View>
+          ) : (
+            <InkButton testID="write-continue" label="Read it back to me" onPress={close} />
+          )}
         </SafeAreaView>
       </Studio>
     );

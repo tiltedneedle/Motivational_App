@@ -17,6 +17,7 @@ export default function Settings() {
   const reset = useMorrow((s) => s.reset);
   const book = useLatestBook();
   const [confirming, setConfirming] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const exportAll = async () => {
     const payload = {
@@ -33,8 +34,13 @@ export default function Settings() {
     const message = book ? `${bookToText(book)}\n\n---\n${JSON.stringify(payload, null, 2)}` : JSON.stringify(payload, null, 2);
     try {
       await Share.share({ message, title: 'Morrow export' });
+      setExportError(null);
     } catch {
-      // Sharing can be unavailable; the data is still on the device.
+      // Swallowing this made the button do nothing at all, on the one screen
+      // that promises the person their writing is theirs to take away.
+      setExportError(
+        'This device would not open the share sheet, so nothing left the app. Everything is still here, and you can try again.',
+      );
     }
   };
 
@@ -88,6 +94,11 @@ export default function Settings() {
           <View style={{ gap: 10 }}>
             <Label>Your data</Label>
             <InkButton testID="settings-export" label="Export everything" onPress={exportAll} />
+            {exportError ? (
+              <Body testID="settings-export-error" style={{ color: day.ink }}>
+                {exportError}
+              </Body>
+            ) : null}
             {confirming ? (
               <View style={{ gap: 8, backgroundColor: day.surface, padding: 16, borderRadius: 18 }}>
                 <Body style={{ color: day.ink }}>

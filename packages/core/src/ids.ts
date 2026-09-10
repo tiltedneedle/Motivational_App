@@ -49,3 +49,31 @@ export function dayOf(instant: Date, boundaryHour = 3): string {
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
+
+const ORDINALS = [
+  'Zeroth',
+  'First',
+  'Second',
+  'Third',
+  'Fourth',
+  'Fifth',
+  'Sixth',
+  'Seventh',
+  'Eighth',
+  'Ninth',
+  'Tenth',
+];
+
+/**
+ * "First", "Second", "Twelfth". Used on the spine of the Book, which used to
+ * say "First edition" whatever edition it was, so a re-authored Book was
+ * indistinguishable from the original at a glance.
+ */
+export function ordinal(n: number): string {
+  const i = Math.trunc(n);
+  if (i >= 0 && i < ORDINALS.length) return ORDINALS[i] as string;
+  const tens = i % 100;
+  const suffix =
+    tens >= 11 && tens <= 13 ? 'th' : i % 10 === 1 ? 'st' : i % 10 === 2 ? 'nd' : i % 10 === 3 ? 'rd' : 'th';
+  return `${i}${suffix}`;
+}

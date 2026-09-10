@@ -165,6 +165,38 @@ describe('the Interview', () => {
   });
 });
 
+describe('adding to the Interview a second time', () => {
+  it('only asks about areas that have not been shaped yet', () => {
+    // "Add another" used to reset the cursor to zero, so every area already
+    // answered was asked again and a second draft appended for each.
+    let s = initialInterview();
+    s = toggleArea(s, 'health');
+    s = beginBranches(s);
+    const area = AREAS.find((a) => a.id === 'health');
+    const branch = area?.branches[0];
+    s = answer(s, branch?.label ?? '');
+    if (s.stage === 'follow') s = answer(s, branch?.follow?.options[0] ?? 'yes');
+    s = answer(s, 'This season');
+    expect(s.drafts).toHaveLength(1);
+
+    // Now they pick a second area and come back.
+    s = toggleArea(s, 'money');
+    s = beginBranches(s);
+    expect(s.stage).toBe('branch');
+    // The cursor must be on the new area, not back at the top.
+    expect(s.picked[s.cursor]).toBe('money');
+
+    const money = AREAS.find((a) => a.id === 'money');
+    const mb = money?.branches[0];
+    s = answer(s, mb?.label ?? '');
+    if (s.stage === 'follow') s = answer(s, mb?.follow?.options[0] ?? 'yes');
+    s = answer(s, 'This season');
+
+    expect(s.drafts).toHaveLength(2);
+    expect(new Set(s.drafts.map((d) => d.areaId)).size).toBe(2);
+  });
+});
+
 describe('specificity', () => {
   it('accepts a line with a clock time and a place without a follow-up', () => {
     const r = scoreSpecificity('Tuesday, Thursday, Saturday at 6:40, out the back door');
