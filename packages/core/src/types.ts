@@ -256,6 +256,13 @@ export const BookVersion = z.object({
   id: z.string(),
   version: z.number().int(),
   title: z.string(),
+  /**
+   * Whether the person typed the spine title. Carried on the sealed Book, not
+   * only on the input, because the server recomputes the authorship ratio from
+   * these contents and an absent flag reads as "they wrote it" — which credits
+   * the app's own word "Untitled" to them.
+   */
+  titleAuthored: z.boolean().optional(),
   track: DepthTrack,
   sealedAt: z.string(),
   firstSentence: z.string(),

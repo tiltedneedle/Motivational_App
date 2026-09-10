@@ -9,6 +9,7 @@ export * from './engines/practices';
 export * from './engines/blueprint';
 export * from './engines/book';
 export * from './engines/consistency';
+export * from './engines/days';
 export * from './engines/goals';
 export * from './engines/safety';
 export * from './engines/writing';

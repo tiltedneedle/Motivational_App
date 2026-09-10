@@ -98,7 +98,11 @@ create table public.goal_analyses (
   written_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (goal_id, kind)
-);
+,
+  -- The stones are free text, and the Obstacles stone asks what gets in the
+  -- way, which is where the worst sentence of somebody's week can land. A
+  -- flagged line is never read back or sealed into the Book.
+  safety_risk text not null default 'none' check (safety_risk in ('none','concern','crisis')));
 
 -- ---------------------------------------------------------------- the Book
 
@@ -201,9 +205,18 @@ create table public.evidence (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users on delete cascade,
   goal_id uuid references public.goals on delete set null,
+  -- The move this row is proof of, when it is one. Undo removes a move's own
+  -- ledger row and no one else's; the client matched on the title and day
+  -- before this existed, which deleted the wrong row whenever two moves shared
+  -- a name on a day. `set null` rather than cascade: a deleted move does not
+  -- unhappen the morning somebody did it.
+  move_id uuid references public.moves on delete set null,
   kind text not null check (kind in ('move','practice','milestone','capture','seal')),
   text text not null,
   day date not null,
+  -- The safety verdict on this text. Free-text rows are quoted back in the dawn
+  -- brief and the ledger, and a flagged one never is.
+  safety_risk text not null default 'none' check (safety_risk in ('none','concern','crisis')),
   created_at timestamptz not null default now()
 );
 create index evidence_user_day on public.evidence (user_id, day);
@@ -220,7 +233,9 @@ create table public.day_summaries (
   mood_word text,
   proof text,
   glad_of text,
-  primary key (user_id, day)
+  primary key (user_id, day),
+  -- The proof line typed at night is read back the next morning.
+  safety_risk text not null default 'none' check (safety_risk in ('none','concern','crisis'))
 );
 
 create table public.briefs (

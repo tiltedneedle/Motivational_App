@@ -159,6 +159,7 @@ export function buildBookVersion(input: BookInput, newId: (p: string) => string)
     id: newId('book'),
     version: input.version,
     title: input.title.trim() || 'Untitled',
+    titleAuthored: input.titleAuthored !== false,
     track: input.track,
     sealedAt: input.sealedAt ?? new Date().toISOString(),
     firstSentence: firstSentence(ideal),

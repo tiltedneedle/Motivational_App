@@ -17,6 +17,8 @@ import {
   buildPractice,
   dueOn,
   logOf,
+  movesForDay,
+  movesOpenOn,
   practiceValue,
   dayOf,
   draftLockUntil,
@@ -40,6 +42,7 @@ import {
   type Evidence,
   type Goal,
   type GoalAnalysis,
+  type Move,
   type Plan,
   type Portrait,
   type Practice,
@@ -855,18 +858,10 @@ function recomputeDay(
   day: string,
   practiceLogs: PracticeLog[] = s.practiceLogs,
 ): Record<string, DaySummary> {
-  // A day counts what was due that day, plus anything actually finished that
-  // day. It used to count `status !== 'todo'`, which swept in every move ever
-  // completed — so the Consistency Score climbed toward 100 and could never
-  // fall, which is exactly the number the product must not be able to fake.
+  // A move belongs to exactly one day: see `movesForDay` for why that sentence
+  // needed writing down and testing.
   const boundary = s.profile.dayBoundaryHour;
-  const moves = plans
-    .flatMap((p) => p.moves)
-    .filter(
-      (m) =>
-        m.scheduledFor === day ||
-        (m.status === 'done' && m.completedAt && dayOf(new Date(m.completedAt), boundary) === day),
-    );
+  const moves = movesForDay(plans.flatMap((p) => p.moves), day, boundary);
   const done = moves.filter((m) => m.status === 'done').length;
   const skipped = moves.filter((m) => m.status === 'skip').length;
 
@@ -954,14 +949,9 @@ export function todaysMoves(s: MorrowState) {
   const day = dayOf(new Date(), s.profile.dayBoundaryHour);
   const all = s.plans.flatMap((p) => p.moves);
   const boundary = s.profile.dayBoundaryHour;
-  const touchedToday = (m: (typeof all)[number]) =>
-    m.status === 'done' && !!m.completedAt && dayOf(new Date(m.completedAt), boundary) === day;
-  // Due today or overdue and still open, plus what was finished today so the
-  // screen shows the day's work. Anything closed on an earlier day is history,
-  // not today — it used to stay on the list forever.
-  const due = all.filter(
-    (m) => (m.status === 'todo' && (!m.scheduledFor || m.scheduledFor <= day)) || m.scheduledFor === day || touchedToday(m),
-  );
+  // What the day is still asking for, plus what was finished today. A parked
+  // move is still open: "not today" is not "never". See `movesOpenOn`.
+  const due = movesOpenOn(all, day, boundary);
   if (due.some((m) => m.status === 'todo')) {
     return due.sort((a, b) => a.order - b.order);
   }
