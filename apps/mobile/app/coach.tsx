@@ -19,7 +19,7 @@ import {
   type ChipId,
   type CoachReply,
 } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Rule, Statement, Stone, Studio, TextButton, UserField, UserText, accent, day } from '@morrow/ui';
+import { Body, Chip, InkButton, Label, Rule, Statement, Stone, Studio, TextButton, Toast, UserField, UserText, accent, day } from '@morrow/ui';
 import { useConsistency, useGoals, useLatestBook, useMorrow, useTodaysMoves } from '../src/store';
 
 export default function Coach() {
@@ -30,6 +30,7 @@ export default function Coach() {
   const goals = useGoals();
   const score = useConsistency();
   const shrinkMove = useMorrow((s) => s.shrinkMove);
+  const toast = useMorrow((s) => s.toast);
   const setToast = useMorrow((s) => s.setToast);
 
   const [thread, setThread] = useState<{ who: 'me' | 'coach'; text: string }[]>([]);
@@ -44,7 +45,13 @@ export default function Coach() {
     makeBrief();
   }, [makeBrief]);
 
-  const brief = state.briefs[state.briefs.length - 1] ?? null;
+useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3400);
+    return () => clearTimeout(t);
+  }, [toast, setToast]);
+
+    const brief = state.briefs[state.briefs.length - 1] ?? null;
   const days = useMemo(() => Object.values(state.days), [state.days]);
   const today = dayOf(new Date(), state.profile.dayBoundaryHour);
 
@@ -158,7 +165,18 @@ export default function Coach() {
               <Chip key={c.id} testID={`chip-${c.id}`} label={c.label} onPress={() => say(c.id, c.label)} />
             ))}
           </View>
-          <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-end' }}>
+          {/*
+          The Coach's own actions raise a toast, and this screen rendered no
+          surface for one, so every confirmation and every refusal it produced
+          went nowhere at all. Today was the only screen that showed them.
+        */}
+        {toast ? (
+          <View style={{ paddingBottom: 10 }}>
+            <Toast text={toast.text} />
+          </View>
+        ) : null}
+
+        <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-end' }}>
             <View style={{ flex: 1 }}>
               <UserField
                 testID="coach-input"

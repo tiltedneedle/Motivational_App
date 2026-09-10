@@ -26,7 +26,16 @@ export default function Settings() {
       goals: state.goals,
       analyses: state.analyses,
       texts: state.texts,
+      // A sitting still in progress is the writing most worth getting out, and
+      // it was the one thing this left behind. The storage banner offers this
+      // export as "copy out what is open"; without these it copied out
+      // everything except what was open.
+      drafts: state.drafts,
+      practices: state.practices,
+      practiceLogs: state.practiceLogs,
+      scenes: state.scenes,
       books: state.books,
+      portraits: state.portraits,
       plans: state.plans,
       evidence: state.evidence,
       days: state.days,

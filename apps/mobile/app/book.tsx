@@ -11,6 +11,24 @@ import { ANALYSIS_TITLES, bookToText, ordinal, pageCount } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, UserText, day, night, radius } from '@morrow/ui';
 import { useLatestBook, useMorrow } from '../src/store';
 
+/**
+ * A goal's name, set in the face that tells the truth about who wrote it.
+ *
+ * A goal named by tapping through the fixed Interview bank is the app's phrase,
+ * not the person's. Printing it in the serif alongside their own sentences says
+ * they wrote it, on the one page in the product where that claim is the whole
+ * point. The authorship ratio already knows the difference — `nameAuthored` —
+ * and the typography now knows it too.
+ */
+function ChapterName({ name, authored, size }: { name: string; authored: boolean; size: number }) {
+  if (authored) {
+    return <UserText style={{ fontSize: size, lineHeight: size * 1.3, color: '#15181F' }}>{name}</UserText>;
+  }
+  return (
+    <Body style={{ fontSize: size - 1, lineHeight: size * 1.3, color: '#3B3A36' }}>{name}</Body>
+  );
+}
+
 export default function BookScreen() {
   const router = useRouter();
   const book = useLatestBook();
@@ -79,7 +97,9 @@ export default function BookScreen() {
           <Label style={{ color: '#8B7F6A' }}>Contents</Label>
           {book.chapters.map((c) => (
             <View key={c.goalId} style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
-              <UserText style={{ flex: 1, fontSize: 17, color: '#15181F' }}>{c.name}</UserText>
+              <View style={{ flex: 1 }}>
+                <ChapterName name={c.name} authored={c.nameAuthored !== false} size={17} />
+              </View>
               <Label style={{ color: '#8B7F6A' }}>{c.horizon}</Label>
             </View>
           ))}
@@ -87,7 +107,7 @@ export default function BookScreen() {
           {book.chapters.map((c) => (
             <View key={`ch-${c.goalId}`} style={{ gap: 10, marginTop: 10 }}>
               <Rule style={{ backgroundColor: 'rgba(21,24,31,0.12)' }} />
-              <UserText style={{ fontSize: 22, lineHeight: 28, color: '#15181F' }}>{c.name}</UserText>
+              <ChapterName name={c.name} authored={c.nameAuthored !== false} size={22} />
               {c.lines.map((l, i) => (
                 <View key={`${c.goalId}-${i}`} style={{ gap: 3 }}>
                   <Label style={{ color: '#8B7F6A' }}>
