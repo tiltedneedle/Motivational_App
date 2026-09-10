@@ -27,6 +27,8 @@ import {
   guarded,
   isQuotable,
   isWorse,
+  shouldOfferSupport,
+  withinSoftenWindow,
   mergeGoalDrafts,
   newId,
   reading,
@@ -847,6 +849,12 @@ export const useMorrow = create<MorrowState>()(
         const daysArr = Object.values(s.days);
         const r = reading(daysArr, day);
         const yesterdayKey = new Date(new Date(`${day}T00:00:00Z`).getTime() - 86_400_000).toISOString().slice(0, 10);
+        // PRD 11.6: concern softens the next prompt, avoids numeric targets and
+        // suggests professional support once. For a long time the verdict was
+        // computed on every write, stored on the row, and then ignored by every
+        // screen — the band existed in the data and nowhere else.
+        const soften = softenNow(s, day);
+        const offerSupport = shouldOfferSupport(soften, s.profile.supportOfferedAt ?? null);
         const brief = buildDawnBrief(
           {
             day,
@@ -857,10 +865,18 @@ export const useMorrow = create<MorrowState>()(
             persona: s.profile.persona,
             score: r.score,
             previousScore: r.previous,
+            soften,
+            offerSupport,
           },
           newId,
         );
-        set((st) => ({ briefs: [...st.briefs, brief] }));
+        set((st) => ({
+          briefs: [...st.briefs, brief],
+          // Stamped when the line is actually written into a brief, not when
+          // the band opens — otherwise a brief that failed to build would still
+          // burn the one offer the person gets.
+          profile: offerSupport ? { ...st.profile, supportOfferedAt: new Date().toISOString() } : st.profile,
+        }));
         return brief;
       },
 
@@ -895,6 +911,21 @@ export const useMorrow = create<MorrowState>()(
         const { hydrated: _h, toast: _t, storageError: _e, ...rest } = s as MorrowState & Record<string, unknown>;
         return rest as Partial<MorrowState>;
       },
+      /**
+       * zustand's default merge is one level deep, so a profile written by an
+       * older build replaces DEFAULT_PROFILE wholesale and every field added
+       * since is `undefined` on that device — no error, no crash, just a
+       * setting that silently reads as unset. Merging the profile explicitly
+       * is what makes adding a field to it a safe thing to do.
+       */
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<MorrowState>;
+        return {
+          ...current,
+          ...p,
+          profile: { ...DEFAULT_PROFILE, ...current.profile, ...(p.profile ?? {}) },
+        };
+      },
       onRehydrateStorage: () => (state, error) => {
         // Ask the storage layer, not this callback, whether the disk is sound:
         // a blob that reads but does not parse never reaches `error` here, and
@@ -914,6 +945,39 @@ export const useMorrow = create<MorrowState>()(
 );
 
 // ---------------------------------------------------------------- helpers
+
+/**
+ * Whether this morning is inside the concern band.
+ *
+ * Everything the person writes is screened, and the verdict is stored on the
+ * row it came from — a sitting, an analysis line, the proof typed at the end of
+ * a day. This reads those verdicts back rather than keeping a separate flag,
+ * so there is nothing to drift out of step and nothing extra to migrate.
+ *
+ * Crisis is not included: crisis has its own path — the sitting is paused, the
+ * resources card is shown, and the text never reaches the Book. A softened
+ * brief is what the *next* morning owes somebody, and after a crisis the app
+ * has already said more than a softened brief would.
+ */
+export function softenNow(s: MorrowState, today: string): boolean {
+  const boundary = s.profile.dayBoundaryHour;
+  const flagged: string[] = [];
+
+  for (const t of s.texts) {
+    if (t.safetyRisk === 'concern') flagged.push(dayOf(new Date(t.createdAt), boundary));
+  }
+  for (const a of s.analyses) {
+    if (a.safetyRisk === 'concern' && a.writtenAt) flagged.push(dayOf(new Date(a.writtenAt), boundary));
+  }
+  for (const e of s.evidence) {
+    if (e.safetyRisk === 'concern') flagged.push(e.day);
+  }
+  for (const d of Object.values(s.days)) {
+    if (d.safetyRisk === 'concern') flagged.push(d.day);
+  }
+
+  return flagged.some((f) => withinSoftenWindow(f, today));
+}
 
 /**
  * The sitting that speaks for a kind: the most recent one that may be quoted.

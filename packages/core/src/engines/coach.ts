@@ -8,7 +8,7 @@
 import type { Brief, BookVersion, DaySummary, GoalAnalysis, Move, Persona } from '../types';
 import { isReturning } from './consistency';
 import { plural } from '../ids';
-import { isQuotable, screen } from './safety';
+import { SUPPORT_LINE, isQuotable, screen } from './safety';
 
 export interface BriefInput {
   day: string;
@@ -20,6 +20,13 @@ export interface BriefInput {
   score: number;
   previousScore: number;
   raining?: boolean;
+  /**
+   * The concern band (PRD 11.6). Softens the register whatever persona is set,
+   * and takes the Consistency number off the brief.
+   */
+  soften?: boolean;
+  /** The one time the app names professional support. See `shouldOfferSupport`. */
+  offerSupport?: boolean;
 }
 
 const REGISTER: Record<Persona, { open: (s: string) => string; push: (s: string) => string }> = {
@@ -37,6 +44,27 @@ const REGISTER: Record<Persona, { open: (s: string) => string; push: (s: string)
   },
 };
 
+/**
+ * How Today says hello.
+ *
+ * This was the fixed string "Good morning." on every screen at every hour,
+ * which is the sort of detail that quietly tells somebody the app is not
+ * really looking at them: a person sealing the day at nine in the evening was
+ * wished a good morning, and so was a person writing at half past midnight.
+ *
+ * The boundaries are the ordinary English ones and the small hours get their
+ * own line rather than being rounded up into morning — somebody up at two is
+ * not having a morning, and pretending otherwise reads worse than saying
+ * nothing. App chrome, not the user's words: it is set in the sans.
+ */
+export function greeting(instant: Date, name?: string): string {
+  const h = instant.getHours();
+  const opener =
+    h < 4 ? 'Still up' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+  const who = name?.trim();
+  return who ? `${opener}, ${who}.` : `${opener}.`;
+}
+
 /** The line the day opens with: the user's own first sentence, in quotation marks. */
 export function openingQuote(book: BookVersion | null): string | null {
   const s = book?.firstSentence?.trim();
@@ -45,7 +73,10 @@ export function openingQuote(book: BookVersion | null): string | null {
 
 export function buildDawnBrief(input: BriefInput, newId: (p: string) => string): Brief {
   const { yesterday, moves, analyses, persona, book } = input;
-  const reg = REGISTER[persona];
+  // Concern outranks the persona. Somebody who chose "fierce" in Settings on a
+  // good week did not choose to be pushed on this one, and "No negotiation
+  // with yourself this morning" is the exact sentence not to print at them.
+  const reg = input.soften ? REGISTER.gentle : REGISTER[persona];
   const quotes: string[] = [];
 
   const quote = openingQuote(book);
@@ -65,11 +96,17 @@ export function buildDawnBrief(input: BriefInput, newId: (p: string) => string):
       quotes.push(yesterday.proof.trim());
     }
     const delta = input.score - input.previousScore;
-    const trend = delta > 0 ? `Consistency ${input.score}, up from ${input.previousScore}.` : `Consistency ${input.score}.`;
+    // "avoids numeric targets" (PRD 11.6). The score is still computed and
+    // still on Progress if they go looking; it just does not lead the morning.
+    const trend = input.soften
+      ? ''
+      : delta > 0
+        ? `Consistency ${input.score}, up from ${input.previousScore}.`
+        : `Consistency ${input.score}.`;
     // Their sentence usually ends in a full stop already, and appending another
     // gave `Rained the whole way.". Consistency 86` — the app's punctuation
     // landing on top of theirs.
-    yesterdayLine = `${endSentence(bits.join(' '))} ${trend}`;
+    yesterdayLine = trend ? `${endSentence(bits.join(' '))} ${trend}` : endSentence(bits.join(' '));
   }
 
   // Today: the first move, and why it is first.
@@ -104,6 +141,8 @@ export function buildDawnBrief(input: BriefInput, newId: (p: string) => string):
     ifThen: ifLine,
     quotedSpans: quotes,
     firstMoveId: first?.id ?? null,
+    support: input.offerSupport ? SUPPORT_LINE : null,
+    soften: Boolean(input.soften),
     createdAt: new Date().toISOString(),
   };
 }

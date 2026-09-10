@@ -81,7 +81,11 @@ const CONCERN = [
   /\b(?:drink|drinking|drank)\s+(?:too\s+much|every\s?(?:day|night)|to\s+forget)\b/i,
   /\bpanic\s+attacks?\b/i,
   /\bhopeless(?:ness)?\b/i,
-  /\bnobody\s+(?:would|will|even)\s+(?:care|notice|miss)\b/i,
+  // "nobody would even notice" is the shape people actually write, and the
+  // old form wanted the verb immediately after the modal, so the commonest
+  // phrasing in the band fell straight through it. "No one" too: it is at
+  // least as common as "nobody" and was not matched at all.
+  /\b(?:nobody|no\s?one)\s+(?:would|will|even|really)\s+(?:even\s+|really\s+|actually\s+)?(?:care|cares|notice|notices|miss|misses)\b/i,
   /\bnumb\s+(?:all\s+the\s+time|most\s+days)\b/i,
 ];
 
@@ -105,6 +109,50 @@ export function isWorse(candidate: SafetyRisk, current: SafetyRisk): boolean {
 
 export function actionFor(risk: SafetyRisk): SafetyResult['action'] {
   return risk === 'crisis' ? 'resources' : risk === 'concern' ? 'soften' : 'continue';
+}
+
+/**
+ * What the concern band actually does (PRD 11.6).
+ *
+ * For a long time it did nothing: the verdict was computed, stored on the row,
+ * and then every screen treated it exactly like `none`. Three concrete things
+ * are owed to somebody whose writing lands here, and they are small enough to
+ * say in one place:
+ *
+ * 1. the next prompt is softer — the fierce register does not get to push;
+ * 2. no numeric targets — the Consistency figure comes off the brief, because
+ *    a number is the last thing a flat week needs to be scored with;
+ * 3. professional support is named once, not every morning.
+ *
+ * The window is how long "next" lasts. A day is the honest reading: the brief
+ * is written each morning out of the night before.
+ */
+export const SOFTEN_WINDOW_DAYS = 1;
+
+/**
+ * The support line. App prose, deliberately plain, and it names nothing the
+ * app cannot deliver — the helplines it points at are the ones in HELPLINES,
+ * already on the resources card.
+ */
+export const SUPPORT_LINE =
+  'If the last few days have been heavier than usual, talking to someone — a doctor, a therapist, one of the lines in Settings — is a reasonable thing to do. It is there whenever you want it.';
+
+/** Whether a day is inside the soften window of a flagged day. */
+export function withinSoftenWindow(flaggedDay: string, today: string, windowDays = SOFTEN_WINDOW_DAYS): boolean {
+  if (!flaggedDay || !today) return false;
+  const a = Date.parse(`${flaggedDay}T00:00:00Z`);
+  const b = Date.parse(`${today}T00:00:00Z`);
+  if (Number.isNaN(a) || Number.isNaN(b)) return false;
+  const gap = Math.round((b - a) / 86_400_000);
+  return gap >= 0 && gap <= windowDays;
+}
+
+/**
+ * Whether the app may name professional support this morning: only in the
+ * concern band, and only if it has not already done so.
+ */
+export function shouldOfferSupport(soften: boolean, supportOfferedAt: string | null): boolean {
+  return soften && !supportOfferedAt;
 }
 
 export function screen(text: string): SafetyResult {

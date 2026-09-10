@@ -6,7 +6,17 @@ import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { consistencyCaption, dayOf, domainMeta, isReturning, plural, returnsLetter, sourceLineFor } from '@morrow/core';
+import {
+  consistencyCaption,
+  dayOf,
+  domainMeta,
+  formatDay,
+  greeting,
+  isReturning,
+  plural,
+  returnsLetter,
+  sourceLineFor,
+} from '@morrow/core';
 import {
   Body,
   Chip,
@@ -111,12 +121,19 @@ export default function Today() {
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: 24 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingTop: 12 }}>
-            <Label testID="today-date">{new Date().toDateString().slice(0, 10)}</Label>
+            {/*
+              The app's day, not the wall clock's. Somebody writing at half past
+              midnight with a 4 a.m. boundary is still in yesterday as far as
+              every move, seal and ledger entry is concerned; printing the
+              calendar date here had the header say Friday while the entry they
+              had just sealed filed itself under Thursday.
+            */}
+            <Label testID="today-date">{formatDay(today, { weekday: true })}</Label>
             <Label>{plural(days.filter((d) => d.sealedAt).length, 'sealed day')}</Label>
           </View>
 
           <Statement style={{ marginTop: 12 }}>
-            {state.profile.displayName ? `Good morning, ${state.profile.displayName}.` : 'Good morning.'}
+            {greeting(new Date(), state.profile.displayName)}
           </Statement>
 
           {book ? (

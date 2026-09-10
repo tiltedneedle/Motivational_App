@@ -379,6 +379,19 @@ export const Brief = z.object({
   ifThen: z.string(),
   quotedSpans: z.array(z.string()),
   firstMoveId: z.string().nullable(),
+  /**
+   * The one-time line pointing at professional support (PRD 11.6: concern
+   * "suggests professional support once"). Null on every other brief, which is
+   * almost all of them.
+   */
+  support: z.string().nullable().default(null),
+  /**
+   * Whether this brief was written in the concern band. The screen needs to
+   * know as well as the engine: the Consistency figure at the foot of the card
+   * is a numeric target like any other, and "avoids numeric targets" means it
+   * too, not only the one in the Yesterday line.
+   */
+  soften: z.boolean().default(false),
   createdAt: z.string(),
 });
 export type Brief = z.infer<typeof Brief>;
@@ -406,6 +419,12 @@ export const Profile = z.object({
   reducedMotion: z.boolean(),
   consentedAt: z.string().nullable(),
   entitled: z.boolean(),
+  /**
+   * When the app last pointed at professional support. PRD 11.6 says once, and
+   * this is what makes it once rather than every morning that a flat week
+   * happens to trip the concern band.
+   */
+  supportOfferedAt: z.string().nullable().default(null),
 });
 export type Profile = z.infer<typeof Profile>;
 
@@ -422,6 +441,7 @@ export const DEFAULT_PROFILE: Profile = {
   reducedMotion: false,
   consentedAt: null,
   entitled: false,
+  supportOfferedAt: null,
 };
 
 // ---------------------------------------------------------------- domain meta

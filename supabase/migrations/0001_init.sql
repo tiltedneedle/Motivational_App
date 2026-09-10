@@ -24,6 +24,9 @@ create table public.profiles (
   haptics_on boolean not null default true,
   consented_at timestamptz,
   entitlement text not null default 'free',
+  -- PRD 11.6: the concern band suggests professional support *once*. This is
+  -- what makes it once across devices rather than once per install.
+  support_offered_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -249,6 +252,12 @@ create table public.briefs (
   -- every brief must quote the user at least once (PRD §7.9)
   quoted_spans jsonb not null default '[]'::jsonb,
   first_move_id uuid references public.moves on delete set null,
+  -- The one-time support line, and whether the brief was written in the
+  -- concern band at all. Kept on the row rather than recomputed, because the
+  -- register a person was actually spoken to in that morning is a fact about
+  -- that morning, not something to re-derive later from data that has moved on.
+  support text,
+  soften boolean not null default false,
   read_at timestamptz,
   created_at timestamptz not null default now(),
   unique (user_id, day, kind)

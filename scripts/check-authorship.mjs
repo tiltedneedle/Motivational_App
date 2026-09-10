@@ -44,6 +44,7 @@ const APP_PROSE = [
   'scheduleLabel',
   'durationLabel',
   'cadenceLabel',
+  'greeting',
 ];
 
 /**

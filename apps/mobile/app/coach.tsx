@@ -133,8 +133,28 @@ useEffect(() => {
                 <Label style={{ color: accent.coralText }}>If</Label>
                 <Body style={{ color: day.ink }}>{brief.ifThen}</Body>
               </View>
-              <Rule />
-              <Label>Consistency {score.score}</Label>
+              {brief.support ? (
+                <>
+                  <Rule />
+                  <View style={{ gap: 4 }}>
+                    <Label style={{ color: accent.coralText }}>One thing</Label>
+                    <Body testID="brief-support" style={{ color: day.ink }}>
+                      {brief.support}
+                    </Body>
+                  </View>
+                </>
+              ) : null}
+              {/*
+                No number on a heavy week. The score is still computed and
+                still on Progress if they go and look for it; it does not lead
+                the morning. PRD 11.6.
+              */}
+              {brief.soften ? null : (
+                <>
+                  <Rule />
+                  <Label testID="brief-consistency">Consistency {score.score}</Label>
+                </>
+              )}
             </View>
           ) : null}
 

@@ -9,6 +9,8 @@
  */
 import { describe, expect, it } from 'vitest';
 import { movesForDay, movesOpenOn, type DayMove } from '../src/engines/days';
+import { dayOf, formatDay } from '../src/ids';
+import { greeting } from '../src/engines/coach';
 
 const BOUNDARY = 3;
 
@@ -85,5 +87,47 @@ describe('what Today still asks for', () => {
   it('keeps an undated move, which is asked for whenever it is looked at', () => {
     const undated = move({ scheduledFor: null });
     expect(movesOpenOn([undated], '2026-09-10', BOUNDARY)).toHaveLength(1);
+  });
+});
+
+/**
+ * The two places the app used to read the wall clock instead of its own day.
+ *
+ * `dayOf` is the app's definition of "today": a day runs from the boundary
+ * hour to the boundary hour, so somebody writing at half past midnight is
+ * still in yesterday. Today's header printed `new Date()` instead, so the
+ * screen said Friday while everything sealed on it filed itself under
+ * Thursday. And the greeting was the fixed string "Good morning." at every
+ * hour of the day, including the evening when the day is sealed.
+ */
+describe('the app day, as the person sees it', () => {
+  it('is yesterday before the boundary hour', () => {
+    expect(dayOf(new Date(2026, 8, 11, 1, 8), 4)).toBe('2026-09-10');
+    expect(dayOf(new Date(2026, 8, 11, 3, 59), 4)).toBe('2026-09-10');
+    expect(dayOf(new Date(2026, 8, 11, 4, 0), 4)).toBe('2026-09-11');
+    expect(dayOf(new Date(2026, 8, 11, 23, 30), 4)).toBe('2026-09-11');
+  });
+
+  it('is printed by the header in the same words as the ledger', () => {
+    // Both go through formatDay, so "THU 10 SEP" in one place is "THU 10 SEP"
+    // in the other. The header used to be "Fri Sep 11" — a different format of
+    // a different day.
+    expect(formatDay('2026-09-10', { weekday: true, today: '2026-09-10' })).toBe('Thu 10 Sep');
+    expect(formatDay(dayOf(new Date(2026, 8, 11, 1, 8), 4), { weekday: true, today: '2026-09-10' })).toBe(
+      'Thu 10 Sep',
+    );
+  });
+
+  it('greets by the hour, and does not wish anybody a good morning at nine at night', () => {
+    expect(greeting(new Date(2026, 8, 11, 2, 0))).toBe('Still up.');
+    expect(greeting(new Date(2026, 8, 11, 8, 0))).toBe('Good morning.');
+    expect(greeting(new Date(2026, 8, 11, 13, 0))).toBe('Good afternoon.');
+    expect(greeting(new Date(2026, 8, 11, 21, 0))).toBe('Good evening.');
+  });
+
+  it('uses the name when there is one, and does not print an empty comma when there is not', () => {
+    expect(greeting(new Date(2026, 8, 11, 8, 0), 'Sam')).toBe('Good morning, Sam.');
+    expect(greeting(new Date(2026, 8, 11, 8, 0), '   ')).toBe('Good morning.');
+    expect(greeting(new Date(2026, 8, 11, 8, 0), undefined)).toBe('Good morning.');
   });
 });
