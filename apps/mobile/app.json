@@ -11,7 +11,12 @@
       "bundleIdentifier": "app.morrow.client"
     },
     "android": {
-      "package": "app.morrow.client"
+      "package": "app.morrow.client",
+      "blockedPermissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ]
     },
     "web": {
       "bundler": "metro",

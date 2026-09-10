@@ -209,9 +209,8 @@ it found shows up until you build natively.
   put two major versions of each in the tree at once. `npx expo install --fix`
   aligned them, which also moved react-native 0.82.0 to 0.86.3, react 19.1.0 to
   19.2.3 and TypeScript to what the SDK expects.
-- **Two physical copies of react-native and react-native-svg. Mitigated in the
-  bundler, NOT fully resolved on disk — read this before the first native
-  build.** `packages/ui` dev-pinned react, react-native and react-native-svg at
+- **Two physical copies of react-native and react-native-svg. Resolved, and now
+  confirmed at the native link stage.** `packages/ui` dev-pinned react, react-native and react-native-svg at
   versions the app had moved past, so the tree held two different majors. That
   part is fixed: the pins are gone, they are peer dependencies, and the
   workspace root carries one copy for typechecking. What is left is subtler.
@@ -222,19 +221,18 @@ it found shows up until you build natively.
   in `.npmrc`, which pnpm 11 does not read), dropping the dev pins, and removing
   the peer declarations entirely.
 
-  The mitigation actually in place is `config.resolver.extraNodeModules` in
-  `metro.config.js`, pinning react, react-dom, react-native and
-  react-native-svg to the app's copy so an import from inside `@morrow/ui`
-  cannot reach the second instance. That covers the JS bundle. It does not
-  cover **native autolinking**, which scans node_modules directly, and this
-  environment cannot build natively, so that half is unverified. `expo-doctor`
-  still reports 17/18 with this as the one failure.
+  `config.resolver.extraNodeModules` in `metro.config.js` pins react, react-dom,
+  react-native and react-native-svg to the app's copy, so an import from inside
+  `@morrow/ui` cannot reach the second instance. That covers the JS bundle.
 
-  **On the first machine that can run `expo run:ios` or `expo run:android`:**
-  build, and if autolinking reports a duplicate module or the linker reports
-  duplicate symbols, the known fix is a `pnpm.overrides` entry forcing a single
-  resolution, or flattening `packages/ui` into the app. Do not assume the
-  warning is cosmetic just because the web build is green.
+  The native half is now answered too, without needing an Android SDK.
+  `npx expo prebuild --platform android` generates the native project and runs
+  autolinking, which is the step that would actually produce a duplicate native
+  module. Expo autolinking resolves 45 modules with zero duplicates, and
+  community autolinking resolves 9 native modules with **none** resolving to
+  more than one copy — `react-native-svg` picks the app's. The `expo-doctor`
+  warning describes the on-disk layout and does not translate into a duplicate
+  at link time. It is still worth watching on the first real build.
 - **`app.json` carried two keys SDK 57 rejects**, `newArchEnabled` and
   `android.edgeToEdgeEnabled`. Both are the default now and the flags are gone.
 - **`metro.config.js` replaced `watchFolders` instead of appending to it**, so
@@ -282,6 +280,30 @@ Still not done here, and it needs a machine that can do it:
   place because Supabase has it and removing it buys nothing, but it is not a
   dependency.
 
+
+### What prebuild found, without an Android SDK (2026-09-10)
+
+`npx expo prebuild --platform android --no-install --clean` generates the native
+project and runs autolinking. It compiles nothing, so it needs no SDK, and it
+exercises the config plugins and the module resolution that a real build would.
+
+- **The app asked for three permissions it does not need**: `SYSTEM_ALERT_WINDOW`
+  (draw over other apps), `READ_EXTERNAL_STORAGE` and `WRITE_EXTERNAL_STORAGE`.
+  They arrive through default Expo modules rather than anything the product
+  does. For an app whose whole promise is that a person's writing stays on their
+  device, asking to draw over other apps and write external storage undermines
+  the pitch before anyone opens it, and it is the kind of thing a store reviewer
+  asks about. `android.blockedPermissions` in `app.json` strips all three at
+  manifest merge; the shipped app asks only for Internet and Vibrate.
+- **`userInterfaceStyle: light` was declared but not enforced.** It needs
+  `expo-system-ui`, which was not installed, so Android would have applied the
+  system theme to native surfaces regardless of what the config said. The
+  product has a deliberate day studio and night studio; the system does not get
+  to choose between them. Installed.
+- **The native folders are output, not source.** They are generated on demand
+  and now gitignored, so `app.json` stays the one place native configuration
+  lives.
+
 ## Blocked on the user
 - Supabase project URL/anon key, Anthropic API key, fal.ai key, RevenueCat keys: needed to test real providers. Everything runs on local fallbacks without them.
 
@@ -298,10 +320,11 @@ not have, and they are the only things standing between the current tree and
 something a person could actually use.
 
 1. **Build it natively, once.** `cd apps/mobile && npx expo run:ios` (or
-   `run:android`). Everything so far has run through react-native-web. Watch
-   for the duplicate native module warning described in the research pass above,
-   and check the fonts, the hold gesture, the drag on Today, and the safety card
-   on a real device. This is the largest untested surface in the project.
+   `run:android`, which needs an Android SDK this machine does not have).
+   Everything so far has run through react-native-web. Autolinking and the
+   manifest are verified via prebuild, so what remains is what only a device can
+   show: the fonts, the hold gesture, the drag on Today, the safety card, and
+   Dynamic Type at 200%. This is the largest untested surface in the project.
 2. ~~Run the Supabase migration against a real Postgres.~~ **Done** — see the
    research pass. Still worth one `supabase db reset` against the real service
    before launch, because PGlite is Postgres but Supabase is Postgres plus its
