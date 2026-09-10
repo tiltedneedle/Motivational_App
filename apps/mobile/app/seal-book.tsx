@@ -126,12 +126,17 @@ export default function SealBook() {
             doneLabel="Sealed · first edition"
             done={sealed}
             reducedMotion={reduced}
+            // Both branches have to RETURN the refusal. The bar releases its
+            // latch on `false` and stays shut on anything else, so a call site
+            // that drops the value leaves the person on this screen with the
+            // one control that can seal their Book permanently dead — which is
+            // exactly what happens if you hold the bar before typing the line.
             onComplete={() => {
               if (!iWill.trim()) {
                 setError('The "I will…" line is required. It can be three words.');
-                return;
+                return false;
               }
-              onSeal();
+              return onSeal();
             }}
           />
           {sealed ? <InkButton testID="seal-open-book" label="Read the Book" onPress={() => router.replace('/book')} /> : null}
