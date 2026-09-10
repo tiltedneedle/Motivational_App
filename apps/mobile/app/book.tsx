@@ -77,6 +77,43 @@ export default function BookScreen() {
           style={{ flex: 1, backgroundColor: '#FBF8F2', borderRadius: radius.card }}
           contentContainerStyle={{ padding: 26, paddingBottom: 40, gap: 18 }}
         >
+          {/*
+            The spine.
+
+            Sitting 2 asks "if this plan were a book on your shelf, what is on
+            the spine?", stores the answer, prints it at the top of the plain
+            text export — and never showed it on the Book itself. Somebody was
+            asked to title their own book and then never saw the title.
+
+            In the serif when they typed it, in the sans when it is the app's
+            fallback, which is the same rule as everywhere else — and the
+            framing sits apart from the title for the same reason the Portrait's
+            identity framing does.
+
+            The id is `book-spine`, not `book-title`: the rank screen's own
+            field already owns that one, and expo-router keeps that screen
+            mounted behind this one, so anything asking for "book-title" was
+            handed the field the person typed into rather than the spine of the
+            Book it produced.
+          */}
+          <View style={{ gap: 2 }}>
+            {book.titleFraming ? (
+              <Body testID="book-spine-framing" style={{ fontSize: 15, color: '#8B7F6A' }}>
+                {book.titleFraming}
+              </Body>
+            ) : null}
+            {book.titleAuthored === false ? (
+              <Body testID="book-spine" style={{ fontSize: 26, lineHeight: 32, color: '#231F1A' }}>
+                {book.title}
+              </Body>
+            ) : (
+              <UserText testID="book-spine" style={{ fontSize: 26, lineHeight: 32, color: '#231F1A' }}>
+                {book.title}
+              </UserText>
+            )}
+          </View>
+          <Rule style={{ backgroundColor: '#E2DACB' }} />
+
           <Label style={{ color: '#8B7F6A' }}>Chapter one · the Fifteen</Label>
           <UserText testID="book-first-sentence" style={{ fontSize: 28, lineHeight: 34, color: '#15181F' }}>
             {book.firstSentence}

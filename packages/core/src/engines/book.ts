@@ -38,6 +38,8 @@ export interface BookInput {
    * bank, it then counts as neither the user's prose nor rival prose.
    */
   titleAuthored?: boolean;
+  /** The fixed framing the title is set against, if a chip was chosen. */
+  titleFraming?: string | null;
   track: DepthTrack;
   ideal: string;
   shadow: string | null;
@@ -161,6 +163,7 @@ export function buildBookVersion(input: BookInput, newId: (p: string) => string)
     version: input.version,
     title: input.title.trim() || 'Untitled',
     titleAuthored: input.titleAuthored !== false,
+    titleFraming: input.titleFraming?.trim() || null,
     track: input.track,
     sealedAt: input.sealedAt ?? new Date().toISOString(),
     firstSentence: firstSentence(ideal),
@@ -209,7 +212,9 @@ export function diffBooks(previous: BookVersion, next: BookVersion): BookDiff {
 /** Plain-text export. The PDF renderer uses the same shape. */
 export function bookToText(book: BookVersion): string {
   const out: string[] = [];
-  out.push(book.title.toUpperCase());
+  // The framing is the app's words and the title is theirs; the plain text has
+  // no second face to say so, so they simply run together as one line.
+  out.push([book.titleFraming, book.title].filter(Boolean).join(' ').toUpperCase());
   out.push(`Sealed ${formatDay(book.sealedAt.slice(0, 10))} · ${plural(book.chapters.length, 'goal')} · ${book.track}`);
   out.push('');
   out.push('CHAPTER ONE · THE FIFTEEN');

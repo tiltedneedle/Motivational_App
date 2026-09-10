@@ -272,6 +272,13 @@ export const BookVersion = z.object({
    * the app's own word "Untitled" to them.
    */
   titleAuthored: z.boolean().optional(),
+  /**
+   * The fixed words the spine title is set against — "The one where I…" and
+   * the like. App chrome, kept apart from the title itself so the two can be
+   * typeset in different faces and so the authorship ratio never counts it as
+   * theirs. Same arrangement as the Portrait's identity line.
+   */
+  titleFraming: z.string().nullable().default(null),
   track: DepthTrack,
   sealedAt: z.string(),
   firstSentence: z.string(),

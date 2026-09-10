@@ -113,6 +113,10 @@ create table public.books (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users on delete cascade,
   title text not null default 'Untitled',
+  -- The fixed words in front of the title ("The one where I"). App chrome, so
+  -- it is stored apart from the title and never counted as the person's prose
+  -- by book_authorship_ratio.
+  title_framing text,
   current_version int not null default 1,
   first_sealed_at timestamptz not null default now()
 );

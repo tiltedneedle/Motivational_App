@@ -18,6 +18,7 @@ export default function Rank() {
   const goals = useGoals();
   const rankGoals = useMorrow((s) => s.rankGoals);
   const bookTitle = useMorrow((s) => s.bookTitle);
+  const setBookTitleFraming = useMorrow((s) => s.setBookTitleFraming);
   const setBookTitle = useMorrow((s) => s.setBookTitle);
   const [framing, setFraming] = useState<string | null>(null);
 
@@ -105,7 +106,15 @@ export default function Rank() {
                   // spine of their Book — a sentence fragment the app wrote,
                   // counted as their prose. Now it only sets the opening words
                   // shown in front of the field they type into.
-                  onPress={() => setFraming(framing === f ? null : f)}
+                  onPress={() => {
+                    const next = framing === f ? null : f;
+                    setFraming(next);
+                    // Kept, so the Book can print it in front of their words.
+                    // It was only ever a placeholder before, which meant the
+                    // opening the person chose vanished the moment they left
+                    // this screen.
+                    setBookTitleFraming(next ? next.replace(/…$/, '').trim() : null);
+                  }}
                 />
               ))}
             </View>

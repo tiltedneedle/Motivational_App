@@ -105,6 +105,12 @@ export interface MorrowState {
   /** The coach's single invitation to the Full track, once ever. */
   fullTrackInvited: boolean;
   bookTitle: string;
+  /**
+   * The fixed words in front of the spine title — "The one where I…" and the
+   * like — kept apart from the title so the Book can typeset the two
+   * differently and the authorship ratio never counts the app's half as theirs.
+   */
+  bookTitleFraming: string | null;
   iWill: string;
 
   // profile
@@ -129,6 +135,7 @@ export interface MorrowState {
     input: { framingId: string | null; line: string; line2?: string; paragraph?: string },
   ) => void;
   setBookTitle: (t: string) => void;
+  setBookTitleFraming: (f: string | null) => void;
   setIWill: (t: string) => void;
   sealBook: () => { ok: true; book: BookVersion } | { ok: false; error: string };
 
@@ -264,6 +271,7 @@ const EMPTY = {
   toast: null,
   fullTrackInvited: false,
   bookTitle: '',
+  bookTitleFraming: null,
   iWill: '',
 };
 
@@ -460,6 +468,7 @@ export const useMorrow = create<MorrowState>()(
       },
 
       setBookTitle: (t) => set({ bookTitle: t }),
+      setBookTitleFraming: (f) => set({ bookTitleFraming: f }),
       setIWill: (t) => set({ iWill: t }),
 
       sealBook: () => {
@@ -478,6 +487,7 @@ export const useMorrow = create<MorrowState>()(
               // Anything else in this field was typed by the person: the
               // framing chips on the rank screen no longer fill it in.
               titleAuthored: !!s.bookTitle.trim(),
+              titleFraming: s.bookTitleFraming,
               track: s.profile.track,
               ideal: [ideal?.body ?? '', ...additions].filter(Boolean).join('\n\n'),
               shadow: shadow?.body ?? null,

@@ -692,6 +692,7 @@ describe('the coach', () => {
           id: 'b1',
           version: 1,
           title: 'A year of the back door',
+          titleFraming: null,
           track: 'starter',
           sealedAt: '2026-09-08T22:41:00.000Z',
           firstSentence: "It's 6:40 and the kitchen is still blue",

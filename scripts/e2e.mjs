@@ -207,8 +207,15 @@ async function main() {
     await tap('heard-continue');
 
     // ---- rank + title
+    //
+    // The framing chip is the app's words and the field is theirs. Choosing a
+    // chip here is what proves the two survive to the Book as two things: the
+    // framing used to be a placeholder, so the opening the person chose
+    // vanished the moment they left this screen.
     check('rank screen', await seen('screen-rank'));
-    await page.locator('[data-testid="book-title"]').fill('A year of the back door');
+    await tap('title-framing-The one where I…');
+    await page.waitForTimeout(200);
+    await page.locator('[data-testid="book-title"]').fill('stopped negotiating with the alarm');
     await page.waitForTimeout(200);
     await tap('rank-continue');
 
@@ -277,6 +284,20 @@ async function main() {
 
     check('the Book was sealed', await seen('screen-book'));
     if (await seen('screen-book')) {
+      // The spine. Sitting 2 asks what is on it, the export printed it, and the
+      // Book itself did not — somebody was asked to title their own book and
+      // then never saw the title.
+      check(
+        'the Book shows the title they wrote on its spine',
+        (await text('book-spine')).includes('stopped negotiating with the alarm'),
+        await text('book-spine'),
+      );
+      check(
+        'with the framing they chose in front of it, as separate words',
+        (await text('book-spine-framing')).includes('The one where I'),
+        await text('book-spine-framing'),
+      );
+
       const firstSentence = await text('book-first-sentence');
       // `IDEAL.includes('')` is true, so the old form of this check passed
       // when the element rendered nothing at all — the one failure it existed
