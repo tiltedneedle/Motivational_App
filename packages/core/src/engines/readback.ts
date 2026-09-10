@@ -24,13 +24,26 @@ export interface ReadBackResult {
   leftOutQuestion?: string;
 }
 
+/**
+ * The words that put a sentence in one part of a life rather than another.
+ *
+ * Every form is spelled out rather than left to a trailing `\w*` on the whole
+ * alternation, which is how the first version worked and why it read "cardio"
+ * as money (`card`), "the same" as people (`sam`) and "billion" as money
+ * (`bill`). This label is the app telling somebody what it thinks their own
+ * sentence was about, printed next to their words, so it is worth the length.
+ *
+ * `still` is gone from mind entirely. In English it is almost always the
+ * adverb — "still blue", "still asleep", "still here" — and it was strong
+ * enough to take "It is 6:40 and the kitchen is still blue" away from home.
+ */
 const DOMAIN_HINTS: Record<Exclude<DomainId, 'custom'>, RegExp> = {
-  health: /\b(run|running|ran|walk|gym|lift|weight|body|knee|shoe|race|marathon|swim|cycle|strong|fit|breath|sleep in|stretch)\w*\b/i,
-  money: /\b(money|balance|rent|save|saving|debt|card|overdraft|salary|raise|bill|afford|account|pension|invoice|budget)\w*\b/i,
-  craft: /\b(write|writing|wrote|pitch|book|essay|draft|portfolio|guitar|paint|code|build|ship|launch|study|learn|practice|practise|play)\w*\b/i,
-  mind: /\b(calm|quiet|anxious|anxiety|spiral|meditat|pray|phone|screen|sleep|bed|rest|breathe|still|peace|tired)\w*\b/i,
-  people: /\b(sam|mum|mom|dad|family|friend|partner|wife|husband|kids|child|call|visit|dinner|together|upstairs|love)\w*\b/i,
-  home: /\b(kitchen|home|house|flat|room|garden|move|cook|clean|table|door|shelf|wall|window)\w*\b/i,
+  health: /\b(run|runs|running|ran|walk|walks|walking|walked|gym|lift|lifts|lifting|weights?|body|knees?|shoes?|race|races|racing|marathons?|swim|swims|swimming|cycle|cycles|cycling|cardio|strong|stronger|fitness|fitter|breath|breathing|stretch|stretches|stretching)\b/i,
+  money: /\b(money|balance|rent|save|saves|saving|savings|debt|debts|overdraft|salary|raise|bills?|afford|accounts?|pension|invoices?|budget|budgets|budgeting)\b/i,
+  craft: /\b(write|writes|writing|wrote|pitch|pitches|books?|essays?|draft|drafts|portfolio|guitar|paint|paints|painting|code|coding|build|builds|building|ship|ships|shipping|launch|launches|study|studies|studying|learn|learns|learning|practice|practise|practising|practicing|play|plays|playing)\b/i,
+  mind: /\b(calm|calmer|quiet|quieter|anxious|anxiety|spiral|spiralling|spiraling|meditate|meditation|meditating|pray|prayer|phones?|screens?|sleep|sleeps|sleeping|slept|bed|bedtime|rest|resting|restless|breathe|peace|peaceful|tired)\b/i,
+  people: /\b(sam|mum|mom|dad|family|friend|friends|partner|wife|husband|kids|child|children|call|calls|calling|called|visit|visits|visiting|dinner|together|upstairs|love)\b/i,
+  home: /\b(kitchen|home|house|flat|rooms?|garden|move|moves|moving|moved|cook|cooks|cooking|clean|cleans|cleaning|table|doors?|shelf|shelves|walls?|windows?)\b/i,
 };
 
 /** Signals that a clause is about wanting something, not just describing. */
@@ -40,18 +53,39 @@ const CONCRETE = /\b(\d|£|\$|€|km|minutes?|hours?|weeks?|months?|every|mornin
 
 const NOISE = /^(and|but|so|then|because|which|that|it|there|this)\b/i;
 
+/**
+ * Which part of a life a sentence belongs to, or none.
+ *
+ * A tie used to be broken by the order the domains happen to be written in
+ * this file, which is not a fact about anybody's sentence. "It is 6:40 and the
+ * kitchen is still blue" matched mind once and home once, and mind won because
+ * it is declared first. The longer match wins now — a longer word is a more
+ * specific claim — and a genuine tie is answered with `custom`, which the
+ * screen shows as "something else". Saying nothing is better than guessing
+ * out loud at what somebody's sentence was about.
+ */
 export function domainOf(text: string): DomainId {
   let best: DomainId = 'custom';
   let bestScore = 0;
+  let bestLength = 0;
+  let tied = false;
+
   for (const [id, re] of Object.entries(DOMAIN_HINTS) as [Exclude<DomainId, 'custom'>, RegExp][]) {
     const matches = text.match(new RegExp(re.source, 'gi'));
-    const score = matches ? matches.length : 0;
-    if (score > bestScore) {
+    if (!matches) continue;
+    const score = matches.length;
+    const length = matches.reduce((n, m) => n + m.length, 0);
+    if (score > bestScore || (score === bestScore && length > bestLength)) {
       bestScore = score;
+      bestLength = length;
       best = id;
+      tied = false;
+    } else if (score === bestScore && length === bestLength) {
+      tied = true;
     }
   }
-  return bestScore > 0 ? best : 'custom';
+
+  return bestScore === 0 || tied ? 'custom' : best;
 }
 
 /** Split into clauses while keeping exact offsets, so every span stays verbatim. */
@@ -62,15 +96,23 @@ export function clauses(text: string): { text: string; start: number; end: numbe
   while ((m = re.exec(text)) !== null) {
     const raw = m[0];
     const lead = raw.length - raw.trimStart().length;
-    const trimmed = raw.trim().replace(/[.!?;]+$/, '');
+    // Commas and colons too. A span is printed inside quotation marks, and
+    // “I am out the back door before the kettle boils,” reads as a bug in the
+    // app rather than as their sentence. Trimming the tail leaves a verbatim
+    // substring, so nothing about the authorship rule changes.
+    const trimmed = raw.trim().replace(/[.!?;,:]+$/, '');
     if (trimmed.length < 12) continue;
     const start = m.index + lead;
     out.push({ text: trimmed, start, end: start + trimmed.length });
     // Long clauses often hold two wants joined by "and": offer the halves too.
     const andIdx = trimmed.search(/\s+and\s+(?=i|we|the|my)/i);
     if (trimmed.length > 90 && andIdx > 30) {
-      const left = trimmed.slice(0, andIdx).trim();
-      const rightRaw = trimmed.slice(andIdx).replace(/^\s+and\s+/i, '');
+      // The comma before "and" belongs to the join, not to either half of it.
+      const left = trimmed.slice(0, andIdx).trim().replace(/[,;:]+$/, '');
+      const rightRaw = trimmed
+        .slice(andIdx)
+        .replace(/^\s+and\s+/i, '')
+        .replace(/[,;:]+$/, '');
       const rightStart = start + trimmed.length - rightRaw.length;
       if (left.length >= 16) out.push({ text: left, start, end: start + left.length });
       if (rightRaw.length >= 16) out.push({ text: rightRaw, start: rightStart, end: rightStart + rightRaw.length });

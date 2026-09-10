@@ -123,6 +123,17 @@ export default function Settings() {
           </View>
 
           <Rule />
+          {/* The other half of PRD §11.6's disclosure. The first is on the Coach. */}
+          <View style={{ gap: 6 }}>
+            <Label>About the coach</Label>
+            <Body testID="settings-is-ai" style={{ fontSize: 14 }}>
+              Morrow's coach is an AI. It asks and it quotes you. It never writes a goal, a plan line or a sentence of
+              your Book — and if it produces text that is not yours, the app throws it away rather than showing it to
+              you.
+            </Body>
+          </View>
+
+          <Rule />
           {/*
             The helplines, findable without being in crisis.
 

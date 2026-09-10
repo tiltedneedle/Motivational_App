@@ -9,7 +9,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { domainMeta, type Span } from '@morrow/core';
+import { domainMeta, plural, type Span } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Statement, Stone, Studio, UserField, UserText, day } from '@morrow/ui';
 import { ai, latestText, useMorrow } from '../src/store';
 
@@ -64,6 +64,7 @@ export default function Heard() {
     setRows((r) => r?.map((row, j) => (j === i ? { ...row, name } : row)) ?? r);
 
   const named = rows?.filter((r) => r.state === 'kept' && r.name.trim()) ?? [];
+  const unnamed = rows?.filter((r) => r.state === 'kept' && !r.name.trim()) ?? [];
 
   const done = () => {
     if (named.length) {
@@ -157,7 +158,19 @@ export default function Heard() {
           </ScrollView>
         )}
 
-        <View style={{ paddingBottom: 18 }}>
+        <View style={{ paddingBottom: 18, gap: 8 }}>
+          {/*
+            A kept line with no name is not a goal, because the app does not
+            get to name it. Said out loud, because otherwise pressing "go on"
+            quietly drops the lines they just chose and nothing on the screen
+            explains where they went.
+          */}
+          {unnamed.length ? (
+            <Body testID="heard-unnamed" style={{ fontSize: 13 }}>
+              {plural(unnamed.length, 'line')} kept but not named yet. Name a line to keep it — the app will not name it
+              for you.
+            </Body>
+          ) : null}
           <InkButton
             testID="heard-continue"
             label={

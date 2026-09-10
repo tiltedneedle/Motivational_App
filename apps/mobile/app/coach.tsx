@@ -119,6 +119,19 @@ useEffect(() => {
           <TextButton testID="coach-back" label="Today" onPress={() => router.replace('/today')} />
         </View>
 
+        {/*
+          PRD §11.6: "Morrow's coach is an AI" at first chat and in Settings.
+          It was in neither. Shown while the thread is empty, which is every
+          first chat and no later one, and it says the thing that actually
+          matters about it rather than only the disclosure.
+        */}
+        {thread.length === 0 ? (
+          <Body testID="coach-is-ai" style={{ fontSize: 13, color: day.ink2, paddingTop: 10 }}>
+            Morrow's coach is an AI. It asks and it quotes you. It never writes a goal, a plan line or a sentence of
+            your Book.
+          </Body>
+        ) : null}
+
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18, gap: 16 }}>
           {thread.length === 0 && brief ? (
             <View testID="dawn-brief" style={{ gap: 14 }}>

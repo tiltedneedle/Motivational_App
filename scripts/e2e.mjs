@@ -536,6 +536,22 @@ async function main() {
 
     await page.setViewportSize({ width: 420, height: 900 });
 
+    // ---- the two places PRD §11.6 requires the disclosure, and the helplines
+    //
+    // "Morrow's coach is an AI" at first chat and in Settings. It was in
+    // neither, and the helplines lived only on the card the safety screen
+    // raises — so the only route to a number was to already be in crisis.
+    await page.goto(`${BASE}/coach`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(2000);
+    await page.waitForTimeout(600);
+    check('the coach says it is an AI on the first chat', await seen('coach-is-ai'));
+
+    await page.goto(`${BASE}/settings`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(400);
+    check('and Settings says it too', await seen('settings-is-ai'));
+    check('the helplines are reachable without a crisis', await seen('settings-helpline-US'));
+
     // ---- the safety gate, on its own path
     await page.goto(`${BASE}/coach`, { waitUntil: 'networkidle' });
     await page.clock.runFor(2000);
