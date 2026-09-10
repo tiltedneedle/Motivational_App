@@ -121,7 +121,10 @@ create table public.book_versions (
   i_will text not null check (length(btrim(i_will)) > 0),
   contents jsonb not null,
   diff jsonb,
-  -- PRD §11.1: a Book below this floor contains prose the user did not write
+  -- PRD §11.1: a Book below this floor contains prose the user did not write.
+  -- The constraint is a backstop; the number itself is recomputed from
+  -- `contents` by book_versions_authorship_guard below, because a floor applied
+  -- to a figure the client chose only checks that the client can do division.
   authorship_ratio real not null check (authorship_ratio >= 0.95),
   pdf_path text,
   lockscreen_path text,
@@ -251,19 +254,51 @@ alter table public.briefs             enable row level security;
 create policy "own profile" on public.profiles
   for all using (auth.uid() = id) with check (auth.uid() = id);
 
-do $$
-declare t text;
-begin
-  foreach t in array array[
-    'goals','authoring_sessions','authoring_texts','goal_analyses','books','book_versions',
-    'plans','milestones','moves','obstacle_plans','evidence','day_summaries','briefs'
-  ] loop
-    execute format(
-      'create policy %I on public.%I for all using (auth.uid() = user_id) with check (auth.uid() = user_id)',
-      'own ' || t, t
-    );
-  end loop;
-end $$;
+-- Written out one per table rather than generated in a loop. These policies
+-- are the whole boundary between one person's writing and another's, and a
+-- reviewer has to be able to read them without running them. Built with
+-- dynamic SQL they were invisible to every tool that reads this file, which
+-- is a poor property for the only thing standing between two strangers'
+-- private diaries.
+
+create policy "own goals" on public.goals
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "own authoring_sessions" on public.authoring_sessions
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "own authoring_texts" on public.authoring_texts
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "own goal_analyses" on public.goal_analyses
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "own books" on public.books
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "own book_versions" on public.book_versions
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "own plans" on public.plans
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "own milestones" on public.milestones
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "own moves" on public.moves
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "own obstacle_plans" on public.obstacle_plans
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "own evidence" on public.evidence
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "own day_summaries" on public.day_summaries
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "own briefs" on public.briefs
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 -- ---------------------------------------------------------------- guards
 
@@ -308,6 +343,81 @@ end $$;
 create trigger authoring_texts_immutable
   before update on public.authoring_texts
   for each row execute function public.protect_sealed_text();
+
+-- The authorship floor, recomputed here rather than believed.
+--
+-- `authorship_ratio` arrives from the device, and a check constraint on a
+-- number the client chose is not a guard: anything that could put prose the
+-- person did not write into a Book could also send 1.0 alongside it. The Book's
+-- contents are in this row, so the server can do the arithmetic itself.
+--
+-- Same rule as `authorshipRatio` in packages/core/src/engines/book.ts, and the
+-- two are meant to agree: the user's own writing over their writing plus any
+-- prose about their life they did not write. Framing labels and bank-supplied
+-- names count as neither, being chrome that is identical for every person.
+create or replace function public.book_authorship_ratio(contents jsonb) returns real
+language plpgsql immutable as $$
+declare
+  chapter jsonb;
+  line jsonb;
+  user_chars bigint := 0;
+  generated_chars bigint := 0;
+begin
+  user_chars := user_chars
+    + coalesce(length(contents ->> 'ideal'), 0)
+    + coalesce(length(contents ->> 'shadow'), 0)
+    + coalesce(length(contents ->> 'iWill'), 0);
+
+  -- A title the person typed counts; "Untitled" and a tapped framing do not.
+  if coalesce((contents ->> 'titleAuthored')::boolean, true) then
+    user_chars := user_chars + coalesce(length(contents ->> 'title'), 0);
+  end if;
+
+  for chapter in select * from jsonb_array_elements(coalesce(contents -> 'chapters', '[]'::jsonb)) loop
+    if coalesce((chapter ->> 'nameAuthored')::boolean, true) then
+      user_chars := user_chars + coalesce(length(chapter ->> 'name'), 0);
+    end if;
+
+    for line in select * from jsonb_array_elements(coalesce(chapter -> 'lines', '[]'::jsonb)) loop
+      user_chars := user_chars
+        + coalesce(length(line ->> 'text'), 0)
+        + coalesce(length(line ->> 'text2'), 0);
+      generated_chars := generated_chars + coalesce(length(line ->> 'generated'), 0);
+    end loop;
+
+    for line in select * from jsonb_array_elements(coalesce(chapter -> 'memories', '[]'::jsonb)) loop
+      user_chars := user_chars + coalesce(length(line #>> '{}'), 0);
+    end loop;
+  end loop;
+
+  if user_chars + generated_chars = 0 then
+    return 1.0;
+  end if;
+  return user_chars::real / (user_chars + generated_chars)::real;
+end $$;
+
+create or replace function public.check_book_authorship() returns trigger
+language plpgsql as $$
+declare
+  actual real;
+begin
+  actual := public.book_authorship_ratio(new.contents);
+
+  if actual < 0.95 then
+    raise exception
+      'this Book is % percent the writer''s own words; below 95 it contains prose they did not write',
+      round(actual::numeric * 100, 1);
+  end if;
+
+  -- The stored number is always the one the server worked out, so a Book can
+  -- never claim an authorship it does not have.
+  new.authorship_ratio := actual;
+  return new;
+end $$;
+
+create trigger book_versions_authorship_guard
+  before insert or update on public.book_versions
+  for each row execute function public.check_book_authorship();
 
 create or replace function public.touch_updated_at() returns trigger
 language plpgsql as $$

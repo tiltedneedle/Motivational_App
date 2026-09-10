@@ -24,7 +24,6 @@ import {
   reading,
   screen,
   scoreSpecificity,
-  todayISO,
   wordCount,
   type AnalysisKind,
   type AuthoringText,
@@ -384,18 +383,46 @@ export const useMorrow = create<MorrowState>()(
         }
       },
 
+      /**
+       * Build the Portrait and the Blueprint for a goal.
+       *
+       * A plan is built once. It used to be replaced wholesale every time this
+       * ran, and it runs again whenever the Book is re-sealed or a missing
+       * stone is filled in from the Goal screen — so a person who added their
+       * Monitoring line in week three lost every move they had kept, along with
+       * the dates they kept them on. Changing a plan that is already under way
+       * is what the replan is for, and that asks first.
+       *
+       * The Portrait is derived and safe to rebuild, except for an identity
+       * line the person has written themselves. That is theirs and survives.
+       */
       makePortraitAndPlan: (goalId) => {
         const s = get();
         const goal = s.goals.find((g) => g.id === goalId);
         const ideal = latestText(s.texts, 'ideal')?.body ?? '';
         if (!goal) return { ok: false, error: 'That goal is gone.' };
         const analyses = s.analyses.filter((a) => a.goalId === goalId);
+        const existingPlan = s.plans.find((p) => p.goalId === goalId);
+        const existingPortrait = s.portraits.find((p) => p.goalId === goalId);
         try {
-          const portrait = buildPortrait({ goal, analyses, ideal, firstName: s.profile.displayName });
-          const plan = buildPlan({ goal, analyses }, { today: todayISO(), newId });
+          const built = buildPortrait({ goal, analyses, ideal, firstName: s.profile.displayName });
+          const portrait =
+            existingPortrait?.identityLineEdited
+              ? {
+                  ...built,
+                  identityLine: existingPortrait.identityLine,
+                  identityFraming: existingPortrait.identityFraming,
+                  identityLineEdited: true,
+                }
+              : built;
+          // The day boundary is the user's, not UTC's. Dating the first move by
+          // UTC put it a day late for anyone west of it, and Today filters by
+          // the local day, so the move simply never appeared.
+          const today = dayOf(new Date(), s.profile.dayBoundaryHour);
+          const plan = existingPlan ?? buildPlan({ goal, analyses }, { today, newId });
           set((st) => ({
             portraits: [...st.portraits.filter((p) => p.goalId !== goalId), portrait],
-            plans: [...st.plans.filter((p) => p.goalId !== goalId), plan],
+            plans: existingPlan ? st.plans : [...st.plans, plan],
           }));
           return { ok: true };
         } catch (err) {

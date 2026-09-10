@@ -24,7 +24,16 @@ export function sequentialIds(seed = 0): (prefix?: string) => string {
   return (prefix = 'id') => `${prefix}_${(n++).toString(36).padStart(4, '0')}`;
 }
 
-export function todayISO(now = new Date()): string {
+/**
+ * The UTC calendar date. Not "today".
+ *
+ * Every "today" decision in the product goes through `dayOf`, which honours the
+ * user's day boundary. This is kept only for stamping things that are genuinely
+ * in UTC, and it is deliberately named for what it returns: using it as today
+ * dated a move a day late for everyone west of UTC, and Today filters by the
+ * local day, so the move never appeared at all.
+ */
+export function utcDate(now = new Date()): string {
   return now.toISOString().slice(0, 10);
 }
 

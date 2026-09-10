@@ -179,6 +179,42 @@ describe('specificity', () => {
     expect(followUpPrompt('strategies')).toBe('When, exactly, and where?');
   });
 
+  it('does not mistake a preposition for a place', () => {
+    // The old pattern was (at|in|on|from|to) + optional "the" + any word, so
+    // "to run" and "in order" registered as places. Nearly every English
+    // sentence contains one, which meant the single follow-up question was
+    // never asked of anybody.
+    for (const line of ['I want to run more', 'get on top of it', 'in order to feel better']) {
+      expect(scoreSpecificity(line).hasPlace, line).toBe(false);
+    }
+  });
+
+  it('recognises a real place, named or pointed at', () => {
+    expect(scoreSpecificity('twenty minutes in the kitchen').hasPlace).toBe(true);
+    expect(scoreSpecificity('out the back door and round the park').hasPlace).toBe(true);
+    expect(scoreSpecificity('at my desk before anyone else is up').hasPlace).toBe(true);
+  });
+
+  it('does not read money or a distance as a clock time', () => {
+    // "£10.50" and "5.30 km" both matched the dotted clock form, so a line
+    // that never said when scored as though it had.
+    expect(scoreSpecificity('put by 10.50 a week').hasTime).toBe(false);
+    expect(scoreSpecificity('run 5.30 km').hasTime).toBe(false);
+  });
+
+  it('still reads a dotted time when the sentence says it is one', () => {
+    expect(scoreSpecificity('out the door at 6.40').hasTime).toBe(true);
+    expect(scoreSpecificity('up at 6:15 every day').hasTime).toBe(true);
+    expect(scoreSpecificity('7 pm, after the washing up').hasTime).toBe(true);
+  });
+
+  it('asks its one question of a line that says what but never when or where', () => {
+    const r = scoreSpecificity('read more books this year');
+    expect(r.hasTime).toBe(false);
+    expect(r.hasPlace).toBe(false);
+    expect(r.needsFollowUp).toBe(true);
+  });
+
   it('treats an empty line as needing everything', () => {
     expect(scoreSpecificity('').score).toBe(0);
   });

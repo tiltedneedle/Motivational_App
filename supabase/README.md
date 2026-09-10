@@ -13,11 +13,19 @@ turns that into something that survives a lost phone.
   - `moves.source_line_id` is `NOT NULL`, and a trigger checks that the line
     belongs to the same person and the same goal. A move with nothing of the
     user's behind it cannot be inserted.
-  - `book_versions.authorship_ratio` carries a `>= 0.95` check constraint, so a
-    Book containing prose the user did not write cannot be stored at all.
-  - `authoring_texts` cannot be rewritten once the 24-hour draft lock passes.
-    It can be added to. The Fifteen is not something to tidy later into
-    something safer.
+  - `book_versions.authorship_ratio` is **recomputed on the server** from the
+    Book's own contents, by the same rule as `authorshipRatio` in the core
+    package, and the stored figure is overwritten with the server's. Below 0.95
+    the insert is refused. A check constraint on a number the device sent would
+    only have proved the device can divide.
+  - `authoring_texts.body` cannot be rewritten at all, ever. It can be added
+    to — that is a new row of kind `addition`. The Fifteen is not something to
+    tidy later into something safer. (An earlier version compared
+    `sealed_until < now()` and so left the words editable for exactly the 24
+    hours they were meant to be protected, and froze them afterwards.)
+  - Row level security is on all 14 tables, with one policy each, written out
+    per table rather than generated in a loop so they can be read without being
+    run. `scripts/check-sql.mjs` asserts all of the above still holds.
 - `functions/readback` — chooses phrases from the user's writing and verifies
   every one is a verbatim substring before returning it.
 - `functions/safety` — the second opinion behind the on-device screen.
@@ -31,6 +39,14 @@ supabase start
 supabase db reset
 supabase functions serve
 ```
+
+**This migration has never been executed.** There is no Postgres and no Docker
+in the environment it was written in, so it is verified two ways short of
+actually running: `pglast` parses all 60 statements, and `scripts/check-sql.mjs`
+asserts every structural guard is present. Neither can validate a `plpgsql`
+function body, which is an opaque string to any parser — a body referencing a
+column that does not exist will pass both and fail on the first `db reset`.
+Run it against a real instance before trusting it.
 
 Set `ANTHROPIC_API_KEY` in the function environment. Without it, every function
 returns a `degraded` response and the app quietly uses its local engines. That
