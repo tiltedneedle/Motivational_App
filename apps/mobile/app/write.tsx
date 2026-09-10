@@ -228,7 +228,19 @@ export default function Write() {
         </View>
 
         <View style={{ alignItems: 'center', paddingVertical: 14 }}>
-          <Ring size={92} progress={ringFraction(session)} color={accent.coral} track="rgba(255,255,255,0.12)" width={3}>
+          {/*
+            The ring is the only thing in the room that says how long is left,
+            and as a drawing it said nothing at all to a screen reader.
+          */}
+          <Ring
+            size={92}
+            progress={ringFraction(session)}
+            color={accent.coral}
+            track="rgba(255,255,255,0.12)"
+            width={3}
+            accessibilityLabel="Time left in this sitting"
+            valueText={`${formatRemaining(remaining(session))} left, ${words} words`}
+          >
             <Stone size={64} domain="health" polish={polish(words)} />
           </Ring>
         </View>

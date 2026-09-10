@@ -259,7 +259,11 @@ export function InkButton({
       accessibilityState={{ disabled: disabled || busy, busy }}
       style={({ pressed }) => [
         {
-          height: 58,
+          // A floor, not a ceiling. At 200% type a fixed 58 clipped the label
+          // inside the button that was supposed to carry it.
+          minHeight: 58,
+          paddingVertical: 14,
+          paddingHorizontal: 20,
           borderRadius: radius.chip,
           backgroundColor: p.ink,
           alignItems: 'center',
@@ -276,7 +280,7 @@ export function InkButton({
       {busy ? (
         <ActivityIndicator color={dark ? night.ground : '#FFFFFF'} />
       ) : (
-        <Text style={{ fontFamily: fonts.sansSemi, fontSize: 17, color: dark ? night.ground : '#FFFFFF' }}>
+        <Text style={{ fontFamily: fonts.sansSemi, fontSize: 17, textAlign: 'center', color: dark ? night.ground : '#FFFFFF' }}>
           {label}
         </Text>
       )}
@@ -579,10 +583,20 @@ export function Toast({
   onAction?: () => void;
   testID?: string;
 }) {
+  // iOS ignores accessibilityLiveRegion, so a toast carrying Undo was
+  // announced on Android and silent on VoiceOver — and Undo is the only way
+  // back from parking a stone by accident. Announce it explicitly there.
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return;
+    const message = actionLabel ? `${text}. ${actionLabel} available.` : text;
+    AccessibilityInfo.announceForAccessibility(message);
+  }, [text, actionLabel]);
+
   return (
     <View
       testID={testID}
       accessibilityLiveRegion="polite"
+      role="alert"
       style={{
         flexDirection: 'row',
         alignItems: 'center',
@@ -594,7 +608,12 @@ export function Toast({
         backgroundColor: night.ground,
       }}
     >
-      <Text numberOfLines={1} style={{ flex: 1, fontFamily: fonts.sansMedium, fontSize: 14, color: '#FFFFFF' }}>
+      <Text
+        // Two lines, not one. A move title plus "Added ·" is routinely longer
+        // than a phone is wide, and the tail was simply cut off.
+        numberOfLines={2}
+        style={{ flex: 1, fontFamily: fonts.sansMedium, fontSize: 14, color: '#FFFFFF' }}
+      >
         {text}
       </Text>
       {actionLabel ? (

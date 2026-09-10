@@ -109,14 +109,19 @@ export default function Coach() {
             <View testID="dawn-brief" style={{ gap: 14 }}>
               <Statement style={{ fontSize: 27, lineHeight: 33 }}>{brief.today}</Statement>
               <Rule />
-              <View style={{ flexDirection: 'row', gap: 14 }}>
-                <Label style={{ width: 76, color: accent.coral }}>Yesterday</Label>
-                <Body style={{ flex: 1, color: day.ink }}>{brief.yesterday}</Body>
+              {/*
+                Label above value, not beside it. A fixed-width column cannot
+                reflow, so at 200% type the row labels were cut off rather than
+                wrapping.
+              */}
+              <View style={{ gap: 4 }}>
+                <Label style={{ color: accent.coralText }}>Yesterday</Label>
+                <Body style={{ color: day.ink }}>{brief.yesterday}</Body>
               </View>
               <Rule />
-              <View style={{ flexDirection: 'row', gap: 14 }}>
-                <Label style={{ width: 76, color: accent.coral }}>If</Label>
-                <Body style={{ flex: 1, color: day.ink }}>{brief.ifThen}</Body>
+              <View style={{ gap: 4 }}>
+                <Label style={{ color: accent.coralText }}>If</Label>
+                <Body style={{ color: day.ink }}>{brief.ifThen}</Body>
               </View>
               <Rule />
               <Label>Consistency {score.score}</Label>

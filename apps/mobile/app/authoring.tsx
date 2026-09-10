@@ -44,7 +44,10 @@ export default function Authoring() {
                   key={t.id}
                   testID={`track-${t.id}`}
                   accessibilityRole="radio"
-                  accessibilityState={{ selected: on }}
+                  // A radio announces `checked`, not `selected`. With only
+                  // `selected` set, both tracks read as unchecked and there was
+                  // no way to hear which one you were about to start.
+                  accessibilityState={{ checked: on, selected: on }}
                   onPress={() => setProfile({ track: t.id })}
                   style={{
                     padding: 16,

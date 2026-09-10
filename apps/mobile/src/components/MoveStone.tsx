@@ -93,8 +93,25 @@ export function MoveStone({
         <Pressable
           testID={testID}
           accessibilityRole="checkbox"
-          accessibilityState={{ checked: seated }}
-          accessibilityLabel={label}
+          // A stone has three states, not two. `checked` is a boolean, so
+          // "parked" and "not done yet" both announced as unchecked and a
+          // screen-reader user could not tell a move they had set aside from
+          // one they had not reached. The state is spelled out in the label.
+          accessibilityState={{ checked: status === 'done' }}
+          accessibilityLabel={
+            status === 'done'
+              ? `${label}. Done.`
+              : status === 'skip'
+                ? `${label}. Set aside for today.`
+                : steps
+                  ? `${label}. Not done. ${steps.done} of ${steps.total} steps.`
+                  : `${label}. Not done.`
+          }
+          {...(steps
+            ? {
+                accessibilityValue: { min: 0, max: steps.total, now: steps.done },
+              }
+            : {})}
           accessibilityHint="Double tap to seat. Long press for not today."
           accessibilityActions={[{ name: 'longpress', label: 'Not today' }]}
           onAccessibilityAction={(e) => {
@@ -106,7 +123,16 @@ export function MoveStone({
           style={{ padding: 2 }}
         >
           {steps ? (
-            <Ring size={socket} progress={steps.done / steps.total} color={accent.coral} segments={steps.total} width={2.5}>
+            <Ring
+              size={socket}
+              progress={steps.done / steps.total}
+              color={accent.coral}
+              segments={steps.total}
+              width={2.5}
+              // The stone above already announces the step count, so the ring
+              // inside it stays silent rather than saying the same thing twice.
+              accessibilityLabel={null}
+            >
               <Socket size={size * 1.16}>{stone}</Socket>
             </Ring>
           ) : (
@@ -114,7 +140,15 @@ export function MoveStone({
           )}
         </Pressable>
       </GestureDetector>
+      {/*
+        A drag hint for the eye only. It lives at opacity 0 almost always, and
+        an element at opacity 0 is still in the accessibility tree, so a screen
+        reader used to read out "Not today" under every stone on the screen.
+      */}
       <Animated.Text
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        aria-hidden
         style={{
           position: 'absolute',
           top: socket + 2,

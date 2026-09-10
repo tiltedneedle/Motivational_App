@@ -56,7 +56,7 @@ export default function GoalScreen() {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 16, gap: 20 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
             <View style={{ flex: 1, gap: 6 }}>
-              <Label style={{ color: meta.hex }}>{goal.horizon}</Label>
+              <Label style={{ color: meta.ink }}>{goal.horizon}</Label>
               <Statement testID="goal-title">{goal.title}</Statement>
             </View>
             <Ring size={72} progress={pct} color={meta.hex} width={4}>
@@ -127,7 +127,7 @@ export default function GoalScreen() {
               <Label>The plan · every move shows the line it came from</Label>
               {plan.milestones.slice(0, 1).map((ms) => (
                 <View key={ms.id} style={{ gap: 4 }}>
-                  <Label style={{ color: accent.coral }}>
+                  <Label style={{ color: accent.coralText }}>
                     Milestone 1 · by {ms.targetDate}
                   </Label>
                   <Statement style={{ fontSize: 22, lineHeight: 27 }}>{ms.title}</Statement>

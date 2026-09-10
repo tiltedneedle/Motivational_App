@@ -19,6 +19,17 @@ export interface RingProps {
   children?: React.ReactNode;
   style?: ViewStyle;
   testID?: string;
+  /**
+   * What this ring is measuring, said in words. Without it the ring is a
+   * drawing: the only thing carrying the Fifteen's countdown, a routine's step
+   * progress or a goal's completion was the shape itself.
+   *
+   * Pass null for a ring that genuinely means nothing on its own — one sitting
+   * behind a number that already says the same thing.
+   */
+  accessibilityLabel?: string | null;
+  /** Overrides the percentage announcement, e.g. "3 of 5 steps". */
+  valueText?: string;
 }
 
 export function Ring({
@@ -31,13 +42,30 @@ export function Ring({
   children,
   style,
   testID,
+  accessibilityLabel,
+  valueText,
 }: RingProps) {
   const r = (size - width) / 2;
   const c = 2 * Math.PI * r;
   const p = Math.max(0, Math.min(1, progress));
 
   return (
-    <View testID={testID} style={[{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }, style]}>
+    <View
+      testID={testID}
+      {...(accessibilityLabel
+        ? {
+            accessibilityRole: 'progressbar' as const,
+            accessibilityLabel,
+            accessibilityValue: {
+              min: 0,
+              max: segments > 1 ? segments : 100,
+              now: segments > 1 ? Math.round(p * segments) : Math.round(p * 100),
+              ...(valueText ? { text: valueText } : {}),
+            },
+          }
+        : {})}
+      style={[{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }, style]}
+    >
       <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ position: 'absolute' }}>
         <G rotation={-90} originX={size / 2} originY={size / 2}>
           {segments <= 1 ? (

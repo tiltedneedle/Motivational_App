@@ -120,7 +120,7 @@ export default function Today() {
 
           {returnCard ? (
             <View testID="return-card" style={{ marginTop: 16, backgroundColor: day.surface, borderRadius: radius.card, padding: 18, gap: 10 }}>
-              <Label style={{ color: accent.coral }}>Welcome back</Label>
+              <Label style={{ color: accent.coralText }}>Welcome back</Label>
               <Body style={{ color: day.ink }}>{returnCard.body}</Body>
               <Chip label="Start small" onPress={() => setReturnCard(null)} />
             </View>
@@ -170,7 +170,7 @@ export default function Today() {
               }}
             >
               <View style={{ flex: 1, gap: 6 }}>
-                <Label style={{ color: accent.coral }}>Now</Label>
+                <Label style={{ color: accent.coralText }}>Now</Label>
                 <Statement style={{ fontSize: 26, lineHeight: 30 }}>{now.title}</Statement>
                 <Body style={{ fontSize: 14 }}>
                   {sourceLineFor(now, state.analyses) ? 'Tap the stone. Drag it up for not today.' : ''}

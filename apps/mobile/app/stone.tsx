@@ -97,7 +97,7 @@ export default function StoneScreen() {
           <Stone size={30} domain={goal.domain} polish={1} />
           <View style={{ flex: 1 }}>
             <Label testID="stone-goal">{goal.title}</Label>
-            <Label testID="stone-step" style={{ color: accent.coral, marginTop: 2 }}>
+            <Label testID="stone-step" style={{ color: accent.coralText, marginTop: 2 }}>
               {ANALYSIS_TITLES[kind]} · stone {stepIndex + 1} of {plan.length}
             </Label>
           </View>

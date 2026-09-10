@@ -6,6 +6,16 @@
  * used at those moments whatever the system theme says.
  */
 
+/**
+ * Every ink here clears 4.5:1 against every ground in this palette, measured
+ * in `test/contrast.test.ts` rather than judged by eye.
+ *
+ * There is not room for three legible greys on a light ground, and the old
+ * palette pretended there was: `ink3` measured 2.14:1 and carried every label,
+ * placeholder, caption and completed row in the product. The hierarchy is now
+ * two steps of colour (5.55 and 4.53) and is carried the rest of the way by
+ * weight and size, which cost nobody their eyesight.
+ */
 export const day = {
   ground: '#F1F0EC',
   groundTop: '#F8F7F4',
@@ -13,8 +23,8 @@ export const day = {
   surface: '#FFFFFF',
   surface2: '#EEEDE8',
   ink: '#17181C',
-  ink2: '#6B6E76',
-  ink3: '#A3A6AD',
+  ink2: '#55585F',
+  ink3: '#62656E',
   line: 'rgba(23,24,28,0.12)',
   line2: 'rgba(23,24,28,0.06)',
   scrim: 'rgba(23,24,28,0.38)',
@@ -28,7 +38,7 @@ export const night = {
   surface2: '#26272D',
   ink: '#F2F1ED',
   ink2: '#B4B6BC',
-  ink3: '#7E8189',
+  ink3: '#8B8E95',
   line: 'rgba(255,255,255,0.14)',
   line2: 'rgba(255,255,255,0.07)',
   scrim: 'rgba(0,0,0,0.55)',
@@ -36,14 +46,39 @@ export const night = {
 
 export type Palette = typeof day;
 
+/**
+ * Each domain colour comes in three forms, because one colour cannot do all
+ * three jobs and the palette used to ask it to.
+ *
+ *  - the bare name is the MARK: stones, rings, the fill of a control. It clears
+ *    3:1 on the day ground, the threshold for a graphical object.
+ *  - `…Text` is the same hue dark enough to be READ as small text on a light
+ *    ground. Amber as a 12px label measured 1.97:1, which is not a colour.
+ *  - `…Night` is the same hue light enough to be read in the night studio.
+ *
+ * White is only legible on `…Text`, never on the mark, so a filled control that
+ * carries a white label takes the text form as its fill.
+ */
 export const accent = {
   coral: '#EA4B2E',
+  coralText: '#CB3014',
+  coralNight: '#ED6147',
   coralSoft: 'rgba(234,75,46,0.12)',
   teal: '#169A89',
+  tealText: '#11796C',
+  tealNight: '#179F8D',
   violet: '#6D4BE8',
-  amber: '#F09A12',
+  violetText: '#6D4BE8',
+  violetNight: '#957CEE',
+  amber: '#C27B0C',
+  amberText: '#966009',
+  amberNight: '#F09A12',
   rose: '#E23A6E',
-  moss: '#5E9E2E',
+  roseText: '#CF1E55',
+  roseNight: '#E75E88',
+  moss: '#5C9A2D',
+  mossText: '#477823',
+  mossNight: '#5E9E2E',
   pearl: '#CFCBC2',
   success: '#1E9E5A',
   destructive: '#B23A1E',

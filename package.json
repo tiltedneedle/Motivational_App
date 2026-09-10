@@ -5,7 +5,7 @@
   "packageManager": "pnpm@11.5.2",
   "scripts": {
     "typecheck": "pnpm -r typecheck",
-    "test": "pnpm --filter @morrow/core test",
+    "test": "pnpm -r --filter ./packages/** test",
     "test:functions": "node scripts/check-functions.mjs",
     "build:web": "pnpm --filter mobile export:web",
     "test:e2e": "node scripts/e2e.mjs",

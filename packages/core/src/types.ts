@@ -395,8 +395,20 @@ export const DEFAULT_PROFILE: Profile = {
 export interface DomainMeta {
   id: DomainId;
   label: string;
-  /** Studio stone colours (PRD §8.3). */
+  /**
+   * The stone colour (PRD 8.3). A mark, not a text colour: it clears 3:1
+   * against the day ground, which is the threshold for a graphical object and
+   * nothing like enough to read a 12px label in.
+   */
   hex: string;
+  /**
+   * The same hue, dark enough to be read as small text on a light ground.
+   * Screens that set a domain colour on type take this one. Mind's amber
+   * measured 1.97:1 as a label, which is not a colour anybody can read.
+   */
+  ink: string;
+  /** The same hue, light enough to be read in the night studio. */
+  inkNight: string;
   gradient: [string, string, string, string];
 }
 
@@ -405,36 +417,48 @@ export const DOMAINS: Record<Exclude<DomainId, 'custom'>, DomainMeta> = {
     id: 'health',
     label: 'Health',
     hex: '#EA4B2E',
+    ink: '#CB3014',
+    inkNight: '#ED6147',
     gradient: ['#FFDCCF', '#FF8A66', '#EA4B2E', '#7A1D10'],
   },
   money: {
     id: 'money',
     label: 'Money',
     hex: '#169A89',
+    ink: '#11796C',
+    inkNight: '#179F8D',
     gradient: ['#D6FAF4', '#4FDCCB', '#169A89', '#0A4A42'],
   },
   craft: {
     id: 'craft',
     label: 'Work & craft',
     hex: '#6D4BE8',
+    ink: '#6D4BE8',
+    inkNight: '#957CEE',
     gradient: ['#EAE3FF', '#A98FFF', '#6D4BE8', '#2E1F7A'],
   },
   mind: {
     id: 'mind',
     label: 'Mind & sleep',
     hex: '#F09A12',
+    ink: '#966009',
+    inkNight: '#F09A12',
     gradient: ['#FFF3D2', '#FFC85E', '#F09A12', '#7A4A05'],
   },
   people: {
     id: 'people',
     label: 'People',
     hex: '#E23A6E',
+    ink: '#CF1E55',
+    inkNight: '#E75E88',
     gradient: ['#FFE3EC', '#FF8FB0', '#E23A6E', '#6E1230'],
   },
   home: {
     id: 'home',
     label: 'Home',
     hex: '#5E9E2E',
+    ink: '#477823',
+    inkNight: '#5E9E2E',
     gradient: ['#E6F5D6', '#A9DC7A', '#5E9E2E', '#244A0E'],
   },
 };
@@ -443,6 +467,8 @@ export const CUSTOM_DOMAIN: DomainMeta = {
   id: 'custom',
   label: 'Something else',
   hex: '#8E8A80',
+  ink: '#67645C',
+  inkNight: '#A8A49A',
   gradient: ['#FFFFFF', '#F3F1EC', '#CFCBC2', '#8E8A80'],
 };
 

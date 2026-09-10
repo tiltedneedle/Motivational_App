@@ -142,7 +142,10 @@ export default function Interview() {
                     flexDirection: 'row',
                     alignItems: 'center',
                     gap: 14,
-                    height: 54,
+                    // A floor, not a fixed height: an answer has to be able to
+                    // wrap to a second line at 200% type instead of being cut.
+                    minHeight: 54,
+                    paddingVertical: 12,
                     paddingHorizontal: 16,
                     borderRadius: 18,
                     backgroundColor: isSelected(label) ? day.ink : day.surface,
@@ -153,6 +156,7 @@ export default function Interview() {
                     style={{
                       width: 26,
                       height: 26,
+                      flexShrink: 0,
                       borderRadius: 13,
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -185,7 +189,8 @@ export default function Interview() {
                   flexDirection: 'row',
                   alignItems: 'center',
                   gap: 14,
-                  height: 54,
+                  minHeight: 54,
+                  paddingVertical: 12,
                   paddingHorizontal: 16,
                   borderRadius: 18,
                   borderWidth: 1.5,
