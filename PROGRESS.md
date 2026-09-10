@@ -15,12 +15,13 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 1. packages/core: domain model, stores (zustand + persist), engines
 - [x] 2. packages/ui: Studio tokens, Stone/Socket/Ring, HoldBar, Chip, Field, Sheet, text primitives
 - [x] 3. apps/mobile screens (all 16 routes)
-- [x] 4. Tests: 198 core + 33 contrast + 6 storage unit tests, 67 Playwright e2e checks, all green
+- [x] 4. Tests: 236 core + 33 contrast + 6 storage unit tests, 88 Playwright e2e checks, all green
 - [x] 5. supabase/: migrations with RLS and three structural authorship guards, edge functions
 - [x] 6. Hardening: the eight-lens audit's findings, worst first (see below) — 95 of 95
 - [x] 7. Research pass: libraries/versions; the migration against a real Postgres; prebuild
 - [x] 8. Second audit, six lenses over the repairs — 37 of 37
 - [x] 9. Walking the built app in a browser, at three widths (see below)
+- [x] 10. PRD §7 read against the app: notifications, the paywall and the tablet layout built
 
 ## In flight
 
@@ -30,9 +31,9 @@ only tested. What is left needs a machine or a key this one does not have; see
 "Next steps".
 
 - The tree is green and committed: `pnpm verify` runs the toolchain guard,
-  typecheck, 198 core tests, 33 contrast measurements, 6 storage tests, the
+  typecheck, 236 core tests, 33 contrast measurements, 6 storage tests, the
   edge-function guards, the SQL structural guards, 23 checks against a real
-  Postgres, the serif authorship guard, the web build and 67 end-to-end
+  Postgres, the serif authorship guard, the web build and 88 end-to-end
   checks.
 - Three findings were **withdrawn, not fixed**: buildPlan does not construct
   plans its own validator rejects (verified across 560 combinations of strategy
@@ -56,11 +57,11 @@ build, then the end-to-end suite. Nothing ships without it passing.
 
 ```
 pnpm test:deps                  # one toolchain; the RN side left to Expo
-pnpm test                       # 198 core + 33 contrast + 6 storage unit tests
+pnpm test                       # 236 core + 33 contrast + 6 storage unit tests
 pnpm test:sql                   # RLS on every table, the three authorship guards
 pnpm test:migration             # 23 checks against a real Postgres, via PGlite
 pnpm test:authorship            # nothing but the user's words in the serif
-pnpm build:web && pnpm test:e2e # 67 end-to-end checks, serves dist itself
+pnpm build:web && pnpm test:e2e # 88 end-to-end checks, serves dist itself
 node scripts/serve.mjs          # the built app on :8790, to walk it by hand
 cd apps/mobile && npx expo start
 ```
@@ -514,6 +515,53 @@ Two error paths were saying the wrong thing:
   every desktop browser. Verified live by giving the sealed Book a null chapter
   list and pressing the button.
 
+### Three P1 sections that were not built at all (2026-09-11)
+
+Reading §7 against the app rather than against the tests found three whole
+sections with nothing behind them. All three are now built, and all three
+follow the same shape the rest of the codebase uses: the arguable part is a
+pure engine in `packages/core` where it can be tested, and the platform is an
+adapter at the edge that is allowed to be absent.
+
+**§7.11 Notifications.** There were none. Every rule in that section is a
+promise not to be the kind of app people mute, and they are all in
+`engines/notifications.ts` now: one per moment; nothing inside quiet hours, and
+a time that falls inside them *waits* rather than being cancelled, because
+somebody whose wake time is 06:30 has told the app when their morning is; never
+a count of what was missed; a missed one never resent, so a phone that was off
+overnight does not deliver yesterday's morning line at breakfast; and after a
+gap exactly one word on day three and none after. Only the morning carries a
+register — a fierce evening notification is a stranger being sharp with
+somebody who has already decided the day is over. `expo-notifications` is
+loaded lazily behind a try/catch: absent means quieter, never a Book that fails
+to open. Settings gets one control that steps down and says in words what is
+left.
+
+**§7.13 / §8.9 The paywall.** There was none, and `Profile.entitled` was a
+field nothing read. The list of moments is closed on purpose — a paywall that
+can appear anywhere is one that eventually does. What is *not* gated is the
+argument: every goal can be authored, every stone written, and the Book sealed
+with all of them in it, on the free plan. Pro buys the plan the app builds out
+of those lines, never the right to write them down. The per-month maths is
+computed rather than typed beside the price. With no store keys, Continue says
+plainly that nothing was charged rather than spinning.
+
+**§7.14 The tablet layout.** "Content max-width 640 pt, two-column Goal and
+Book." The column was 560 and neither screen had a second column. `useTwoColumn`
+reads the window rather than the platform — a platform check gets a folding
+phone, a split-screen tablet and a resized browser all three wrong.
+
+Two defects came out of building them, both caught by the suite rather than by
+reading:
+
+- **The paywall replaced instead of popping**, which left the screen it came
+  from mounted underneath a second copy of itself — two Todays in the stack,
+  the lower one unreachable and still answering to its own test ids. Popping is
+  also the honest reading of "returns the user to where they were".
+- **Once was not once.** Marking the moment seen on the dismiss button meant a
+  system back gesture, or closing the app on that screen, brought it back the
+  next time Today opened.
+
 ## Blocked on the user
 - Supabase project URL/anon key, Anthropic API key, fal.ai key, RevenueCat keys: needed to test real providers. Everything runs on local fallbacks without them.
 
@@ -549,7 +597,15 @@ needs either hardware or a credential.
 3. **One `supabase db reset` against the real service** before launch. PGlite is
    Postgres, but Supabase is Postgres plus its own roles, extensions and `auth`
    schema, and `scripts/test-migration.mjs` stubs the last of those.
-4. Then loop: implement, test, harden, research, repeat.
+4. **The store keys.** `apps/mobile/src/billing.ts` is one function and one
+   seam; the paywall, the gates and their tests all go through the `Billing`
+   interface. Until then Continue says plainly that nothing was charged, which
+   is the honest thing for it to say.
+5. **Widgets and the Live Activity** (§7.11, P1-stretch). WidgetKit and a
+   foreground service are native code with no web equivalent, so nothing about
+   them can be built or checked on this machine. The data they need — the first
+   move, the Consistency figure — is already computed and already on Today.
+6. Then loop: implement, test, harden, research, repeat.
 
 ## Where the walkthrough habits are written down
 
