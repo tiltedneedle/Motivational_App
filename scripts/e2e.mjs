@@ -333,14 +333,18 @@ async function main() {
     const rows = await page.locator('[data-testid^="stone-mv"]').count();
     check('the plan produced at least one move on Today', rows > 0, `rows=${rows}`);
 
-    // A move is cut from the Strategies line the person wrote. Nothing checked
-    // that the words on Today were ever theirs.
+    // A move is cut from the Strategies line the person wrote.
+    //
+    // Scoped to the move rows themselves. Reading the whole screen let the Book
+    // quotation card at the top satisfy this, so the check passed without ever
+    // looking at a move.
     if (rows > 0) {
-      const todayText = await page.locator('[data-testid="screen-today"]').innerText();
+      const titles = await page.locator('[data-testid^="row-mv"], [data-testid="now-card"]').allInnerTexts();
+      const joined = titles.join(' | ');
       check(
         'the moves on Today are cut from the user own strategy line',
-        todayText.includes('6:40') || todayText.includes('back door') || todayText.includes('one run'),
-        todayText.slice(0, 160),
+        titles.length > 0 && (joined.includes('6:40') || joined.includes('back door')),
+        joined.slice(0, 200) || '(no move rows read)',
       );
     }
 

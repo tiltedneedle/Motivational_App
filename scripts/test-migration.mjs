@@ -313,6 +313,43 @@ try {
     'never rewritten',
   );
 
+  // The shape the app actually writes: a 24-hour draft lock, still running.
+  // The guard was only ever tested on a row with `sealed_until` null, which is
+  // a row the product never stores, so the case that matters went unchecked.
+  const lockedId = (
+    await as(
+      ALICE,
+      `insert into public.authoring_texts (user_id, kind, body, word_count, seconds_writing, mode, safety_risk, sealed_until)
+       values ($1, 'shadow', 'The alarm goes twice and I let it.', 8, 600, 'type', 'none', now() + interval '24 hours')
+       returning id`,
+      [ALICE],
+    )
+  ).rows[0].id;
+  await asRejects(
+    'a sitting inside its draft lock cannot be rewritten',
+    ALICE,
+    `update public.authoring_texts set body = 'Something safer.' where id = $1`,
+    [lockedId],
+    'never rewritten',
+  );
+
+  const expiredId = (
+    await as(
+      ALICE,
+      `insert into public.authoring_texts (user_id, kind, body, word_count, seconds_writing, mode, safety_risk, sealed_until)
+       values ($1, 'addition', 'And another thing.', 3, 120, 'type', 'none', now() - interval '48 hours')
+       returning id`,
+      [ALICE],
+    )
+  ).rows[0].id;
+  await asRejects(
+    'and it still cannot be rewritten after the lock expires',
+    ALICE,
+    `update public.authoring_texts set body = 'Something safer.' where id = $1`,
+    [expiredId],
+    'never rewritten',
+  );
+
   const touched = await as(
     ALICE,
     `update public.authoring_texts set safety_risk = 'concern' where id = $1 returning id`,

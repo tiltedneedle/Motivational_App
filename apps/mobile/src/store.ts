@@ -490,9 +490,31 @@ export const useMorrow = create<MorrowState>()(
           // the local day, so the move simply never appeared.
           const today = dayOf(new Date(), s.profile.dayBoundaryHour);
           const plan = existingPlan ?? buildPlan({ goal, analyses }, { today, newId });
+
+          // An existing plan keeps its moves — rebuilding them would throw away
+          // every one the person had already kept, and their dates with them.
+          // But what is safely derivable IS refreshed, or a Monitoring line
+          // written in week three could never reach the milestone the Goal
+          // screen promises it will fill: the plan was built before that line
+          // existed and nothing ever went back for it.
+          const monitoring = analyses.find((a) => a.kind === 'monitoring' && a.line.trim());
+          const refreshed =
+            existingPlan && monitoring
+              ? {
+                  ...existingPlan,
+                  milestones: existingPlan.milestones.map((ms) =>
+                    ms.proofSourceLineId
+                      ? ms
+                      : { ...ms, proof: monitoring.line.trim(), proofSourceLineId: monitoring.id },
+                  ),
+                }
+              : existingPlan;
+
           set((st) => ({
             portraits: [...st.portraits.filter((p) => p.goalId !== goalId), portrait],
-            plans: existingPlan ? st.plans : [...st.plans, plan],
+            plans: refreshed
+              ? st.plans.map((p) => (p.goalId === goalId ? refreshed : p))
+              : [...st.plans, plan],
           }));
           return { ok: true };
         } catch (err) {
@@ -612,8 +634,19 @@ export const useMorrow = create<MorrowState>()(
 
       setMoveStatus: (moveId, status) =>
         set((s) => {
-          const day = dayOf(new Date(), s.profile.dayBoundaryHour);
+          const boundary = s.profile.dayBoundaryHour;
+          const day = dayOf(new Date(), boundary);
           let title = '';
+
+          // Every day this change touches, not only today. Undoing a move that
+          // was kept on an earlier day removed that day's ledger row and left
+          // its score exactly where it was, so the number went on counting work
+          // whose record had just been deleted.
+          const before = s.plans.flatMap((p) => p.moves).find((m) => m.id === moveId);
+          const touched = new Set<string>([day]);
+          if (before?.completedAt) touched.add(dayOf(new Date(before.completedAt), boundary));
+          if (before?.scheduledFor) touched.add(before.scheduledFor);
+
           const plans = s.plans.map((p) => ({
             ...p,
             moves: p.moves.map((m) => {
@@ -645,7 +678,9 @@ export const useMorrow = create<MorrowState>()(
                 s.evidence.filter((e) =>
                   e.moveId ? e.moveId !== moveId : !(e.kind === 'move' && e.text === title && e.day === day),
                 );
-          return { plans, evidence: ev, days: recomputeDay(s, plans, ev, day) };
+          let days = s.days;
+          for (const d of touched) days = recomputeDay({ ...s, days }, plans, ev, d);
+          return { plans, evidence: ev, days };
         }),
 
       addMove: (goalId, title, minutes, opts) => {

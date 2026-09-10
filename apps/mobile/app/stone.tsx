@@ -56,6 +56,8 @@ export default function StoneScreen() {
 
   const ready = line.trim().length > 0 && (kind !== 'obstacles' || line2.trim().length > 0);
 
+  const makePlan = useMorrow((s) => s.makePortraitAndPlan);
+
   const goNext = () => {
     write(goalId, kind, {
       framingId,
@@ -69,6 +71,17 @@ export default function StoneScreen() {
       router.replace(`/stone?goal=${goalId}&kind=${nextKind}`);
       return;
     }
+
+    // The last stone for this goal is written, so build or refresh its plan
+    // here rather than only when the Book is sealed.
+    //
+    // Sealing was the single call site, which meant a goal whose Blueprint had
+    // failed the first time — because the Strategies line was missing then —
+    // could only ever get one by sealing a second edition of the whole Book.
+    // Safe to call now: it keeps an existing plan and its kept moves, and only
+    // fills in what is newly derivable.
+    makePlan(goalId);
+
     const idx = goals.findIndex((g) => g.id === goalId);
     const nextGoal = goals[idx + 1];
     if (nextGoal) {

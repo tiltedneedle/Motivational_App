@@ -53,6 +53,16 @@ export function SafetyGate() {
       ? `https://${contact}`
       : `tel:${contact.replace(/\s/g, '')}`;
     try {
+      // `canOpenURL` first, because on the web build `openURL` resolves whether
+      // or not anything handled it — a browser with no dialler simply does
+      // nothing and reports success. Waiting for a rejection that never comes
+      // meant the fallback could not fire on the one platform most likely to
+      // need it.
+      const handled = await Linking.canOpenURL(target).catch(() => true);
+      if (!handled) {
+        setDialFailed(contact);
+        return;
+      }
       await Linking.openURL(target);
       setDialFailed(null);
     } catch {
@@ -163,6 +173,15 @@ export function SafetyGate() {
               style={{ fontFamily: fonts.sansMedium, fontSize: 14, lineHeight: 20, color: day.ink, marginTop: 14 }}
             >
               This device could not open {dialFailed} on its own. The number is above and can be copied.
+            </Text>
+          ) : null}
+
+          {Platform.OS === 'web' ? (
+            <Text
+              testID="safety-web-note"
+              style={{ fontFamily: fonts.sans, fontSize: 13, lineHeight: 19, color: day.ink2, marginTop: 14 }}
+            >
+              On a computer these numbers may not dial. Every one of them can be selected and copied.
             </Text>
           ) : null}
 
