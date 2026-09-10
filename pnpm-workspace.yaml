@@ -2,10 +2,22 @@ packages:
   - "apps/*"
   - "packages/*"
 
-allowBuilds:
-  esbuild: set this to true or false
+# pnpm 11 reads these from here, not from .npmrc or package.json. The same move
+# caught `onlyBuiltDependencies` earlier in this build; `node-linker` was still
+# sitting in .npmrc being quietly ignored, which is why the workspace kept two
+# physically distinct copies of react-native at the same version.
+#
+# React Native's Metro resolver and its native build tooling both assume a flat
+# node_modules. Under the isolated layout each workspace package resolved its
+# own peer context, so apps/mobile and packages/ui each got their own
+# react-native and react-native-svg tree, and a native build may only contain
+# one copy of any native module.
+nodeLinker: hoisted
 
-onlyBuiltDependencies:
-  - esbuild
-  - "@swc/core"
-  - sharp
+# pnpm 11 asks, per package, whether its install script may run. An unanswered
+# question fails the install outright, which then fails every command that runs
+# a dependency check first, including `expo export`.
+allowBuilds:
+  esbuild: true
+  "@swc/core": true
+  sharp: true

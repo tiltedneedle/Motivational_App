@@ -184,6 +184,68 @@ Note on how it was run: the fan-out was too wide (294 agents) and hit the accoun
 
 - [x] **medium** `supabase/migrations/0001_init.sql:125` — The SQL authorship floor validates a number the client chose; nothing on the server can see the Book's contents
 - [x] **medium** `supabase/migrations/0001_init.sql:297` — The sealed-writing trigger is inverted: the body is rewritable exactly during the 24-hour draft lock and frozen only after it expires
+## Research pass (2026-09-10)
+
+`npx expo-doctor` from `apps/mobile` is the check that found all of this, and it
+is worth running before any native build. It reported 4 of 18 checks failing on
+a tree whose web build and 40 end-to-end checks were green, because none of what
+it found shows up until you build natively.
+
+- **Every Expo package was pinned to the pre-SDK-57 numbering.** `expo-constants`
+  at `~18.0.9` where SDK 57 wants `~57.0.17`, and the same for `expo-font`,
+  `expo-haptics`, `expo-linking`, `expo-splash-screen`, `expo-status-bar`. That
+  put two major versions of each in the tree at once. `npx expo install --fix`
+  aligned them, which also moved react-native 0.82.0 to 0.86.3, react 19.1.0 to
+  19.2.3 and TypeScript to what the SDK expects.
+- **Two physical copies of react-native and react-native-svg. Mitigated in the
+  bundler, NOT fully resolved on disk — read this before the first native
+  build.** `packages/ui` dev-pinned react, react-native and react-native-svg at
+  versions the app had moved past, so the tree held two different majors. That
+  part is fixed: the pins are gone, they are peer dependencies, and the
+  workspace root carries one copy for typechecking. What is left is subtler.
+  pnpm gives every workspace package its own peer resolution, so `apps/mobile`
+  and `packages/ui` still link to two store entries of the *same* version under
+  different peer hashes. Three things were tried and none of them collapsed the
+  two: moving `nodeLinker: hoisted` into `pnpm-workspace.yaml` (it was sitting
+  in `.npmrc`, which pnpm 11 does not read), dropping the dev pins, and removing
+  the peer declarations entirely.
+
+  The mitigation actually in place is `config.resolver.extraNodeModules` in
+  `metro.config.js`, pinning react, react-dom, react-native and
+  react-native-svg to the app's copy so an import from inside `@morrow/ui`
+  cannot reach the second instance. That covers the JS bundle. It does not
+  cover **native autolinking**, which scans node_modules directly, and this
+  environment cannot build natively, so that half is unverified. `expo-doctor`
+  still reports 17/18 with this as the one failure.
+
+  **On the first machine that can run `expo run:ios` or `expo run:android`:**
+  build, and if autolinking reports a duplicate module or the linker reports
+  duplicate symbols, the known fix is a `pnpm.overrides` entry forcing a single
+  resolution, or flattening `packages/ui` into the app. Do not assume the
+  warning is cosmetic just because the web build is green.
+- **`app.json` carried two keys SDK 57 rejects**, `newArchEnabled` and
+  `android.edgeToEdgeEnabled`. Both are the default now and the flags are gone.
+- **`metro.config.js` replaced `watchFolders` instead of appending to it**, so
+  every folder Expo watches by default was dropped.
+- **`allowBuilds` was left on a pnpm-generated placeholder** ("set this to true
+  or false"), so `pnpm install` exited non-zero, which failed every command that
+  runs a dependency check first, `expo export` included.
+
+Still not done here, and it needs a machine that can do it:
+
+- The app has only ever been built for web. No iOS or Android build has been
+  run, so none of the native module work above is confirmed beyond what
+  expo-doctor reports. This is the single biggest untested area in the project:
+  every screen, gesture and font has only ever run through react-native-web.
+- The whole stack moved in this pass — react-native 0.82.0 to 0.86.3, react
+  19.1.0 to 19.2.3, TypeScript to what SDK 57 pins — and the evidence that it
+  still works is the suite: typecheck clean, 112 core tests, 30 contrast tests,
+  40 end-to-end checks. That is real evidence for the JS, and no evidence at all
+  for the native side.
+- The Supabase migration has never been executed. No Postgres and no Docker in
+  this environment; `pnpm test:sql` checks structure, and cannot check that a
+  plpgsql body references columns that exist.
+
 ## Blocked on the user
 - Supabase project URL/anon key, Anthropic API key, fal.ai key, RevenueCat keys: needed to test real providers. Everything runs on local fallbacks without them.
 

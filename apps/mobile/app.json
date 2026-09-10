@@ -6,11 +6,24 @@
     "orientation": "portrait",
     "scheme": "morrow",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
-    "ios": { "supportsTablet": true, "bundleIdentifier": "app.morrow.client" },
-    "android": { "package": "app.morrow.client", "edgeToEdgeEnabled": true },
-    "web": { "bundler": "metro", "output": "single" },
-    "plugins": ["expo-router", "expo-font"],
-    "experiments": { "typedRoutes": false }
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "app.morrow.client"
+    },
+    "android": {
+      "package": "app.morrow.client"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-splash-screen"
+    ],
+    "experiments": {
+      "typedRoutes": false
+    }
   }
 }
