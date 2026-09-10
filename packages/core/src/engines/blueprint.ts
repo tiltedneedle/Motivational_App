@@ -120,7 +120,12 @@ export function buildPlan(input: BuildInput, opts: BlueprintOptions): Plan {
       planId,
       goalId: goal.id,
       title: i === 0 ? firstMilestoneTitle(goal.title, strategyText) : `Step ${i + 1} toward ${goal.title.toLowerCase()}`,
-      proof: monitoring?.line.trim() ?? 'One entry in the ledger.',
+      // Empty when they have not written the Monitoring line yet. It used to
+      // fall back to "One entry in the ledger.", which is the app deciding what
+      // counts as proof for somebody else's goal — and `validatePlan` then
+      // waved it through because the field was not empty. A milestone with no
+      // proof says so, and the Goal screen asks for the line.
+      proof: monitoring?.line.trim() ?? '',
       proofSourceLineId: monitoring?.id ?? null,
       targetDate: addDays(opts.today, Math.max(7, Math.round(horizonDays * share))),
       order: i,
@@ -285,7 +290,12 @@ export function validatePlan(
   }
 
   for (const ms of plan.milestones) {
-    if (!ms.proof.trim()) problems.push(`milestone "${ms.title}" has no proof`);
+    // A proof is theirs or it is nothing. Checking only that the string is
+    // non-empty let the app's own fallback sentence satisfy the rule, which is
+    // the same class of mistake as an unsourced move.
+    if (ms.proof.trim() && (!ms.proofSourceLineId || !ids.has(ms.proofSourceLineId))) {
+      problems.push(`milestone "${ms.title}" has a proof with no user line behind it`);
+    }
   }
   for (const op of plan.obstaclePlans) {
     if (!op.sourceLineId || !ids.has(op.sourceLineId)) {

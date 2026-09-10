@@ -20,6 +20,22 @@ const FILE = 'supabase/migrations/0001_init.sql';
 const sql = await readFile(FILE, 'utf8');
 const lower = sql.toLowerCase();
 
+/**
+ * The body of one `create table` statement.
+ *
+ * Every per-table assertion below runs against its own slice. Searching the
+ * whole file meant `moves.source_line_id is NOT NULL` was satisfied by any
+ * NOT NULL uuid column anywhere in the schema — both of these guards stayed
+ * green with the columns they name made nullable.
+ */
+function tableBody(name) {
+  const head = `create table public.${name} (`;
+  const i = sql.indexOf(head);
+  if (i === -1) return '';
+  const j = sql.indexOf('\n);', i);
+  return sql.slice(i + head.length, j === -1 ? undefined : j).toLowerCase();
+}
+
 let failures = 0;
 const check = (name, ok, detail = '') => {
   if (ok) {
@@ -41,9 +57,10 @@ check('every table has at least one policy', tables.every((t) => policied.has(t)
 
 // ---- the authorship guards, which are the product's central promise
 
+const movesTable = tableBody('moves');
 check(
   'a move cannot exist without the user line behind it',
-  /source_line_id\s+uuid\s+not null/.test(lower),
+  /source_line_id\s+uuid\s+not null/.test(movesTable),
   'moves.source_line_id must be NOT NULL',
 );
 check(
@@ -52,8 +69,18 @@ check(
 );
 check(
   'a move names the plan it belongs to',
-  /plan_id\s+uuid\s+not null\s+references public\.plans/.test(lower),
+  /plan_id\s+uuid\s+not null\s+references public\.plans/.test(movesTable),
   'moves.plan_id must be NOT NULL: milestone_id is nullable, so without it a move has no path to its plan',
+);
+check(
+  'a ledger row can name the move it is proof of',
+  /move_id\s+uuid\s+references public\.moves/.test(tableBody('evidence')),
+  'evidence.move_id: undo removes a move\'s own row, and matching on the title deleted the wrong one',
+);
+check(
+  'the free-text rows carry a safety verdict',
+  ['goal_analyses', 'evidence', 'day_summaries'].every((t) => /safety_risk\s+text\s+not null/.test(tableBody(t))),
+  'a flagged line must never be quoted back or sealed',
 );
 check(
   'the authorship ratio is recomputed on the server, not believed',
@@ -75,8 +102,8 @@ check(
   // It once compared `sealed_until < now()`, which froze the words only after
   // the draft lock expired and left them editable for the day they were meant
   // to be protected. Exactly backwards, and easy to reintroduce.
-  !/if\s+old\.sealed_until\s*[<>]/.test(lower),
-  'found a sealed_until comparison guarding the body check',
+  !/old\.sealed_until/.test(lower),
+  'the body check must not consult sealed_until at all: writing is never rewritten, not merely rewritten later',
 );
 
 // ---- nothing is readable across accounts

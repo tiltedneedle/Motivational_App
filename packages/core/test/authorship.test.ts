@@ -386,6 +386,34 @@ describe('the Book', () => {
     expect(carried).toBe(true);
   });
 
+  it('will not put its own sentence in a milestone proof', () => {
+    // The proof is the rule THEY wrote for what counts. It used to fall back
+    // to "One entry in the ledger." when the Monitoring line was missing, and
+    // the validator accepted it because the string was not empty.
+    const noMonitoring = base.analyses.filter((a) => a.kind !== 'monitoring');
+    const plan = buildPlan(
+      { goal: base.goals[0]!, analyses: noMonitoring },
+      { today: '2026-09-10', newId: sequentialIds() },
+    );
+    for (const ms of plan.milestones) {
+      expect(ms.proof).toBe('');
+      expect(ms.proofSourceLineId).toBeNull();
+    }
+    expect(validatePlan(plan, noMonitoring, '2026-09-10')).toEqual([]);
+  });
+
+  it('refuses a proof that claims a line the person did not write', () => {
+    const plan = buildPlan(
+      { goal: base.goals[0]!, analyses: base.analyses },
+      { today: '2026-09-10', newId: sequentialIds() },
+    );
+    const forged = {
+      ...plan,
+      milestones: plan.milestones.map((m) => ({ ...m, proof: 'Invented rule.', proofSourceLineId: 'not_a_real_line' })),
+    };
+    expect(validatePlan(forged, base.analyses, '2026-09-10').join(' ')).toContain('no user line behind it');
+  });
+
   it('never seals a line the safety screen flagged', () => {
     // The rule used to apply to the Fifteen alone. The stones are free text
     // too, and the Obstacles stone asks what gets in the way, which is exactly
