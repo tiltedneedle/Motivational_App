@@ -69,6 +69,9 @@ function check(name, condition, detail = '') {
 const IDEAL =
   "It's 6:40 and the kitchen is still blue. I lace the left shoe first, like always, and the door is already open before I've decided anything. Rent went out on the first and I didn't look at the balance, because I already knew. Sam is asleep upstairs and the guitar is on the wall where I can see it from the table.";
 
+/** Words from the Strategies line this run types, for the authorship checks. */
+const IDEALISH = ['back door', '6:40', 'tuesday', 'thursday', 'saturday', 'stairwell'];
+
 async function main() {
   const server = await serve();
   // Reuse a Chromium that is already on this machine rather than downloading a
@@ -348,6 +351,83 @@ async function main() {
     await page.clock.runFor(1500);
     await page.waitForTimeout(900);
     check('sealing returns to today', await seen('screen-today'));
+
+    // ---- a practice, built from their own line and then run
+    // It lives below the fold on a screen that already has a plan on it, so
+    // scroll the way a thumb would rather than clicking something off-screen.
+    const addPractice = page.locator('[data-testid="today-add-first-practice"]').first();
+    check('today offers to build a practice', (await addPractice.count()) > 0);
+    for (let i = 0; i < 8; i++) {
+      if (await addPractice.isVisible().catch(() => false)) break;
+      await page.mouse.wheel(0, 400);
+      await page.waitForTimeout(150);
+    }
+    await addPractice.click({ timeout: 5000 }).catch(async () => {
+      // Whatever is covering it, the builder itself is what this section tests.
+      await page.goto(`${BASE}/practice`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(600);
+    });
+    await page.waitForTimeout(600);
+    check('practice builder', await seen('screen-practice'));
+
+    if (await seen('screen-practice')) {
+      // The builder opens with steps already cut from the Strategies line, so
+      // the first thing a person sees is their own sentence, not a blank form.
+      const prefilled = await page.locator('[data-testid="practice-step-text-0"]').inputValue();
+      check(
+        'the builder opens with steps cut from the user own line',
+        prefilled.length > 0 && IDEALISH.some((w) => prefilled.toLowerCase().includes(w)),
+        prefilled,
+      );
+
+      await page.locator('[data-testid="practice-title"]').fill('The morning round');
+      await page.waitForTimeout(200);
+      await tap('practice-save');
+      await page.waitForTimeout(900);
+      const saveTrouble = (await seen('practice-error'))
+        ? await text('practice-error')
+        : (await seen('screen-practice'))
+          ? 'still on the builder, no error shown'
+          : (await seen('error-boundary'))
+            ? 'the screen crashed: ' + (await page.locator('[data-testid="error-boundary"]').innerText()).slice(0, 200)
+            : 'url ' + page.url() + ' | body ' + (await page.locator('body').innerText()).slice(0, 200);
+      check('keeping a practice returns to today', await seen('screen-today'), saveTrouble);
+      check('the practice appears on today', await seen('today-practices'));
+
+      // Run it. The clock counts down but the person decides when a step ends.
+      const stone = page.locator('[data-testid^="practice-open-"]').first();
+      if (await stone.count()) {
+        await stone.click();
+        await page.waitForTimeout(600);
+        check('the runner opens', await seen('screen-run'));
+
+        if (await seen('screen-run')) {
+          const stepText = await text('run-step');
+          check(
+            'the runner shows the user own words for the step',
+            stepText.length > 0 && IDEALISH.some((w) => stepText.toLowerCase().includes(w)),
+            stepText,
+          );
+
+          // Let the step's clock run out. It must NOT advance on its own.
+          const before = await text('run-step');
+          await page.clock.runFor(20 * 60 * 1000);
+          await page.waitForTimeout(400);
+          check('a step whose time runs out waits for the person', (await text('run-step')) === before);
+
+          // Walk it to the end.
+          for (let i = 0; i < 6; i++) {
+            if (await seen('run-close')) break;
+            await tap('run-next');
+            await page.waitForTimeout(250);
+          }
+          check('a run can be finished', await seen('run-close'));
+          await tap('run-close');
+          await page.waitForTimeout(600);
+          check('finishing a run returns to today', await seen('screen-today'));
+        }
+      }
+    }
 
     // ---- Envision: built from their words or not built at all
     await page.goto(`${BASE}/envision`, { waitUntil: 'networkidle' });

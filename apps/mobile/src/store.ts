@@ -14,6 +14,10 @@ import {
   buildDawnBrief,
   buildPlan,
   buildPortrait,
+  buildPractice,
+  dueOn,
+  logOf,
+  practiceValue,
   dayOf,
   draftLockUntil,
   draftOf,
@@ -38,6 +42,9 @@ import {
   type GoalAnalysis,
   type Plan,
   type Portrait,
+  type Practice,
+  type PracticeLog,
+  type RunnerState,
   type Profile,
   type SafetyRisk,
   type Scene,
@@ -69,6 +76,8 @@ export interface MorrowState {
   books: BookVersion[];
   portraits: Portrait[];
   plans: Plan[];
+  practices: Practice[];
+  practiceLogs: PracticeLog[];
   evidence: Evidence[];
   days: Record<string, DaySummary>;
   scenes: Scene[];
@@ -108,6 +117,24 @@ export interface MorrowState {
 
   // plan
   makePortraitAndPlan: (goalId: string) => { ok: true } | { ok: false; error: string };
+
+  // practices
+  /**
+   * Build and keep a practice. Returns null when the goal has no Strategies
+   * line yet, because a practice with nothing of theirs behind it is the one
+   * thing this product will not store.
+   */
+  addPractice: (input: {
+    goalId: string;
+    title: string;
+    kind: Practice['kind'];
+    steps: { text: string; seconds: number }[];
+    schedule: Practice['schedule'];
+    minVersion?: string;
+  }) => Practice | null;
+  archivePractice: (id: string) => void;
+  /** Record what actually happened in a run, finished or abandoned. */
+  logRun: (state: RunnerState) => void;
 
   // envision
   /**
@@ -160,6 +187,8 @@ const EMPTY = {
   books: [] as BookVersion[],
   portraits: [] as Portrait[],
   plans: [] as Plan[],
+  practices: [] as Practice[],
+  practiceLogs: [] as PracticeLog[],
   evidence: [] as Evidence[],
   days: {} as Record<string, DaySummary>,
   scenes: [] as Scene[],
@@ -434,6 +463,72 @@ export const useMorrow = create<MorrowState>()(
         }
       },
 
+      addPractice: (input) => {
+        const s = get();
+        const source = s.analyses.find(
+          (a) => a.goalId === input.goalId && a.kind === 'strategies' && a.line.trim(),
+        );
+        if (!source) {
+          set({ toast: { text: 'Write the Strategies line for this goal first.', kind: 'info' } });
+          return null;
+        }
+        try {
+          const practice = buildPractice({ ...input, source, newId });
+          set((st) => ({
+            practices: [...st.practices, practice],
+            toast: { text: `Added \u00b7 ${practice.title}`, kind: 'add' },
+          }));
+          return practice;
+        } catch (err) {
+          set({
+            toast: {
+              text: err instanceof Error ? err.message.replace('Practice rejected: ', '') : 'That could not be saved.',
+              kind: 'info',
+            },
+          });
+          return null;
+        }
+      },
+
+      archivePractice: (id) =>
+        set((st) => ({
+          practices: st.practices.map((p) =>
+            p.id === id ? { ...p, archivedAt: new Date().toISOString() } : p,
+          ),
+        })),
+
+      logRun: (runner) => {
+        const s = get();
+        const practice = s.practices.find((p) => p.id === runner.practiceId);
+        if (!practice) return;
+        const day = dayOf(new Date(), s.profile.dayBoundaryHour);
+        const log = logOf(runner, practice, day, newId);
+
+        // One log per practice per day: doing it twice is still one day of
+        // having done it, and two rows would count it twice in the score.
+        const logs = [...s.practiceLogs.filter((l) => !(l.practiceId === practice.id && l.day === day)), log];
+
+        // A finished practice is proof, and proof belongs in the ledger in the
+        // person's own words - the step titles are cut from their line.
+        const evidence =
+          log.stepsDone > 0
+            ? [
+                ...s.evidence.filter((e) => !(e.kind === 'practice' && e.moveId === practice.id && e.day === day)),
+                {
+                  id: newId('ev'),
+                  goalId: practice.goalId,
+                  moveId: practice.id,
+                  kind: 'practice' as const,
+                  text: log.minimal ? practice.minVersion : practice.title,
+                  day,
+                  createdAt: new Date().toISOString(),
+                },
+              ]
+            : s.evidence;
+
+        set({ practiceLogs: logs, evidence, days: recomputeDay(s, s.plans, evidence, day, logs) });
+      },
+
       makeScene: async (goalId, type) => {
         const s = get();
         const existing = s.scenes.find((sc) => sc.goalId === goalId && sc.type === type);
@@ -666,11 +761,21 @@ export function latestText(texts: AuthoringText[], kind: WritingKind): Authoring
 }
 
 
+/** The last day this practice was actually done, for an interval schedule. */
+function lastDoneDay(logs: PracticeLog[], practiceId: string, before: string): string | null {
+  const days = logs
+    .filter((l) => l.practiceId === practiceId && l.stepsDone > 0 && l.day < before)
+    .map((l) => l.day)
+    .sort();
+  return days[days.length - 1] ?? null;
+}
+
 function recomputeDay(
   s: MorrowState,
   plans: Plan[],
   evidence: Evidence[],
   day: string,
+  practiceLogs: PracticeLog[] = s.practiceLogs,
 ): Record<string, DaySummary> {
   // A day counts what was due that day, plus anything actually finished that
   // day. It used to count `status !== 'todo'`, which swept in every move ever
@@ -686,16 +791,32 @@ function recomputeDay(
     );
   const done = moves.filter((m) => m.status === 'done').length;
   const skipped = moves.filter((m) => m.status === 'skip').length;
-  const planned = moves.length;
+
+  // Practices count toward the day too, or the score would say nothing about a
+  // person whose whole plan is a morning routine. A practice that was asked for
+  // is planned; what they did of it is what it is worth, and the two-minute
+  // version is worth the whole thing.
+  const asked = s.practices.filter((practice) =>
+    dueOn(practice, day, lastDoneDay(practiceLogs, practice.id, day)),
+  );
+  const logsToday = practiceLogs.filter((l) => l.day === day);
+  const practiceDone = asked.reduce(
+    (n, practice) => n + practiceValue(logsToday.find((l) => l.practiceId === practice.id)),
+    0,
+  );
+
+  const planned = moves.length + asked.length;
   const prev = s.days[day];
   return {
     ...s.days,
     [day]: {
       day,
       planned,
-      done,
+      // A partly-kept routine is neither done nor skipped, so it lands here
+      // rather than being rounded away in either direction.
+      done: done + Math.floor(practiceDone),
       skipped,
-      partial: 0,
+      partial: Number((practiceDone % 1).toFixed(2)),
       evidenceCount: evidence.filter((e) => e.day === day).length,
       sealedAt: prev?.sealedAt ?? null,
       moodWord: prev?.moodWord ?? null,
@@ -804,7 +925,29 @@ export function consistency(s: MorrowState) {
 }
 
 /** Hooks screens should use. Each one is reference-stable between real changes. */
+/**
+ * The practices this day asks for.
+ *
+ * Returns the stored Practice objects themselves, NOT freshly-built pairs of
+ * practice-and-log. `useShallow` compares the members of the array by
+ * reference, so a selector that wraps each one in a new object is unequal to
+ * itself on every render and the screen loops until React gives up. That was
+ * bug 4 of the first audit and this is the same trap one row over; the pairing
+ * with logs happens in the screen, where a `useMemo` can hold it still.
+ */
+export function todaysPractices(s: MorrowState): Practice[] {
+  const day = dayOf(new Date(), s.profile.dayBoundaryHour);
+  return s.practices.filter((p) => dueOn(p, day, lastDoneDay(s.practiceLogs, p.id, day)));
+}
+
+/** Today's log for a practice, or null. Cheap enough to call per row. */
+export function logForToday(s: MorrowState, practiceId: string): PracticeLog | null {
+  const day = dayOf(new Date(), s.profile.dayBoundaryHour);
+  return s.practiceLogs.find((l) => l.practiceId === practiceId && l.day === day) ?? null;
+}
+
 export const useGoals = () => useMorrow(useShallow(activeGoals));
+export const useTodaysPractices = () => useMorrow(useShallow(todaysPractices));
 export const useTodaysMoves = () => useMorrow(useShallow(todaysMoves));
 export const useConsistency = () => useMorrow(useShallow(consistency));
 export const useLatestBook = () => useMorrow(latestBook);

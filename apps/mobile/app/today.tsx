@@ -18,6 +18,7 @@ import {
   Statement,
   Stone,
   Studio,
+  TextButton,
   Toast,
   UserText,
   accent,
@@ -27,7 +28,14 @@ import {
   useReducedMotion,
 } from '@morrow/ui';
 import { MoveStone } from '../src/components/MoveStone';
-import { useConsistency, useGoals, useLatestBook, useMorrow, useTodaysMoves } from '../src/store';
+import {
+  useConsistency,
+  useGoals,
+  useLatestBook,
+  useMorrow,
+  useTodaysMoves,
+  useTodaysPractices,
+} from '../src/store';
 
 export default function Today() {
   const router = useRouter();
@@ -37,6 +45,8 @@ export default function Today() {
   const moves = useTodaysMoves();
   const book = useLatestBook();
   const score = useConsistency();
+  const practices = useTodaysPractices();
+  const practiceLogs = useMorrow((s) => s.practiceLogs);
   const toast = useMorrow((s) => s.toast);
   const setToast = useMorrow((s) => s.setToast);
   const setStatus = useMorrow((s) => s.setMoveStatus);
@@ -276,6 +286,83 @@ export default function Today() {
                   </View>
                 );
               })}
+            </View>
+          ) : null}
+
+          {/*
+            Practices. A routine is one stone that seats in steps rather than a
+            list of chores: each tap sinks it a little further, and the ring
+            fills one segment per step. Tapping it opens the runner.
+          */}
+          {practices.length ? (
+            <View testID="today-practices" style={{ marginTop: 26, gap: 4 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Label>Practices</Label>
+                <TextButton testID="today-add-practice" label="Add one" onPress={() => router.push('/practice')} />
+              </View>
+              {practices.map((practice) => {
+                const goal = goals.find((g) => g.id === practice.goalId);
+                const total = practice.steps.length || 1;
+                const log = practiceLogs.find((l) => l.practiceId === practice.id && l.day === today) ?? null;
+                const done = log?.minimal ? total : (log?.stepsDone ?? 0);
+                return (
+                  <View
+                    key={practice.id}
+                    testID={`practice-row-${practice.id}`}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 14,
+                      paddingVertical: 10,
+                      borderTopWidth: 1,
+                      borderTopColor: day.line,
+                    }}
+                  >
+                    <MoveStone
+                      testID={`practice-stone-${practice.id}`}
+                      size={26}
+                      domain={goal?.domain ?? 'health'}
+                      status={done >= total ? 'done' : 'todo'}
+                      steps={{ done: Math.min(done, total), total }}
+                      label={practice.title}
+                      reducedMotion={reduced}
+                      onSeat={() => router.push(`/run?id=${practice.id}`)}
+                      onPark={() => router.push(`/run?id=${practice.id}&minimal=1`)}
+                    />
+                    <Pressable
+                      testID={`practice-open-${practice.id}`}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${practice.title}, ${done} of ${total} steps. Open the runner.`}
+                      onPress={() => router.push(`/run?id=${practice.id}`)}
+                      style={{ flex: 1 }}
+                    >
+                      <Text
+                        style={{
+                          fontFamily: fonts.sansMedium,
+                          fontSize: 16,
+                          color: done >= total ? day.ink2 : day.ink,
+                          textDecorationLine: done >= total ? 'line-through' : 'none',
+                        }}
+                      >
+                        {practice.title}
+                      </Text>
+                      <Body style={{ fontSize: 13 }}>
+                        {done >= total ? 'Kept' : `${total} ${total === 1 ? 'step' : 'steps'}`}
+                      </Body>
+                    </Pressable>
+                  </View>
+                );
+              })}
+            </View>
+          ) : null}
+
+          {!practices.length && goals.length ? (
+            <View testID="today-no-practices" style={{ marginTop: 26, gap: 6 }}>
+              <Label>Practices</Label>
+              <Body style={{ fontSize: 13 }}>
+                The things you do rather than finish. Built out of the line you already wrote about how you will do it.
+              </Body>
+              <Chip testID="today-add-first-practice" label="Add one" ghost onPress={() => router.push('/practice')} />
             </View>
           ) : null}
 
