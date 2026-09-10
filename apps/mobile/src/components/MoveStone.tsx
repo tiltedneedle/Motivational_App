@@ -9,7 +9,7 @@ import { useRef } from 'react';
 import { Animated, Pressable, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Ring, Socket, Stone, accent, day } from '@morrow/ui';
-import type { DomainId } from '@morrow/core';
+import { plural, type DomainId } from '@morrow/core';
 
 const PARK_THRESHOLD = 40;
 
@@ -104,7 +104,7 @@ export function MoveStone({
               : status === 'skip'
                 ? `${label}. Set aside for today.`
                 : steps
-                  ? `${label}. Not done. ${steps.done} of ${steps.total} steps.`
+                  ? `${label}. Not done. ${steps.done} of ${plural(steps.total, 'step')}.`
                   : `${label}. Not done.`
           }
           {...(steps

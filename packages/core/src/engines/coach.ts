@@ -7,6 +7,7 @@
  */
 import type { Brief, BookVersion, DaySummary, GoalAnalysis, Move, Persona } from '../types';
 import { isReturning } from './consistency';
+import { plural } from '../ids';
 import { isQuotable, screen } from './safety';
 
 export interface BriefInput {
@@ -56,7 +57,7 @@ export function buildDawnBrief(input: BriefInput, newId: (p: string) => string):
     yesterdayLine = 'Quiet day yesterday. It is still in the ledger as a quiet day, not a failure.';
   } else {
     const bits: string[] = [];
-    bits.push(`${yesterday.done} of ${Math.max(yesterday.planned, yesterday.done)} moves`);
+    bits.push(`${yesterday.done} of ${plural(Math.max(yesterday.planned, yesterday.done), 'move')}`);
     // Only if the screen did not flag it. The dawn brief is read over
     // breakfast, and this is exactly the sentence that must not come back.
     if (yesterday.proof?.trim() && isQuotable(yesterday)) {

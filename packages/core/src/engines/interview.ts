@@ -6,6 +6,7 @@
  * The bank is data, so the whole Interview runs offline; the server engine
  * (§7.1 "adaptive engine") can replace `nextQuestion` later without changing callers.
  */
+import { plural } from '../ids';
 import type { DomainId } from '../types';
 
 export interface Branch {
@@ -348,7 +349,7 @@ export function guessLine(s: InterviewState): string {
   if (s.stage === 'summary') {
     return s.drafts.length === 1
       ? 'One goal, held clearly.'
-      : `${s.drafts.length} goals. I think I've got you.`;
+      : `${plural(s.drafts.length, 'goal')}. I think I've got you.`;
   }
   const area = currentArea(s);
   if (!area) return '';

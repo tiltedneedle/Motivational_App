@@ -112,7 +112,7 @@ export default function Today() {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: 24 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingTop: 12 }}>
             <Label testID="today-date">{new Date().toDateString().slice(0, 10)}</Label>
-            <Label>{days.filter((d) => d.sealedAt).length} sealed days</Label>
+            <Label>{plural(days.filter((d) => d.sealedAt).length, 'sealed day')}</Label>
           </View>
 
           <Statement style={{ marginTop: 12 }}>
