@@ -349,6 +349,26 @@ async function main() {
     await page.waitForTimeout(900);
     check('sealing returns to today', await seen('screen-today'));
 
+    // ---- Envision: built from their words or not built at all
+    await page.goto(`${BASE}/envision`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(2000);
+    await page.waitForTimeout(900);
+    check('envision screen', await seen('screen-envision'));
+
+    // The first scene draws on arrival. Whatever it shows, it must either carry
+    // a phrase from the user's own writing or say plainly that it cannot.
+    const drew = await seen('scene-practice');
+    if (drew) {
+      const sceneText = await page.locator('[data-testid="scene-practice"]').innerText();
+      check(
+        'the scene contains a phrase from the user own writing',
+        sceneText.includes('kitchen') || sceneText.includes('back door') || sceneText.includes('towpath'),
+        sceneText.slice(0, 160),
+      );
+    } else {
+      check('a scene it cannot source says so rather than inventing one', await seen('scene-empty-practice'));
+    }
+
     // ---- Progress: the ledger, the almanac and the score
     await page.goto(`${BASE}/progress`, { waitUntil: 'networkidle' });
     await page.clock.runFor(1500);

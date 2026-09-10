@@ -320,6 +320,7 @@ export default function Today() {
           >
             <TabButton label="Today" active testID="tab-today" onPress={() => undefined} />
             <TabButton label="Book" testID="tab-book" onPress={() => router.push('/book')} />
+            <TabButton label="Envision" testID="tab-envision" onPress={() => router.push('/envision')} />
             <TabButton label="Coach" testID="tab-coach" onPress={() => router.push('/coach')} />
             <TabButton label="You" testID="tab-you" onPress={() => router.push('/settings')} />
           </View>

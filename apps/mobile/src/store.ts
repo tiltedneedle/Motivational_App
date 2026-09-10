@@ -109,6 +109,17 @@ export interface MorrowState {
   // plan
   makePortraitAndPlan: (goalId: string) => { ok: true } | { ok: false; error: string };
 
+  // envision
+  /**
+   * Draw a scene for a goal, or hand back the one already drawn.
+   *
+   * Returns null when there is nothing of the person's own to build it from.
+   * That is not a failure to handle quietly: a scene with no detail of their
+   * life in it is stock footage, and the screen shows its own typographic card
+   * rather than pretending.
+   */
+  makeScene: (goalId: string, type: Scene['type']) => Promise<Scene | null>;
+
   // today
   setMoveStatus: (moveId: string, status: 'todo' | 'done' | 'skip') => void;
   /**
@@ -420,6 +431,50 @@ export const useMorrow = create<MorrowState>()(
           return { ok: true };
         } catch (err) {
           return { ok: false, error: err instanceof Error ? err.message : 'The plan could not be built.' };
+        }
+      },
+
+      makeScene: async (goalId, type) => {
+        const s = get();
+        const existing = s.scenes.find((sc) => sc.goalId === goalId && sc.type === type);
+        if (existing) return existing;
+
+        const goal = s.goals.find((g) => g.id === goalId);
+        if (!goal) return null;
+
+        // Built from their own material and nothing else: the Impact line for
+        // who else it changes, and the Fifteen for the texture of the morning.
+        const impact = s.analyses.find((a) => a.goalId === goalId && a.kind === 'impact' && a.line.trim());
+        const ideal = latestText(s.texts, 'ideal')?.body ?? '';
+        if (!ideal.trim() && !impact?.line.trim()) return null;
+
+        try {
+          const out = await ai.scene({
+            goalTitle: goal.title,
+            impactLine: impact?.line.trim() ?? '',
+            idealExcerpt: ideal,
+            type,
+          });
+          // `guarded` empties the narrative when nothing of theirs is in it.
+          if (!out.narrative.trim()) return null;
+
+          const scene: Scene = {
+            id: newId('scene'),
+            goalId,
+            type,
+            imagePrompt: out.imagePrompt,
+            // No image service is wired, and the PRD says the feature never
+            // shows an empty state, so the screen sets the words instead.
+            imageUri: null,
+            narrative: out.narrative,
+            sourcedDetail: out.sourcedDetail,
+            tone: null,
+            createdAt: new Date().toISOString(),
+          };
+          set((st) => ({ scenes: [...st.scenes.filter((x) => !(x.goalId === goalId && x.type === type)), scene] }));
+          return scene;
+        } catch {
+          return null;
         }
       },
 
