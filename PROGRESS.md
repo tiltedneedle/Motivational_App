@@ -21,8 +21,20 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [ ] 7. Research pass: libraries/versions; improvements; repeat
 
 ## In flight
-- The audit list below is worked through: 95 of 95 closed. Green after every group.
-- Three findings were **withdrawn, not fixed**: buildPlan does not construct plans its own validator rejects (verified across 560 combinations of strategy line, weekday and target date), and splitFirstMoves no longer eats the first letter of a sentence. Those lenses lost their verifiers to the spend limit and nothing refuted them.
+- Nothing. The tree is green and committed: `pnpm verify` runs typecheck, 112
+  core tests, 30 contrast measurements, the edge-function guards, the SQL
+  structural guards, the serif authorship guard, the web build and 40
+  end-to-end checks. Start at "Next steps".
+- The audit list below is worked through: 95 of 95 closed.
+- Three findings were **withdrawn, not fixed**: buildPlan does not construct
+  plans its own validator rejects (verified across 560 combinations of strategy
+  line, weekday and target date), and splitFirstMoves no longer eats the first
+  letter of a sentence. Those lenses lost their verifiers to the spend limit, so
+  nothing had refuted them; they were checked by hand instead.
+- **Twelve product files were edited by the audit's own subagents**, which had
+  been told not to modify anything. The edits were good and are reviewed, tested
+  and committed, but the lesson stands: after a fan-out, check `git status` and
+  file mtimes before staging, and review what changed.
 
 ## How to run it
 ```
@@ -256,6 +268,24 @@ Still not done here, and it needs a machine that can do it:
 - 2026-09-10: the timed rituals are tested with Playwright's `page.clock` rather than a test-only fast-forward hook, so the fifteen minutes in the test is the same fifteen minutes the product ships.
 
 ## Next steps
-1. Fix everything the eight-lens audit confirms, worst first.
-2. Finish the hardening pass: offline states, export/delete round trip, the accessibility sweep (Dynamic Type to 200%, a screen-reader name and state on every custom control, a non-drag path for every drag).
-3. Research pass on libraries and current practice; implement what earns its place; then loop.
+
+In the order they matter. The first two need a machine or a key this one does
+not have, and they are the only things standing between the current tree and
+something a person could actually use.
+
+1. **Build it natively, once.** `cd apps/mobile && npx expo run:ios` (or
+   `run:android`). Everything so far has run through react-native-web. Watch
+   for the duplicate native module warning described in the research pass above,
+   and check the fonts, the hold gesture, the drag on Today, and the safety card
+   on a real device. This is the largest untested surface in the project.
+2. **Run the Supabase migration against a real Postgres.** `supabase start &&
+   supabase db reset`. `pnpm test:sql` checks structure and cannot check that a
+   plpgsql body references columns that exist.
+3. **Wire the real providers** once the keys below arrive, and confirm
+   `guarded()` still refuses what it should when a real model is behind it.
+   Every one of those paths is currently exercised only against LocalProvider.
+4. **A second audit, at a fifth of the width.** The last one was 294 agents and
+   died on the spend limit, which cost the verifiers for 5 of 8 lenses; those
+   findings had to be checked by hand. Eight lenses with one verifier each is
+   ~30 agents and would have caught the same things.
+5. Then loop: implement, test, harden, research, repeat.
