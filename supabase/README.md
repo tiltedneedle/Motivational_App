@@ -40,13 +40,23 @@ supabase db reset
 supabase functions serve
 ```
 
-**This migration has never been executed.** There is no Postgres and no Docker
-in the environment it was written in, so it is verified two ways short of
-actually running: `pglast` parses all 60 statements, and `scripts/check-sql.mjs`
-asserts every structural guard is present. Neither can validate a `plpgsql`
-function body, which is an opaque string to any parser — a body referencing a
-column that does not exist will pass both and fail on the first `db reset`.
-Run it against a real instance before trusting it.
+### It is tested, without Docker
+
+`pnpm test:migration` runs this file against a real Postgres 18 — PGlite, which
+is Postgres compiled to WebAssembly, so it needs no server and no Docker — and
+then exercises every guard: row level security from one account against
+another's, the move source trigger in all four of its failure modes, the
+immutability of stored writing, and the authorship floor including the case
+where the device lies about the ratio.
+
+Two things Supabase provides that the test has to stub: the `auth` schema, and
+the `authenticated` role. The second matters more than it looks. Postgres
+exempts a table's owner from row level security, and PGlite connects as a
+superuser who owns everything, so a harness that skips this reports every policy
+working while testing nothing at all.
+
+`pnpm test:sql` is the cheap half: structural assertions over the text, so a
+guard cannot be quietly deleted in a refactor.
 
 Set `ANTHROPIC_API_KEY` in the function environment. Without it, every function
 returns a `degraded` response and the app quietly uses its local engines. That

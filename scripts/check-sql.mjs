@@ -1,13 +1,16 @@
 /**
  * Structural checks on the migration.
  *
- * There is no Postgres on this machine, so the migration has never been
- * executed — see PROGRESS.md. That is a real gap and this script does not close
- * it: `plpgsql` function bodies are opaque strings to any parser, so a body
- * that references a column that does not exist will pass here and fail on the
- * first `supabase db reset`. What this does check is that the guards carrying
- * the product's promises are present and shaped correctly, so none of them can
- * be quietly deleted or weakened in a refactor.
+ * These are structural checks over the text: that the guards carrying the
+ * product's promises are present and shaped correctly, so none of them can be
+ * quietly deleted or weakened in a refactor. They are fast and they run on
+ * every verify.
+ *
+ * They are not the whole story, because a `plpgsql` body is an opaque string to
+ * any parser. `scripts/test-migration.mjs` is the other half: it runs this
+ * migration against a real Postgres (PGlite, no Docker) and exercises every
+ * guard below for real, as a non-owner role so row level security actually
+ * applies.
  *
  * Run: node scripts/check-sql.mjs
  */
@@ -48,6 +51,11 @@ check(
   /create trigger moves_source_guard/.test(lower) && /check_move_source/.test(lower),
 );
 check(
+  'a move names the plan it belongs to',
+  /plan_id\s+uuid\s+not null\s+references public\.plans/.test(lower),
+  'moves.plan_id must be NOT NULL: milestone_id is nullable, so without it a move has no path to its plan',
+);
+check(
   'the authorship ratio is recomputed on the server, not believed',
   /create trigger book_versions_authorship_guard/.test(lower) && /new\.authorship_ratio\s*:=\s*actual/.test(lower),
   'the stored ratio must be overwritten with the server figure',
@@ -86,5 +94,6 @@ console.log(
     ? `${failures} structural check(s) failed`
     : `${tables.length} tables, ${policies.length} policies, all guards present`,
 );
-console.log('NOTE: the migration has not been executed — no Postgres in this environment.');
+console.log('NOTE: these are structural checks over the text. scripts/test-migration.mjs');
+console.log('      runs the migration against a real Postgres and exercises the guards.');
 process.exit(failures ? 1 : 0);

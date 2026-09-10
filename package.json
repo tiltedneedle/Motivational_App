@@ -8,14 +8,16 @@
     "test": "pnpm -r --filter ./packages/** test",
     "test:functions": "node scripts/check-functions.mjs",
     "test:sql": "node scripts/check-sql.mjs",
+    "test:migration": "node scripts/test-migration.mjs",
     "test:authorship": "node scripts/check-authorship.mjs",
     "build:web": "pnpm --filter mobile export:web",
     "test:e2e": "node scripts/e2e.mjs",
-    "verify": "pnpm typecheck && pnpm test && pnpm test:functions && pnpm test:sql && pnpm test:authorship && pnpm build:web && pnpm test:e2e",
+    "verify": "pnpm typecheck && pnpm test && pnpm test:functions && pnpm test:sql && pnpm test:migration && pnpm test:authorship && pnpm build:web && pnpm test:e2e",
     "web": "pnpm --filter mobile web",
     "lint": "pnpm -r lint"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@types/react": "~19.2.4",
     "playwright": "^1.56.0",
     "react": "19.2.3",

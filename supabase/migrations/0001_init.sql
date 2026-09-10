@@ -163,6 +163,11 @@ create table public.moves (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users on delete cascade,
   goal_id uuid not null references public.goals on delete cascade,
+  -- The plan this move belongs to. Not optional, and not reachable through the
+  -- milestone: `milestone_id` is nullable, so a move without one had no path
+  -- back to its plan at all, and the client model is `Plan.moves`. Syncing a
+  -- plan would have silently dropped every move that had no milestone.
+  plan_id uuid not null references public.plans on delete cascade,
   milestone_id uuid references public.milestones on delete set null,
   title text not null,
   effort text not null default 'M' check (effort in ('S','M','L')),
@@ -179,6 +184,7 @@ create table public.moves (
   created_at timestamptz not null default now()
 );
 create index moves_user_sched on public.moves (user_id, scheduled_for);
+create index moves_plan on public.moves (plan_id, "order");
 
 create table public.obstacle_plans (
   id uuid primary key default gen_random_uuid(),
@@ -305,7 +311,7 @@ create policy "own briefs" on public.briefs
 -- A move must be sourced from a line the same user wrote, for the same goal.
 create or replace function public.check_move_source() returns trigger
 language plpgsql security definer set search_path = public as $$
-declare src record;
+declare src record; plan record;
 begin
   select goal_id, user_id into src from public.goal_analyses where id = new.source_line_id;
   if src is null then
@@ -317,6 +323,19 @@ begin
   if src.goal_id <> new.goal_id then
     raise exception 'move %: source line belongs to a different goal', new.id;
   end if;
+
+  -- The plan has to answer the same two questions the line does.
+  select goal_id, user_id into plan from public.plans where id = new.plan_id;
+  if plan is null then
+    raise exception 'move %: plan_id does not exist', new.id;
+  end if;
+  if plan.user_id <> new.user_id then
+    raise exception 'move %: plan belongs to another person', new.id;
+  end if;
+  if plan.goal_id <> new.goal_id then
+    raise exception 'move %: plan was made for a different goal', new.id;
+  end if;
+
   return new;
 end $$;
 

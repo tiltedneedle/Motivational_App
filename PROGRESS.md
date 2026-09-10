@@ -254,9 +254,33 @@ Still not done here, and it needs a machine that can do it:
   still works is the suite: typecheck clean, 112 core tests, 30 contrast tests,
   40 end-to-end checks. That is real evidence for the JS, and no evidence at all
   for the native side.
-- The Supabase migration has never been executed. No Postgres and no Docker in
-  this environment; `pnpm test:sql` checks structure, and cannot check that a
-  plpgsql body references columns that exist.
+- ~~The Supabase migration has never been executed.~~ **Done.** PGlite is
+  Postgres 18 compiled to WebAssembly, so `pnpm test:migration` runs the whole
+  migration and exercises every guard with no Docker and no installed server.
+  21 checks. Running it found three things no amount of reading would have: the
+  `pgcrypto` extension line (only `gen_random_uuid()` was ever used, and that has
+  been core Postgres since 13), that `moves` had no `plan_id` at all, and that a
+  harness connecting as the table owner silently tests no row level security at
+  all, because Postgres exempts owners from it.
+
+
+### Running the migration found what reading it could not (2026-09-10)
+
+- **`moves` had no `plan_id`.** A move reached its plan only through
+  `milestone_id`, which is nullable, so a move without a milestone had no path
+  back to its plan — and the client model is `Plan.moves`. A sync layer built on
+  that schema would have silently dropped those moves. The column is now NOT
+  NULL, indexed, and the source-guard trigger checks the plan belongs to the
+  same person and the same goal, exactly as it already checked the line.
+- **The row level security tests were testing nothing.** Postgres exempts a
+  table's owner from RLS and PGlite connects as a superuser who owns everything.
+  The first version of the harness reported every policy working; it was reading
+  its own rows as the owner. It now creates the `authenticated` role, grants it
+  what Supabase grants, and runs every statement as that role.
+- **`create extension pgcrypto` is unnecessary.** The only thing it was there
+  for is `gen_random_uuid()`, which has been core Postgres since 13. Left in
+  place because Supabase has it and removing it buys nothing, but it is not a
+  dependency.
 
 ## Blocked on the user
 - Supabase project URL/anon key, Anthropic API key, fal.ai key, RevenueCat keys: needed to test real providers. Everything runs on local fallbacks without them.
@@ -278,9 +302,11 @@ something a person could actually use.
    for the duplicate native module warning described in the research pass above,
    and check the fonts, the hold gesture, the drag on Today, and the safety card
    on a real device. This is the largest untested surface in the project.
-2. **Run the Supabase migration against a real Postgres.** `supabase start &&
-   supabase db reset`. `pnpm test:sql` checks structure and cannot check that a
-   plpgsql body references columns that exist.
+2. ~~Run the Supabase migration against a real Postgres.~~ **Done** — see the
+   research pass. Still worth one `supabase db reset` against the real service
+   before launch, because PGlite is Postgres but Supabase is Postgres plus its
+   own roles, extensions and `auth` schema, and this test stubs the last of
+   those.
 3. **Wire the real providers** once the keys below arrive, and confirm
    `guarded()` still refuses what it should when a real model is behind it.
    Every one of those paths is currently exercised only against LocalProvider.
