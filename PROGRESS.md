@@ -15,20 +15,24 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 1. packages/core: domain model, stores (zustand + persist), engines
 - [x] 2. packages/ui: Studio tokens, Stone/Socket/Ring, HoldBar, Chip, Field, Sheet, text primitives
 - [x] 3. apps/mobile screens (all 16 routes)
-- [x] 4. Tests: 104 core + 30 contrast unit tests, 40 Playwright e2e checks, all green
+- [x] 4. Tests: 188 core + 33 contrast + 6 storage unit tests, 60 Playwright e2e checks, all green
 - [x] 5. supabase/: migrations with RLS and three structural authorship guards, edge functions
-- [x] 6. Hardening: the eight-lens audit's findings, worst first (see below)
-- [ ] 7. Research pass: libraries/versions; improvements; repeat
+- [x] 6. Hardening: the eight-lens audit's findings, worst first (see below) — 95 of 95
+- [x] 7. Research pass: libraries/versions; the migration against a real Postgres; prebuild
+- [x] 8. Second audit, six lenses over the repairs — 37 of 37
+- [x] 9. Walking the built app in a browser, at three widths (see below)
 
 ## In flight
-- Working through the second audit's 37 findings, listed below. The three
-  critical ones and both HoldBar findings are closed, along with the safety
-  cluster; the rest are medium and low and are listed unticked.
-- The tree is green and committed: `pnpm verify` runs typecheck, 112
-  core tests, 30 contrast measurements, the edge-function guards, the SQL
-  structural guards, the serif authorship guard, the web build and 40
-  end-to-end checks. Start at "Next steps".
-- The audit list below is worked through: 95 of 95 closed.
+
+Nothing is half-done. Both audits are closed — 95 of 95, then 37 of 37 — and
+the app has been walked end to end in a browser on the built bundle rather than
+only tested. What is left needs a machine or a key this one does not have; see
+"Next steps".
+
+- The tree is green and committed: `pnpm verify` runs typecheck, 188 core
+  tests, 33 contrast measurements, 6 storage tests, the edge-function guards,
+  the SQL structural guards, 23 checks against a real Postgres, the serif
+  authorship guard, the web build and 60 end-to-end checks.
 - Three findings were **withdrawn, not fixed**: buildPlan does not construct
   plans its own validator rejects (verified across 560 combinations of strategy
   line, weekday and target date), and splitFirstMoves no longer eats the first
@@ -50,10 +54,12 @@ function guards, the SQL structural guards, the serif authorship guard, the web
 build, then the end-to-end suite. Nothing ships without it passing.
 
 ```
-pnpm test                       # 104 core + 30 contrast unit tests
+pnpm test                       # 188 core + 33 contrast + 6 storage unit tests
 pnpm test:sql                   # RLS on every table, the three authorship guards
+pnpm test:migration             # 23 checks against a real Postgres, via PGlite
 pnpm test:authorship            # nothing but the user's words in the serif
-pnpm build:web && pnpm test:e2e # 40 end-to-end checks, serves dist itself
+pnpm build:web && pnpm test:e2e # 60 end-to-end checks, serves dist itself
+node scripts/serve.mjs          # the built app on :8790, to walk it by hand
 cd apps/mobile && npx expo start
 ```
 
@@ -316,40 +322,40 @@ The headline: **the storage-error path I added was destroying the data it existe
 - [x] **critical** `apps/mobile/app/seal-book.tsx:132` — Seal the Book latches its HoldBar shut: the refusal signal is thrown away at the call site
 - [x] **critical** `apps/mobile/src/store.ts:640` — The storage-error branch overwrites the very data it exists to protect
 - [x] **critical** `apps/mobile/src/store.ts:640` — The storage-error branch overwrites the user's stored data with an empty store
-- [ ] **high** `apps/mobile/app/book.tsx:82` — The Book prints app-composed goal names in the serif reserved for the user's own words
-- [ ] **high** `scripts/check-authorship.mjs:56` — check-authorship.mjs strips every {…} expression, so app prose reaching UserText through a variable is invisible — and the Coach ships one
-- [ ] **high** `scripts/check-authorship.mjs:50` — UserText is not the only serif: UserField and the Fifteen's TextInput set it and render app-written placeholders in it, where the authorship guard cannot see them
-- [ ] **high** `apps/mobile/src/store.ts:662` — latestText — the only thing keeping crisis writing out of the Book — lives in a module no suite imports, and deleting its guard leaves every test green
-- [ ] **high** `packages/ui/src/primitives.tsx:443` — HoldBar's reduced-motion easing fills the bar to 100% on the first frame, so reduced-motion users release 1.3 s before the seal fires
-- [ ] **high** `packages/ui/src/primitives.tsx:518` — HoldBar's pointerDown guard swallows keyboard activation on react-native-web 0.21, which emits onPressIn/onPressOut for Enter and Space
+- [x] **high** `apps/mobile/app/book.tsx:82` — The Book prints app-composed goal names in the serif reserved for the user's own words
+- [x] **high** `scripts/check-authorship.mjs:56` — check-authorship.mjs strips every {…} expression, so app prose reaching UserText through a variable is invisible — and the Coach ships one
+- [x] **high** `scripts/check-authorship.mjs:50` — UserText is not the only serif: UserField and the Fifteen's TextInput set it and render app-written placeholders in it, where the authorship guard cannot see them
+- [x] **high** `apps/mobile/src/store.ts:662` — latestText — the only thing keeping crisis writing out of the Book — lives in a module no suite imports, and deleting its guard leaves every test green
+- [x] **high** `packages/ui/src/primitives.tsx:443` — HoldBar's reduced-motion easing fills the bar to 100% on the first frame, so reduced-motion users release 1.3 s before the seal fires
+- [x] **high** `packages/ui/src/primitives.tsx:518` — HoldBar's pointerDown guard swallows keyboard activation on react-native-web 0.21, which emits onPressIn/onPressOut for Enter and Space
 - [x] **high** `apps/mobile/src/store.ts:640` — The storageError path writes the empty default state over the intact record it was added to protect
-- [ ] **high** `apps/mobile/src/store.ts:684` — recomputeDay credits one completed move to two different days, so a day with no activity scores 100%
-- [ ] **high** `apps/mobile/src/store.ts:325` — Only the Fifteen is safety-screened; analysis lines and the seal-day proof are never screened, and both are quoted back verbatim the next morning and sealed into the Book
-- [ ] **high** `apps/mobile/src/store.ts:290` — The added "second opinion" can never differ from the local screen — the app never constructs a remote provider, so ten regexes are still the entire crisis detector
-- [ ] **high** `packages/core/src/engines/safety.ts:47` — The widened crisis regexes fire on ordinary gym and self-improvement sentences, and a false positive now silently deletes the whole sitting from the Book
-- [ ] **high** `apps/mobile/src/store.ts:684` — A move completed before its scheduled day credits two days; the scheduled day scores 100% with no activity
-- [ ] **high** `apps/mobile/app/coach.tsx:61` — The Coach's "I'm stuck" chip creates a byte-identical duplicate of the move already on Today
-- [ ] **medium** `apps/mobile/app/write.tsx:322` — The Fifteen's Seeds column sets bank-written goal titles in the serif and calls them the user's own
-- [ ] **medium** `packages/core/src/engines/coach.ts:174` — "I'm stuck" duplicates the move the person is already stuck on, and the duplicate lowers their Consistency Score
-- [ ] **medium** `packages/core/src/engines/book.ts:153` — BookVersion carries no titleAuthored, so the SQL authorship guard credits the app's spine title to the user
-- [ ] **medium** `packages/core/src/engines/portrait.ts:78` — proposeIdentity silently truncates the user's clause at eleven words and presents the fragment as verbatim
-- [ ] **medium** `scripts/e2e.mjs:323` — The e2e check that Today's moves come from the user's own line is satisfied by the Book quotation card, not by any move
-- [ ] **medium** `scripts/check-sql.mjs:46` — check-sql's two NOT NULL assertions are unanchored and are satisfied by other tables — moves.source_line_id and moves.plan_id can both be made nullable with all guards green
-- [ ] **medium** `scripts/test-migration.mjs:302` — The writing-immutability guard is only ever tested on a row shape the app never writes, and check-sql's 'unconditional' assertion bans only < and >
-- [ ] **medium** `packages/ui/test/contrast.test.ts:74` — The contrast suite measures only the six domain accents; accent.success is used as 14px body text at 3.02:1
-- [ ] **medium** `scripts/check-functions.mjs:28` — check-functions.mjs's guard for the safety edge function is /crisis/, satisfied by the word inside its own prompt string
-- [ ] **medium** `packages/core/src/engines/blueprint.ts:288` — validatePlan's milestone check is satisfied by the app's own fallback sentence, and no test or SQL guard covers a milestone with no source line
-- [ ] **medium** `apps/mobile/src/components/SafetyGate.tsx:55` — The helpline dial-failure fallback is unreachable on the web build because react-native-web's Linking.openURL never rejects
-- [ ] **medium** `apps/mobile/src/store.ts:426` — makePortraitAndPlan never rebuilds an existing plan, so a Monitoring line written later can never reach the milestone it is promised to fill
-- [ ] **medium** `apps/mobile/src/store.ts:764` — A parked move disappears from the app the next day and can never be reached again
-- [ ] **medium** `packages/core/src/engines/safety.ts:128` — The resources card still promises the writing was not remembered, while saveText has already persisted it and Settings counts and exports it
-- [ ] **medium** `packages/core/src/engines/safety.ts:87` — The 'concern' verdict is still computed and discarded — actionFor has no call site and nothing distinguishes concern from none
-- [ ] **medium** `apps/mobile/src/store.ts:514` — Undoing a move on a later day deletes the earlier day's ledger row but leaves that day's score frozen
-- [ ] **medium** `apps/mobile/app/seal-book.tsx:42` — makePortraitAndPlan has one call site, so a goal that failed to plan can only get one by sealing a second edition of the Book
-- [ ] **medium** `apps/mobile/app/coach.tsx:67` — addMove's toast is the only feedback for a Coach action, and the Coach renders no Toast surface
-- [ ] **medium** `apps/mobile/app/settings.tsx:23` — "Copy out what is open" exports everything except the writing that is open
-- [ ] **low** `packages/core/src/engines/blueprint.ts:377` — proposeReplan and applyReplan still have no test and no call site; the G-168 repair added the gate but not the tests it named
-- [ ] **low** `supabase/migrations/0001_init.sql:200` — evidence.move_id, the key undo correctness now depends on, has no column in the migration
+- [x] **high** `apps/mobile/src/store.ts:684` — recomputeDay credits one completed move to two different days, so a day with no activity scores 100%
+- [x] **high** `apps/mobile/src/store.ts:325` — Only the Fifteen is safety-screened; analysis lines and the seal-day proof are never screened, and both are quoted back verbatim the next morning and sealed into the Book
+- [x] **high** `apps/mobile/src/store.ts:290` — The added "second opinion" can never differ from the local screen — the app never constructs a remote provider, so ten regexes are still the entire crisis detector
+- [x] **high** `packages/core/src/engines/safety.ts:47` — The widened crisis regexes fire on ordinary gym and self-improvement sentences, and a false positive now silently deletes the whole sitting from the Book
+- [x] **high** `apps/mobile/src/store.ts:684` — A move completed before its scheduled day credits two days; the scheduled day scores 100% with no activity
+- [x] **high** `apps/mobile/app/coach.tsx:61` — The Coach's "I'm stuck" chip creates a byte-identical duplicate of the move already on Today
+- [x] **medium** `apps/mobile/app/write.tsx:322` — The Fifteen's Seeds column sets bank-written goal titles in the serif and calls them the user's own
+- [x] **medium** `packages/core/src/engines/coach.ts:174` — "I'm stuck" duplicates the move the person is already stuck on, and the duplicate lowers their Consistency Score
+- [x] **medium** `packages/core/src/engines/book.ts:153` — BookVersion carries no titleAuthored, so the SQL authorship guard credits the app's spine title to the user
+- [x] **medium** `packages/core/src/engines/portrait.ts:78` — proposeIdentity silently truncates the user's clause at eleven words and presents the fragment as verbatim
+- [x] **medium** `scripts/e2e.mjs:323` — The e2e check that Today's moves come from the user's own line is satisfied by the Book quotation card, not by any move
+- [x] **medium** `scripts/check-sql.mjs:46` — check-sql's two NOT NULL assertions are unanchored and are satisfied by other tables — moves.source_line_id and moves.plan_id can both be made nullable with all guards green
+- [x] **medium** `scripts/test-migration.mjs:302` — The writing-immutability guard is only ever tested on a row shape the app never writes, and check-sql's 'unconditional' assertion bans only < and >
+- [x] **medium** `packages/ui/test/contrast.test.ts:74` — The contrast suite measures only the six domain accents; accent.success is used as 14px body text at 3.02:1
+- [x] **medium** `scripts/check-functions.mjs:28` — check-functions.mjs's guard for the safety edge function is /crisis/, satisfied by the word inside its own prompt string
+- [x] **medium** `packages/core/src/engines/blueprint.ts:288` — validatePlan's milestone check is satisfied by the app's own fallback sentence, and no test or SQL guard covers a milestone with no source line
+- [x] **medium** `apps/mobile/src/components/SafetyGate.tsx:55` — The helpline dial-failure fallback is unreachable on the web build because react-native-web's Linking.openURL never rejects
+- [x] **medium** `apps/mobile/src/store.ts:426` — makePortraitAndPlan never rebuilds an existing plan, so a Monitoring line written later can never reach the milestone it is promised to fill
+- [x] **medium** `apps/mobile/src/store.ts:764` — A parked move disappears from the app the next day and can never be reached again
+- [x] **medium** `packages/core/src/engines/safety.ts:128` — The resources card still promises the writing was not remembered, while saveText has already persisted it and Settings counts and exports it
+- [x] **medium** `packages/core/src/engines/safety.ts:87` — The 'concern' verdict is still computed and discarded — actionFor has no call site and nothing distinguishes concern from none
+- [x] **medium** `apps/mobile/src/store.ts:514` — Undoing a move on a later day deletes the earlier day's ledger row but leaves that day's score frozen
+- [x] **medium** `apps/mobile/app/seal-book.tsx:42` — makePortraitAndPlan has one call site, so a goal that failed to plan can only get one by sealing a second edition of the Book
+- [x] **medium** `apps/mobile/app/coach.tsx:67` — addMove's toast is the only feedback for a Coach action, and the Coach renders no Toast surface
+- [x] **medium** `apps/mobile/app/settings.tsx:23` — "Copy out what is open" exports everything except the writing that is open
+- [x] **low** `packages/core/src/engines/blueprint.ts:377` — proposeReplan and applyReplan still have no test and no call site; the G-168 repair added the gate but not the tests it named
+- [x] **low** `supabase/migrations/0001_init.sql:200` — evidence.move_id, the key undo correctness now depends on, has no column in the migration
 
 ### Walking the app by hand (2026-09-10)
 
@@ -385,6 +391,65 @@ escapes on this machine, so patch scripts go through the Write tool; and the
 browser pane being hidden means screenshots can show a stale frame, so read the
 DOM to confirm what is actually there.
 
+### The second walkthrough, on the built bundle (2026-09-11)
+
+The first walkthrough proved the flow ran. This one went after the things a
+green suite cannot see: what the app says when the clock disagrees with it,
+what happens on the screens either side of the happy path, and what the page
+does at widths the e2e viewport never visits. Driven through the DOM rather
+than screenshots, because the browser pane is hidden and its frames go stale.
+
+Verified live, on the built app:
+
+- **Crash recovery.** The page was killed mid-sitting; "Carry on · 14:58 left"
+  was offered on return, all 265 characters came back, and the clock resumed at
+  14:57.
+- **Sealing from the keyboard alone.** A `keydown` of Enter on a focused
+  `seal-hold` seals the Book. Somebody who cannot press and hold has exactly one
+  route through the product, and it works.
+- **The HoldBar re-arms after a refusal.** Refused twice — "The 'I will…' line
+  is required", then "No goal has been written about yet" — and still accepted
+  the next activation. The latch fix, confirmed with a real bar rather than a
+  unit test.
+- **Parking a move.** Long-press parks it, the toast offers Undo, the Now card
+  advances to the next move, and the parked one is still in the plan with the
+  day it was for. "Not today" is not "never".
+- **Sealing the day**, then the ledger and the almanac carrying it.
+
+Seven more defects came out of it:
+
+- **Today's header printed the wall clock.** With a 4 a.m. boundary, somebody
+  writing at half past midnight is still in yesterday as far as every move, seal
+  and ledger row is concerned — so the header said FRI SEP 11 while the entry
+  they had just sealed filed itself under THU 10 SEP. Found at 01:08, which is
+  the only hour it is visible.
+- **"Good morning." at every hour**, including the evening when the day is
+  sealed and the small hours when people actually write.
+- **The concern band was a column in a table.** PRD §11.6 owes three things to
+  somebody whose writing lands there; the verdict was computed on every write,
+  stored on the row, and read by nothing. All three happen now, and the chat —
+  the one thing a person writes that is not kept — leaves one date behind so
+  tomorrow's brief knows.
+- **The helplines were reachable only in crisis.** They lived in the card the
+  safety screen raises, so the only way to a number was to already be having the
+  worst evening of your life. They are in Settings now, ungated and uncounted.
+- **The Goal screen's plan gave no state**: every move read the same whether it
+  was done last week, parked this morning, or still ahead.
+- **The Book's three actions ran 12 pt off a 320 pt screen**, putting
+  "Something moved" half off the page.
+- **The writing had no measure on a wide screen.** At 1280 pt the Book's first
+  sentence set itself 1192 pt wide, about a hundred and fifty characters on one
+  line of serif.
+
+Two of those were pattern gaps rather than screen bugs, and both were found by
+writing the sentence a person would actually write: the despair pattern wanted
+its verb immediately after the modal, so "nobody would even notice" fell
+through it, and "no one" was not matched at all.
+
+Three e2e checks were added for the widths the suite's own 420 pt viewport
+cannot see, and both fixes were verified to fail without them before being kept.
+A guard that cannot fail is not a guard.
+
 ## Blocked on the user
 - Supabase project URL/anon key, Anthropic API key, fal.ai key, RevenueCat keys: needed to test real providers. Everything runs on local fallbacks without them.
 
@@ -393,29 +458,50 @@ DOM to confirm what is actually there.
 - 2026-09-09: local store = zustand + AsyncStorage persistence for Phase 1 speed; SQLite/Drizzle migration is a hardening step once screens exist.
 - 2026-09-10: the authorship rule is enforced in four independent places rather than one — `verifySpans`, `validatePlan`, `authorshipRatio`, and again in SQL. `guarded()` re-checks what the server already checked. Deliberate duplication: a person writing their own life should not depend on any single process being correct.
 - 2026-09-10: the timed rituals are tested with Playwright's `page.clock` rather than a test-only fast-forward hook, so the fifteen minutes in the test is the same fifteen minutes the product ships.
+- 2026-09-11: the concern band softens the register whatever persona is set. Somebody who chose "fierce" on a good week did not choose to be pushed on this one, and the alternative — honouring the setting — means printing "No negotiation with yourself this morning" at the person the band exists for.
+- 2026-09-11: `Studio` holds one 560 pt column rather than each screen carrying its own max-width. Forty screens each remembering a number is forty chances to forget it, and the ground stays full-bleed so the constraint is on the writing, not on the room.
+- 2026-09-11: the app's day, not the wall clock's, is what any screen prints. `dayOf(new Date(), boundary)` is the only definition of "today" in the product; a screen that reaches for `new Date()` to display a date is a bug even when it happens to agree.
 
 ## Next steps
 
-In the order they matter. The first two need a machine or a key this one does
-not have, and they are the only things standing between the current tree and
-something a person could actually use.
+Everything that can be done on this machine, without a key, is done. Both
+audits are closed and the built app has been walked end to end. What remains
+needs either hardware or a credential.
 
 1. **Build it natively, once.** `cd apps/mobile && npx expo run:ios` (or
    `run:android`, which needs an Android SDK this machine does not have).
    Everything so far has run through react-native-web. Autolinking and the
    manifest are verified via prebuild, so what remains is what only a device can
    show: the fonts, the hold gesture, the drag on Today, the safety card, and
-   Dynamic Type at 200%. This is the largest untested surface in the project.
-2. ~~Run the Supabase migration against a real Postgres.~~ **Done** — see the
-   research pass. Still worth one `supabase db reset` against the real service
-   before launch, because PGlite is Postgres but Supabase is Postgres plus its
-   own roles, extensions and `auth` schema, and this test stubs the last of
-   those.
-3. **Wire the real providers** once the keys below arrive, and confirm
-   `guarded()` still refuses what it should when a real model is behind it.
-   Every one of those paths is currently exercised only against LocalProvider.
-4. **A second audit, at a fifth of the width.** The last one was 294 agents and
-   died on the spend limit, which cost the verifiers for 5 of 8 lenses; those
-   findings had to be checked by hand. Eight lenses with one verifier each is
-   ~30 agents and would have caught the same things.
-5. Then loop: implement, test, harden, research, repeat.
+   Dynamic Type at 200%. This is the largest untested surface in the project,
+   and the layout sweep at 320/375/1280 pt is the closest a browser can get to
+   the last of those.
+2. **Wire the real providers** once the keys arrive, and confirm `guarded()`
+   still refuses what it should with a real model behind it. Every one of those
+   paths is currently exercised only against `LocalProvider`, and
+   `hasRemoteProvider` is false in every build so far — which is why the app
+   says ten regular expressions rather than implying a second opinion it cannot
+   get.
+3. **One `supabase db reset` against the real service** before launch. PGlite is
+   Postgres, but Supabase is Postgres plus its own roles, extensions and `auth`
+   schema, and `scripts/test-migration.mjs` stubs the last of those.
+4. Then loop: implement, test, harden, research, repeat.
+
+## Where the walkthrough habits are written down
+
+Worth keeping on the next resume, because each cost an hour to learn:
+
+- **Heredocs mangle escapes on this machine.** `\b` became a literal backspace
+  byte (0x08) in the coach engine and a fix silently did nothing. Patch scripts
+  go through the Write tool; `cat -A` finds the damage.
+- **The browser pane is hidden**, so screenshots can show a stale frame and
+  pointer actions can time out. Read the DOM to confirm state; drive presses by
+  dispatching the full pointer sequence, and use `history.pushState` +
+  `popstate` to move between routes without losing the helpers defined on
+  `globalThis`.
+- **A long pointer hold does not drive react-native-web's responder** from
+  synthetic events; the keyboard route does, and Playwright's real mouse plus
+  `page.clock.runFor` does. Both are exercised in `scripts/e2e.mjs`.
+- **After a fan-out, check `git status` and file mtimes before staging.** The
+  first audit's subagents edited twelve product files they had been told not to
+  touch.
