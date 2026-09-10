@@ -141,7 +141,12 @@ export default function BookScreen() {
           </Body>
         ) : null}
 
-        <View style={{ flexDirection: 'row', gap: 10, paddingVertical: 14 }}>
+        {/*
+          Wraps. Three chips in a fixed row ran 12 pt past the edge of a
+          320 pt screen, which put "Something moved" — the one that says the
+          Book no longer describes them — half off the page.
+        */}
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingVertical: 14 }}>
           <Chip testID="book-export" label="Export" onPress={onExport} />
           <Chip
             testID="book-still-true"

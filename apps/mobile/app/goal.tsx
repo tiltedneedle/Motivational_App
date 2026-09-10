@@ -5,7 +5,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ANALYSIS_ORDER, ANALYSIS_TITLES, domainMeta, formatDay, sourceLineFor } from '@morrow/core';
+import { ANALYSIS_ORDER, ANALYSIS_TITLES, closedOn, dayOf, domainMeta, formatDay, sourceLineFor } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Ring, Rule, Statement, Stone, Studio, TextButton, UserText, accent, day } from '@morrow/ui';
 import { analysisPlan } from './stone';
 import { analysesFor, useGoals, useMorrow } from '../src/store';
@@ -20,6 +20,8 @@ export default function GoalScreen() {
   // somebody's plan and their own sentences to a goal they did not open.
   const goal = id ? goals.find((g) => g.id === id) : goals[0];
   const goBack = () => (router.canGoBack() ? router.back() : router.replace('/today'));
+  const boundary = state.profile.dayBoundaryHour;
+  const today = dayOf(new Date(), boundary);
 
   if (!goal) {
     return (
@@ -150,9 +152,39 @@ export default function GoalScreen() {
               ))}
               {plan.moves.map((m) => {
                 const from = sourceLineFor(m, analyses);
+                // What the plan screen was not saying: which of these has
+                // happened. Every move read the same whether it was done last
+                // week, parked this morning, or still ahead — on the one screen
+                // whose whole title is "the plan".
+                const when = m.status === 'done' ? closedOn(m, boundary) : m.scheduledFor;
+                const state =
+                  m.status === 'done'
+                    ? `Done${when ? ` ${formatDay(when, { weekday: true, today })}` : ''}`
+                    : m.status === 'skip'
+                      ? `Not today${when ? ` · was ${formatDay(when, { today })}` : ''}`
+                      : when
+                        ? formatDay(when, { weekday: true, today })
+                        : 'Not scheduled';
                 return (
-                  <View key={m.id} testID={`plan-move-${m.id}`} style={{ paddingVertical: 10, borderTopWidth: 1, borderTopColor: day.line2, gap: 3 }}>
-                    <Body style={{ color: day.ink, fontSize: 16 }}>{m.title}</Body>
+                  <View
+                    key={m.id}
+                    testID={`plan-move-${m.id}`}
+                    accessibilityLabel={`${m.title}. ${state}.`}
+                    style={{ paddingVertical: 10, borderTopWidth: 1, borderTopColor: day.line2, gap: 3 }}
+                  >
+                    {/*
+                      Under the title, not beside it. Set in a row, the longest
+                      state — "Not today · was 12 Sep" — took half the width at
+                      375 pt and squeezed somebody's own sentence into a column
+                      narrower than the label describing it.
+                    */}
+                    <Body style={{ color: m.status === 'done' ? day.ink2 : day.ink, fontSize: 16 }}>{m.title}</Body>
+                    <Label
+                      testID={`plan-move-state-${m.id}`}
+                      style={{ color: m.status === 'done' ? accent.success : m.status === 'skip' ? day.ink3 : day.ink2 }}
+                    >
+                      {state}
+                    </Label>
                     {from ? (
                       <Body style={{ fontSize: 13, color: day.ink2 }}>
                         from <UserText italic style={{ fontSize: 13, color: day.ink2 }}>“{from}”</UserText>

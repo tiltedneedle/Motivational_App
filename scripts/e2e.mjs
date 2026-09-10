@@ -490,6 +490,52 @@ async function main() {
     const progressScore = await text('progress-score');
     check('the score is a number, not a blank', /^\d+$/.test(progressScore.trim()), progressScore);
 
+    // ---- the shape of the page, at the two widths that break it
+    //
+    // Both of these were real: three chips in a fixed row ran 12 pt off the
+    // side of a 320 pt screen, and on a wide browser the Book's first sentence
+    // set itself 1192 pt wide — about a hundred and fifty characters on one
+    // line of serif. Neither is visible at the 420 pt this suite otherwise
+    // runs at, which is exactly why they survived.
+    const SCREENS = ['/today', '/book', '/coach', '/progress', '/settings', '/envision'];
+
+    await page.setViewportSize({ width: 320, height: 700 });
+    const narrow = [];
+    for (const route of SCREENS) {
+      await page.goto(`${BASE}${route}`, { waitUntil: 'networkidle' });
+      await page.clock.runFor(1200);
+      await page.waitForTimeout(350);
+      const over = await page.evaluate(() => {
+        const de = document.documentElement;
+        return de.scrollWidth > de.clientWidth ? `${de.scrollWidth} > ${de.clientWidth}` : null;
+      });
+      if (over) narrow.push(`${route}: ${over}`);
+    }
+    check('nothing runs off the side of a 320 pt screen', narrow.length === 0, narrow.join(', '));
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(`${BASE}/book`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(400);
+    const measure = await page.evaluate(() => {
+      const el = document.querySelector('[data-testid="book-first-sentence"]');
+      const shell = document.querySelector('[data-testid="screen-book"]');
+      if (!el || !shell) return null;
+      return { line: Math.round(el.getBoundingClientRect().width), ground: Math.round(shell.getBoundingClientRect().width) };
+    });
+    check(
+      'the writing keeps a readable measure on a wide screen',
+      Boolean(measure) && measure.line <= 600,
+      measure ? `${measure.line} pt` : '(no book on screen)',
+    );
+    check(
+      'and the ground still reaches both edges',
+      Boolean(measure) && measure.ground >= 1200,
+      measure ? `${measure.ground} pt` : '(no book on screen)',
+    );
+
+    await page.setViewportSize({ width: 420, height: 900 });
+
     // ---- the safety gate, on its own path
     await page.goto(`${BASE}/coach`, { waitUntil: 'networkidle' });
     await page.clock.runFor(2000);

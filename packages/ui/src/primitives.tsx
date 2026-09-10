@@ -42,12 +42,29 @@ export function Studio({
   const p = dark ? (night as unknown as Palette) : day;
   return (
     <PaletteContext.Provider value={{ p, dark }}>
+      {/*
+        The ground is full bleed; the writing is not.
+
+        This is a phone-native product and every measure in it — the Fifteen,
+        the Book, the read-back — is set for a hand's width. Opened at 1280 pt
+        the Book's first sentence ran 1192 pt wide, about a hundred and fifty
+        characters on one line of serif, which is not a page anybody reads.
+        One column here rather than a max-width on forty screens, and the
+        colour still reaches the edges so a tablet does not look like a phone
+        pasted onto a white sheet.
+      */}
       <View testID={testID} style={[{ flex: 1, backgroundColor: p.ground }, style]}>
-        {children}
+        <View style={{ flex: 1, width: '100%', maxWidth: COLUMN, alignSelf: 'center' }}>{children}</View>
       </View>
     </PaletteContext.Provider>
   );
 }
+
+/**
+ * The widest the writing is ever set. A little over a large phone, so a tablet
+ * feels roomy without the line length leaving the range the type was chosen for.
+ */
+export const COLUMN = 560;
 
 // ---------------------------------------------------------------- text
 
