@@ -16,6 +16,7 @@ import type {
 } from '../types';
 import { ANALYSIS_ORDER } from '../types';
 import { framingLabel } from './framings';
+import { isQuotable } from './safety';
 import { firstSentence } from './portrait';
 
 export const MIN_AUTHORSHIP_RATIO = 0.95;
@@ -61,6 +62,10 @@ export function buildChapters(input: BookInput): BookChapter[] {
       const lines = ANALYSIS_ORDER.flatMap((kind: AnalysisKind) => {
         const a = list.find((x) => x.kind === kind && (x.line.trim() || x.paragraph?.trim()));
         if (!a) return [];
+        // Enforced where the quoting happens, not at each writer. A line the
+        // safety screen flagged is the person's to keep and never the app's to
+        // print back at them in a serif face months later.
+        if (!isQuotable(a)) return [];
         return [
           {
             kind,

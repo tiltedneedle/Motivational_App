@@ -127,6 +127,17 @@ export const GoalAnalysis = z.object({
    * the seal refuses (PRD §11.1).
    */
   generated: z.string().optional(),
+  /**
+   * The safety verdict on these lines.
+   *
+   * The stones are free text and the person writes the worst of it here as
+   * often as in the Fifteen — the Obstacles stone asks what gets in the way.
+   * Without this the rule that crisis writing is never quoted back applied to
+   * the Fifteen alone, and a line typed here was read out in the dawn brief the
+   * next morning and sealed into the Book. Absent means never screened, which
+   * reads as `none`.
+   */
+  safetyRisk: SafetyRisk.optional(),
   specificity: z.number().min(0).max(1),
   followupShown: z.boolean(),
   writtenAt: z.string(),
@@ -292,6 +303,8 @@ export const Evidence = z.object({
   kind: z.enum(['move', 'practice', 'milestone', 'capture', 'seal']),
   text: z.string(),
   day: z.string(),
+  /** Same rule as the analysis lines: a captured thought is free text too. */
+  safetyRisk: SafetyRisk.optional(),
   createdAt: z.string(),
 });
 export type Evidence = z.infer<typeof Evidence>;
@@ -307,6 +320,11 @@ export const DaySummary = z.object({
   moodWord: z.string().nullable(),
   proof: z.string().nullable(),
   gladOf: z.string().nullable(),
+  /**
+   * The verdict on the proof line typed when the day was sealed. The dawn brief
+   * reads that line back the next morning, so it needs to know.
+   */
+  safetyRisk: SafetyRisk.optional(),
 });
 export type DaySummary = z.infer<typeof DaySummary>;
 

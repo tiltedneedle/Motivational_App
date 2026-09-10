@@ -167,6 +167,21 @@ export interface MorrowState {
   // ui
   setToast: (t: ToastState | null) => void;
   clearSafety: () => void;
+  /**
+   * The person says the screen was wrong about their writing.
+   *
+   * A crisis verdict excludes a sitting from the read-back and from every
+   * future Book, permanently, on the word of ten regular expressions. That is
+   * a large thing to do to somebody's writing without an appeal, and the
+   * patterns have been wrong before — "I hurt my wrists in the gym again" was
+   * flagged until this was written. So the judgement is reversible by the only
+   * person who actually knows.
+   *
+   * It does not reverse itself and nothing automatic calls this: the second
+   * opinion may only ever tighten a verdict. Only a deliberate human act
+   * loosens one.
+   */
+  reconsiderLatestFlag: () => void;
   inviteFullTrack: () => void;
   reset: () => void;
 }
@@ -354,6 +369,11 @@ export const useMorrow = create<MorrowState>()(
       writeAnalysis: (goalId, kind, input) => {
         const line = input.line.trim();
         if (!line) return;
+        // The stones are free text, and the Obstacles stone asks what gets in
+        // the way — which is where the worst sentence of somebody's week
+        // routinely lands. Screening only the Fifteen meant a line typed here
+        // was read back in the dawn brief and sealed into the Book.
+        const risk = screen([line, input.line2 ?? '', input.paragraph ?? ''].join(' '));
         const spec = scoreSpecificity(input.paragraph?.trim() || line);
         set((s) => {
           const existing = s.analyses.find((a) => a.goalId === goalId && a.kind === kind);
@@ -367,6 +387,7 @@ export const useMorrow = create<MorrowState>()(
             ...(input.line2?.trim() ? { line2: input.line2.trim() } : {}),
             ...(input.paragraph?.trim() ? { paragraph: input.paragraph.trim() } : {}),
             specificity: spec.score,
+            safetyRisk: risk.risk,
             followupShown: existing?.followupShown ?? false,
             writtenAt: new Date().toISOString(),
           };
@@ -374,7 +395,12 @@ export const useMorrow = create<MorrowState>()(
             ? s.analyses.map((a) => (a.id === existing.id ? row : a))
             : [...s.analyses, row];
           const goals = s.goals.map((g) => (g.id === goalId ? { ...g, status: 'authored' as const } : g));
-          return { analyses, goals };
+          return {
+            analyses,
+            goals,
+            safetyPause:
+              risk.risk === 'crisis' ? { risk: risk.risk, at: new Date().toISOString() } : s.safetyPause,
+          };
         });
       },
 
@@ -657,20 +683,46 @@ export const useMorrow = create<MorrowState>()(
           const clean = text.trim();
           if (!clean) return {};
           const day = dayOf(new Date(), s.profile.dayBoundaryHour);
+          const risk = screen(clean);
           const evidence = [
             ...s.evidence,
-            { id: newId('ev'), goalId: goalId ?? null, kind: 'capture' as const, text: clean, day, createdAt: new Date().toISOString() },
+            {
+              id: newId('ev'),
+              goalId: goalId ?? null,
+              kind: 'capture' as const,
+              text: clean,
+              day,
+              safetyRisk: risk.risk,
+              createdAt: new Date().toISOString(),
+            },
           ];
-          return { evidence, days: recomputeDay(s, s.plans, evidence, day) };
+          return {
+            evidence,
+            days: recomputeDay(s, s.plans, evidence, day),
+            safetyPause:
+              risk.risk === 'crisis' ? { risk: risk.risk, at: new Date().toISOString() } : s.safetyPause,
+          };
         }),
 
       sealDay: ({ moodWord, proof, gladOf }) =>
         set((s) => {
           const day = dayOf(new Date(), s.profile.dayBoundaryHour);
+          // The proof line is typed at night, is free text, and the coach reads
+          // it back the next morning as "and you wrote …". It gets the same
+          // screen as everything else the app quotes.
+          const risk = screen([proof, gladOf].join(' '));
           const evidence = proof.trim()
             ? [
                 ...s.evidence,
-                { id: newId('ev'), goalId: null, kind: 'seal' as const, text: proof.trim(), day, createdAt: new Date().toISOString() },
+                {
+                  id: newId('ev'),
+                  goalId: null,
+                  kind: 'seal' as const,
+                  text: proof.trim(),
+                  day,
+                  safetyRisk: risk.risk,
+                  createdAt: new Date().toISOString(),
+                },
               ]
             : s.evidence;
           const days = recomputeDay(s, s.plans, evidence, day);
@@ -682,9 +734,15 @@ export const useMorrow = create<MorrowState>()(
               moodWord: moodWord || null,
               proof: proof.trim() || null,
               gladOf: gladOf.trim() || null,
+              safetyRisk: risk.risk,
             };
           }
-          return { evidence, days };
+          return {
+            evidence,
+            days,
+            safetyPause:
+              risk.risk === 'crisis' ? { risk: risk.risk, at: new Date().toISOString() } : s.safetyPause,
+          };
         }),
 
       makeBrief: () => {
@@ -714,6 +772,19 @@ export const useMorrow = create<MorrowState>()(
       },
 
       setToast: (t) => set({ toast: t }),
+      reconsiderLatestFlag: () =>
+        set((st) => {
+          // The most recent flagged sitting: the one the card is about.
+          const flagged = [...st.texts]
+            .filter((t) => t.safetyRisk === 'crisis')
+            .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))[0];
+          if (!flagged) return { safetyPause: null };
+          return {
+            texts: st.texts.map((t) => (t.id === flagged.id ? { ...t, safetyRisk: 'none' as const } : t)),
+            safetyPause: null,
+          };
+        }),
+
       clearSafety: () => set({ safetyPause: null }),
       inviteFullTrack: () => set({ fullTrackInvited: true }),
       reset: () => set({ profile: DEFAULT_PROFILE, ...EMPTY }),

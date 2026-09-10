@@ -429,6 +429,34 @@ describe('safety', () => {
     expect(screen("I don't want to kill myself, I just want to sleep").risk).toBe('crisis');
   });
 
+  it('does not read gym injuries, idioms or savings as a crisis', () => {
+    // Every one of these was flagged by the widened patterns, and a flag now
+    // excludes the whole sitting from the Book, so each would have quietly
+    // deleted somebody's writing.
+    for (const t of [
+      'I hurt my wrists in the gym again last week.',
+      'I keep hurting my legs when I push the pace.',
+      'I want to kill my self-doubt.',
+      'This year I am taking my life back.',
+      'I took my life savings and bought the van.',
+      'She took my life apart and I let her.',
+    ]) {
+      expect(screen(t).risk, t).not.toBe('crisis');
+    }
+  });
+
+  it('still catches the sentences those patterns are actually for', () => {
+    for (const t of [
+      'I have been cutting my arms again',
+      'I hurt myself on purpose last week',
+      'I have thought about taking my own life',
+      'I am going to end my life',
+      'killing myself would be easier',
+    ]) {
+      expect(screen(t).risk, t).toBe('crisis');
+    }
+  });
+
   it('does not read ordinary hard writing as a crisis', () => {
     for (const t of [
       'It was a terrible year and I gave up in March',

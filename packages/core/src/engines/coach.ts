@@ -7,7 +7,7 @@
  */
 import type { Brief, BookVersion, DaySummary, GoalAnalysis, Move, Persona } from '../types';
 import { isReturning } from './consistency';
-import { screen } from './safety';
+import { isQuotable, screen } from './safety';
 
 export interface BriefInput {
   day: string;
@@ -57,7 +57,9 @@ export function buildDawnBrief(input: BriefInput, newId: (p: string) => string):
   } else {
     const bits: string[] = [];
     bits.push(`${yesterday.done} of ${Math.max(yesterday.planned, yesterday.done)} moves`);
-    if (yesterday.proof?.trim()) {
+    // Only if the screen did not flag it. The dawn brief is read over
+    // breakfast, and this is exactly the sentence that must not come back.
+    if (yesterday.proof?.trim() && isQuotable(yesterday)) {
       bits.push(`and you wrote “${yesterday.proof.trim()}”`);
       quotes.push(yesterday.proof.trim());
     }
@@ -190,7 +192,7 @@ export function replyToChip(chip: ChipId, ctx: ChipContext): CoachReply {
     }
     case 'dont-feel': {
       const wentAnyway = ctx.days
-        .filter((d) => d.done > 0 && d.proof?.trim())
+        .filter((d) => d.done > 0 && d.proof?.trim() && isQuotable(d))
         .sort((a, b) => (a.day < b.day ? 1 : -1))[0];
       if (wentAnyway?.proof) {
         return {

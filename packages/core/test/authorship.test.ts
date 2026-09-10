@@ -386,6 +386,29 @@ describe('the Book', () => {
     expect(carried).toBe(true);
   });
 
+  it('never seals a line the safety screen flagged', () => {
+    // The rule used to apply to the Fifteen alone. The stones are free text
+    // too, and the Obstacles stone asks what gets in the way, which is exactly
+    // where the worst sentence of somebody's week lands. It was read back the
+    // next morning and printed in the Book.
+    const flagged = {
+      ...base,
+      analyses: base.analyses.map((a, i) =>
+        i === 0 ? { ...a, safetyRisk: 'crisis' as const } : a,
+      ),
+    };
+    const chapters = buildChapters(flagged);
+    const kinds = chapters.flatMap((c) => c.lines.map((l) => l.kind));
+    expect(kinds).not.toContain(base.analyses[0]?.kind);
+    // And the rest of their writing still gets to be a Book.
+    expect(chapters.some((c) => c.lines.length > 0)).toBe(true);
+  });
+
+  it('keeps everything the screen did not flag', () => {
+    const chapters = buildChapters(base);
+    expect(chapters.flatMap((c) => c.lines).length).toBeGreaterThan(0);
+  });
+
   it('does not count fixed framing labels against the user', () => {
     const book = buildBookVersion(base, sequentialIds());
     const labelled = book.chapters.some((c) => c.lines.some((l) => l.framingLabel));

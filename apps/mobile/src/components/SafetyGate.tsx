@@ -31,6 +31,7 @@ const SETTLE_MS = 900;
 export function SafetyGate() {
   const pause = useMorrow((s) => s.safetyPause);
   const clear = useMorrow((s) => s.clearSafety);
+  const reconsider = useMorrow((s) => s.reconsiderLatestFlag);
   const { height } = useWindowDimensions();
   const [armed, setArmed] = useState(false);
   const [dialFailed, setDialFailed] = useState<string | null>(null);
@@ -197,6 +198,26 @@ export function SafetyGate() {
             {RESOURCES_COPY.dismiss}
           </Text>
         </Pressable>
+        {/*
+          The screen can be wrong, and when it is it has quietly excluded the
+          whole sitting from their Book. The person is the only one who knows,
+          so they are given the say. Placed under the way out, in the quieter
+          weight: it is the rarer answer, not the encouraged one.
+        */}
+        <Pressable
+          testID="safety-wrong"
+          accessibilityRole="button"
+          accessibilityLabel="This was not about me. Keep my writing."
+          accessibilityState={{ disabled: !armed }}
+          disabled={!armed}
+          onPress={reconsider}
+          style={{ paddingVertical: 12, marginTop: 14, alignItems: 'center', opacity: armed ? 1 : 0.45 }}
+        >
+          <Text style={{ fontFamily: fonts.sansMedium, fontSize: 14, color: day.ink2, textAlign: 'center' }}>
+            This was not about me — keep my writing
+          </Text>
+        </Pressable>
+
       </View>
     </View>
   );

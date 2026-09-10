@@ -22,8 +22,22 @@ import type { SafetyRisk } from '../types';
  *  - The gap between "myself" and a body part: people write "cutting my arms".
  *
  * Negations are deliberately NOT excluded. "I don't want to kill myself" still
- * raises the card, because the cost of being wrong here is a card someone
- * dismisses in one tap, and the cost of the other mistake has no floor.
+ * raises the card.
+ *
+ * That over-sensitivity used to be free: the cost of being wrong was a card
+ * someone dismissed in one tap. It stopped being free the moment a crisis
+ * verdict also started excluding the whole sitting from the Book for good, and
+ * the two changes were each defensible alone and harmful together. Four
+ * ordinary sentences were flagged by the widened patterns — "I hurt my wrists
+ * in the gym again", "I want to kill my self-doubt", "this year I am taking my
+ * life back", "I took my life savings and bought the van" — and each one would
+ * have silently deleted nine hundred words of somebody's writing from their own
+ * Book.
+ *
+ * So two things hold together now and neither is optional: the patterns below
+ * mean what they say, and a person can tell the app the flag was wrong
+ * (`reconsider` in the store). An automated judgement that is permanent,
+ * destructive and unappealable is not a safety feature.
  */
 const CRISIS = [
   // Inflections only for "myself", which is unambiguous. "kill me" stays in
@@ -31,9 +45,12 @@ const CRISIS = [
   // joke killed me" are ordinary English, and a card that fires on those
   // teaches people to dismiss it without reading, which is the one way this
   // screen can be made worse at its job.
-  /\bkill(?:ing|ed|s)?\s+my ?self\b/i,
+  /\bkill(?:ing|ed|s)?\s+my ?self(?![\w-])/i,
   /\bkill\s+me\b/i,
-  /\b(?:end|ending|ended|ends|take|taking|took)\s+(?:my|this)\s+(?:own\s+)?life\b/i,
+  /\b(?:end|ending|ended|ends)\s+(?:my|this)\s+(?:own\s+)?life\b/i,
+  // "take" only with "own". "Taking my life back" and "took my life savings"
+  // are ordinary sentences, and the idiom this list is for says "own life".
+  /\b(?:take|taking|took|takes)\s+(?:my|his|her|their)\s+own\s+life\b/i,
   /\bend(?:ing|ed)?\s+it\s+all\b/i,
   /\bsuicid\w*/i,
   /\bunalive\w*/i,
@@ -44,7 +61,9 @@ const CRISIS = [
   /\bwish(?:ed|ing)?\s+(?:i|I)\s+(?:was|were|wasn['’]?t|weren['’]?t)\s+(?:dead|here|alive|born|never\s+born)\b/i,
   /\bbetter\s+off\s+(?:without\s+me|dead|if\s+i\s+(?:was|were)n['’]?t)\b/i,
   /\bself[- ]?harm\w*/i,
-  /\b(?:cut|cutting|cuts|hurt|hurting|hurts|harm|harming)\s+(?:my ?self|my\s+(?:arms?|legs?|wrists?|thighs?|skin))\b/i,
+  /\b(?:cut|cutting|cuts|harm|harming|harms)\s+(?:my ?self|my\s+(?:arms?|legs?|wrists?|thighs?|skin))\b/i,
+  // "hurt my legs" is a gym sentence. "Hurt myself" is not.
+  /\b(?:hurt|hurting|hurts)\s+my ?self(?![\w-])/i,
   /\bno\s+(?:reason|point)\s+(?:to|in)\s+(?:go(?:ing)?\s+on|carry(?:ing)?\s+on|liv(?:e|ing)|be(?:ing)?\s+here)\b/i,
   /\bnothing\s+(?:left\s+)?to\s+live\s+for\b/i,
   /\boverdos\w*/i,
