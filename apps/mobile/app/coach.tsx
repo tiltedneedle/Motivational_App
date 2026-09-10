@@ -32,6 +32,7 @@ export default function Coach() {
   const shrinkMove = useMorrow((s) => s.shrinkMove);
   const toast = useMorrow((s) => s.toast);
   const setToast = useMorrow((s) => s.setToast);
+  const noteConcern = useMorrow((s) => s.noteConcern);
 
   const [thread, setThread] = useState<{ who: 'me' | 'coach'; text: string }[]>([]);
   const [draft, setDraft] = useState('');
@@ -86,6 +87,10 @@ useEffect(() => {
       useMorrow.setState({ safetyPause: { risk: risk.risk, at: new Date().toISOString() } });
       return;
     }
+    // Not a crisis, but not nothing either. The thread is not kept, so without
+    // this the band closes the moment they leave the screen and tomorrow's
+    // brief is written as though the conversation never happened.
+    if (risk.risk === 'concern') noteConcern();
     // The rules the coach obeys whatever was asked (PRD 11.6): no calorie
     // targets, no dosages, no financial recommendations. This was written and
     // unit-tested and then never called, so the coach answered all three.

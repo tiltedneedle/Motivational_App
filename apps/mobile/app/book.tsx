@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { Share, View } from 'react-native';
 import { ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ANALYSIS_TITLES, bookToText, ordinal, pageCount } from '@morrow/core';
+import { ANALYSIS_TITLES, bookToText, formatDay, ordinal, pageCount } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, UserText, day, night, radius } from '@morrow/ui';
 import { useLatestBook, useMorrow } from '../src/store';
 
@@ -131,7 +131,7 @@ export default function BookScreen() {
             {book.iWill}
           </UserText>
           <Label style={{ color: '#8B7F6A', marginTop: 8 }}>
-            Sealed {book.sealedAt.slice(0, 10)} · written by you
+            Sealed {formatDay(book.sealedAt.slice(0, 10))} · written by you
           </Label>
         </ScrollView>
 

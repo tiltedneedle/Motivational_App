@@ -155,6 +155,30 @@ export function shouldOfferSupport(soften: boolean, supportOfferedAt: string | n
   return soften && !supportOfferedAt;
 }
 
+/** One screened thing and the day it was written. Category and text stay out. */
+export interface RiskStamp {
+  risk: SafetyRisk | null | undefined;
+  day: string;
+}
+
+/**
+ * Whether this morning is inside the concern band.
+ *
+ * Takes a flat list rather than the store, for the same reason the day
+ * accounting does: the rule is worth testing on its own, and the store cannot
+ * be imported into a test without React Native coming with it. The store's job
+ * is to collect the stamps — a sitting, an analysis line, a proof, a day, and
+ * the one date the chat leaves behind — and this decides.
+ *
+ * Crisis is deliberately not in the band. Crisis has its own path: the sitting
+ * pauses, the resources card comes up, and the writing never reaches the Book.
+ * A softened brief is what the *next* morning owes somebody, and after a crisis
+ * the app has already said considerably more than a softened brief would.
+ */
+export function softenFrom(stamps: readonly RiskStamp[], today: string, windowDays = SOFTEN_WINDOW_DAYS): boolean {
+  return stamps.some((st) => st.risk === 'concern' && withinSoftenWindow(st.day, today, windowDays));
+}
+
 export function screen(text: string): SafetyResult {
   const t = text ?? '';
   if (!t.trim()) return { risk: 'none', category: null, action: 'continue' };

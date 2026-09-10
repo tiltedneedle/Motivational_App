@@ -32,7 +32,11 @@ export interface BriefInput {
 const REGISTER: Record<Persona, { open: (s: string) => string; push: (s: string) => string }> = {
   gentle: {
     open: (s) => s,
-    push: (s) => `When you're ready: ${s}`,
+    // A comma, and the sentence carried on rather than restarted. The colon
+    // form printed "When you're ready: Start with Thursday: at 6:40" — two
+    // colons and a capital mid-sentence, on the one register that is supposed
+    // to read as somebody speaking gently.
+    push: (s) => `When you're ready, ${lowerFirst(s)}`,
   },
   straight: {
     open: (s) => s,

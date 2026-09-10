@@ -4,10 +4,10 @@
  */
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Platform, ScrollView, Share, View } from 'react-native';
+import { Alert, Linking, Platform, Pressable, ScrollView, Share, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { bookToText, plural } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, day } from '@morrow/ui';
+import { HELPLINES, bookToText, plural } from '@morrow/core';
+import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, accent, day } from '@morrow/ui';
 import { useLatestBook, useMorrow } from '../src/store';
 
 export default function Settings() {
@@ -18,6 +18,28 @@ export default function Settings() {
   const book = useLatestBook();
   const [confirming, setConfirming] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [dialFailed, setDialFailed] = useState<string | null>(null);
+
+  /**
+   * Same shape as the one on the resources card, and for the same reason:
+   * `openURL` resolves on the web whether or not anything handled it, so
+   * waiting for a rejection that never comes left somebody tapping a number
+   * that quietly did nothing.
+   */
+  const openHelpline = async (contact: string) => {
+    const target = contact.includes('.') ? `https://${contact}` : `tel:${contact.replace(/\s/g, '')}`;
+    try {
+      const handled = await Linking.canOpenURL(target).catch(() => true);
+      if (!handled) {
+        setDialFailed(contact);
+        return;
+      }
+      await Linking.openURL(target);
+      setDialFailed(null);
+    } catch {
+      setDialFailed(contact);
+    }
+  };
 
   const exportAll = async () => {
     const payload = {
@@ -98,6 +120,48 @@ export default function Settings() {
                 />
               ))}
             </View>
+          </View>
+
+          <Rule />
+          {/*
+            The helplines, findable without being in crisis.
+
+            They lived in one place: the card the safety screen raises. So the
+            only way to reach a number was to already be having the worst
+            evening of your life — and the concern band's one line says "one of
+            the lines in Settings", which was a promise the app did not keep.
+            Nothing here is gated, logged, or counted.
+          */}
+          <View style={{ gap: 10 }}>
+            <Label>If you need someone</Label>
+            <Body style={{ fontSize: 13 }}>
+              Here whether or not anything is wrong. Nothing you do on this screen is recorded.
+            </Body>
+            {HELPLINES.map((h) => (
+              <Pressable
+                key={h.region}
+                testID={`settings-helpline-${h.region}`}
+                accessibilityRole="link"
+                accessibilityLabel={`${h.name}, ${h.region}: ${h.contact}`}
+                onPress={() => openHelpline(h.contact)}
+                style={{ paddingVertical: 8 }}
+              >
+                <Body style={{ color: day.ink }}>{h.name}</Body>
+                <Body selectable style={{ fontSize: 15, color: accent.coralText }}>
+                  {h.contact}
+                  <Body style={{ fontSize: 13, color: day.ink2 }}>{`  ${h.region}`}</Body>
+                </Body>
+              </Pressable>
+            ))}
+            {dialFailed ? (
+              <Body testID="settings-dial-failed" style={{ fontSize: 13, color: day.ink }}>
+                {`This device would not dial ${dialFailed}. The number is above and can be selected and copied.`}
+              </Body>
+            ) : Platform.OS === 'web' ? (
+              <Body style={{ fontSize: 13, color: day.ink2 }}>
+                On a computer these numbers may not dial. Every one of them can be selected and copied.
+              </Body>
+            ) : null}
           </View>
 
           <Rule />

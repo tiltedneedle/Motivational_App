@@ -63,6 +63,12 @@ type TextProps = {
    * fragment in a margin, a bare number, a time.
    */
   accessibilityLabel?: string;
+  /**
+   * Lets the reader select and copy the text. Off by default, on wherever the
+   * characters themselves are the useful thing — a helpline number that will
+   * not dial on this device is only any use if it can be copied out.
+   */
+  selectable?: boolean;
 };
 
 export function Statement({ children, style, testID, accessibilityLabel }: TextProps) {
@@ -96,12 +102,13 @@ export function Question({ children, style, testID, accessibilityLabel }: TextPr
   );
 }
 
-export function Body({ children, style, numberOfLines, testID, accessibilityLabel }: TextProps) {
+export function Body({ children, style, numberOfLines, testID, accessibilityLabel, selectable }: TextProps) {
   const { p } = usePalette();
   return (
     <Text
       accessibilityLabel={accessibilityLabel}
       testID={testID}
+      selectable={selectable}
       numberOfLines={numberOfLines}
       style={[{ fontFamily: fonts.sans, fontSize: size.body, lineHeight: 23, color: p.ink2 }, style]}
     >

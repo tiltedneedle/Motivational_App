@@ -10,7 +10,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { buildDawnBrief } from '../src/engines/coach';
-import { SUPPORT_LINE, screen, shouldOfferSupport, withinSoftenWindow } from '../src/engines/safety';
+import { SUPPORT_LINE, screen, shouldOfferSupport, softenFrom, withinSoftenWindow } from '../src/engines/safety';
 import type { BookVersion, DaySummary, Move } from '../src/types';
 
 const DAY = '2026-09-11';
@@ -137,5 +137,37 @@ describe('the concern band is a band, not a column in a table', () => {
     // not diagnose, promise, or name a condition.
     expect(SUPPORT_LINE).toContain('Settings');
     expect(SUPPORT_LINE).not.toMatch(/depress|anxiet|disorder|diagnos/i);
+  });
+});
+
+describe('what puts a morning in the band, and what does not', () => {
+  it('is any one screened thing inside the window', () => {
+    expect(softenFrom([{ risk: 'concern', day: '2026-09-10' }], DAY)).toBe(true);
+    expect(softenFrom([{ risk: 'concern', day: '2026-09-08' }], DAY)).toBe(false);
+    expect(softenFrom([{ risk: 'none', day: '2026-09-10' }], DAY)).toBe(false);
+    expect(softenFrom([], DAY)).toBe(false);
+  });
+
+  it('ignores a risk it has never heard of, and a missing one', () => {
+    // Rows written by an older build, or by a sync that has drifted. A morning
+    // is not softened on a value nothing in the app produces.
+    expect(softenFrom([{ risk: undefined, day: '2026-09-10' }], DAY)).toBe(false);
+    expect(softenFrom([{ risk: null, day: '2026-09-10' }], DAY)).toBe(false);
+  });
+
+  it('does not treat a crisis as a concern', () => {
+    // Crisis has its own path — the sitting pauses and the resources card comes
+    // up. It does not quietly become a softer brief tomorrow instead.
+    expect(softenFrom([{ risk: 'crisis', day: '2026-09-10' }], DAY)).toBe(false);
+  });
+
+  it('finds the one flagged row among many quiet ones', () => {
+    const stamps = [
+      { risk: 'none' as const, day: '2026-09-11' },
+      { risk: 'none' as const, day: '2026-09-10' },
+      { risk: 'concern' as const, day: '2026-09-11' },
+      { risk: 'none' as const, day: '2026-09-09' },
+    ];
+    expect(softenFrom(stamps, DAY)).toBe(true);
   });
 });

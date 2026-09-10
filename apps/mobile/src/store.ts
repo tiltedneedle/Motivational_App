@@ -28,7 +28,8 @@ import {
   isQuotable,
   isWorse,
   shouldOfferSupport,
-  withinSoftenWindow,
+  softenFrom,
+  type RiskStamp,
   mergeGoalDrafts,
   newId,
   reading,
@@ -90,6 +91,16 @@ export interface MorrowState {
   briefs: Brief[];
   /** Set when the safety screen fires; the UI shows the resources card. */
   safetyPause: { risk: SafetyRisk; at: string } | null;
+  /**
+   * The last day the coach heard something in the concern band.
+   *
+   * Everything else the person writes is stored on a row that carries its own
+   * verdict, so `softenNow` can simply read those back. The chat is the one
+   * exception: the thread lives in the Coach screen's own state and is gone
+   * when the screen is, so a concern verdict there would have nowhere to live
+   * and tomorrow's brief would never know. This is that place.
+   */
+  concernAt: string | null;
   toast: ToastState | null;
   /** The coach's single invitation to the Full track, once ever. */
   fullTrackInvited: boolean;
@@ -176,6 +187,7 @@ export interface MorrowState {
   shrinkMove: (moveId: string) => boolean;
   addEvidence: (text: string, goalId?: string) => void;
   sealDay: (input: { moodWord: string; proof: string; gladOf: string }) => void;
+  noteConcern: () => void;
   makeBrief: () => Brief | null;
 
   // ui
@@ -248,6 +260,7 @@ const EMPTY = {
   scenes: [] as Scene[],
   briefs: [] as Brief[],
   safetyPause: null,
+  concernAt: null,
   toast: null,
   fullTrackInvited: false,
   bookTitle: '',
@@ -840,6 +853,16 @@ export const useMorrow = create<MorrowState>()(
           };
         }),
 
+      /**
+       * Remember that the coach heard something in the concern band today.
+       *
+       * Deliberately not a text, a category, or anything the person wrote —
+       * one date. PRD §11.6 logs a flag, never text, and the whole reason this
+       * field exists is that the chat itself is not kept.
+       */
+      noteConcern: () =>
+        set((s) => ({ concernAt: dayOf(new Date(), s.profile.dayBoundaryHour) })),
+
       makeBrief: () => {
         const s = get();
         const day = dayOf(new Date(), s.profile.dayBoundaryHour);
@@ -961,22 +984,15 @@ export const useMorrow = create<MorrowState>()(
  */
 export function softenNow(s: MorrowState, today: string): boolean {
   const boundary = s.profile.dayBoundaryHour;
-  const flagged: string[] = [];
-
-  for (const t of s.texts) {
-    if (t.safetyRisk === 'concern') flagged.push(dayOf(new Date(t.createdAt), boundary));
-  }
-  for (const a of s.analyses) {
-    if (a.safetyRisk === 'concern' && a.writtenAt) flagged.push(dayOf(new Date(a.writtenAt), boundary));
-  }
-  for (const e of s.evidence) {
-    if (e.safetyRisk === 'concern') flagged.push(e.day);
-  }
-  for (const d of Object.values(s.days)) {
-    if (d.safetyRisk === 'concern') flagged.push(d.day);
-  }
-
-  return flagged.some((f) => withinSoftenWindow(f, today));
+  const stamps: RiskStamp[] = [
+    ...s.texts.map((t) => ({ risk: t.safetyRisk, day: dayOf(new Date(t.createdAt), boundary) })),
+    ...s.analyses.map((a) => ({ risk: a.safetyRisk, day: dayOf(new Date(a.writtenAt), boundary) })),
+    ...s.evidence.map((e) => ({ risk: e.safetyRisk, day: e.day })),
+    ...Object.values(s.days).map((d) => ({ risk: d.safetyRisk, day: d.day })),
+    // The chat leaves nothing else behind. See `concernAt`.
+    ...(s.concernAt ? [{ risk: 'concern' as const, day: s.concernAt }] : []),
+  ];
+  return softenFrom(stamps, today);
 }
 
 /**

@@ -17,7 +17,7 @@ import type {
 import { ANALYSIS_ORDER } from '../types';
 import { framingLabel } from './framings';
 import { isQuotable } from './safety';
-import { plural } from '../ids';
+import { formatDay, plural } from '../ids';
 import { firstSentence } from './portrait';
 
 export const MIN_AUTHORSHIP_RATIO = 0.95;
@@ -210,7 +210,7 @@ export function diffBooks(previous: BookVersion, next: BookVersion): BookDiff {
 export function bookToText(book: BookVersion): string {
   const out: string[] = [];
   out.push(book.title.toUpperCase());
-  out.push(`Sealed ${book.sealedAt.slice(0, 10)} · ${plural(book.chapters.length, 'goal')} · ${book.track}`);
+  out.push(`Sealed ${formatDay(book.sealedAt.slice(0, 10))} · ${plural(book.chapters.length, 'goal')} · ${book.track}`);
   out.push('');
   out.push('CHAPTER ONE · THE FIFTEEN');
   out.push(book.ideal);
