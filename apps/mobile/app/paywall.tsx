@@ -10,7 +10,7 @@
  * takes a `from` and goes back to it rather than dropping everyone on Today.
  */
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -45,6 +45,19 @@ export default function Paywall() {
   const selected = PLANS.find((p) => p.id === choice) ?? PLANS[0]!;
 
   /**
+   * Shown counts as shown, whichever way they leave.
+   *
+   * Marking it on "Not now" meant a person who used the system back gesture,
+   * or closed the app on this screen, met it again the next time Today opened —
+   * a paywall that reappears until you press its own button is not the "once"
+   * the PRD asks for, and it is the exact behaviour that makes people delete an
+   * app rather than pay for it.
+   */
+  useEffect(() => {
+    markPaywallSeen(moment);
+  }, [markPaywallSeen, moment]);
+
+  /**
    * Back to exactly where they were.
    *
    * Popping is the honest reading of "returns the user to where they were with
@@ -67,10 +80,7 @@ export default function Paywall() {
     router.replace(safe);
   };
 
-  const notNow = () => {
-    markPaywallSeen(moment);
-    goBack();
-  };
+  const notNow = () => goBack();
 
   const buy = async () => {
     setBusy(true);
@@ -78,7 +88,6 @@ export default function Paywall() {
     const out = await purchase(choice);
     setBusy(false);
     if (out.ok) {
-      markPaywallSeen(moment);
       // Same door out. Somebody who has just paid should land back in the thing
       // they were doing, not be dropped on Today as though they had restarted.
       goBack();

@@ -364,6 +364,15 @@ async function main() {
       await tap('paywall-not-now');
       await page.waitForTimeout(600);
     }
+
+    // Once means once, whichever way they left it. Marking it seen on the
+    // dismiss button meant a system back gesture, or closing the app on this
+    // screen, brought it back the next time Today opened — which is the exact
+    // behaviour that makes people delete an app rather than pay for it.
+    await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(2000);
+    await page.waitForTimeout(700);
+    check('and it does not come back the next time Today opens', !(await seen('screen-paywall')));
     check('today renders', await seen('screen-today'));
     check('and Not now put them back where they were', !(await seen('screen-paywall')));
     // The quotation has its own id. Reading the card's innerText and splitting
