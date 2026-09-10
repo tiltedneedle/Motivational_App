@@ -94,6 +94,27 @@ describe('the domain accents', () => {
   }
 });
 
+describe('the status colours, which are also set as text', () => {
+  // These were left out of the first sweep and are used as 14px body text:
+  // the delta beside the Consistency Score, and the error line in the practice
+  // builder. A colour that means "this went well" or "this is wrong" has to be
+  // readable, or it means nothing at all.
+  it('success reads as small text on the day ground', () => {
+    expect(ratio(accent.success, day.ground)).toBeGreaterThanOrEqual(AA_BODY);
+    expect(ratio(accent.success, day.surface)).toBeGreaterThanOrEqual(AA_BODY);
+  });
+
+  it('destructive reads as small text on the day ground', () => {
+    expect(ratio(accent.destructive, day.ground)).toBeGreaterThanOrEqual(AA_BODY);
+    expect(ratio(accent.destructive, day.surface)).toBeGreaterThanOrEqual(AA_BODY);
+  });
+
+  it('pearl is a mark, not a text colour, and is only asked to be one', () => {
+    // Deliberately not held to the text threshold: it is the coach's stone.
+    expect(ratio(accent.pearl, day.ground)).toBeGreaterThan(1);
+  });
+});
+
 describe('white on a filled control', () => {
   it('reads on the ink button and on coral', () => {
     expect(ratio('#FFFFFF', day.ink)).toBeGreaterThanOrEqual(AA_BODY);

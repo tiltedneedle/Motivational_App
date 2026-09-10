@@ -82,7 +82,10 @@ export const accent = {
   mossText: '#477823',
   mossNight: '#5E9E2E',
   pearl: '#CFCBC2',
-  success: '#1E9E5A',
+  // Darkened to read as small text. It is set at 14px beside the Consistency
+  // Score, where it measured 2.68:1 against the ground it sits on — a colour
+  // that means "this went well" and could not be read.
+  success: '#167442',
   destructive: '#B23A1E',
 } as const;
 
