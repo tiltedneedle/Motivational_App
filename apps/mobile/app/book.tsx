@@ -8,7 +8,21 @@ import { Share, View } from 'react-native';
 import { ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ANALYSIS_TITLES, bookToText, formatDay, ordinal, pageCount } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, UserText, day, night, radius } from '@morrow/ui';
+import {
+  Body,
+  Chip,
+  InkButton,
+  Label,
+  Rule,
+  Statement,
+  Studio,
+  TextButton,
+  UserText,
+  day,
+  night,
+  radius,
+  useTwoColumn,
+} from '@morrow/ui';
 import { useLatestBook, useMorrow } from '../src/store';
 
 /**
@@ -35,6 +49,7 @@ export default function BookScreen() {
   // Kept: this one is read on Today, which is where it navigates to.
   const setToast = useMorrow((s) => s.setToast);
   const [exportError, setExportError] = useState<string | null>(null);
+  const twoColumn = useTwoColumn();
 
   if (!book) {
     return (
@@ -61,7 +76,7 @@ export default function BookScreen() {
   };
 
   return (
-    <Studio dark testID="screen-book">
+    <Studio dark wide={twoColumn} testID="screen-book">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 18 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10 }}>
           <TextButton testID="book-back" label="← Today" onPress={() => router.replace('/today')} />
@@ -114,6 +129,77 @@ export default function BookScreen() {
           </View>
           <Rule style={{ backgroundColor: '#E2DACB' }} />
 
+          {/*
+            PRD §7.14: two-column Book on a tablet.
+
+            The split is the one the document already has. The left column is
+            how the Book opens — the spine, the Fifteen, and the contents — and
+            the right is the chapters themselves. On a phone there is only ever
+            room for one, and they run in the same order they always did.
+          */}
+          {twoColumn ? (
+            <View testID="book-two-column" style={{ flexDirection: 'row', gap: 34 }}>
+              <View style={{ flex: 1, gap: 18 }}>
+              <Label style={{ color: '#8B7F6A' }}>Chapter one · the Fifteen</Label>
+              <UserText testID="book-first-sentence" style={{ fontSize: 28, lineHeight: 34, color: '#15181F' }}>
+                {book.firstSentence}
+              </UserText>
+              <UserText style={{ fontSize: 17, lineHeight: 27, color: '#3B3A36' }}>
+                {book.ideal.slice(book.firstSentence.length).trim()}
+              </UserText>
+
+              {book.shadow ? (
+                <>
+                  <Rule style={{ backgroundColor: 'rgba(21,24,31,0.12)' }} />
+                  <Label style={{ color: '#8B7F6A' }}>The other road</Label>
+                  <UserText style={{ fontSize: 16, lineHeight: 25, color: '#5A5750' }}>{book.shadow}</UserText>
+                </>
+              ) : null}
+
+              <Rule style={{ backgroundColor: 'rgba(21,24,31,0.12)' }} />
+              <Label style={{ color: '#8B7F6A' }}>Contents</Label>
+              {book.chapters.map((c) => (
+                <View key={c.goalId} style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
+                  <View style={{ flex: 1 }}>
+                    <ChapterName name={c.name} authored={c.nameAuthored !== false} size={17} />
+                  </View>
+                  <Label style={{ color: '#8B7F6A' }}>{c.horizon}</Label>
+                </View>
+              ))}
+              </View>
+              <View style={{ flex: 1, gap: 18 }}>
+              {book.chapters.map((c) => (
+                <View key={`ch-${c.goalId}`} style={{ gap: 10, marginTop: 10 }}>
+                  <Rule style={{ backgroundColor: 'rgba(21,24,31,0.12)' }} />
+                  <ChapterName name={c.name} authored={c.nameAuthored !== false} size={22} />
+                  {c.lines.map((l, i) => (
+                    <View key={`${c.goalId}-${i}`} style={{ gap: 3 }}>
+                      <Label style={{ color: '#8B7F6A' }}>
+                        {ANALYSIS_TITLES[l.kind]}
+                        {l.framingLabel ? ` · ${l.framingLabel}` : ''}
+                      </Label>
+                      <UserText style={{ fontSize: 17, lineHeight: 26, color: '#3B3A36' }}>{l.text}</UserText>
+                      {l.text2 ? (
+                        <UserText italic style={{ fontSize: 16, lineHeight: 24, color: '#5A5750' }}>
+                          …then I {l.text2}
+                        </UserText>
+                      ) : null}
+                    </View>
+                  ))}
+                </View>
+              ))}
+              <Rule style={{ backgroundColor: 'rgba(21,24,31,0.12)' }} />
+              <Label style={{ color: '#8B7F6A' }}>I will</Label>
+              <UserText testID="book-i-will" style={{ fontSize: 24, lineHeight: 32, color: '#15181F' }}>
+                {book.iWill}
+              </UserText>
+              <Label style={{ color: '#8B7F6A', marginTop: 8 }}>
+                Sealed {formatDay(book.sealedAt.slice(0, 10))} · written by you
+              </Label>
+              </View>
+            </View>
+          ) : (
+            <>
           <Label style={{ color: '#8B7F6A' }}>Chapter one · the Fifteen</Label>
           <UserText testID="book-first-sentence" style={{ fontSize: 28, lineHeight: 34, color: '#15181F' }}>
             {book.firstSentence}
@@ -140,7 +226,6 @@ export default function BookScreen() {
               <Label style={{ color: '#8B7F6A' }}>{c.horizon}</Label>
             </View>
           ))}
-
           {book.chapters.map((c) => (
             <View key={`ch-${c.goalId}`} style={{ gap: 10, marginTop: 10 }}>
               <Rule style={{ backgroundColor: 'rgba(21,24,31,0.12)' }} />
@@ -161,7 +246,6 @@ export default function BookScreen() {
               ))}
             </View>
           ))}
-
           <Rule style={{ backgroundColor: 'rgba(21,24,31,0.12)' }} />
           <Label style={{ color: '#8B7F6A' }}>I will</Label>
           <UserText testID="book-i-will" style={{ fontSize: 24, lineHeight: 32, color: '#15181F' }}>
@@ -170,6 +254,8 @@ export default function BookScreen() {
           <Label style={{ color: '#8B7F6A', marginTop: 8 }}>
             Sealed {formatDay(book.sealedAt.slice(0, 10))} · written by you
           </Label>
+            </>
+          )}
         </ScrollView>
 
         {exportError ? (

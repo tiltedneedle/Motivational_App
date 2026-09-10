@@ -16,6 +16,7 @@ import {
   Text,
   TextInput,
   View,
+  useWindowDimensions,
   type StyleProp,
   type TextStyle,
   type ViewStyle,
@@ -30,11 +31,18 @@ export function usePalette() {
 
 export function Studio({
   dark = false,
+  wide = false,
   children,
   style,
   testID,
 }: {
   dark?: boolean;
+  /**
+   * Let the screen use the full tablet width rather than one column of
+   * writing. Only for the two screens PRD 7.14 names — the Goal and the Book —
+   * which lay out their own columns inside it.
+   */
+  wide?: boolean;
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
   testID?: string;
@@ -54,17 +62,42 @@ export function Studio({
         pasted onto a white sheet.
       */}
       <View testID={testID} style={[{ flex: 1, backgroundColor: p.ground }, style]}>
-        <View style={{ flex: 1, width: '100%', maxWidth: COLUMN, alignSelf: 'center' }}>{children}</View>
+        <View style={{ flex: 1, width: '100%', maxWidth: wide ? TWO_COLUMN : COLUMN, alignSelf: 'center' }}>
+          {children}
+        </View>
       </View>
     </PaletteContext.Provider>
   );
 }
 
 /**
- * The widest the writing is ever set. A little over a large phone, so a tablet
- * feels roomy without the line length leaving the range the type was chosen for.
+ * The widest one column of writing is ever set (PRD 7.14: "content max-width
+ * 640 pt"). A little over a large phone, so a tablet feels roomy without the
+ * line length leaving the range this type was chosen for.
  */
-export const COLUMN = 560;
+export const COLUMN = 640;
+
+/**
+ * The width at which there is honestly room for two columns.
+ *
+ * Two columns of 640 plus the gutter and the margins. Below it there is not
+ * room for both, and a screen that tries anyway gets two narrow columns rather
+ * than one good one.
+ */
+export const TWO_COLUMN = 1000;
+
+/**
+ * Whether this screen has room for the tablet layout (PRD 7.14: two-column
+ * Goal and Book).
+ *
+ * Reads the window rather than the platform, so it is right on a folding
+ * phone, on a split-screen tablet and in a resized browser — all three of
+ * which a platform check gets wrong.
+ */
+export function useTwoColumn(): boolean {
+  const { width } = useWindowDimensions();
+  return width >= TWO_COLUMN;
+}
 
 // ---------------------------------------------------------------- text
 

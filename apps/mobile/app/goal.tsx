@@ -6,7 +6,22 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ANALYSIS_ORDER, ANALYSIS_TITLES, closedOn, dayOf, domainMeta, formatDay, sourceLineFor } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Ring, Rule, Statement, Stone, Studio, TextButton, UserText, accent, day } from '@morrow/ui';
+import {
+  Body,
+  Chip,
+  InkButton,
+  Label,
+  Ring,
+  Rule,
+  Statement,
+  Stone,
+  Studio,
+  TextButton,
+  UserText,
+  accent,
+  day,
+  useTwoColumn,
+} from '@morrow/ui';
 import { analysisPlan } from './stone';
 import { analysesFor, useGoals, useMorrow } from '../src/store';
 
@@ -22,6 +37,7 @@ export default function GoalScreen() {
   const goBack = () => (router.canGoBack() ? router.back() : router.replace('/today'));
   const boundary = state.profile.dayBoundaryHour;
   const today = dayOf(new Date(), boundary);
+  const twoColumn = useTwoColumn();
 
   if (!goal) {
     return (
@@ -48,7 +64,7 @@ export default function GoalScreen() {
   const pct = plan?.moves.length ? doneCount / plan.moves.length : 0;
 
   return (
-    <Studio testID="screen-goal">
+    <Studio wide={twoColumn} testID="screen-goal">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12 }}>
           <TextButton testID="goal-back" label="← Today" onPress={goBack} />
@@ -80,6 +96,138 @@ export default function GoalScreen() {
             </View>
           ) : null}
 
+          {/*
+            PRD §7.14: two-column Goal on a tablet.
+
+            The five stones are what they wrote; the plan is what it became.
+            Side by side, a move and the line it came from are on screen at the
+            same time, which is the claim the plan column makes about itself and
+            was previously two scrolls apart. One column below tablet width, in
+            the order it always ran.
+          */}
+          {twoColumn ? (
+            <View testID="goal-two-column" style={{ flexDirection: 'row', gap: 34 }}>
+              <View style={{ flex: 1, gap: 20 }}>
+              <View style={{ gap: 10 }}>
+                <Label>The five stones</Label>
+                {ANALYSIS_ORDER.map((kind) => {
+                  const a = analyses.find((x) => x.kind === kind);
+                  const included = wanted.includes(kind);
+                  return (
+                    <View
+                      key={kind}
+                      testID={`analysis-${kind}`}
+                      style={{
+                        flexDirection: 'row',
+                        gap: 14,
+                        alignItems: 'flex-start',
+                        paddingVertical: 12,
+                        borderTopWidth: 1,
+                        borderTopColor: day.line,
+                        opacity: included || a ? 1 : 0.5,
+                      }}
+                    >
+                      <Stone size={24} domain={goal.domain} polish={a ? 1 : 0.4} seated={Boolean(a)} />
+                      <View style={{ flex: 1, gap: 4 }}>
+                        <Label>{ANALYSIS_TITLES[kind]}</Label>
+                        {a ? (
+                          <>
+                            <UserText style={{ fontSize: 16, lineHeight: 23 }}>{a.paragraph?.trim() || a.line}</UserText>
+                            {a.line2 ? (
+                              <UserText italic style={{ fontSize: 15, color: day.ink2 }}>…then I {a.line2}</UserText>
+                            ) : null}
+                          </>
+                        ) : (
+                          <Chip
+                            testID={`write-${kind}`}
+                            label={included ? 'Write this one' : 'Go deeper'}
+                            ghost
+                            onPress={() => router.push(`/stone?goal=${goal.id}&kind=${kind}`)}
+                          />
+                        )}
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+              </View>
+              <View style={{ flex: 1, gap: 20 }}>
+              {plan ? (
+                <View style={{ gap: 10 }}>
+                  <Rule />
+                  <Label>The plan · every move shows the line it came from</Label>
+                  {plan.milestones.slice(0, 1).map((ms) => (
+                    <View key={ms.id} style={{ gap: 4 }}>
+                      <Label style={{ color: accent.coralText }}>
+                        Milestone 1 · by {formatDay(ms.targetDate)}
+                      </Label>
+                      <Statement style={{ fontSize: 22, lineHeight: 27 }}>{ms.title}</Statement>
+                      {/*
+                        "In your words" is only true when a Monitoring line is
+                        behind it. Without one the plan carries a placeholder, and
+                        calling the app's own sentence the user's is the exact thing
+                        the authorship rule exists to prevent.
+                      */}
+                      {ms.proofSourceLineId ? (
+                        <Body style={{ fontSize: 13 }}>
+                          Proof, in your words: <UserText italic style={{ fontSize: 13 }}>“{ms.proof}”</UserText>
+                        </Body>
+                      ) : (
+                        <Body style={{ fontSize: 13 }}>
+                          No proof yet. Write the Monitoring line and it goes here.
+                        </Body>
+                      )}
+                    </View>
+                  ))}
+                  {plan.moves.map((m) => {
+                    const from = sourceLineFor(m, analyses);
+                    // What the plan screen was not saying: which of these has
+                    // happened. Every move read the same whether it was done last
+                    // week, parked this morning, or still ahead — on the one screen
+                    // whose whole title is "the plan".
+                    const when = m.status === 'done' ? closedOn(m, boundary) : m.scheduledFor;
+                    const state =
+                      m.status === 'done'
+                        ? `Done${when ? ` ${formatDay(when, { weekday: true, today })}` : ''}`
+                        : m.status === 'skip'
+                          ? `Not today${when ? ` · was ${formatDay(when, { today })}` : ''}`
+                          : when
+                            ? formatDay(when, { weekday: true, today })
+                            : 'Not scheduled';
+                    return (
+                      <View
+                        key={m.id}
+                        testID={`plan-move-${m.id}`}
+                        accessibilityLabel={`${m.title}. ${state}.`}
+                        style={{ paddingVertical: 10, borderTopWidth: 1, borderTopColor: day.line2, gap: 3 }}
+                      >
+                        {/*
+                          Under the title, not beside it. Set in a row, the longest
+                          state — "Not today · was 12 Sep" — took half the width at
+                          375 pt and squeezed somebody's own sentence into a column
+                          narrower than the label describing it.
+                        */}
+                        <Body style={{ color: m.status === 'done' ? day.ink2 : day.ink, fontSize: 16 }}>{m.title}</Body>
+                        <Label
+                          testID={`plan-move-state-${m.id}`}
+                          style={{ color: m.status === 'done' ? accent.success : m.status === 'skip' ? day.ink3 : day.ink2 }}
+                        >
+                          {state}
+                        </Label>
+                        {from ? (
+                          <Body style={{ fontSize: 13, color: day.ink2 }}>
+                            from <UserText italic style={{ fontSize: 13, color: day.ink2 }}>“{from}”</UserText>
+                          </Body>
+                        ) : null}
+                      </View>
+                    );
+                  })}
+                </View>
+              ) : null}
+              </View>
+            </View>
+          ) : (
+            <>
           <View style={{ gap: 10 }}>
             <Label>The five stones</Label>
             {ANALYSIS_ORDER.map((kind) => {
@@ -122,7 +270,6 @@ export default function GoalScreen() {
               );
             })}
           </View>
-
           {plan ? (
             <View style={{ gap: 10 }}>
               <Rule />
@@ -195,6 +342,8 @@ export default function GoalScreen() {
               })}
             </View>
           ) : null}
+            </>
+          )}
         </ScrollView>
       </SafeAreaView>
     </Studio>

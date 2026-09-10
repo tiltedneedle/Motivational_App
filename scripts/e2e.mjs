@@ -555,7 +555,48 @@ async function main() {
       measure ? `${measure.ground} pt` : '(no book on screen)',
     );
 
+    // PRD 7.14: two-column Goal and Book on a tablet. Both columns must
+    // actually carry something — a split that leaves one side empty is worse
+    // than no split at all.
+    const bookCols = await page.evaluate(() => {
+      const el = document.querySelector('[data-testid="book-two-column"]');
+      if (!el) return null;
+      return [...el.children].map((c) => ({ w: Math.round(c.getBoundingClientRect().width), n: c.innerText.trim().length }));
+    });
+    check(
+      'the Book lays itself out in two columns on a tablet',
+      Boolean(bookCols) && bookCols.length === 2 && bookCols.every((c) => c.w > 300 && c.n > 40),
+      JSON.stringify(bookCols),
+    );
+
+    const goalHref = await page.evaluate(() => {
+      const key = Object.keys(localStorage).find((k) => k.includes('morrow'));
+      const st = key ? JSON.parse(localStorage.getItem(key)).state : null;
+      return st?.goals?.[0]?.id ?? null;
+    });
+    if (goalHref) {
+      await page.goto(`${BASE}/goal?id=${goalHref}`, { waitUntil: 'networkidle' });
+      await page.clock.runFor(1200);
+      await page.waitForTimeout(400);
+      const goalCols = await page.evaluate(() => {
+        const el = document.querySelector('[data-testid="goal-two-column"]');
+        if (!el) return null;
+        return [...el.children].map((c) => ({ w: Math.round(c.getBoundingClientRect().width), n: c.innerText.trim().length }));
+      });
+      check(
+        'and so does the Goal',
+        Boolean(goalCols) && goalCols.length === 2 && goalCols.every((c) => c.w > 300 && c.n > 40),
+        JSON.stringify(goalCols),
+      );
+    }
+
+    // And back to one column on a phone, which is the case that ships.
     await page.setViewportSize({ width: 420, height: 900 });
+    await page.goto(`${BASE}/book`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(400);
+    check('a phone gets one column, not two narrow ones', !(await seen('book-two-column')));
+    check('and the Book is all still there', (await text('book-i-will')).length > 10);
 
     // ---- the way out of a screen that broke
     //
