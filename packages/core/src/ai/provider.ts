@@ -44,11 +44,13 @@ export interface AiProvider {
 // ---------------------------------------------------------------- local
 
 /**
- * The shortest thing that can count as a detail from someone's writing. Below
- * this it is a word, not a detail, and it proves nothing about whose life the
- * scene is describing.
+ * The shortest thing that can count as a detail from someone's writing.
+ *
+ * Paired with the two-word rule in `verify`, not standing alone: "the kitchen"
+ * is eleven characters and is unmistakably a detail of one person's morning,
+ * while "a" is in everybody's writing. It is the pair that does the work.
  */
-export const MIN_SOURCED_DETAIL = 12;
+export const MIN_SOURCED_DETAIL = 8;
 
 export class LocalProvider implements AiProvider {
   readonly name = 'local';
@@ -87,12 +89,44 @@ export class LocalProvider implements AiProvider {
   }
 }
 
+/**
+ * Words that end a phrase mid-thought, so a quotation stops before them.
+ */
+const PHRASE_BREAK = new Set([
+  'is', 'was', 'are', 'were', 'am', 'be', 'been', 'being',
+  'and', 'but', 'or', 'so', 'then', 'when', 'while', 'because',
+  'to', 'of', 'in', 'on', 'at', 'by', 'for', 'with', 'as', 'from',
+  'that', 'which', 'who', 'i', 'it', 'still', 'not',
+]);
+
+/**
+ * A concrete detail from the person's own writing, cut where it still reads.
+ *
+ * The scene says "You remember writing about X", so X has to be a noun phrase.
+ * Taking a fixed three words returned "the kitchen is still" out of "the
+ * kitchen is still blue", and the scene read "You remember writing about the
+ * kitchen is still." — their own sentence, chopped where it means nothing, and
+ * handed back as the thing they wrote. The phrase now stops at the first word
+ * that breaks it.
+ */
 function pickDetail(text: string): string | null {
   const t = (text ?? '').trim();
   if (!t) return null;
-  const m = t.match(/\b(?:the|my|a)\s+[a-z][\w'’-]*(?:\s+[a-z][\w'’-]*){0,2}\b/i);
-  return m?.[0]?.trim() ?? null;
+  const m = t.match(/\b(?:the|my|a)\s+[a-z][\w'-]*(?:\s+[a-z][\w'-]*){0,3}\b/i);
+  if (!m || !m[0]) return null;
+
+  const words = m[0].trim().split(/\s+/);
+  const kept = [words[0] as string];
+  for (const w of words.slice(1)) {
+    if (PHRASE_BREAK.has(w.toLowerCase())) break;
+    kept.push(w);
+  }
+  // A determiner and a noun is the shortest thing that still reads as a detail
+  // of somebody's morning. Below that it is a word, not a detail.
+  return kept.length >= 2 ? kept.join(' ') : null;
 }
+
+
 
 export function sceneImagePrompt(req: SceneRequest): string {
   const grade =

@@ -4,7 +4,7 @@
  * question instead of inventing encouragement.
  */
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -33,6 +33,15 @@ export default function Coach() {
 
   const [thread, setThread] = useState<{ who: 'me' | 'coach'; text: string }[]>([]);
   const [draft, setDraft] = useState('');
+
+  // Today used to be the only screen that built the brief, so arriving here
+  // first — from a notification, a deep link, or just the tab bar — showed a
+  // coach with nothing to say. Making one is idempotent: it returns the day's
+  // brief if there already is one.
+  const makeBrief = useMorrow((s) => s.makeBrief);
+  useEffect(() => {
+    makeBrief();
+  }, [makeBrief]);
 
   const brief = state.briefs[state.briefs.length - 1] ?? null;
   const days = useMemo(() => Object.values(state.days), [state.days]);

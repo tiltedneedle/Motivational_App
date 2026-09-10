@@ -224,6 +224,34 @@ describe('how long a sitting has to be to count', () => {
   });
 });
 
+describe('the dawn brief inside a sentence', () => {
+  it('does not lowercase a weekday in the user own move title', () => {
+    const brief = buildDawnBrief(
+      {
+        day: '2026-09-10',
+        book: null,
+        yesterday: null,
+        moves: [
+          {
+            id: 'mv1', goalId: 'g1', milestoneId: null,
+            title: 'Tuesday: at 6:40, out the back door',
+            effort: 'S', energy: 'high', ifThen: null, scheduledFor: '2026-09-10',
+            week: 1, status: 'todo', completedAt: null, minVersion: null,
+            sourceLineId: 'a1', order: 0,
+          },
+        ],
+        analyses: [],
+        persona: 'gentle',
+        score: 40,
+        previousScore: 40,
+      } as never,
+      sequentialIds(),
+    );
+    expect(brief.today).toContain('Tuesday');
+    expect(brief.today).not.toContain('tuesday');
+  });
+});
+
 describe('specificity', () => {
   it('accepts a line with a clock time and a place without a follow-up', () => {
     const r = scoreSpecificity('Tuesday, Thursday, Saturday at 6:40, out the back door');

@@ -5,7 +5,7 @@
  */
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, ScrollView, TextInput, View } from 'react-native';
+import { AppState, Platform, ScrollView, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   DOORWAY,
@@ -26,7 +26,7 @@ import {
   type WritingMode,
   type WritingSessionState,
 } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Ring, Statement, Stone, Studio, UserText, accent, night, type as fonts } from '@morrow/ui';
+import { Body, Chip, InkButton, Label, Ring, Statement, Stone, Studio, UserText, accent, focusRing, night, type as fonts, webOnlyStyle } from '@morrow/ui';
 import { latestText, useMorrow } from '../src/store';
 
 const TICK_MS = 250;
@@ -306,6 +306,11 @@ export default function Write() {
                 color: '#F3E6D3',
                 minHeight: 260,
                 textAlignVertical: 'top',
+                // Chrome's default focus ring is amber and reads as a warning
+                // in the night studio. Redrawn in the product's coral rather
+                // than removed: the room is auto-focused, but a keyboard user
+                // still has to be able to see where they are.
+                ...(Platform.OS === 'web' ? webOnlyStyle({ ...focusRing }) : {}),
               }}
             />
           </ScrollView>

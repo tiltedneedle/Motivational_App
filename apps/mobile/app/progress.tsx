@@ -94,9 +94,18 @@ export default function Progress() {
               {consistencyCaption(score)}
             </Body>
             <Bar value={score.score} low={score.baselineLow} high={score.baselineHigh} />
-            {score.baselineHigh > 0 ? (
+            {/*
+              A band needs two ends. With one week of history low and high are
+              the same number and "between 86 and 86" is not a sentence anyone
+              would write, so say the simpler true thing instead.
+            */}
+            {score.baselineHigh > 0 && score.baselineHigh > score.baselineLow ? (
               <Label style={{ textTransform: 'none', letterSpacing: 0 }}>
                 Your own eight weeks have run between {score.baselineLow} and {score.baselineHigh}.
+              </Label>
+            ) : score.baselineHigh > 0 ? (
+              <Label style={{ textTransform: 'none', letterSpacing: 0 }}>
+                Not enough weeks yet to say what your usual is.
               </Label>
             ) : null}
           </View>

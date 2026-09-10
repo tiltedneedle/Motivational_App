@@ -34,6 +34,21 @@ describe('the scene the device draws when there is no model', () => {
     }
   });
 
+  it('cuts the quoted detail where it still reads as a phrase', async () => {
+    // The scene says "You remember writing about X", so X has to be a noun
+    // phrase. This used to return "the kitchen is still" out of "the kitchen is
+    // still blue" and hand the person their own sentence chopped in half.
+    const out = await guarded(new LocalProvider()).scene({
+      goalTitle: 'Half marathon',
+      impactLine: 'Sam would stop worrying about me',
+      idealExcerpt: IDEAL,
+      type: 'practice',
+    });
+    const last = out.sourcedDetail.trim().split(/\s+/).pop()?.toLowerCase() ?? '';
+    expect(['is', 'was', 'and', 'the', 'a', 'to', 'of', 'still']).not.toContain(last);
+    expect(IDEAL.toLowerCase()).toContain(out.sourcedDetail.toLowerCase());
+  });
+
   it('says nothing rather than inventing a life when there is nothing to quote', async () => {
     const out = await guarded(new LocalProvider()).scene({
       goalTitle: 'Half marathon',

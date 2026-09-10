@@ -65,7 +65,10 @@ export function buildDawnBrief(input: BriefInput, newId: (p: string) => string):
     }
     const delta = input.score - input.previousScore;
     const trend = delta > 0 ? `Consistency ${input.score}, up from ${input.previousScore}.` : `Consistency ${input.score}.`;
-    yesterdayLine = `${bits.join(' ')}. ${trend}`;
+    // Their sentence usually ends in a full stop already, and appending another
+    // gave `Rained the whole way.". Consistency 86` — the app's punctuation
+    // landing on top of theirs.
+    yesterdayLine = `${endSentence(bits.join(' '))} ${trend}`;
   }
 
   // Today: the first move, and why it is first.
@@ -104,7 +107,29 @@ export function buildDawnBrief(input: BriefInput, newId: (p: string) => string):
   };
 }
 
+/**
+ * Lowercase the first letter so a quoted line reads inside a sentence — but
+ * never a proper noun.
+ *
+ * A move cut from "Tuesday, Thursday, Saturday at 6:40" is titled "Tuesday:
+ * at 6:40, out the back door", and this turned the brief into "Start with
+ * tuesday: at 6:40". These are the person's own words being mangled by a
+ * typographic convenience, which is the wrong way round.
+ */
+const PROPER_START =
+  /^(?:Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)day\b|^(?:January|February|March|April|May|June|July|August|September|October|November|December)\b|^I\b/;
+
+/** Close a sentence without doubling punctuation the person already wrote. */
+function endSentence(s: string): string {
+  const t = s.trimEnd();
+  if (!t) return t;
+  // Look past a closing quote mark: `way."` is already finished.
+  const meaningful = t.replace(/["'\u201d\u2019]+$/, '');
+  return /[.!?]$/.test(meaningful) ? t : `${t}.`;
+}
+
 function lowerFirst(s: string): string {
+  if (PROPER_START.test(s)) return s;
   return s.charAt(0).toLowerCase() + s.slice(1);
 }
 

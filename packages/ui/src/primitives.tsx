@@ -20,7 +20,7 @@ import {
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
-import { accent, day, motion, night, radius, size, type as fonts, type Palette } from './tokens';
+import { accent, day, focusRing, motion, night, radius, size, type as fonts, webOnlyStyle, type Palette } from './tokens';
 
 export const PaletteContext = React.createContext<{ p: Palette; dark: boolean }>({ p: day, dark: false });
 
@@ -331,6 +331,7 @@ export function UserField({
   minHeight?: number;
 }) {
   const { p } = usePalette();
+  const [focused, setFocused] = useState(false);
   return (
     <TextInput
       testID={testID}
@@ -340,6 +341,8 @@ export function UserField({
       placeholderTextColor={p.ink3}
       multiline={multiline}
       autoFocus={autoFocus}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
       onSubmitEditing={onSubmitEditing}
       accessibilityLabel={label ?? placeholder}
       // The hint stays a hint. It is still announced, and it no longer has to
@@ -350,11 +353,15 @@ export function UserField({
         fontSize: 19,
         lineHeight: 28,
         color: p.ink,
-        borderBottomWidth: 2,
-        borderBottomColor: accent.coral,
+        // Focus is shown by the line this field already has, not by a box
+        // drawn around it. A coral rectangle on a coral-underlined field reads
+        // as an error, and the browser's own ring is amber, which is worse.
+        borderBottomWidth: focused ? 3 : 2,
+        borderBottomColor: focused ? accent.coral : accent.coralSoftLine,
         paddingVertical: 8,
         minHeight: minHeight ?? (multiline ? 96 : 44),
         textAlignVertical: multiline ? 'top' : 'center',
+        ...(Platform.OS === 'web' ? webOnlyStyle({ outlineStyle: 'none' }) : {}),
       }}
     />
   );

@@ -64,6 +64,8 @@ export const accent = {
   coralText: '#CB3014',
   coralNight: '#ED6147',
   coralSoft: 'rgba(234,75,46,0.12)',
+  /** The writing line at rest. Focus moves it to full coral. */
+  coralSoftLine: 'rgba(234,75,46,0.45)',
   teal: '#169A89',
   tealText: '#11796C',
   tealNight: '#179F8D',
@@ -83,6 +85,30 @@ export const accent = {
   success: '#1E9E5A',
   destructive: '#B23A1E',
 } as const;
+
+/**
+ * The focus ring, on web.
+ *
+ * Chrome draws its own in amber (#E59700), which is not a colour this product
+ * owns and reads as a warning against the night studio. Keyboard focus has to
+ * stay visible — that is a promise, not a preference — so it is redrawn in the
+ * product's own coral rather than removed.
+ */
+export const focusRing = {
+  outlineColor: accent.coral,
+  outlineStyle: 'solid',
+  outlineWidth: 2,
+  outlineOffset: 3,
+} as const;
+
+/**
+ * Style properties react-native-web understands and React Native's own types do
+ * not, such as `outlineStyle`. Casting once here beats an `as never` at every
+ * call site and keeps it obvious that these apply on web only.
+ */
+export function webOnlyStyle(style: Record<string, unknown>): Record<string, never> {
+  return style as Record<string, never>;
+}
 
 export const space = [0, 4, 8, 12, 16, 22, 32, 48, 64] as const;
 
