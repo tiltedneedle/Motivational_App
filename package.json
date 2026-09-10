@@ -7,12 +7,13 @@
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r --filter ./packages/** --filter mobile test",
     "test:functions": "node scripts/check-functions.mjs",
+    "test:deps": "node scripts/check-deps.mjs",
     "test:sql": "node scripts/check-sql.mjs",
     "test:migration": "node scripts/test-migration.mjs",
     "test:authorship": "node scripts/check-authorship.mjs",
     "build:web": "pnpm --filter mobile export:web",
     "test:e2e": "node scripts/e2e.mjs",
-    "verify": "pnpm typecheck && pnpm test && pnpm test:functions && pnpm test:sql && pnpm test:migration && pnpm test:authorship && pnpm build:web && pnpm test:e2e",
+    "verify": "pnpm test:deps && pnpm typecheck && pnpm test && pnpm test:functions && pnpm test:sql && pnpm test:migration && pnpm test:authorship && pnpm build:web && pnpm test:e2e",
     "web": "pnpm --filter mobile web",
     "lint": "pnpm -r lint"
   },
@@ -22,7 +23,7 @@
     "playwright": "^1.56.0",
     "react": "19.2.3",
     "react-native": "0.86.3",
-    "react-native-svg": "15.15.4",
-    "typescript": "^5.9.2"
+    "react-native-svg": "15.15.5",
+    "typescript": "^6.0.3"
   }
 }
