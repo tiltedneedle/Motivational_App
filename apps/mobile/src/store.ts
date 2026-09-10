@@ -212,6 +212,8 @@ export interface MorrowState {
   shrinkMove: (moveId: string) => boolean;
   addEvidence: (text: string, goalId?: string) => void;
   sealDay: (input: { moodWord: string; proof: string; gladOf: string }) => void;
+  /** PRD §7.10: the move they pointed at in the dawn brief this morning. */
+  setIntention: (moveId: string) => void;
   noteConcern: () => void;
   makeBrief: () => Brief | null;
 
@@ -892,6 +894,37 @@ export const useMorrow = create<MorrowState>()(
        * one date. PRD §11.6 logs a flag, never text, and the whole reason this
        * field exists is that the chat itself is not kept.
        */
+      /**
+       * The morning intention (PRD §7.10): one tap on the first move, in the
+       * dawn brief.
+       *
+       * Nothing scores them against it and nothing nags about it later. Today
+       * simply says "you said this one this morning", because the choosing is
+       * the ritual — an intention the app then held over somebody's head would
+       * be a different product.
+       */
+      setIntention: (moveId) =>
+        set((s) => {
+          const day = dayOf(new Date(), s.profile.dayBoundaryHour);
+          const existing = s.days[day];
+          const base: DaySummary = existing ?? {
+            day,
+            planned: 0,
+            done: 0,
+            skipped: 0,
+            partial: 0,
+            evidenceCount: 0,
+            sealedAt: null,
+            moodWord: null,
+            proof: null,
+            gladOf: null,
+            intentionMoveId: null,
+          };
+          return { days: { ...s.days, [day]: { ...base, intentionMoveId: moveId } } };
+        }),
+
+      inviteFullTrack: () => set({ fullTrackInvited: true }),
+
       noteConcern: () =>
         set((s) => ({ concernAt: dayOf(new Date(), s.profile.dayBoundaryHour) })),
 
@@ -950,7 +983,6 @@ export const useMorrow = create<MorrowState>()(
         }),
 
       clearSafety: () => set({ safetyPause: null }),
-      inviteFullTrack: () => set({ fullTrackInvited: true }),
       reset: () => set({ profile: DEFAULT_PROFILE, ...EMPTY }),
     }),
     {
@@ -1097,6 +1129,9 @@ function recomputeDay(
       moodWord: prev?.moodWord ?? null,
       proof: prev?.proof ?? null,
       gladOf: prev?.gladOf ?? null,
+      // Carried, not recomputed. It is a thing the person did this morning, and
+      // recounting the moves later must not quietly forget it.
+      intentionMoveId: prev?.intentionMoveId ?? null,
     },
   };
 }

@@ -73,6 +73,27 @@ async function* walk(dir) {
   }
 }
 
+/**
+ * Everything outside `{ ... }` in a chunk of JSX.
+ *
+ * Balanced, counting depth, rather than a non-greedy `/\{[\s\S]*?\}/`. That
+ * form stops at the first closing brace it meets, so a template literal or a
+ * nested object inside the expression left its own tail behind as "text" — and
+ * this guard then reported the leftover punctuation as app prose in the serif.
+ * Worse than the noise: the same mistake can leave real prose hidden inside the
+ * part it wrongly considered an expression.
+ */
+function stripExpressions(jsx) {
+  let out = '';
+  let depth = 0;
+  for (const ch of jsx) {
+    if (ch === '{') depth += 1;
+    else if (ch === '}') depth = Math.max(0, depth - 1);
+    else if (depth === 0) out += ch;
+  }
+  return out;
+}
+
 const problems = [];
 let usages = 0;
 let checked = 0;
@@ -115,7 +136,7 @@ for (const root of ROOTS) {
       }
 
       // ---- 1: app prose written straight in
-      const literal = body.replace(/\{[\s\S]*?\}/g, '').trim();
+      const literal = stripExpressions(body).trim();
       if (literal && !ALLOWED_LITERAL.test(literal)) {
         problems.push({ file: rel, line, why: `app prose in the serif: "${literal.slice(0, 60)}"` });
       }

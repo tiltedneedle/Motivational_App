@@ -65,6 +65,10 @@ export default function Today() {
   const [returnCard, setReturnCard] = useState<{ body: string } | null>(null);
 
   const today = dayOf(new Date(), state.profile.dayBoundaryHour);
+  const intendedMoveId = state.days[today]?.intentionMoveId ?? null;
+  const intendedMove = intendedMoveId
+    ? state.plans.flatMap((p) => p.moves).find((m) => m.id === intendedMoveId)
+    : undefined;
   const days = useMemo(() => Object.values(state.days), [state.days]);
 
   useEffect(() => {
@@ -207,6 +211,18 @@ export default function Today() {
               <Body style={{ fontSize: 14 }}>
                 Nothing else is due. The next one is tomorrow, and it will be here then.
               </Body>
+              {/*
+                The morning intention closes here too. Saying it back on the
+                Now card and then forgetting it the moment the day is finished
+                would make the ritual look like a to-do list item rather than
+                the thing they chose this morning and did.
+              */}
+              {intendedMove ? (
+                <View testID="day-done-intention" style={{ gap: 3, marginTop: 4 }}>
+                  <Label style={{ color: accent.coralText }}>You said this one</Label>
+                  <UserText style={{ fontSize: 16, lineHeight: 23, color: day.ink2 }}>{intendedMove.title}</UserText>
+                </View>
+              ) : null}
             </View>
           ) : null}
 
@@ -225,7 +241,13 @@ export default function Today() {
               }}
             >
               <View style={{ flex: 1, gap: 6 }}>
-                <Label style={{ color: accent.coralText }}>Now</Label>
+                {/*
+                  PRD §7.10: the morning intention is one tap in the dawn brief,
+                  and this is the other half of it — Today saying so. Nothing
+                  counts it and nothing nags about it; the choosing was the
+                  ritual, and being remembered is the whole reward for it.
+                */}
+                <Label style={{ color: accent.coralText }}>{intendedMoveId === now.id ? 'You said this one' : 'Now'}</Label>
                 <Statement style={{ fontSize: 26, lineHeight: 30 }}>{now.title}</Statement>
                 {/*
                   When they said they were stuck and took the smaller version,

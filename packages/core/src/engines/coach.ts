@@ -8,6 +8,7 @@
 import type { Brief, BookVersion, DaySummary, GoalAnalysis, Move, Persona } from '../types';
 import { isReturning } from './consistency';
 import { plural } from '../ids';
+import { firstSentence } from './portrait';
 import { SUPPORT_LINE, isQuotable, screen } from './safety';
 
 export interface BriefInput {
@@ -351,11 +352,31 @@ export function returnsLetter(book: BookVersion | null, gapDays: number, returnN
   return { body, quotes };
 }
 
-/** The single invitation to the Full track, after the first sealed Book. */
-export function fullTrackInvitation(longestLine: string): { text: string; quotes: string[] } {
-  const trimmed = longestLine.trim();
+/**
+ * The single invitation to the Full track, after the first sealed Book
+ * (PRD 7.10). The argument is their own longest line: they already went that
+ * deep on one thing, in their own words.
+ *
+ * Three fields rather than one string, because the screen sets the quotation in
+ * the serif and the app's sentence in the sans, and a `slice(0, 120)` cut
+ * somebody's word in half - a quotation that ends mid-word reads as a bug in
+ * the app rather than as their sentence.
+ */
+export function fullTrackInvitation(longestLine: string): {
+  text: string;
+  /** The quotation as it should be printed: their words, cut at a word. */
+  quoted: string;
+  /** The app's half, which is never set in the serif. */
+  ask: string;
+  quotes: string[];
+} {
+  const trimmed = (longestLine ?? '').trim();
+  const quoted = firstSentence(trimmed, 120);
+  const ask = 'You wrote that much about one of them. Want to go that deep on the rest?';
   return {
-    text: `You wrote this much about it: “${trimmed.slice(0, 120)}${trimmed.length > 120 ? '…' : ''}”. Want to go that deep on the rest?`,
+    text: `You wrote this much about it: “${quoted}”. ${ask}`,
+    quoted,
+    ask,
     quotes: [trimmed],
   };
 }

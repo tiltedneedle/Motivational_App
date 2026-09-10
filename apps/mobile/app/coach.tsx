@@ -17,6 +17,7 @@ import {
   replyToText,
   screen,
   type ChipId,
+  fullTrackInvitation,
   type CoachReply,
 } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Rule, Statement, Stone, Studio, TextButton, Toast, UserField, UserText, accent, day } from '@morrow/ui';
@@ -33,6 +34,8 @@ export default function Coach() {
   const toast = useMorrow((s) => s.toast);
   const setToast = useMorrow((s) => s.setToast);
   const noteConcern = useMorrow((s) => s.noteConcern);
+  const setIntention = useMorrow((s) => s.setIntention);
+  const inviteFullTrack = useMorrow((s) => s.inviteFullTrack);
 
   const [thread, setThread] = useState<{ who: 'me' | 'coach'; text: string }[]>([]);
   const [draft, setDraft] = useState('');
@@ -46,15 +49,36 @@ export default function Coach() {
     makeBrief();
   }, [makeBrief]);
 
-useEffect(() => {
+  useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), 3400);
     return () => clearTimeout(t);
   }, [toast, setToast]);
 
-    const brief = state.briefs[state.briefs.length - 1] ?? null;
+  const brief = state.briefs[state.briefs.length - 1] ?? null;
   const days = useMemo(() => Object.values(state.days), [state.days]);
   const today = dayOf(new Date(), state.profile.dayBoundaryHour);
+
+  // PRD 7.10, the morning intention: one tap on the first move, inside the
+  // brief. The brief already names the move; there was simply nothing to tap.
+  const firstMove = brief?.firstMoveId ? moves.find((m) => m.id === brief.firstMoveId) : undefined;
+  const intended = state.days[today]?.intentionMoveId ?? null;
+
+  // PRD 7.10, the other ritual on this screen: one invitation to the Full
+  // track, after the first sealed Book, ever. `fullTrackInvitation` was written
+  // and tested and then never called, so it never arrived at all.
+  //
+  // The longest line they wrote is the argument: they already went that deep on
+  // one thing, in their own words, and this asks whether they want to on the
+  // rest. Not a sales line the app made up about them.
+  const longestLine = useMemo(() => {
+    const lines = state.analyses.map((a) => a.paragraph?.trim() || a.line.trim()).filter((l) => l.length > 0);
+    return lines.sort((a, b) => b.length - a.length)[0] ?? '';
+  }, [state.analyses]);
+  const invitation =
+    book && !state.fullTrackInvited && state.profile.track === 'starter' && longestLine.length >= 40
+      ? fullTrackInvitation(longestLine)
+      : null;
 
   const ctx = {
     book,
@@ -151,6 +175,60 @@ useEffect(() => {
                 <Label style={{ color: accent.coralText }}>If</Label>
                 <Body style={{ color: day.ink }}>{brief.ifThen}</Body>
               </View>
+              {firstMove ? (
+                <>
+                  <Rule />
+                  <View style={{ gap: 6 }}>
+                    <Label style={{ color: accent.coralText }}>{intended === firstMove.id ? 'You said' : 'This one'}</Label>
+                    {/* Their sentence, cut from their own Strategies line. */}
+                    <UserText style={{ fontSize: 18, lineHeight: 25, color: day.ink }}>{firstMove.title}</UserText>
+                    {intended === firstMove.id ? (
+                      <Body testID="intention-set" style={{ fontSize: 13 }}>
+                        Said this morning. Nothing is counting; it is on Today when you want it.
+                      </Body>
+                    ) : (
+                      <Chip
+                        testID="intention"
+                        label="This one today"
+                        onPress={() => {
+                          setIntention(firstMove.id);
+                          setToast({ text: 'Said. It is on Today.', kind: 'info' });
+                        }}
+                      />
+                    )}
+                  </View>
+                </>
+              ) : null}
+
+              {invitation ? (
+                <>
+                  <Rule />
+                  <View style={{ gap: 6 }}>
+                    <Label style={{ color: accent.coralText }}>One invitation</Label>
+                    {/*
+                      Their own longest line, quoted, and one sentence of the
+                      app's around it. Split so the serif means what it means
+                      everywhere else in the product.
+                    */}
+                    <UserText testID="full-track-quote" style={{ fontSize: 17, lineHeight: 25, color: day.ink }}>
+                      {`“${invitation.quoted}”`}
+                    </UserText>
+                    <Body style={{ color: day.ink }}>{invitation.ask}</Body>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                      <Chip
+                        testID="full-track-yes"
+                        label="Show me the Full track"
+                        onPress={() => {
+                          inviteFullTrack();
+                          router.push('/settings');
+                        }}
+                      />
+                      <Chip testID="full-track-no" label="Not now" ghost onPress={() => inviteFullTrack()} />
+                    </View>
+                  </View>
+                </>
+              ) : null}
+
               {brief.support ? (
                 <>
                   <Rule />

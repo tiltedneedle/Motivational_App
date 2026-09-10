@@ -240,6 +240,10 @@ create table public.day_summaries (
   mood_word text,
   proof text,
   glad_of text,
+  -- PRD 7.10, the morning intention: the move they pointed at in the dawn
+  -- brief. Nothing scores against it; Today only says it back to them, and it
+  -- is here so that survives a new device.
+  intention_move_id uuid references public.moves on delete set null,
   primary key (user_id, day),
   -- The proof line typed at night is read back the next morning.
   safety_risk text not null default 'none' check (safety_risk in ('none','concern','crisis'))

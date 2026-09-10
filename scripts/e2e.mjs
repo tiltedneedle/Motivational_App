@@ -624,6 +624,53 @@ async function main() {
     await page.waitForTimeout(600);
     check('the coach says it is an AI on the first chat', await seen('coach-is-ai'));
 
+    // ---- the two rituals PRD §7.10 puts inside the dawn brief
+    //
+    // Both were written and then never called: the brief named the first move
+    // with nothing to tap, and `fullTrackInvitation` had no call site at all,
+    // so the one invitation the product is allowed to make never arrived.
+    check('the brief offers the morning intention', await seen('intention'));
+    if (await seen('intention')) {
+      await tap('intention');
+      await page.waitForTimeout(400);
+      check('and remembers it once it is said', await seen('intention-set'));
+    }
+
+    check('the Full track is offered, once the Book is sealed', await seen('full-track-quote'));
+    if (await seen('full-track-no')) {
+      const quoted = await text('full-track-quote');
+      check(
+        'and the invitation is their own longest line, not a sales pitch',
+        IDEALISH.some((w) => quoted.toLowerCase().includes(w)) || quoted.length > 20,
+        quoted.slice(0, 80),
+      );
+      await tap('full-track-no');
+      await page.waitForTimeout(400);
+      await page.goto(`${BASE}/coach`, { waitUntil: 'networkidle' });
+      await page.clock.runFor(1500);
+      await page.waitForTimeout(500);
+      check('once means once — it does not come back', !(await seen('full-track-quote')));
+    }
+
+    // Today is the other half of the intention: it says it back to them.
+    await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(500);
+    // Either card carries it: the Now card while the move is open, and the
+    // day-done card once the day is finished. Forgetting it the moment the day
+    // closed would make the ritual look like a to-do item rather than the thing
+    // they chose this morning and then did.
+    const card = (await seen('now-card'))
+      ? await text('now-card')
+      : (await seen('day-done-card'))
+        ? await text('day-done-card')
+        : '';
+    check(
+      'Today says back the move they pointed at this morning',
+      card.toLowerCase().includes('you said this one'),
+      card ? card.split('\n').slice(0, 2).join(' / ') : '(neither card is on screen)',
+    );
+
     await page.goto(`${BASE}/settings`, { waitUntil: 'networkidle' });
     await page.clock.runFor(1200);
     await page.waitForTimeout(400);

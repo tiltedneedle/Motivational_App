@@ -9,7 +9,7 @@
  * morning". These tests hold the three promises still.
  */
 import { describe, expect, it } from 'vitest';
-import { buildDawnBrief } from '../src/engines/coach';
+import { buildDawnBrief, fullTrackInvitation } from '../src/engines/coach';
 import { SUPPORT_LINE, screen, shouldOfferSupport, softenFrom, withinSoftenWindow } from '../src/engines/safety';
 import type { BookVersion, DaySummary, Move } from '../src/types';
 
@@ -169,5 +169,44 @@ describe('what puts a morning in the band, and what does not', () => {
       { risk: 'none' as const, day: '2026-09-09' },
     ];
     expect(softenFrom(stamps, DAY)).toBe(true);
+  });
+});
+
+/**
+ * The one invitation the product is allowed to make (PRD §7.10).
+ *
+ * `fullTrackInvitation` was written, and then had no call site for as long as
+ * the app existed — the invitation never arrived at all. Now that it does, the
+ * shape of it matters: the argument is the person's own longest line, and the
+ * app's sentence around it is kept separate so the serif goes on meaning what
+ * it means everywhere else.
+ */
+describe('the invitation to go deeper', () => {
+  const LONG =
+    'Sam would stop worrying about me on the days I say nothing, and I would stop pretending the mornings are fine when they are not.';
+
+  it('quotes them, and does not cut a word in half', () => {
+    const inv = fullTrackInvitation(LONG);
+    const shown = inv.quoted.replace(/…$/, '');
+    expect(LONG.startsWith(shown)).toBe(true);
+    // Cut at a word, not through one: whatever follows in their sentence must
+    // begin a new word. "…the mornings are fine when they…" is fine;
+    // "…when th…" would be the app breaking their word in half.
+    expect(LONG.slice(shown.length)).toMatch(/^(\s|$)/);
+    expect(inv.quotes[0]).toBe(LONG);
+  });
+
+  it('keeps the app half out of the quotation', () => {
+    const inv = fullTrackInvitation(LONG);
+    expect(inv.ask).not.toContain('Sam');
+    expect(inv.quoted).not.toContain('Want to go');
+    // The combined form is for the plain-text paths that have one face only.
+    expect(inv.text).toContain(inv.ask);
+  });
+
+  it('does not fall over on nothing', () => {
+    const inv = fullTrackInvitation('');
+    expect(inv.quoted).toBe('');
+    expect(inv.quotes).toEqual(['']);
   });
 });

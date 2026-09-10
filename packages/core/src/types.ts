@@ -348,6 +348,18 @@ export const DaySummary = z.object({
    * reads that line back the next morning, so it needs to know.
    */
   safetyRisk: SafetyRisk.optional(),
+  /**
+   * The move the person pointed at this morning (PRD §7.10, the morning
+   * intention: one tap on the first move inside the dawn brief).
+   *
+   * Not a commitment the app scores them against — nothing reads this to
+   * punish. It is only so Today can say "you said this one this morning",
+   * which is the whole ritual: the choosing is the point, not the tracking.
+   *
+   * Absent on every row written before this existed, which reads the same as
+   * "no intention was set", so nothing needs migrating.
+   */
+  intentionMoveId: z.string().nullable().optional(),
 });
 export type DaySummary = z.infer<typeof DaySummary>;
 
