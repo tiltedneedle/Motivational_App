@@ -45,12 +45,26 @@ export default function SealDay() {
           <View style={{ gap: 8 }}>
             <Label style={{ color: night.ink3 }}>One piece of proof</Label>
             {rule ? <Body style={{ color: night.ink3, fontSize: 13 }}>Your rule: “{rule}”</Body> : null}
-            <UserField testID="seal-proof" value={proof} onChangeText={setProof} placeholder="What actually happened" multiline />
+            <UserField
+              testID="seal-proof"
+              label="What actually happened today"
+              value={proof}
+              onChangeText={setProof}
+              placeholder="What actually happened"
+              multiline
+            />
           </View>
 
           <View style={{ gap: 8 }}>
             <Label style={{ color: night.ink3 }}>One thing you are glad of</Label>
-            <UserField testID="seal-glad" value={gladOf} onChangeText={setGladOf} placeholder="Anything at all" multiline />
+            <UserField
+              testID="seal-glad"
+              label="Something you are glad of"
+              value={gladOf}
+              onChangeText={setGladOf}
+              placeholder="Anything at all"
+              multiline
+            />
           </View>
 
           <View style={{ alignItems: 'center', paddingVertical: 10 }}>

@@ -111,6 +111,7 @@ export default function Rank() {
             </View>
             <UserField
               testID="book-title"
+              label="The title on the spine of your Book"
               value={bookTitle}
               onChangeText={setBookTitle}
               placeholder={framing ? `${framing.replace('…', '')} what?` : 'Your own words'}

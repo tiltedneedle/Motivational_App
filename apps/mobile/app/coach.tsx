@@ -157,7 +157,14 @@ export default function Coach() {
           </View>
           <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-end' }}>
             <View style={{ flex: 1 }}>
-              <UserField testID="coach-input" value={draft} onChangeText={setDraft} placeholder="Talk to the coach" onSubmitEditing={send} />
+              <UserField
+                testID="coach-input"
+                label="Talk to the coach"
+                value={draft}
+                onChangeText={setDraft}
+                placeholder="Say anything"
+                onSubmitEditing={send}
+              />
             </View>
             <InkButton testID="coach-send" label="Send" onPress={send} style={{ height: 46, paddingHorizontal: 20 }} />
           </View>

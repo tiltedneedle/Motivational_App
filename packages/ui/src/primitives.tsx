@@ -305,6 +305,7 @@ export function UserField({
   value,
   onChangeText,
   placeholder,
+  label,
   multiline = false,
   autoFocus = false,
   testID,
@@ -314,6 +315,15 @@ export function UserField({
   value: string;
   onChangeText: (t: string) => void;
   placeholder?: string;
+  /**
+   * What this field is for, in words, and it is not the placeholder.
+   *
+   * A placeholder is a hint that vanishes the moment someone types, so using it
+   * as the accessible name leaves the field unnamed exactly when a screen-reader
+   * user is checking what they have written. Where a visible Label already sits
+   * above the field, pass its text here.
+   */
+  label?: string;
   multiline?: boolean;
   autoFocus?: boolean;
   testID?: string;
@@ -331,7 +341,10 @@ export function UserField({
       multiline={multiline}
       autoFocus={autoFocus}
       onSubmitEditing={onSubmitEditing}
-      accessibilityLabel={placeholder}
+      accessibilityLabel={label ?? placeholder}
+      // The hint stays a hint. It is still announced, and it no longer has to
+      // do the job of the name.
+      {...(label && placeholder ? { accessibilityHint: placeholder } : {})}
       style={{
         fontFamily: fonts.serif,
         fontSize: 19,

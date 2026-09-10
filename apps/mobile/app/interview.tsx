@@ -219,6 +219,7 @@ export default function Interview() {
                   <View style={{ flex: 1 }}>
                     <UserField
                       testID="custom-input"
+                      label="Say it in your own words"
                       value={customText}
                       onChangeText={setCustomText}
                       placeholder={q.customHint}

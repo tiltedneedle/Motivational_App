@@ -137,6 +137,7 @@ export default function StoneScreen() {
             <Label>In your words</Label>
             <UserField
               testID="stone-line"
+              label="Your line for this stone"
               value={line}
               onChangeText={setLine}
               placeholder={set.hint}
@@ -145,7 +146,13 @@ export default function StoneScreen() {
             {kind === 'obstacles' ? (
               <>
                 <Label style={{ marginTop: 10 }}>…then I</Label>
-                <UserField testID="stone-line2" value={line2} onChangeText={setLine2} placeholder="what you do instead" />
+                <UserField
+                  testID="stone-line2"
+                  label="What you do instead"
+                  value={line2}
+                  onChangeText={setLine2}
+                  placeholder="what you do instead"
+                />
               </>
             ) : null}
             {line.trim() ? (
@@ -161,6 +168,7 @@ export default function StoneScreen() {
               <Question style={{ fontSize: 18 }}>{followUpPrompt(kind === 'monitoring' ? 'monitoring' : 'strategies')}</Question>
               <UserField
                 testID="stone-followup-input"
+                label="When and where"
                 value={line}
                 onChangeText={setLine}
                 placeholder="add the when and the where"
@@ -180,6 +188,7 @@ export default function StoneScreen() {
               ))}
               <UserField
                 testID="stone-paragraph"
+                label="Your paragraph for this stone"
                 value={paragraph}
                 onChangeText={setParagraph}
                 placeholder="A paragraph, at least. Write until it is true."

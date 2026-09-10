@@ -57,6 +57,7 @@ export default function SealBook() {
             <Label style={{ color: night.ink3 }}>I will…</Label>
             <UserField
               testID="i-will"
+              label="Your I will line"
               value={iWill}
               onChangeText={(t) => {
                 setIWill(t);
