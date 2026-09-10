@@ -254,3 +254,31 @@ describe('Fewer', () => {
     expect(left.some((n) => n.moment === 'wake')).toBe(true);
   });
 });
+
+describe('a tap has somewhere to land', () => {
+  it('sends every notice to the screen it is about', () => {
+    const notices = planNotices({
+      ...base,
+      day: SUNDAY,
+      milestone: { title: 'First two weeks', proof: 'one run in the ledger, any pace' },
+    });
+    const where = Object.fromEntries(notices.map((n) => [n.moment, n.route]));
+    // The Sunday line is about the reading view. Opening the app to wherever it
+    // happened to be would waste the one tap somebody gave it.
+    expect(where.sunday).toBe('/reading');
+    expect(where.evening).toBe('/seal-day');
+    expect(where.wake).toBe('/today');
+    expect(where.milestone).toBe('/progress');
+  });
+
+  it('gives the return nudge somewhere gentle to land', () => {
+    const [nudge] = planNotices({ ...base, daysSinceAnything: 3 });
+    expect(nudge?.route).toBe('/today');
+  });
+
+  it('never leaves a route empty', () => {
+    for (const n of planNotices({ ...base, day: SUNDAY })) {
+      expect(n.route, n.moment).toMatch(/^\/[a-z-]+$/);
+    }
+  });
+});

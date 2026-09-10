@@ -4,6 +4,8 @@ import {
   CHIPS,
   HELPLINES,
   addAnother,
+  bookPages,
+  pageCount,
   addCustomArea,
   answer,
   beginBranches,
@@ -51,6 +53,7 @@ import {
   toggleArea,
   totalQuestions,
   wordCount,
+  type BookVersion,
   type DaySummary,
   type GoalAnalysis,
 } from '../src/index';
@@ -883,5 +886,56 @@ describe('a plan whose first step the user put a week away', () => {
     ];
     const plan = buildPlan({ goal, analyses: many } as never, { today: '2026-09-06', newId });
     expect(plan.moves.filter((m) => m.week === 1).length).toBeLessThanOrEqual(3);
+  });
+});
+
+/**
+ * The Book as a list of pages, for the Sunday reading (PRD §7.3).
+ *
+ * "A reading view with no controls but a page turn" needs the Book to be pages
+ * rather than one scroll — and the pages must be the printed order, because a
+ * reading view that reorders somebody's own document is a different document.
+ */
+describe('the Book turns into pages', () => {
+  const book = {
+    firstSentence: 'It is 6:40 and the kitchen is still blue.',
+    ideal: 'It is 6:40 and the kitchen is still blue. Sam is still asleep.',
+    shadow: null,
+    iWill: 'I will be out the back door before the kettle boils',
+    sealedAt: '2026-09-10T21:00:00.000Z',
+    chapters: [
+      { goalId: 'g1', name: '5 km race', horizon: 'Three months', lines: [] },
+      { goalId: 'g2', name: 'Sleep by eleven', horizon: 'Three months', lines: [] },
+    ],
+  } as unknown as BookVersion;
+
+  it('opens with the Fifteen and ends with the I will', () => {
+    const pages = bookPages(book);
+    expect(pages[0]!.kind).toBe('opening');
+    expect(pages[pages.length - 1]!.kind).toBe('i-will');
+  });
+
+  it('puts the contents before the chapters, in rank order', () => {
+    const kinds = bookPages(book).map((p) => p.kind);
+    expect(kinds).toEqual(['opening', 'contents', 'chapter', 'chapter', 'i-will']);
+  });
+
+  it('gives the other road its own page only when it was written', () => {
+    expect(bookPages(book).some((p) => p.kind === 'shadow')).toBe(false);
+    const withShadow = { ...book, shadow: 'The mornings go and I do not notice.' } as BookVersion;
+    expect(bookPages(withShadow).some((p) => p.kind === 'shadow')).toBe(true);
+  });
+
+  it('agrees with the page count printed on the Book', () => {
+    expect(pageCount(book)).toBe(bookPages(book).length);
+    const withShadow = { ...book, shadow: 'x' } as BookVersion;
+    expect(pageCount(withShadow)).toBe(bookPages(withShadow).length);
+  });
+
+  it('does not repeat the first sentence in the body of the opening page', () => {
+    const opening = bookPages(book)[0]!;
+    if (opening.kind !== 'opening') throw new Error('first page is not the opening');
+    expect(opening.rest.startsWith('It is 6:40')).toBe(false);
+    expect(opening.rest).toContain('Sam is still asleep');
   });
 });

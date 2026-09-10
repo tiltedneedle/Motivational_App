@@ -635,6 +635,53 @@ async function main() {
     check('a phone gets one column, not two narrow ones', !(await seen('book-two-column')));
     check('and the Book is all still there', (await text('book-i-will')).length > 10);
 
+    // ---- Sunday reading (PRD 7.3)
+    //
+    // "A reading view with no controls but a page turn; at the end, Still true
+    // or Something moved." The Sunday notification points here, and until this
+    // screen existed it pointed at nothing in particular.
+    await page.goto(`${BASE}/reading`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(500);
+    check('the reading view opens', await seen('screen-reading'));
+
+    if (await seen('screen-reading')) {
+      check(
+        'and it opens on their own first sentence',
+        IDEAL.includes((await text('reading-first-sentence')).trim()),
+        await text('reading-first-sentence'),
+      );
+      const firstPage = await text('reading-progress');
+
+      // Turn to the last page. The only control is the page itself.
+      let turns = 0;
+      while (turns < 12 && !(await seen('reading-still-true'))) {
+        await tap('reading-page');
+        await page.waitForTimeout(220);
+        turns += 1;
+      }
+      check('every page can be turned with nothing but the page', await seen('reading-still-true'), `${turns} turns`);
+      check('and the counter moved with it', (await text('reading-progress')) !== firstPage);
+      check('the last page is the I will line', (await text('reading-i-will')).includes('kettle boils'));
+
+      // "Something moved" opens the review with a goal to pick, and never
+      // strands them: Never mind puts the two decisions back.
+      await tap('reading-moved');
+      await page.waitForTimeout(300);
+      check('Something moved asks which one', await seen('reading-pick-goal'));
+
+      // And it is not a one-way door: somebody who taps it and then decides
+      // nothing did move gets the two decisions back rather than being made to
+      // pick a goal to rewrite.
+      await tap('reading-never-mind');
+      await page.waitForTimeout(300);
+      check('and it can be backed out of', await seen('reading-still-true'));
+
+      await tap('reading-still-true');
+      await page.waitForTimeout(600);
+      check('Still true goes back to Today', await seen('screen-today'));
+    }
+
     // ---- the way out of a screen that broke
     //
     // The boundary says "export it first if you would rather be certain" and

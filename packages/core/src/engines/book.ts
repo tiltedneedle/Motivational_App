@@ -178,7 +178,32 @@ export function buildBookVersion(input: BookInput, newId: (p: string) => string)
 
 /** Page count for the reader, so "page 1 of 9" is honest. */
 export function pageCount(book: BookVersion): number {
-  return 2 + (book.shadow ? 1 : 0) + book.chapters.length + 1;
+  return bookPages(book).length;
+}
+
+/**
+ * One page of the Book, for the Sunday reading (PRD 7.3).
+ *
+ * "A reading view with no controls but a page turn." So the Book has to be a
+ * list of pages rather than one long scroll, and this is the list — the same
+ * order the printed Book is in, because a reading view that reorders somebody's
+ * own document is a different document.
+ */
+export type BookPage =
+  | { kind: 'opening'; firstSentence: string; rest: string }
+  | { kind: 'shadow'; text: string }
+  | { kind: 'contents'; chapters: BookVersion['chapters'] }
+  | { kind: 'chapter'; chapter: BookVersion['chapters'][number] }
+  | { kind: 'i-will'; text: string; sealedAt: string };
+
+export function bookPages(book: BookVersion): BookPage[] {
+  const rest = book.ideal.slice(book.firstSentence.length).trim();
+  const pages: BookPage[] = [{ kind: 'opening', firstSentence: book.firstSentence, rest }];
+  if (book.shadow) pages.push({ kind: 'shadow', text: book.shadow });
+  pages.push({ kind: 'contents', chapters: book.chapters });
+  for (const chapter of book.chapters) pages.push({ kind: 'chapter', chapter });
+  pages.push({ kind: 'i-will', text: book.iWill, sealedAt: book.sealedAt });
+  return pages;
 }
 
 export interface BookDiff {

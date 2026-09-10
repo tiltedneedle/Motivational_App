@@ -68,6 +68,7 @@ export default function Today() {
 
   const today = dayOf(new Date(), state.profile.dayBoundaryHour);
   const intendedMoveId = state.days[today]?.intentionMoveId ?? null;
+  const isSunday = new Date(`${today}T00:00:00Z`).getUTCDay() === 0;
 
   /**
    * The one appearance nobody asked for: once, after the first Blueprint
@@ -156,6 +157,24 @@ export default function Today() {
           <Statement style={{ marginTop: 12 }}>
             {greeting(new Date(), state.profile.displayName)}
           </Statement>
+
+          {/*
+            Sunday (PRD §7.3). Offered rather than imposed: it is a card on the
+            day it belongs to and nothing on any other, and it is the only place
+            in the app that asks for ten minutes rather than two.
+          */}
+          {book && isSunday ? (
+            <Pressable
+              testID="today-sunday"
+              accessibilityRole="button"
+              accessibilityLabel="Sunday reading: ten minutes with the Book"
+              onPress={() => router.push('/reading')}
+              style={{ marginTop: 16, backgroundColor: day.surface, borderRadius: radius.card, padding: 18, gap: 6 }}
+            >
+              <Label style={{ color: accent.coralText }}>Sunday</Label>
+              <Body style={{ color: day.ink, fontSize: 16 }}>Ten minutes with what you wrote.</Body>
+            </Pressable>
+          ) : null}
 
           {book ? (
             <Pressable testID="today-book-line" onPress={() => router.push('/book')} style={{ marginTop: 8 }}>

@@ -30,6 +30,12 @@ export interface Notice {
   at: string;
   title: string;
   body: string;
+  /**
+   * Where tapping it should land. A notification that opens the app to
+   * wherever it happened to be is a notification that wasted somebody's tap:
+   * the Sunday line is about the reading view and should open it.
+   */
+  route: string;
   /** Substrings of the person's own writing that appear in `body`. */
   quotes: string[];
 }
@@ -160,6 +166,7 @@ export function planNotices(input: NoticeInput): Notice[] {
         moment: 'return',
         at: at(input.day, time),
         title: 'Still here',
+        route: '/today',
         body: line
           ? `Nothing reset. The Book still says “${line}”.`
           : 'Nothing reset while you were away. It is all still here.',
@@ -177,6 +184,7 @@ export function planNotices(input: NoticeInput): Notice[] {
       moment: 'wake',
       at: at(input.day, wakeAt),
       title: 'This morning',
+      route: '/today',
       body: wakeLine(`Start with ${lower(first.title)}.`),
       quotes: [first.title],
     });
@@ -192,6 +200,7 @@ export function planNotices(input: NoticeInput): Notice[] {
       moment: 'evening',
       at: at(input.day, eveningAt),
       title: 'Seal the day',
+      route: '/seal-day',
       // Never a count of what is missing. A quiet day goes in the ledger as a
       // quiet day, and the notification says the same thing the screen does.
       body: done > 0 ? 'Put it in the ledger before you sleep.' : 'Quiet day or not, it goes in the ledger.',
@@ -208,6 +217,7 @@ export function planNotices(input: NoticeInput): Notice[] {
       moment: 'sunday',
       at: at(input.day, sundayAt),
       title: 'Sunday reading',
+      route: '/reading',
       body: input.book.firstSentence?.trim()
         ? `Ten minutes with what you wrote. It opens: “${input.book.firstSentence.trim()}”`
         : 'Ten minutes with what you wrote.',
@@ -224,6 +234,7 @@ export function planNotices(input: NoticeInput): Notice[] {
       // a time. PRD: at most one notification per moment.
       at: at(input.day, shiftHour(wakeAt, 1, quiet) ?? wakeAt),
       title: `Milestone · ${formatDay(input.day)}`,
+      route: '/progress',
       body: input.milestone.proof.trim()
         ? `${input.milestone.title}. Your rule: “${input.milestone.proof.trim()}”`
         : input.milestone.title,

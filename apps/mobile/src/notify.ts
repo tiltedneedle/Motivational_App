@@ -61,7 +61,7 @@ export async function scheduler(): Promise<Scheduler> {
       async schedule(notice) {
         await mod.scheduleNotificationAsync({
           identifier: notice.id,
-          content: { title: notice.title, body: notice.body },
+          content: { title: notice.title, body: notice.body, data: { route: notice.route } },
           // A wall-clock date, in the device's own zone, which is what the
           // planner produces and what "07:30 on the 14th" has to mean whatever
           // zone the person is in that morning.

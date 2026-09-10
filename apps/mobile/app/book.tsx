@@ -271,6 +271,12 @@ export default function BookScreen() {
         */}
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingVertical: 14 }}>
           <Chip testID="book-export" label="Export" onPress={onExport} />
+          {/*
+            The Sunday reading (PRD §7.3) has a door. The notification points at
+            it and so does Today on a Sunday, but somebody who simply opened
+            their Book and wanted to read it properly had no way through.
+          */}
+          <Chip testID="book-read" label="Read it" onPress={() => router.push('/reading')} />
           <Chip
             testID="book-still-true"
             label="Still true"
