@@ -163,6 +163,14 @@ export interface MorrowState {
     minutes: string,
     opts?: { sourceLineId?: string; minVersion?: string | null },
   ) => boolean;
+  /**
+   * Take the smaller version of a move that is already on Today.
+   *
+   * Not a new move: the coach used to add one carrying the same title, so the
+   * person stuck on one thing ended up with two identical rows and the extra
+   * one counted against their score for not being done.
+   */
+  shrinkMove: (moveId: string) => boolean;
   addEvidence: (text: string, goalId?: string) => void;
   sealDay: (input: { moodWord: string; proof: string; gladOf: string }) => void;
   makeBrief: () => Brief | null;
@@ -677,6 +685,24 @@ export const useMorrow = create<MorrowState>()(
         set((st) => ({
           plans: st.plans.map((p) => (p.id === plan.id ? { ...p, moves: [...p.moves, move] } : p)),
           toast: { text: `Added · ${clean}`, kind: 'add' },
+        }));
+        return true;
+      },
+
+      shrinkMove: (moveId) => {
+        const s = get();
+        const move = s.plans.flatMap((p) => p.moves).find((m) => m.id === moveId);
+        if (!move) return false;
+        if (!move.minVersion) {
+          set({ toast: { text: 'There is no smaller version of this one yet.', kind: 'info' } });
+          return false;
+        }
+        set((st) => ({
+          plans: st.plans.map((p) => ({
+            ...p,
+            moves: p.moves.map((m) => (m.id === moveId ? { ...m, doingMinVersion: true } : m)),
+          })),
+          toast: { text: `The small version it is · ${move.title}`, kind: 'info' },
         }));
         return true;
       },

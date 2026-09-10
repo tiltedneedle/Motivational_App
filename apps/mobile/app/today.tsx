@@ -210,6 +210,16 @@ export default function Today() {
               <View style={{ flex: 1, gap: 6 }}>
                 <Label style={{ color: accent.coralText }}>Now</Label>
                 <Statement style={{ fontSize: 26, lineHeight: 30 }}>{now.title}</Statement>
+                {/*
+                  When they said they were stuck and took the smaller version,
+                  it is shown here rather than written over their title. The
+                  title is their sentence; the small version is the app's.
+                */}
+                {now.doingMinVersion && now.minVersion ? (
+                  <Body testID="now-min-version" style={{ fontSize: 15, color: day.ink }}>
+                    Today: {now.minVersion}
+                  </Body>
+                ) : null}
                 <Body style={{ fontSize: 14 }}>
                   {sourceLineFor(now, state.analyses) ? 'Tap the stone. Drag it up for not today.' : ''}
                 </Body>

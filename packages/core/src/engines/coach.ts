@@ -174,12 +174,22 @@ export interface CoachReply {
    * in `minVersion`, because that sentence is the app's, and a move titled
    * with app prose is a plan line the person did not write.
    */
+  /**
+   * What the reply offers to do, if anything.
+   *
+   * `shrink-move` points at the move the person is already stuck on and offers
+   * its smaller version. It used to be an `add-move` carrying that same move's
+   * title, which created a byte-identical duplicate on Today: two rows saying
+   * the same sentence, and the second one counted against them in the
+   * Consistency Score for not being done.
+   */
   action: {
-    kind: 'add-move';
+    kind: 'shrink-move';
+    moveId: string;
     goalId: string;
+    /** Their own title, for the confirmation. Never written anywhere. */
     title: string;
     minVersion: string | null;
-    sourceLineId: string;
   } | null;
 }
 
@@ -200,11 +210,11 @@ export function replyToChip(chip: ChipId, ctx: ChipContext): CoachReply {
           quotedSpans: [obstacle.line.trim(), obstacle.line2.trim()],
           action: next
             ? {
-                kind: 'add-move',
+                kind: 'shrink-move',
+                moveId: next.id,
                 goalId: next.goalId,
                 title: next.title,
                 minVersion: next.minVersion,
-                sourceLineId: next.sourceLineId,
               }
             : null,
         };
@@ -225,11 +235,11 @@ export function replyToChip(chip: ChipId, ctx: ChipContext): CoachReply {
           quotedSpans: [wentAnyway.proof.trim()],
           action: next
             ? {
-                kind: 'add-move',
+                kind: 'shrink-move',
+                moveId: next.id,
                 goalId: next.goalId,
                 title: next.title,
                 minVersion: next.minVersion,
-                sourceLineId: next.sourceLineId,
               }
             : null,
         };

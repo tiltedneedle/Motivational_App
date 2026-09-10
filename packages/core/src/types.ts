@@ -184,6 +184,15 @@ export const Move = z.object({
   status: MoveStatus,
   completedAt: z.string().nullable(),
   minVersion: z.string().nullable(),
+  /**
+   * True when the person said they were stuck and took the smaller version.
+   *
+   * A flag rather than a rewritten title, because the title is their sentence
+   * and `minVersion` is the app's. Swapping one for the other would put app
+   * prose on their plan, which is the thing the whole product is built not to
+   * do. Today shows the small version underneath instead.
+   */
+  doingMinVersion: z.boolean().optional(),
   /** REQUIRED: the id of the user's analysis line this move came from. Validated in code. */
   sourceLineId: z.string(),
   order: z.number().int(),

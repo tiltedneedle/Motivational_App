@@ -29,7 +29,7 @@ export default function Coach() {
   const moves = useTodaysMoves();
   const goals = useGoals();
   const score = useConsistency();
-  const addMove = useMorrow((s) => s.addMove);
+  const shrinkMove = useMorrow((s) => s.shrinkMove);
   const setToast = useMorrow((s) => s.setToast);
 
   const [thread, setThread] = useState<{ who: 'me' | 'coach'; text: string }[]>([]);
@@ -65,16 +65,9 @@ export default function Coach() {
     const reply: CoachReply = replyToChip(chip, ctx);
     setThread((t) => [...t, { who: 'me', text: label }, { who: 'coach', text: reply.text }]);
     if (!reply.action) return;
-    // The move goes to the goal it came from, carrying the line the user wrote
-    // it from. Filing it under the first goal put one goal's move on another
-    // goal's plan and attributed it to a sentence it did not come from.
-    const added = addMove(reply.action.goalId, reply.action.title, '10 min', {
-      sourceLineId: reply.action.sourceLineId,
-      minVersion: reply.action.minVersion,
-    });
-    // addMove raises its own toast either way. Announcing "Added" over the top
-    // of its refusal told people a move existed when none did.
-    if (!added) return;
+    // Shrink the move they are stuck on rather than adding another one like it.
+    // The store raises its own toast either way.
+    shrinkMove(reply.action.moveId);
   };
 
   const send = () => {

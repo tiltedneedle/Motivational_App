@@ -621,8 +621,12 @@ describe('the coach', () => {
       persona: 'gentle',
     });
     expect(r.action).not.toBeNull();
+    // It points at the move they are already stuck on rather than making
+    // another one like it: a duplicate row counted against them in the score
+    // for not being done.
+    expect(r.action?.kind).toBe('shrink-move');
+    expect(r.action?.moveId).toBe('mv_guitar');
     expect(r.action?.goalId).toBe('g_guitar');
-    expect(r.action?.sourceLineId).toBe('a_guitar_strategies');
     // The title is the sentence they wrote. The two-minute version is the
     // app's, so it travels beside it rather than becoming the move.
     expect(r.action?.title).toBe('Ten minutes of scales after dinner');
