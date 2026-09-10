@@ -296,13 +296,23 @@ async function main() {
     await page.goto(`${BASE}/coach`, { waitUntil: 'networkidle' });
     await page.clock.runFor(2000);
     await page.waitForTimeout(600);
-    await page.locator('[data-testid="coach-input"]').fill('I want to kill myself');
+    await page.locator('[data-testid="coach-input"]').fill("I don't want to be here any more");
     await tap('coach-send');
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(200);
+    // The contracted form. The screen's first version could only match "do not
+    // want", so the way people actually write the sentence went straight past.
     check('crisis language raises the resources card', await seen('safety-card'));
+
     if (await seen('safety-card')) {
+      // The way out sits exactly where the Send button was. A second tap of a
+      // double tap must not land on it and close a card nobody has read.
+      await page.locator('[data-testid="safety-continue"]').click({ force: true, timeout: 2000 }).catch(() => {});
+      check('a stray tap straight after cannot dismiss the card', await seen('safety-card'));
+
+      // And once it has settled, it must still be the easiest thing to press.
+      await page.waitForTimeout(1100);
       await tap('safety-continue');
-      check('the card can be dismissed', !(await seen('safety-card')));
+      check('the card can be dismissed once it has settled', !(await seen('safety-card')));
     }
 
     check('no uncaught page errors', pageErrors.length === 0, pageErrors.join(' | '));

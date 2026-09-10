@@ -7,7 +7,17 @@ import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { CHIPS, dayOf, replyToChip, screen, type ChipId, type CoachReply } from '@morrow/core';
+import {
+  CHIPS,
+  contentGuard,
+  dayOf,
+  detectReturns,
+  replyToChip,
+  replyToText,
+  screen,
+  type ChipId,
+  type CoachReply,
+} from '@morrow/core';
 import { Body, Chip, InkButton, Label, Rule, Statement, Stone, Studio, TextButton, UserField, UserText, accent, day } from '@morrow/ui';
 import { useConsistency, useGoals, useLatestBook, useMorrow, useTodaysMoves } from '../src/store';
 
@@ -34,17 +44,27 @@ export default function Coach() {
     moves,
     days,
     today,
-    returns: days.filter((d) => d.sealedAt).length,
+    // A return is a gap the person came back from, not a sealed day. Passing
+    // the sealed-day count made the celebrate reply print the same number
+    // twice: "12 sealed days and 12 returns".
+    returns: detectReturns(days, today).length,
     persona: state.profile.persona,
   };
 
   const say = (chip: ChipId, label: string) => {
     const reply: CoachReply = replyToChip(chip, ctx);
     setThread((t) => [...t, { who: 'me', text: label }, { who: 'coach', text: reply.text }]);
-    if (reply.action && goals[0]) {
-      addMove(goals[0].id, reply.action.title, '10 min');
-      setToast({ text: `Added · ${reply.action.title}`, kind: 'add' });
-    }
+    if (!reply.action) return;
+    // The move goes to the goal it came from, carrying the line the user wrote
+    // it from. Filing it under the first goal put one goal's move on another
+    // goal's plan and attributed it to a sentence it did not come from.
+    const added = addMove(reply.action.goalId, reply.action.title, '10 min', {
+      sourceLineId: reply.action.sourceLineId,
+      minVersion: reply.action.minVersion,
+    });
+    // addMove raises its own toast either way. Announcing "Added" over the top
+    // of its refusal told people a move existed when none did.
+    if (!added) return;
   };
 
   const send = () => {
@@ -56,11 +76,20 @@ export default function Coach() {
       useMorrow.setState({ safetyPause: { risk: risk.risk, at: new Date().toISOString() } });
       return;
     }
-    setThread((t) => [
-      ...t,
-      { who: 'me', text },
-      { who: 'coach', text: 'Say more about that. What would have to be true for the next hour to go differently?' },
-    ]);
+    // The rules the coach obeys whatever was asked (PRD 11.6): no calorie
+    // targets, no dosages, no financial recommendations. This was written and
+    // unit-tested and then never called, so the coach answered all three.
+    const guard = contentGuard(text);
+    if (!guard.allowed) {
+      setThread((t) => [...t, { who: 'me', text }, { who: 'coach', text: guard.redirect ?? '' }]);
+      return;
+    }
+    // replyToText carries the Returns branch: someone coming back after a gap
+    // is met with that, not with the same generic question as everyone else.
+    // The screen used to inline the generic line and never call this at all.
+    const reply = replyToText(text, ctx);
+    if (!reply.text) return;
+    setThread((t) => [...t, { who: 'me', text }, { who: 'coach', text: reply.text }]);
   };
 
   return (

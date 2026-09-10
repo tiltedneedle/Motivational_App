@@ -135,8 +135,25 @@ export interface ChipContext {
 export interface CoachReply {
   text: string;
   quotedSpans: string[];
-  /** When the reply ends in something the user can accept onto Today. */
-  action: { kind: 'add-move'; title: string; sourceLineId: string } | null;
+  /**
+   * When the reply ends in something the user can accept onto Today.
+   *
+   * `goalId` is not optional and is not the first goal. The next move is the
+   * soonest across every plan, so it routinely belongs to a goal that is not
+   * ranked first; filing it under `goals[0]` put a guitar move on the running
+   * plan and stamped it with the running Strategies line.
+   *
+   * `title` is the user's own line. The two-minute version travels beside it
+   * in `minVersion`, because that sentence is the app's, and a move titled
+   * with app prose is a plan line the person did not write.
+   */
+  action: {
+    kind: 'add-move';
+    goalId: string;
+    title: string;
+    minVersion: string | null;
+    sourceLineId: string;
+  } | null;
 }
 
 /**
@@ -155,7 +172,13 @@ export function replyToChip(chip: ChipId, ctx: ChipContext): CoachReply {
           text: `You already wrote the answer: if ${obstacle.line.trim().replace(/^if\s+/i, '')}, then you ${obstacle.line2.trim().replace(/^then i\s+/i, '')}. Do that version, not the big one.`,
           quotedSpans: [obstacle.line.trim(), obstacle.line2.trim()],
           action: next
-            ? { kind: 'add-move', title: next.minVersion ?? next.title, sourceLineId: next.sourceLineId }
+            ? {
+                kind: 'add-move',
+                goalId: next.goalId,
+                title: next.title,
+                minVersion: next.minVersion,
+                sourceLineId: next.sourceLineId,
+              }
             : null,
         };
       }
@@ -174,7 +197,13 @@ export function replyToChip(chip: ChipId, ctx: ChipContext): CoachReply {
           text: `On ${wentAnyway.day} you did not feel like it either, and you wrote “${wentAnyway.proof.trim()}”. Same size today.`,
           quotedSpans: [wentAnyway.proof.trim()],
           action: next
-            ? { kind: 'add-move', title: next.minVersion ?? next.title, sourceLineId: next.sourceLineId }
+            ? {
+                kind: 'add-move',
+                goalId: next.goalId,
+                title: next.title,
+                minVersion: next.minVersion,
+                sourceLineId: next.sourceLineId,
+              }
             : null,
         };
       }
@@ -193,9 +222,14 @@ export function replyToChip(chip: ChipId, ctx: ChipContext): CoachReply {
     case 'celebrate': {
       const line = ctx.book?.iWill?.trim() || ctx.book?.firstSentence?.trim() || strategy?.line.trim();
       const days = ctx.days.filter((d) => d.sealedAt).length;
+      // A return is a gap the person came back from, counted by
+      // `detectReturns`. The screen used to pass the sealed-day count in as
+      // `returns` too, so this sentence read "12 sealed days and 12 returns"
+      // every time, which is not a fact about anybody.
+      const returns = ctx.returns > 0 ? ` and ${ctx.returns} ${ctx.returns === 1 ? 'return' : 'returns'}` : '';
       if (line) {
         return {
-          text: `${days} sealed days and ${ctx.returns} returns. You wrote “${line}”. Say it out loud; that is the whole exercise.`,
+          text: `${days} sealed days${returns}. You wrote “${line}”. Say it out loud; that is the whole exercise.`,
           quotedSpans: [line],
           action: null,
         };

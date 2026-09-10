@@ -36,6 +36,8 @@ import {
   returnsLetter,
   ringFraction,
   screen,
+  worseRisk,
+  isWorse,
   scoreSpecificity,
   seeds,
   splitFirstMoves,
@@ -303,6 +305,56 @@ describe('consistency', () => {
 });
 
 describe('safety', () => {
+  it('catches the contracted and inflected forms people actually write', () => {
+    // Each of these slipped through the first version of the screen. The
+    // contracted "don't" was the worst of them, because it is the ordinary way
+    // anyone writes the sentence.
+    const missed = [
+      "I don't want to be here any more",
+      "I didn't want to wake up this morning",
+      'some nights I have thought about killing myself',
+      'I ended my life in every version of this I can imagine',
+      'I wanted to die for most of last year',
+      'I wish I was never born',
+      'I have been cutting my arms again',
+      'there is nothing left to live for',
+      'no point in carrying on',
+      "I'd be better off dead",
+    ];
+    for (const t of missed) {
+      expect(screen(t).risk, t).toBe('crisis');
+      expect(screen(t).action, t).toBe('resources');
+    }
+  });
+
+  it('stays over-sensitive on purpose, even when the sentence is a denial', () => {
+    // The cost of being wrong here is a card that takes one tap to dismiss.
+    // The cost of the other mistake has no floor, so the negation is not
+    // excused.
+    expect(screen("I don't want to kill myself, I just want to sleep").risk).toBe('crisis');
+  });
+
+  it('does not read ordinary hard writing as a crisis', () => {
+    for (const t of [
+      'It was a terrible year and I gave up in March',
+      'I killed the project before it killed me',
+      'my grandmother died in the spring and I still miss her',
+      'the deadline is killing me',
+    ]) {
+      expect(screen(t).risk, t).not.toBe('crisis');
+    }
+  });
+
+  it('takes the stricter of two verdicts and never the softer', () => {
+    expect(worseRisk('none', 'crisis')).toBe('crisis');
+    expect(worseRisk('crisis', 'none')).toBe('crisis');
+    expect(worseRisk('concern', 'crisis')).toBe('crisis');
+    expect(isWorse('crisis', 'concern')).toBe(true);
+    // A second opinion that comes back calmer changes nothing.
+    expect(isWorse('none', 'concern')).toBe(false);
+    expect(isWorse('concern', 'concern')).toBe(false);
+  });
+
   it('catches crisis language and routes to resources', () => {
     for (const t of ['I want to kill myself', 'i want to die', "there's no reason to go on"]) {
       const r = screen(t);
@@ -355,6 +407,63 @@ describe('the coach', () => {
       writtenAt: '2026-09-09T20:00:00.000Z',
     },
   ];
+
+  it('offers the move to the goal it belongs to, in the user own words', () => {
+    // The next move across every plan is routinely not the first goal's. It
+    // used to be filed under goals[0] with that goal's Strategies line, so a
+    // guitar move landed on the running plan attributed to a running sentence.
+    const guitar = {
+      id: 'mv_guitar',
+      goalId: 'g_guitar',
+      milestoneId: null,
+      title: 'Ten minutes of scales after dinner',
+      effort: 'S' as const,
+      energy: 'low' as const,
+      ifThen: null,
+      scheduledFor: '2026-09-10',
+      week: 1,
+      status: 'todo' as const,
+      completedAt: null,
+      minVersion: "Two minutes: play, that's the whole ask.",
+      sourceLineId: 'a_guitar_strategies',
+      order: 0,
+    };
+    const r = replyToChip('stuck', {
+      book: null,
+      analyses,
+      moves: [guitar],
+      days: [],
+      today: '2026-09-09',
+      returns: 0,
+      persona: 'gentle',
+    });
+    expect(r.action).not.toBeNull();
+    expect(r.action?.goalId).toBe('g_guitar');
+    expect(r.action?.sourceLineId).toBe('a_guitar_strategies');
+    // The title is the sentence they wrote. The two-minute version is the
+    // app's, so it travels beside it rather than becoming the move.
+    expect(r.action?.title).toBe('Ten minutes of scales after dinner');
+    expect(r.action?.minVersion).toContain('Two minutes');
+  });
+
+  it('does not print the same number twice when celebrating', () => {
+    const days: DaySummary[] = [
+      { day: '2026-09-01', planned: 1, done: 1, partial: 0, skipped: 0, evidenceCount: 1, sealedAt: '2026-09-01T20:00:00Z', moodWord: null, proof: null, gladOf: null },
+      { day: '2026-09-02', planned: 1, done: 1, partial: 0, skipped: 0, evidenceCount: 1, sealedAt: '2026-09-02T20:00:00Z', moodWord: null, proof: null, gladOf: null },
+    ];
+    const r = replyToChip('celebrate', {
+      book: null,
+      analyses,
+      moves: [],
+      days,
+      today: '2026-09-09',
+      returns: 0,
+      persona: 'gentle',
+    });
+    // Two sealed days and no returns: the sentence must not claim two returns.
+    expect(r.text).toContain('2 sealed days');
+    expect(r.text).not.toContain('2 returns');
+  });
 
   it('quotes the user own if-then when they are stuck', () => {
     const r = replyToChip('stuck', {

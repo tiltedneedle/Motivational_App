@@ -9,30 +9,61 @@
  */
 import type { SafetyRisk } from '../types';
 
+/**
+ * Written to catch the way people actually write, not the dictionary form.
+ *
+ * Three things this list has to survive, because a person in trouble writes
+ * quickly and in the past tense:
+ *
+ *  - Contractions. "I don't want to be here" is the ordinary phrasing and the
+ *    earlier `\bnot want\b` could never match it, because the word in the
+ *    sentence is "don't". The commonest form was the one that got through.
+ *  - Inflection. "killing myself", "ended my life", "wanted to die".
+ *  - The gap between "myself" and a body part: people write "cutting my arms".
+ *
+ * Negations are deliberately NOT excluded. "I don't want to kill myself" still
+ * raises the card, because the cost of being wrong here is a card someone
+ * dismisses in one tap, and the cost of the other mistake has no floor.
+ */
 const CRISIS = [
-  /\bkill (myself|me)\b/i,
-  /\b(end|ending|take) (my|this) (life|own life)\b/i,
+  // Inflections only for "myself", which is unambiguous. "kill me" stays in
+  // its bare form: "it killed me", "this deadline is killing me" and "that
+  // joke killed me" are ordinary English, and a card that fires on those
+  // teaches people to dismiss it without reading, which is the one way this
+  // screen can be made worse at its job.
+  /\bkill(?:ing|ed|s)?\s+my ?self\b/i,
+  /\bkill\s+me\b/i,
+  /\b(?:end|ending|ended|ends|take|taking|took)\s+(?:my|this)\s+(?:own\s+)?life\b/i,
+  /\bend(?:ing|ed)?\s+it\s+all\b/i,
   /\bsuicid\w*/i,
-  /\bwant to die\b/i,
-  /\bnot want(ing)? to (be here|live|wake up)\b/i,
-  /\bbetter off (without me|dead)\b/i,
+  /\bunalive\w*/i,
+  /\bwant(?:ed|ing|s)?\s+to\s+(?:die|be\s+dead|not\s+exist)\b/i,
+  // "do not want", "don't want", "didn't want", "doesn't want".
+  /\b(?:do|does|did)(?:\s+not|n['’]?t)\s+want\s+to\s+(?:be\s+here|be\s+alive|live|wake\s+up|exist|go\s+on|carry\s+on)\b/i,
+  /\bnot\s+want(?:ing)?\s+to\s+(?:be\s+here|be\s+alive|live|wake\s+up|exist)\b/i,
+  /\bwish(?:ed|ing)?\s+(?:i|I)\s+(?:was|were|wasn['’]?t|weren['’]?t)\s+(?:dead|here|alive|born|never\s+born)\b/i,
+  /\bbetter\s+off\s+(?:without\s+me|dead|if\s+i\s+(?:was|were)n['’]?t)\b/i,
   /\bself[- ]?harm\w*/i,
-  /\b(cut|cutting|hurt|hurting) myself\b/i,
-  /\bno reason to (go on|live)\b/i,
+  /\b(?:cut|cutting|cuts|hurt|hurting|hurts|harm|harming)\s+(?:my ?self|my\s+(?:arms?|legs?|wrists?|thighs?|skin))\b/i,
+  /\bno\s+(?:reason|point)\s+(?:to|in)\s+(?:go(?:ing)?\s+on|carry(?:ing)?\s+on|liv(?:e|ing)|be(?:ing)?\s+here)\b/i,
+  /\bnothing\s+(?:left\s+)?to\s+live\s+for\b/i,
   /\boverdos\w*/i,
+  /\b(?:don['’]?t|do\s+not)\s+want\s+to\s+be\s+(?:here|alive)\s+any\s?more\b/i,
 ];
 
 const CONCERN = [
-  /\bhate myself\b/i,
+  /\bhat(?:e|ed|ing)\s+my ?self\b/i,
   /\bworthless\b/i,
-  /\bi(?:'| a)?m a failure\b/i,
-  /\bcan'?t (cope|go on|do this any ?more)\b/i,
-  /\b(starve|starving|purge|purging|binge|bingeing)\b/i,
-  /\b(\d{2,3})\s?(kg|lbs|pounds)\b.{0,24}\b(lose|lost|target|goal)\b/i,
-  /\bdrink(ing)? (too much|every ?(day|night))\b/i,
-  /\bpanic attacks?\b/i,
-  /\bhopeless\b/i,
-  /\bnobody (would|will) (care|notice|miss)\b/i,
+  /\bi(?:['’]| a)?m\s+a\s+failure\b/i,
+  /\bcan(?:['’]?t|not)\s+(?:cope|go\s+on|carry\s+on|do\s+this\s+any\s?more)\b/i,
+  // "bingeing" keeps its e, and it is the spelling people use.
+  /\b(?:starv(?:e|es|ed|ing)|purg(?:e|es|ed|ing)|bing(?:e|es|ed|ing|eing)|restrict(?:ing|ed)?\s+(?:my\s+)?(?:food|calories|intake))\b/i,
+  /\b\d{2,4}\s?(?:kg|lbs?|pounds|kcal|calories)\b.{0,24}\b(?:lose|lost|losing|target|goal|under|max)\b/i,
+  /\b(?:drink|drinking|drank)\s+(?:too\s+much|every\s?(?:day|night)|to\s+forget)\b/i,
+  /\bpanic\s+attacks?\b/i,
+  /\bhopeless(?:ness)?\b/i,
+  /\bnobody\s+(?:would|will|even)\s+(?:care|notice|miss)\b/i,
+  /\bnumb\s+(?:all\s+the\s+time|most\s+days)\b/i,
 ];
 
 export interface SafetyResult {
@@ -40,6 +71,21 @@ export interface SafetyResult {
   /** Never the matched text: we log the category, not the person's words. */
   category: 'self-harm' | 'despair' | 'disordered-eating' | 'substance' | null;
   action: 'continue' | 'soften' | 'resources';
+}
+
+const RANK: Record<SafetyRisk, number> = { none: 0, concern: 1, crisis: 2 };
+
+/** The stricter of two verdicts. A second opinion may only ever tighten. */
+export function worseRisk(a: SafetyRisk, b: SafetyRisk): SafetyRisk {
+  return RANK[a] >= RANK[b] ? a : b;
+}
+
+export function isWorse(candidate: SafetyRisk, current: SafetyRisk): boolean {
+  return RANK[candidate] > RANK[current];
+}
+
+export function actionFor(risk: SafetyRisk): SafetyResult['action'] {
+  return risk === 'crisis' ? 'resources' : risk === 'concern' ? 'soften' : 'continue';
 }
 
 export function screen(text: string): SafetyResult {

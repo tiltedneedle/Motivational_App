@@ -22,6 +22,7 @@ export default function RootLayout() {
   });
   const router = useRouter();
   const hydrated = useMorrow((s) => s.hydrated);
+  const paused = useMorrow((s) => s.safetyPause !== null);
   const [slow, setSlow] = useState(false);
 
   useEffect(() => {
@@ -44,15 +45,28 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <ErrorBoundary onReset={() => router.replace('/today')}>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: day.ground },
-              animation: 'fade',
-            }}
-          />
-        </ErrorBoundary>
+        {/*
+          While the resources card is up, the screen behind it is hidden from
+          assistive technology. The card's own `accessibilityViewIsModal` only
+          does this on iOS, so without it a screen-reader user on Android or the
+          web could tab straight past a crisis card into the writing that raised
+          it.
+        */}
+        <View
+          style={{ flex: 1 }}
+          importantForAccessibility={paused ? 'no-hide-descendants' : 'auto'}
+          aria-hidden={paused}
+        >
+          <ErrorBoundary onReset={() => router.replace('/today')}>
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: day.ground },
+                animation: 'fade',
+              }}
+            />
+          </ErrorBoundary>
+        </View>
         {/* last in the tree, so it paints above whatever screen is showing */}
         <SafetyGate />
       </SafeAreaProvider>

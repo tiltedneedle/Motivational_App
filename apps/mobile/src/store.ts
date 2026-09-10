@@ -19,6 +19,7 @@ import {
   draftOf,
   guarded,
   isQuotable,
+  isWorse,
   newId,
   reading,
   screen,
@@ -110,7 +111,17 @@ export interface MorrowState {
 
   // today
   setMoveStatus: (moveId: string, status: 'todo' | 'done' | 'skip') => void;
-  addMove: (goalId: string, title: string, minutes: string) => void;
+  /**
+   * Returns whether the move was actually created. The coach used to announce
+   * "Added" over the top of this action's own refusal toast, so a person was
+   * told a move existed when none did.
+   */
+  addMove: (
+    goalId: string,
+    title: string,
+    minutes: string,
+    opts?: { sourceLineId?: string; minVersion?: string | null },
+  ) => boolean;
   addEvidence: (text: string, goalId?: string) => void;
   sealDay: (input: { moodWord: string; proof: string; gladOf: string }) => void;
   makeBrief: () => Brief | null;
@@ -206,10 +217,26 @@ export const useMorrow = create<MorrowState>()(
         // Typing a name makes it theirs.
         set((s) => ({ goals: s.goals.map((g) => (g.id === id ? { ...g, title: title.trim(), titleAuthored: true } : g)) })),
 
+      /**
+       * Dropping a goal takes everything hanging off it with it.
+       *
+       * Removing the goal and its analyses alone left the plan, the Portrait
+       * and every move behind: the moves kept appearing on Today with nothing
+       * to tap through to, and the Consistency Score kept counting them as
+       * work the person had failed to do.
+       *
+       * The ledger is the exception. Evidence is a record of days that
+       * actually happened, and a goal being let go does not unhappen them, so
+       * those rows stay and simply stop pointing at a goal.
+       */
       dropGoal: (id) =>
         set((s) => ({
           goals: s.goals.filter((g) => g.id !== id).map((g, i) => ({ ...g, rank: i })),
           analyses: s.analyses.filter((a) => a.goalId !== id),
+          plans: s.plans.filter((p) => p.goalId !== id),
+          portraits: s.portraits.filter((p) => p.goalId !== id),
+          scenes: s.scenes.filter((sc) => sc.goalId !== id),
+          evidence: s.evidence.map((e) => (e.goalId === id ? { ...e, goalId: null } : e)),
         })),
 
       rankGoals: (ids) =>
@@ -246,6 +273,35 @@ export const useMorrow = create<MorrowState>()(
             safetyPause: risk.risk === 'crisis' ? { risk: risk.risk, at: new Date().toISOString() } : s.safetyPause,
           };
         });
+        // The second opinion (PRD §11.6). The local screen above is ten
+        // regexes and it has already decided, because it has to be instant and
+        // has to work with the network off. This asks a model the question the
+        // regexes cannot answer — the quiet sentence with no keyword in it —
+        // and it may only ever tighten the verdict, never relax one.
+        //
+        // Deliberately not awaited: the person is already moving to the
+        // read-back, and a slow network must not hold the door shut. If the
+        // answer comes back worse, the card is raised then and the writing is
+        // reclassified so it can no longer be quoted or sealed.
+        if (risk.risk !== 'crisis') {
+          void ai
+            .safety(body)
+            .then((second) => {
+              if (!isWorse(second.risk, risk.risk)) return;
+              set((s) => ({
+                texts: s.texts.map((t) => (t.id === text.id ? { ...t, safetyRisk: second.risk } : t)),
+                safetyPause:
+                  second.risk === 'crisis'
+                    ? { risk: second.risk, at: new Date().toISOString() }
+                    : s.safetyPause,
+              }));
+            })
+            .catch(() => {
+              // No network, no key, no answer. The local screen stands, and it
+              // is the over-sensitive one, so failing this way is safe.
+            });
+        }
+
         // A crisis result never returns the text onward for read-back.
         return risk.risk === 'crisis' ? null : text;
       },
@@ -385,37 +441,46 @@ export const useMorrow = create<MorrowState>()(
           return { plans, evidence: ev, days: recomputeDay(s, plans, ev, day) };
         }),
 
-      addMove: (goalId, title, minutes) =>
-        set((s) => {
-          const clean = title.trim();
-          if (!clean) return {};
-          const source = s.analyses.find((a) => a.goalId === goalId && a.kind === 'strategies');
-          const plan = s.plans.find((p) => p.goalId === goalId);
-          if (!plan || !source) {
-            // Without a user line behind it there is no move. The UI prevents this.
-            return { toast: { text: 'Write the Strategies line for this goal first.', kind: 'info' } };
-          }
-          const move = {
-            id: newId('mv'),
-            goalId,
-            milestoneId: plan.milestones[0]?.id ?? null,
-            title: clean,
-            effort: (minutes === '2 min' ? 'S' : minutes === '45 min' ? 'L' : 'M') as 'S' | 'M' | 'L',
-            energy: 'low' as const,
-            ifThen: null,
-            scheduledFor: dayOf(new Date(), s.profile.dayBoundaryHour),
-            week: 1,
-            status: 'todo' as const,
-            completedAt: null,
-            minVersion: null,
-            sourceLineId: source.id,
-            order: plan.moves.length,
-          };
-          return {
-            plans: s.plans.map((p) => (p.id === plan.id ? { ...p, moves: [...p.moves, move] } : p)),
-            toast: { text: `Added · ${clean}`, kind: 'add' },
-          };
-        }),
+      addMove: (goalId, title, minutes, opts) => {
+        const s = get();
+        const clean = title.trim();
+        if (!clean) return false;
+        const plan = s.plans.find((p) => p.goalId === goalId);
+        // The caller's line wins when it is real: a move offered by the coach
+        // already knows which sentence it came from, and re-deriving it here
+        // attributed the move to whatever Strategies line happened to belong
+        // to the goal being written to.
+        const given = opts?.sourceLineId
+          ? s.analyses.find((a) => a.id === opts.sourceLineId && a.goalId === goalId)
+          : undefined;
+        const source = given ?? s.analyses.find((a) => a.goalId === goalId && a.kind === 'strategies');
+        if (!plan || !source) {
+          // Without a line of theirs behind it there is no move.
+          set({ toast: { text: 'Write the Strategies line for this goal first.', kind: 'info' } });
+          return false;
+        }
+        const move = {
+          id: newId('mv'),
+          goalId,
+          milestoneId: plan.milestones[0]?.id ?? null,
+          title: clean,
+          effort: (minutes === '2 min' ? 'S' : minutes === '45 min' ? 'L' : 'M') as 'S' | 'M' | 'L',
+          energy: 'low' as const,
+          ifThen: null,
+          scheduledFor: dayOf(new Date(), s.profile.dayBoundaryHour),
+          week: 1,
+          status: 'todo' as const,
+          completedAt: null,
+          minVersion: opts?.minVersion ?? null,
+          sourceLineId: source.id,
+          order: plan.moves.length,
+        };
+        set((st) => ({
+          plans: st.plans.map((p) => (p.id === plan.id ? { ...p, moves: [...p.moves, move] } : p)),
+          toast: { text: `Added · ${clean}`, kind: 'add' },
+        }));
+        return true;
+      },
 
       addEvidence: (text, goalId) =>
         set((s) => {
