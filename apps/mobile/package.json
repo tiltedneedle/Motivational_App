@@ -9,7 +9,8 @@
     "export:web": "expo export --platform web --output-dir dist",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@expo-google-fonts/newsreader": "^0.4.1",
@@ -38,6 +39,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.18",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^3.2.7"
   }
 }

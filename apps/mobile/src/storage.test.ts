@@ -1,0 +1,101 @@
+/**
+ * The one thing this layer exists to prevent: replacing someone's writing with
+ * an empty store because the read failed.
+ *
+ * These run against a fake AsyncStorage rather than a device, because what is
+ * being tested is the ordering — that a failed read latches writes shut BEFORE
+ * anything downstream can persist over the original bytes.
+ */
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const disk = new Map<string, string>();
+let readThrows = false;
+
+vi.mock('@react-native-async-storage/async-storage', () => ({
+  default: {
+    getItem: async (k: string) => {
+      if (readThrows) throw new Error('SQLITE_CORRUPT: database disk image is malformed');
+      return disk.has(k) ? (disk.get(k) as string) : null;
+    },
+    setItem: async (k: string, v: string) => {
+      disk.set(k, v);
+    },
+    removeItem: async (k: string) => {
+      disk.delete(k);
+    },
+  },
+}));
+
+const { QUARANTINE_PREFIX, guardedStorage, hasFailed, resetStorageLatch } = await import('./storage');
+
+const A_REAL_BOOK = JSON.stringify({
+  state: { books: [{ title: 'A year of small mornings' }], texts: [{ body: 'It is 6:40 and the kitchen is still blue.' }] },
+  version: 0,
+});
+
+beforeEach(() => {
+  disk.clear();
+  readThrows = false;
+  resetStorageLatch();
+});
+
+describe('reading and writing when the disk is fine', () => {
+  it('round-trips', async () => {
+    await guardedStorage.setItem('morrow-v1', A_REAL_BOOK);
+    expect(await guardedStorage.getItem('morrow-v1')).toBe(A_REAL_BOOK);
+    expect(hasFailed()).toBe(false);
+  });
+
+  it('reports nothing stored as nothing stored, not as a failure', async () => {
+    expect(await guardedStorage.getItem('morrow-v1')).toBeNull();
+    expect(hasFailed()).toBe(false);
+  });
+});
+
+describe('when the stored writing cannot be read', () => {
+  it('refuses every later write rather than overwriting what is there', async () => {
+    // A write interrupted halfway is the commonest shape of this: it reads
+    // back fine as a string and then does not parse.
+    disk.set('morrow-v1', A_REAL_BOOK.slice(0, 60));
+
+    expect(await guardedStorage.getItem('morrow-v1')).toBeNull();
+    expect(hasFailed()).toBe(true);
+
+    // This is the write that used to destroy everything: the store comes up
+    // holding its empty defaults and persists them over the real bytes.
+    await guardedStorage.setItem('morrow-v1', JSON.stringify({ state: { books: [], texts: [] }, version: 0 }));
+
+    expect(disk.get('morrow-v1')).toBe(A_REAL_BOOK.slice(0, 60));
+    expect(disk.get('morrow-v1')).not.toContain('"books":[]');
+  });
+
+  it('keeps a copy of the unreadable bytes so they are still recoverable', async () => {
+    disk.set('morrow-v1', A_REAL_BOOK.slice(0, 60));
+    await guardedStorage.getItem('morrow-v1');
+
+    const kept = [...disk.entries()].filter(([k]) => k.startsWith(QUARANTINE_PREFIX));
+    expect(kept).toHaveLength(1);
+    expect(kept[0]?.[1]).toBe(A_REAL_BOOK.slice(0, 60));
+  });
+
+  it('latches on a read that throws outright, not only on bad JSON', async () => {
+    disk.set('morrow-v1', A_REAL_BOOK);
+    readThrows = true;
+
+    expect(await guardedStorage.getItem('morrow-v1')).toBeNull();
+    expect(hasFailed()).toBe(true);
+
+    readThrows = false;
+    await guardedStorage.setItem('morrow-v1', '{"state":{},"version":0}');
+    // The original survives: the latch does not lift just because the disk
+    // started answering again.
+    expect(disk.get('morrow-v1')).toBe(A_REAL_BOOK);
+  });
+
+  it('refuses to delete as well, so a reset cannot finish the job', async () => {
+    disk.set('morrow-v1', A_REAL_BOOK.slice(0, 60));
+    await guardedStorage.getItem('morrow-v1');
+    await guardedStorage.removeItem('morrow-v1');
+    expect(disk.has('morrow-v1')).toBe(true);
+  });
+});

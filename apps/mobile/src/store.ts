@@ -3,10 +3,10 @@
  * first, so the Interview, the Fifteen, the stones, the Book and Today all work
  * with the network off. Sync is a later layer that reads this same shape.
  */
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
+import { failureReason, guardedStorage, hasFailed } from './storage';
 import {
   DEFAULT_PROFILE,
   LocalProvider,
@@ -720,23 +720,30 @@ export const useMorrow = create<MorrowState>()(
     }),
     {
       name: 'morrow-v1',
-      storage: createJSONStorage(() => AsyncStorage),
+      // Not `createJSONStorage(AsyncStorage)`. The guard has to sit BELOW
+      // zustand, because zustand's persist middleware replaces `api.setState`
+      // with one that writes on every call — including the call that would set
+      // a "storage is broken" flag. Setting that flag from up here serialised
+      // the store's empty defaults straight over the person's Book, so the
+      // recovery path was the thing destroying the data. See src/storage.ts.
+      storage: createJSONStorage(() => guardedStorage),
       partialize: (s) => {
         const { hydrated: _h, toast: _t, storageError: _e, ...rest } = s as MorrowState & Record<string, unknown>;
         return rest as Partial<MorrowState>;
       },
       onRehydrateStorage: () => (state, error) => {
-        if (error) {
-          // The disk is there but unreadable. Booting as a new user would be
-          // the worst possible response: the next write would overwrite a Book
-          // that is still on the device. So the app comes up refusing to save,
-          // and says so, rather than quietly starting the person's life again.
-          console.error('[morrow] could not read local storage', error);
-          useMorrow.setState({ hydrated: true, storageError: true });
-          return;
+        // Ask the storage layer, not this callback, whether the disk is sound:
+        // a blob that reads but does not parse never reaches `error` here, and
+        // that is the commonest shape of the failure.
+        const broken = Boolean(error) || hasFailed();
+        if (broken) {
+          console.error('[morrow] could not read local storage', error ?? failureReason());
+        } else {
+          state?.setToast(null);
         }
-        state?.setToast(null);
-        useMorrow.setState({ hydrated: true, storageError: false });
+        // Safe either way now: with the latch closed this write is dropped
+        // rather than persisted, so it cannot overwrite anything.
+        useMorrow.setState({ hydrated: true, storageError: broken });
       },
     },
   ),

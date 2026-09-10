@@ -21,7 +21,8 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [ ] 7. Research pass: libraries/versions; improvements; repeat
 
 ## In flight
-- Nothing. The tree is green and committed: `pnpm verify` runs typecheck, 112
+- Working through the second audit's 37 findings, listed below. Four are closed.
+- The tree is green and committed: `pnpm verify` runs typecheck, 112
   core tests, 30 contrast measurements, the edge-function guards, the SQL
   structural guards, the serif authorship guard, the web build and 40
   end-to-end checks. Start at "Next steps".
@@ -304,6 +305,49 @@ exercises the config plugins and the module resolution that a real build would.
   and now gitignored, so `app.json` stays the one place native configuration
   lives.
 
+## Second audit (2026-09-10)
+
+Six lenses over the REPAIRS rather than the codebase cold, with one consolidated skeptic per lens: 13 agents against the first audit's 294, and it found sharper things. Sized this way it cost about a tenth as much and still hit the spend limit only on the final sweep agent.
+
+The headline: **the storage-error path I added was destroying the data it existed to protect.** zustand's persist middleware replaces `api.setState` so every write persists, including the one setting a "storage is broken" flag — and on a failed read the store is holding its empty defaults, which then went straight over the Book on disk. The guard now sits below zustand in `apps/mobile/src/storage.ts`, latches on a bad read, drops every write after it, and copies the unreadable bytes to a dated key first.
+
+- [x] **critical** `apps/mobile/app/seal-book.tsx:132` — Seal the Book latches its HoldBar shut: the refusal signal is thrown away at the call site
+- [x] **critical** `apps/mobile/src/store.ts:640` — The storage-error branch overwrites the very data it exists to protect
+- [x] **critical** `apps/mobile/src/store.ts:640` — The storage-error branch overwrites the user's stored data with an empty store
+- [ ] **high** `apps/mobile/app/book.tsx:82` — The Book prints app-composed goal names in the serif reserved for the user's own words
+- [ ] **high** `scripts/check-authorship.mjs:56` — check-authorship.mjs strips every {…} expression, so app prose reaching UserText through a variable is invisible — and the Coach ships one
+- [ ] **high** `scripts/check-authorship.mjs:50` — UserText is not the only serif: UserField and the Fifteen's TextInput set it and render app-written placeholders in it, where the authorship guard cannot see them
+- [ ] **high** `apps/mobile/src/store.ts:662` — latestText — the only thing keeping crisis writing out of the Book — lives in a module no suite imports, and deleting its guard leaves every test green
+- [ ] **high** `packages/ui/src/primitives.tsx:443` — HoldBar's reduced-motion easing fills the bar to 100% on the first frame, so reduced-motion users release 1.3 s before the seal fires
+- [ ] **high** `packages/ui/src/primitives.tsx:518` — HoldBar's pointerDown guard swallows keyboard activation on react-native-web 0.21, which emits onPressIn/onPressOut for Enter and Space
+- [x] **high** `apps/mobile/src/store.ts:640` — The storageError path writes the empty default state over the intact record it was added to protect
+- [ ] **high** `apps/mobile/src/store.ts:684` — recomputeDay credits one completed move to two different days, so a day with no activity scores 100%
+- [ ] **high** `apps/mobile/src/store.ts:325` — Only the Fifteen is safety-screened; analysis lines and the seal-day proof are never screened, and both are quoted back verbatim the next morning and sealed into the Book
+- [ ] **high** `apps/mobile/src/store.ts:290` — The added "second opinion" can never differ from the local screen — the app never constructs a remote provider, so ten regexes are still the entire crisis detector
+- [ ] **high** `packages/core/src/engines/safety.ts:47` — The widened crisis regexes fire on ordinary gym and self-improvement sentences, and a false positive now silently deletes the whole sitting from the Book
+- [ ] **high** `apps/mobile/src/store.ts:684` — A move completed before its scheduled day credits two days; the scheduled day scores 100% with no activity
+- [ ] **high** `apps/mobile/app/coach.tsx:61` — The Coach's "I'm stuck" chip creates a byte-identical duplicate of the move already on Today
+- [ ] **medium** `apps/mobile/app/write.tsx:322` — The Fifteen's Seeds column sets bank-written goal titles in the serif and calls them the user's own
+- [ ] **medium** `packages/core/src/engines/coach.ts:174` — "I'm stuck" duplicates the move the person is already stuck on, and the duplicate lowers their Consistency Score
+- [ ] **medium** `packages/core/src/engines/book.ts:153` — BookVersion carries no titleAuthored, so the SQL authorship guard credits the app's spine title to the user
+- [ ] **medium** `packages/core/src/engines/portrait.ts:78` — proposeIdentity silently truncates the user's clause at eleven words and presents the fragment as verbatim
+- [ ] **medium** `scripts/e2e.mjs:323` — The e2e check that Today's moves come from the user's own line is satisfied by the Book quotation card, not by any move
+- [ ] **medium** `scripts/check-sql.mjs:46` — check-sql's two NOT NULL assertions are unanchored and are satisfied by other tables — moves.source_line_id and moves.plan_id can both be made nullable with all guards green
+- [ ] **medium** `scripts/test-migration.mjs:302` — The writing-immutability guard is only ever tested on a row shape the app never writes, and check-sql's 'unconditional' assertion bans only < and >
+- [ ] **medium** `packages/ui/test/contrast.test.ts:74` — The contrast suite measures only the six domain accents; accent.success is used as 14px body text at 3.02:1
+- [ ] **medium** `scripts/check-functions.mjs:28` — check-functions.mjs's guard for the safety edge function is /crisis/, satisfied by the word inside its own prompt string
+- [ ] **medium** `packages/core/src/engines/blueprint.ts:288` — validatePlan's milestone check is satisfied by the app's own fallback sentence, and no test or SQL guard covers a milestone with no source line
+- [ ] **medium** `apps/mobile/src/components/SafetyGate.tsx:55` — The helpline dial-failure fallback is unreachable on the web build because react-native-web's Linking.openURL never rejects
+- [ ] **medium** `apps/mobile/src/store.ts:426` — makePortraitAndPlan never rebuilds an existing plan, so a Monitoring line written later can never reach the milestone it is promised to fill
+- [ ] **medium** `apps/mobile/src/store.ts:764` — A parked move disappears from the app the next day and can never be reached again
+- [ ] **medium** `packages/core/src/engines/safety.ts:128` — The resources card still promises the writing was not remembered, while saveText has already persisted it and Settings counts and exports it
+- [ ] **medium** `packages/core/src/engines/safety.ts:87` — The 'concern' verdict is still computed and discarded — actionFor has no call site and nothing distinguishes concern from none
+- [ ] **medium** `apps/mobile/src/store.ts:514` — Undoing a move on a later day deletes the earlier day's ledger row but leaves that day's score frozen
+- [ ] **medium** `apps/mobile/app/seal-book.tsx:42` — makePortraitAndPlan has one call site, so a goal that failed to plan can only get one by sealing a second edition of the Book
+- [ ] **medium** `apps/mobile/app/coach.tsx:67` — addMove's toast is the only feedback for a Coach action, and the Coach renders no Toast surface
+- [ ] **medium** `apps/mobile/app/settings.tsx:23` — "Copy out what is open" exports everything except the writing that is open
+- [ ] **low** `packages/core/src/engines/blueprint.ts:377` — proposeReplan and applyReplan still have no test and no call site; the G-168 repair added the gate but not the tests it named
+- [ ] **low** `supabase/migrations/0001_init.sql:200` — evidence.move_id, the key undo correctness now depends on, has no column in the migration
 ## Blocked on the user
 - Supabase project URL/anon key, Anthropic API key, fal.ai key, RevenueCat keys: needed to test real providers. Everything runs on local fallbacks without them.
 
