@@ -247,17 +247,33 @@ async function main() {
     await page.locator('[data-testid="i-will"]').fill('I will be out the back door before the kettle boils');
     await page.waitForTimeout(200);
 
-    // hold: press, let the clock run past the hold duration, release
-    const bar = page.locator('[data-testid="seal-hold"]').first();
-    const box = await bar.boundingBox();
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-    await page.mouse.down();
-    await page.clock.runFor(2000);
-    await page.waitForTimeout(300);
-    await page.mouse.up();
-    await page.waitForTimeout(400);
-    await page.clock.runFor(1500);
-    await page.waitForTimeout(800);
+    // Keyboard first, before the pointer touches it. Somebody who cannot press
+    // and hold has exactly one way to seal their Book, and the guard that tells
+    // a finger apart from an assistive activation is the thing most likely to
+    // swallow it by accident.
+    await page.locator('[data-testid="seal-hold"]').first().focus().catch(() => {});
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(600);
+    const sealedByKeyboard = await seen('seal-open-book');
+    check('the Book can be sealed from the keyboard alone', sealedByKeyboard);
+
+    if (sealedByKeyboard) {
+      await tap('seal-open-book');
+      await page.waitForTimeout(900);
+    } else {
+      // The pointer route, only if the keyboard did not already do it: press,
+      // let the clock run past the hold, release.
+      const bar = page.locator('[data-testid="seal-hold"]').first();
+      const box = await bar.boundingBox();
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.clock.runFor(2000);
+      await page.waitForTimeout(300);
+      await page.mouse.up();
+      await page.waitForTimeout(400);
+      await page.clock.runFor(1500);
+      await page.waitForTimeout(800);
+    }
 
     check('the Book was sealed', await seen('screen-book'));
     if (await seen('screen-book')) {

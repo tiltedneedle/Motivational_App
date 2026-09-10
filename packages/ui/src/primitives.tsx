@@ -437,10 +437,27 @@ export function HoldBar({
     if (completed.current) return;
     setHolding(true);
     // Reduced motion still needs the hold, or the gesture stops meaning
-    // anything. What it drops is the sweep: the bar steps rather than glides,
-    // so there is no travelling edge to follow.
+    // anything, and it still needs to SHOW the hold, or there is nothing on
+    // screen saying how much longer to keep pressing.
+    //
+    // `Easing.step0` was the wrong tool: it returns 1 for every t above zero,
+    // so the bar filled completely on the first frame while the timer ran the
+    // full 1.6 seconds underneath. A reduced-motion person saw a finished bar,
+    // let go, and the seal silently drained — they were shown the opposite of
+    // what was happening. What that setting asks us to drop is the travelling
+    // edge, not the information, so the bar now moves in four discrete jumps.
+    const steps = 4;
     anim.current = reducedMotion
-      ? Animated.timing(fill, { toValue: 1, duration: durationMs, useNativeDriver: false, easing: Easing.step0 })
+      ? Animated.sequence(
+          Array.from({ length: steps }, (_, i) =>
+            Animated.timing(fill, {
+              toValue: (i + 1) / steps,
+              duration: durationMs / steps,
+              useNativeDriver: false,
+              easing: Easing.step1,
+            }),
+          ),
+        )
       : Animated.timing(fill, { toValue: 1, duration: durationMs, useNativeDriver: false, easing: Easing.linear });
     anim.current.start(({ finished }: { finished: boolean }) => {
       if (finished && !completed.current) {
@@ -485,6 +502,8 @@ export function HoldBar({
    */
   const pointerDown = useRef(false);
   const pointerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const barRef = useRef<unknown>(null);
+  const sealDirectlyRef = useRef<() => void>(() => undefined);
 
   useEffect(
     () => () => {
@@ -493,10 +512,43 @@ export function HoldBar({
     [],
   );
 
+  /**
+   * Keyboard, heard directly rather than inferred.
+   *
+   * react-native-web turns an Enter press into the same onPressIn / onPressOut
+   * / onPress sequence a finger produces, so the guard that tells a finger from
+   * an assistive activation cannot tell them apart at all — it saw a pointer
+   * sequence and swallowed the only route a keyboard user has to seal their
+   * Book. Verified in the browser: before this, Enter on a focused bar did
+   * nothing whatsoever.
+   *
+   * A real key event carries no pointer, so listening for it on the DOM node
+   * settles the question instead of guessing at it.
+   */
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const node = barRef.current as { addEventListener?: (t: string, f: (e: unknown) => void) => void; removeEventListener?: (t: string, f: (e: unknown) => void) => void } | null;
+    if (!node?.addEventListener) return;
+    const onKey = (raw: unknown) => {
+      const e = raw as { key?: string; preventDefault?: () => void; repeat?: boolean };
+      if (e.repeat) return;
+      if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+      e.preventDefault?.();
+      sealDirectlyRef.current();
+    };
+    node.addEventListener('keydown', onKey);
+    return () => node.removeEventListener?.('keydown', onKey);
+  }, []);
+
+  sealDirectlyRef.current = sealDirectly;
+
   const width = fill.interpolate({ inputRange: [0, 1], outputRange: ['2%', '100%'] });
 
   return (
     <Pressable
+      ref={(node) => {
+        barRef.current = node;
+      }}
       testID={testID}
       onPressIn={() => {
         if (pointerTimer.current) clearTimeout(pointerTimer.current);
