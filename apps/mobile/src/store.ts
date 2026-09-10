@@ -9,6 +9,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { failureReason, guardedStorage, hasFailed } from './storage';
 import {
   DEFAULT_PROFILE,
+  AnthropicProvider,
   LocalProvider,
   buildBookVersion,
   buildDawnBrief,
@@ -197,7 +198,32 @@ export interface MorrowState {
   reset: () => void;
 }
 
-export const ai = guarded(new LocalProvider(), {
+/**
+ * Where the edge functions live, when they live anywhere.
+ *
+ * Unset in every build so far, which is the whole point of what follows: the
+ * app has to be honest about running on ten regular expressions rather than
+ * implying a second opinion it cannot actually get.
+ */
+const EDGE_URL = process.env.EXPO_PUBLIC_MORROW_API ?? '';
+
+/**
+ * The provider the app asks, and the rules it is held to.
+ *
+ * `guarded()` re-verifies everything either provider returns, so the rules do
+ * not depend on which one answered. With no endpoint configured the remote side
+ * is simply absent and the device's own engines are the whole answer.
+ *
+ * This plumbing exists because the "second opinion" on the safety screen was
+ * for a while a call that could not possibly disagree: both sides resolved to
+ * the same ten regular expressions over the same string, so the verdict was
+ * always identical and the extra call bought nothing but the appearance of
+ * rigour. `hasRemoteProvider` is what the app checks before claiming otherwise.
+ */
+export const hasRemoteProvider = EDGE_URL.length > 0;
+
+export const ai = guarded(hasRemoteProvider ? new AnthropicProvider({ endpoint: EDGE_URL }) : new LocalProvider(), {
+  fallback: new LocalProvider(),
   onViolation: (info) => {
     // In the product this is a PostHog event with no free text.
     if (__DEV__) console.warn('[authorship]', info.call, info.reason);
@@ -341,7 +367,10 @@ export const useMorrow = create<MorrowState>()(
         // read-back, and a slow network must not hold the door shut. If the
         // answer comes back worse, the card is raised then and the writing is
         // reclassified so it can no longer be quoted or sealed.
-        if (risk.risk !== 'crisis') {
+        // Only worth the round trip when there is actually another opinion to
+        // get. Without an endpoint both sides are the same regular expressions
+        // over the same string, and the call could never disagree.
+        if (risk.risk !== 'crisis' && hasRemoteProvider) {
           void ai
             .safety(body)
             .then((second) => {

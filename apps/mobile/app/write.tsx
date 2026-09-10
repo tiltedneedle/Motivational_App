@@ -62,7 +62,9 @@ export default function Write() {
   phaseRef.current = phase;
 
   const doorway = DOORWAY[kind];
-  const seeds = goals.map((g) => g.title).slice(0, 4);
+  const seeds = goals
+    .map((g) => ({ title: g.title, authored: g.titleAuthored !== false }))
+    .slice(0, 4);
   const resumable = draftWorthKeeping(draft);
 
   useEffect(() => {
@@ -323,16 +325,29 @@ export default function Write() {
                 into the writing, which put words the person only *chose* from
                 a list into prose the Book then counts as theirs.
               */}
-              {seeds.map((s) => (
-                <UserText
-                  key={s}
-                  italic
-                  accessibilityLabel={`One of your goals: ${s}`}
-                  style={{ fontSize: 13, lineHeight: 17, color: night.ink3 }}
-                >
-                  “{s}”
-                </UserText>
-              ))}
+              {seeds.map((s) =>
+                // A goal named by tapping through the fixed bank is the app's
+                // phrase. Quoting it back in the serif, in the margin of the
+                // room where they are writing, says they wrote it.
+                s.authored ? (
+                  <UserText
+                    key={s.title}
+                    italic
+                    accessibilityLabel={`One of your goals: ${s.title}`}
+                    style={{ fontSize: 13, lineHeight: 17, color: night.ink3 }}
+                  >
+                    “{s.title}”
+                  </UserText>
+                ) : (
+                  <Body
+                    key={s.title}
+                    accessibilityLabel={`One of your goals: ${s.title}`}
+                    style={{ fontSize: 13, lineHeight: 17, color: night.ink3 }}
+                  >
+                    {s.title}
+                  </Body>
+                ),
+              )}
             </View>
           ) : null}
         </View>

@@ -75,7 +75,11 @@ export interface IdentityProposal {
 export function proposeIdentity(ideal: string, strategies?: string): IdentityProposal {
   const source = `${strategies ?? ''} ${ideal ?? ''}`;
   const m = source.match(
-    /\b[iI]\s*(?:am|'m|’m)\s+((?:not\s+|no\s+longer\s+|already\s+|finally\s+|still\s+)?[a-z][\w'’-]*(?:\s+[\w'’,-]+){1,10})/,
+    // Up to the end of the clause rather than a fixed number of words. Capped
+    // at eleven it silently cut longer sentences in half and presented the
+    // fragment as something they had written, which is the one thing this
+    // function must not do.
+    /\b[iI]\s*(?:am|'m|’m)\s+((?:not\s+|no\s+longer\s+|already\s+|finally\s+|still\s+)?[a-z][\w'’-]*(?:\s+[\w'’,-]+)*?)(?=\s*[.!?;]|\s+(?:and|but|so|because|which|when|while)\b|$)/,
   );
   const clause = m?.[1]?.trim().replace(/[.,;:]+$/, '').replace(/\s+/g, ' ');
   if (!clause) return { clause: '', framing: null };
