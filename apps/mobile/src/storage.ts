@@ -30,6 +30,17 @@ import type { StateStorage } from 'zustand/middleware';
 /** Where the unreadable bytes go, so a bad read never means a lost Book. */
 export const QUARANTINE_PREFIX = 'morrow-unreadable-';
 
+/**
+ * The one key everything the person has written lives under.
+ *
+ * Named here rather than inline in the persist config because two places need
+ * it: the store, and the error boundary, which reads the blob straight off
+ * disk precisely so that it does not depend on the store still working. A
+ * magic string copied into both is a rename away from an export button that
+ * silently finds nothing.
+ */
+export const STORE_KEY = 'morrow-v1';
+
 let failed = false;
 let failureDetail: string | null = null;
 

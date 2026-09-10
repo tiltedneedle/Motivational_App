@@ -557,6 +557,63 @@ async function main() {
 
     await page.setViewportSize({ width: 420, height: 900 });
 
+    // ---- the way out of a screen that broke
+    //
+    // The boundary says "export it first if you would rather be certain" and
+    // for a long time offered no way to do it: the only control was Try again,
+    // and Settings is behind the router the boundary may have just caught. So
+    // it reads the blob straight off disk — not through the store, which is one
+    // of the things that could be broken — and spills it onto the screen when
+    // the platform has no share sheet, which is every desktop browser.
+    //
+    // Broken here by giving the sealed Book a null chapter list, which is what
+    // a half-written record on disk would look like.
+    // Everything the run has seen up to here. Only the errors this section
+    // causes on purpose are dropped — clearing the whole list would quietly
+    // excuse every real error before it, on the one check that exists to catch
+    // them.
+    const errorsBefore = pageErrors.slice();
+
+    const saved = await page.evaluate(() => {
+      const key = Object.keys(localStorage).find((k) => k.includes('morrow'));
+      if (!key) return null;
+      const before = localStorage.getItem(key);
+      const raw = JSON.parse(before);
+      const book = raw.state.books?.[raw.state.books.length - 1];
+      if (!book) return null;
+      book.chapters = null;
+      localStorage.setItem(key, JSON.stringify(raw));
+      return before;
+    });
+
+    if (saved) {
+      await page.goto(`${BASE}/book`, { waitUntil: 'networkidle' });
+      await page.clock.runFor(1500);
+      await page.waitForTimeout(600);
+      check('a screen that throws is caught rather than blanking', await seen('error-boundary'));
+
+      if (await seen('error-boundary')) {
+        await tap('error-export');
+        await page.waitForTimeout(800);
+        const spilled = (await seen('error-spilled')) ? await text('error-spilled') : '';
+        check(
+          'and the writing can still be got out of it',
+          spilled.includes('"state"') && spilled.length > 200,
+          spilled ? `${spilled.length} chars` : '(nothing spilled)',
+        );
+      }
+
+      // Put the device back the way it was; the checks after this need a Book.
+      await page.evaluate((before) => {
+        const key = Object.keys(localStorage).find((k) => k.includes('morrow'));
+        if (key) localStorage.setItem(key, before);
+      }, saved);
+      // pageerror fires for the throw this test caused on purpose. Rewind to
+      // exactly what was there before, so a real one is still a failure.
+      pageErrors.length = 0;
+      pageErrors.push(...errorsBefore);
+    }
+
     // ---- the two places PRD §11.6 requires the disclosure, and the helplines
     //
     // "Morrow's coach is an AI" at first chat and in Settings. It was in

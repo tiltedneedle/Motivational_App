@@ -6,7 +6,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
-import { failureReason, guardedStorage, hasFailed } from './storage';
+import { STORE_KEY, failureReason, guardedStorage, hasFailed } from './storage';
 import {
   DEFAULT_PROFILE,
   AnthropicProvider,
@@ -68,6 +68,18 @@ export interface ToastState {
   undoId?: string;
   kind?: 'park' | 'add' | 'info';
 }
+
+/**
+ * What came back when a scene was asked for.
+ *
+ * Three different nothings, kept apart because the screen owes each of them a
+ * different sentence: no such goal, nothing of theirs to build it from, and a
+ * request that failed. They were one `null` and Envision printed the middle
+ * message for all three.
+ */
+export type SceneResult =
+  | { ok: true; scene: Scene }
+  | { ok: false; reason: 'no-goal' | 'nothing-to-build-from' | 'failed' };
 
 export interface MorrowState {
   hydrated: boolean;
@@ -162,14 +174,20 @@ export interface MorrowState {
 
   // envision
   /**
-   * Draw a scene for a goal, or hand back the one already drawn.
+   * Draw a scene for a goal, or hand back the one already drawn — and say
+   * which kind of nothing came back when none did.
    *
-   * Returns null when there is nothing of the person's own to build it from.
-   * That is not a failure to handle quietly: a scene with no detail of their
-   * life in it is stock footage, and the screen shows its own typographic card
-   * rather than pretending.
+   * A scene with no detail of their life in it is stock footage, so "nothing
+   * of theirs to build it from" is a real answer the screen shows its own
+   * typographic card for rather than pretending. But it is not the only one.
+   *
+   * `null` used to mean two unrelated things — "there is nothing of yours to
+   * build this from" and "the call failed" — and Envision printed the first
+   * message for both. Somebody who had written plenty was told their writing
+   * was not enough, because a request had failed. Those are different
+   * sentences and they need different answers, so they are different results.
    */
-  makeScene: (goalId: string, type: Scene['type']) => Promise<Scene | null>;
+  makeScene: (goalId: string, type: Scene['type']) => Promise<SceneResult>;
 
   // today
   setMoveStatus: (moveId: string, status: 'todo' | 'done' | 'skip') => void;
@@ -645,16 +663,16 @@ export const useMorrow = create<MorrowState>()(
       makeScene: async (goalId, type) => {
         const s = get();
         const existing = s.scenes.find((sc) => sc.goalId === goalId && sc.type === type);
-        if (existing) return existing;
+        if (existing) return { ok: true as const, scene: existing };
 
         const goal = s.goals.find((g) => g.id === goalId);
-        if (!goal) return null;
+        if (!goal) return { ok: false as const, reason: 'no-goal' as const };
 
         // Built from their own material and nothing else: the Impact line for
         // who else it changes, and the Fifteen for the texture of the morning.
         const impact = s.analyses.find((a) => a.goalId === goalId && a.kind === 'impact' && a.line.trim());
         const ideal = latestText(s.texts, 'ideal')?.body ?? '';
-        if (!ideal.trim() && !impact?.line.trim()) return null;
+        if (!ideal.trim() && !impact?.line.trim()) return { ok: false as const, reason: 'nothing-to-build-from' as const };
 
         try {
           const out = await ai.scene({
@@ -664,7 +682,9 @@ export const useMorrow = create<MorrowState>()(
             type,
           });
           // `guarded` empties the narrative when nothing of theirs is in it.
-          if (!out.narrative.trim()) return null;
+          // That is the same answer as having written nothing: there was no
+          // sentence of theirs for it to be made of.
+          if (!out.narrative.trim()) return { ok: false as const, reason: 'nothing-to-build-from' as const };
 
           const scene: Scene = {
             id: newId('scene'),
@@ -680,9 +700,11 @@ export const useMorrow = create<MorrowState>()(
             createdAt: new Date().toISOString(),
           };
           set((st) => ({ scenes: [...st.scenes.filter((x) => !(x.goalId === goalId && x.type === type)), scene] }));
-          return scene;
-        } catch {
-          return null;
+          return { ok: true as const, scene };
+        } catch (err) {
+          // The call failed. Not the same thing at all, and the screen says so.
+          if (__DEV__) console.warn('[morrow] scene failed', err);
+          return { ok: false as const, reason: 'failed' as const };
         }
       },
 
@@ -932,7 +954,7 @@ export const useMorrow = create<MorrowState>()(
       reset: () => set({ profile: DEFAULT_PROFILE, ...EMPTY }),
     }),
     {
-      name: 'morrow-v1',
+      name: STORE_KEY,
       // Not `createJSONStorage(AsyncStorage)`. The guard has to sit BELOW
       // zustand, because zustand's persist middleware replaces `api.setState`
       // with one that writes on every call — including the call that would set

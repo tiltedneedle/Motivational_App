@@ -54,8 +54,16 @@ export default function Envision() {
   const [goalId, setGoalId] = useState<string | null>(goals[0]?.id ?? null);
   const goal = goals.find((g) => g.id === goalId) ?? goals[0];
   const [drawing, setDrawing] = useState<SceneType | null>(null);
-  /** Types that came back with nothing of theirs to build from. */
-  const [empty, setEmpty] = useState<Record<string, boolean>>({});
+  /**
+   * Why a type has no scene, when it has none.
+   *
+   * Two different reasons, and for a long time one message: "there is not
+   * enough of your own writing behind this one yet" was printed whether the
+   * person had written nothing or the request had simply failed. Telling
+   * somebody who has written plenty that their writing is not enough is the
+   * app blaming them for its own bad evening.
+   */
+  const [why, setWhy] = useState<Record<string, 'nothing-to-build-from' | 'failed'>>({});
 
   const draw = useCallback(
     async (type: SceneType) => {
@@ -63,7 +71,12 @@ export default function Envision() {
       setDrawing(type);
       try {
         const made = await makeScene(goal.id, type);
-        setEmpty((e) => ({ ...e, [`${goal.id}:${type}`]: made === null }));
+        setWhy((w) => {
+          const next = { ...w };
+          if (made.ok) delete next[`${goal.id}:${type}`];
+          else next[`${goal.id}:${type}`] = made.reason === 'failed' ? 'failed' : 'nothing-to-build-from';
+          return next;
+        });
       } finally {
         setDrawing(null);
       }
@@ -76,7 +89,7 @@ export default function Envision() {
   useEffect(() => {
     if (!goal) return;
     const has = scenes.some((s) => s.goalId === goal.id && s.type === 'practice');
-    if (!has && !empty[`${goal.id}:practice`]) void draw('practice');
+    if (!has && !why[`${goal.id}:practice`]) void draw('practice');
     // Only when the goal changes: drawing is idempotent but not free.
   }, [goal?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -132,7 +145,7 @@ export default function Envision() {
 
           {SCENES.map(({ type, title, blurb }) => {
             const scene = scenes.find((s) => s.goalId === goal.id && s.type === type);
-            const nothing = empty[`${goal.id}:${type}`];
+            const missing = why[`${goal.id}:${type}`];
             const busy = drawing === type;
             return (
               <View key={type} testID={`envision-${type}`} style={{ gap: 8 }}>
@@ -161,7 +174,17 @@ export default function Envision() {
                       </View>
                     ) : null}
                   </View>
-                ) : nothing ? (
+                ) : missing === 'failed' ? (
+                  <View
+                    testID={`scene-failed-${type}`}
+                    style={{ borderWidth: 1, borderColor: night.line, borderRadius: 22, padding: 18, gap: 6 }}
+                  >
+                    <Body style={{ color: night.ink2 }}>
+                      This one would not draw just now. Nothing of yours was lost, and nothing was made up in its place.
+                    </Body>
+                    <TextButton testID={`scene-retry-${type}`} label="Try again" onPress={() => void draw(type)} />
+                  </View>
+                ) : missing ? (
                   <View
                     testID={`scene-empty-${type}`}
                     style={{
