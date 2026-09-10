@@ -20,6 +20,8 @@ import {
   almanac,
   consistencyCaption,
   detectReturns,
+  formatDay,
+  plural,
   dayOf,
   type AlmanacMark,
 } from '@morrow/core';
@@ -127,7 +129,7 @@ export default function Progress() {
                 <Body>Most people never come back once.</Body>
                 {returns.slice(-3).reverse().map((r) => (
                   <Body key={r.returnedOn} style={{ fontSize: 13 }}>
-                    Away {r.gapDays} {r.gapDays === 1 ? 'day' : 'days'}, back on {r.returnedOn}.
+                    Away {plural(r.gapDays, 'day')}, back on {formatDay(r.returnedOn, { today })}.
                   </Body>
                 ))}
               </>
@@ -166,7 +168,7 @@ export default function Progress() {
                     >
                       <View style={{ flexDirection: 'row', gap: 10, alignItems: 'baseline', flexWrap: 'wrap' }}>
                         <Label style={{ color: accent.coralText }}>{EVIDENCE_LABEL[e.kind] ?? e.kind}</Label>
-                        <Label>{e.day}</Label>
+                        <Label>{formatDay(e.day, { weekday: true, today })}</Label>
                         {goal ? <Label style={{ textTransform: 'none', letterSpacing: 0 }}>{goal}</Label> : null}
                       </View>
                       {/*
@@ -182,7 +184,7 @@ export default function Progress() {
                   <Pressable
                     testID="ledger-more"
                     accessibilityRole="button"
-                    accessibilityLabel={`Show all ${ledger.length} entries`}
+                    accessibilityLabel={`Show all ${plural(ledger.length, 'entry', 'entries')}`}
                     onPress={() => setShowAll(true)}
                     style={{ paddingVertical: 14 }}
                   >

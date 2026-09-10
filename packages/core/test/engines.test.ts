@@ -23,12 +23,14 @@ import {
   resumeWriting,
   canResume,
   followUpPrompt,
+  formatDay,
   framingSet,
   guessLine,
   initialInterview,
   isReturning,
   minVersionOf,
   nextNudge,
+  plural,
   polish,
   proposeIdentity,
   identityLineText,
@@ -249,6 +251,36 @@ describe('the dawn brief inside a sentence', () => {
     );
     expect(brief.today).toContain('Tuesday');
     expect(brief.today).not.toContain('tuesday');
+  });
+});
+
+describe('dates a person can read', () => {
+  it('writes the day the way it is said, not the way it is stored', () => {
+    expect(formatDay('2026-10-10', { today: '2026-09-10' })).toBe('10 Oct');
+    expect(formatDay('2026-09-08', { today: '2026-09-10', weekday: true })).toBe('Tue 8 Sep');
+  });
+
+  it('adds the year only when it is not this one', () => {
+    expect(formatDay('2027-01-02', { today: '2026-09-10' })).toBe('2 Jan 2027');
+    expect(formatDay('2026-01-02', { today: '2026-09-10' })).toBe('2 Jan');
+  });
+
+  it('hands back anything that is not a date unchanged', () => {
+    expect(formatDay('')).toBe('');
+    expect(formatDay('soon')).toBe('soon');
+  });
+});
+
+describe('counting things in copy', () => {
+  it('does not write "1 goals"', () => {
+    expect(plural(1, 'goal')).toBe('1 goal');
+    expect(plural(0, 'goal')).toBe('0 goals');
+    expect(plural(2, 'goal')).toBe('2 goals');
+  });
+
+  it('takes an irregular plural when the word needs one', () => {
+    expect(plural(1, 'entry', 'entries')).toBe('1 entry');
+    expect(plural(3, 'entry', 'entries')).toBe('3 entries');
   });
 });
 

@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { consistencyCaption, dayOf, domainMeta, isReturning, returnsLetter, sourceLineFor } from '@morrow/core';
+import { consistencyCaption, dayOf, domainMeta, isReturning, plural, returnsLetter, sourceLineFor } from '@morrow/core';
 import {
   Body,
   Chip,
@@ -332,7 +332,7 @@ export default function Today() {
                     <Pressable
                       testID={`practice-open-${practice.id}`}
                       accessibilityRole="button"
-                      accessibilityLabel={`${practice.title}, ${done} of ${total} steps. Open the runner.`}
+                      accessibilityLabel={`${practice.title}, ${done} of ${plural(total, 'step')}. Open the runner.`}
                       onPress={() => router.push(`/run?id=${practice.id}`)}
                       style={{ flex: 1 }}
                     >

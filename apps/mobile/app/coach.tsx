@@ -12,6 +12,7 @@ import {
   contentGuard,
   dayOf,
   detectReturns,
+  plural,
   replyToChip,
   replyToText,
   screen,
@@ -108,7 +109,7 @@ export default function Coach() {
           <Stone size={46} gradient={['#FFFFFF', '#F3F1EC', '#CFCBC2', '#8E8A80']} polish={1} />
           <View style={{ flex: 1 }}>
             <Label>Your coach</Label>
-            <Body style={{ fontSize: 13 }}>{thread.length ? 'Listening' : `Remembers ${days.length} days`}</Body>
+            <Body style={{ fontSize: 13 }}>{thread.length ? 'Listening' : `Remembers ${plural(days.length, 'day')}`}</Body>
           </View>
           <TextButton testID="coach-back" label="Today" onPress={() => router.replace('/today')} />
         </View>

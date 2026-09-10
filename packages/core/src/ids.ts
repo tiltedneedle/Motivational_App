@@ -77,3 +77,40 @@ export function ordinal(n: number): string {
     tens >= 11 && tens <= 13 ? 'th' : i % 10 === 1 ? 'st' : i % 10 === 2 ? 'nd' : i % 10 === 3 ? 'rd' : 'th';
   return `${i}${suffix}`;
 }
+
+/**
+ * "1 goal", "2 goals". The plural is only ever an "s" away in this product's
+ * copy, and where it is not, pass the irregular form.
+ *
+ * Worth a helper rather than a ternary at each site: the Settings screen read
+ * "1 pieces of writing, 1 goals, 5 lines, 1 edition of the Book", which is the
+ * kind of sentence that quietly tells someone nobody looked at this screen.
+ */
+export function plural(n: number, one: string, many?: string): string {
+  return `${n} ${n === 1 ? one : (many ?? `${one}s`)}`;
+}
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+/**
+ * A date the way a person says it: "10 Oct", or "Thu 10 Oct" when the day of
+ * the week is the useful part.
+ *
+ * Screens were printing the stored form — "MILESTONE 1 · BY 2026-10-10", "back
+ * on 2026-09-08" — which is a database value on a page about somebody's life.
+ * The year is added only when it is not the current one, because on a plan that
+ * runs twelve weeks it is noise.
+ */
+export function formatDay(iso: string, opts: { weekday?: boolean; today?: string } = {}): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec((iso ?? '').trim());
+  if (!m) return iso ?? '';
+  const [, y, mo, d] = m;
+  const month = MONTHS[Number(mo) - 1] ?? mo;
+  const day = String(Number(d));
+  const thisYear = (opts.today ?? new Date().toISOString().slice(0, 10)).slice(0, 4);
+  const year = y === thisYear ? '' : ` ${y}`;
+  if (!opts.weekday) return `${day} ${month}${year}`;
+  const dow = WEEKDAYS[new Date(`${iso}T00:00:00Z`).getUTCDay()] ?? '';
+  return `${dow} ${day} ${month}${year}`;
+}

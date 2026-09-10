@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Platform, ScrollView, Share, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { bookToText } from '@morrow/core';
+import { bookToText, plural } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, day } from '@morrow/ui';
 import { useLatestBook, useMorrow } from '../src/store';
 
@@ -55,8 +55,9 @@ export default function Settings() {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18, gap: 22 }}>
           <Statement>What Morrow knows about you.</Statement>
           <Body>
-            {state.texts.length} pieces of writing, {state.goals.length} goals, {state.analyses.length} lines, {state.books.length}{' '}
-            {state.books.length === 1 ? 'edition' : 'editions'} of the Book. All of it on this device.
+            {plural(state.texts.length, 'piece')} of writing, {plural(state.goals.length, 'goal')},{' '}
+            {plural(state.analyses.length, 'line')}, {plural(state.books.length, 'edition')} of the Book. All of it on
+            this device.
           </Body>
 
           <View style={{ gap: 10 }}>

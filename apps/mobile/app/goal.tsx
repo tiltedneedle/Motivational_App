@@ -5,7 +5,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ANALYSIS_ORDER, ANALYSIS_TITLES, domainMeta, sourceLineFor } from '@morrow/core';
+import { ANALYSIS_ORDER, ANALYSIS_TITLES, domainMeta, formatDay, sourceLineFor } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Ring, Rule, Statement, Stone, Studio, TextButton, UserText, accent, day } from '@morrow/ui';
 import { analysisPlan } from './stone';
 import { analysesFor, useGoals, useMorrow } from '../src/store';
@@ -128,7 +128,7 @@ export default function GoalScreen() {
               {plan.milestones.slice(0, 1).map((ms) => (
                 <View key={ms.id} style={{ gap: 4 }}>
                   <Label style={{ color: accent.coralText }}>
-                    Milestone 1 · by {ms.targetDate}
+                    Milestone 1 · by {formatDay(ms.targetDate)}
                   </Label>
                   <Statement style={{ fontSize: 22, lineHeight: 27 }}>{ms.title}</Statement>
                   {/*
