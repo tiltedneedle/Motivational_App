@@ -349,6 +349,27 @@ async function main() {
     await page.waitForTimeout(900);
     check('sealing returns to today', await seen('screen-today'));
 
+    // ---- Progress: the ledger, the almanac and the score
+    await page.goto(`${BASE}/progress`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(500);
+    check('progress screen', await seen('screen-progress'));
+    check('the almanac renders a year of stones', await seen('progress-almanac'));
+
+    // The ledger is the point: it must contain what the run actually did, in
+    // the person's own words, not a count of them.
+    const ledgerText = (await seen('progress-ledger'))
+      ? await page.locator('[data-testid="progress-ledger"]').innerText()
+      : '';
+    check(
+      'the ledger holds the day the run sealed, in the user own words',
+      ledgerText.includes('ten floors') || ledgerText.includes('out the back door') || ledgerText.includes('6:40'),
+      ledgerText.slice(0, 160) || '(ledger empty)',
+    );
+
+    const progressScore = await text('progress-score');
+    check('the score is a number, not a blank', /^\d+$/.test(progressScore.trim()), progressScore);
+
     // ---- the safety gate, on its own path
     await page.goto(`${BASE}/coach`, { waitUntil: 'networkidle' });
     await page.clock.runFor(2000);

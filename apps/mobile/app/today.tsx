@@ -279,8 +279,14 @@ export default function Today() {
             </View>
           ) : null}
 
-          {/* Consistency */}
-          <View style={{ marginTop: 26, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+          {/* Consistency. Tapping it opens the thing it is a summary of. */}
+          <Pressable
+            testID="today-consistency"
+            accessibilityRole="button"
+            accessibilityLabel={`Consistency ${score.score}. Open the ledger and the almanac.`}
+            onPress={() => router.push('/progress')}
+            style={{ marginTop: 26, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}
+          >
             <View>
               <Label>Consistency</Label>
               <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
@@ -296,7 +302,7 @@ export default function Today() {
             <View style={{ width: 140, height: 10, borderRadius: 5, backgroundColor: day.surface2, overflow: 'hidden' }}>
               <View style={{ width: `${score.score}%`, height: '100%', backgroundColor: accent.coral }} />
             </View>
-          </View>
+          </Pressable>
         </ScrollView>
 
         {/* tab bar */}
