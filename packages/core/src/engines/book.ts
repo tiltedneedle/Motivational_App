@@ -30,6 +30,12 @@ export class SealRefused extends Error {
 export interface BookInput {
   version: number;
   title: string;
+  /**
+   * False when the spine title came from a framing chip or any other fixed
+   * string rather than from the person typing it. Like a goal name from the
+   * bank, it then counts as neither the user's prose nor rival prose.
+   */
+  titleAuthored?: boolean;
   track: DepthTrack;
   ideal: string;
   shadow: string | null;
@@ -61,6 +67,11 @@ export function buildChapters(input: BookInput): BookChapter[] {
             framingLabel: framingLabel(kind, goal.domain, a.framingId),
             text: a.paragraph?.trim() || a.line.trim(),
             ...(a.line2?.trim() ? { text2: a.line2.trim() } : {}),
+            // Carried through, not dropped. If any future path ever writes
+            // prose about this person that they did not write, it arrives here
+            // and the ratio below falls. A tripwire nothing is wired to is not
+            // a tripwire.
+            ...(a.generated?.trim() ? { generated: a.generated.trim() } : {}),
           },
         ];
       });
@@ -99,7 +110,11 @@ export function buildChapters(input: BookInput): BookChapter[] {
 export function authorshipRatio(input: BookInput, chapters: BookChapter[]): number {
   let user = 0;
   let generated = 0;
-  user += input.ideal.length + (input.shadow?.length ?? 0) + input.iWill.length + input.title.length;
+  user += input.ideal.length + (input.shadow?.length ?? 0) + input.iWill.length;
+  // The spine title counts only when the person typed it. A title filled in
+  // from a framing chip is a label like any other from the bank: no credit,
+  // no penalty.
+  if (input.titleAuthored !== false) user += input.title.length;
   for (const ch of chapters) {
     // A goal named by tapping through the fixed bank is not the person's
     // writing, so it earns them no credit here. Nor is it counted against

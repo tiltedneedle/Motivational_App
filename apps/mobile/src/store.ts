@@ -305,6 +305,10 @@ export const useMorrow = create<MorrowState>()(
             {
               version: s.books.length + 1,
               title: s.bookTitle || 'Untitled',
+              // "Untitled" is the app's word, so it earns no authorship credit.
+              // Anything else in this field was typed by the person: the
+              // framing chips on the rank screen no longer fill it in.
+              titleAuthored: !!s.bookTitle.trim(),
               track: s.profile.track,
               ideal: [ideal?.body ?? '', ...additions].filter(Boolean).join('\n\n'),
               shadow: shadow?.body ?? null,

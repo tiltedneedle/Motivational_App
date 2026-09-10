@@ -120,6 +120,13 @@ export const GoalAnalysis = z.object({
   line2: z.string().optional(),
   /** Full-track paragraph. */
   paragraph: z.string().optional(),
+  /**
+   * Prose about this person's life that they did not write. Nothing in the
+   * product writes here today, and that is the point: the day something does,
+   * it flows into the Book's `generated` slot, the authorship ratio falls, and
+   * the seal refuses (PRD §11.1).
+   */
+  generated: z.string().optional(),
   specificity: z.number().min(0).max(1),
   followupShown: z.boolean(),
   writtenAt: z.string(),
@@ -131,7 +138,19 @@ export const Portrait = z.object({
   /** All of these quote or restate the user's own lines; `identityLine` is the only proposal, and it is editable. */
   title: z.string(),
   why: z.string(),
+  /**
+   * The user's own clause, verbatim, and nothing else. This is what gets set in
+   * the serif. It is empty until either the extractor finds a clause the person
+   * actually wrote or the person writes one.
+   */
   identityLine: z.string(),
+  /**
+   * The fixed words in front of it ("I'm becoming someone who is"). Chrome:
+   * printed small and grey in the interface face, never in the serif, and
+   * excluded from the authorship ratio like every other framing label.
+   * Null once the user has written their own line, which needs no framing.
+   */
+  identityFraming: z.string().nullable(),
   identityLineEdited: z.boolean(),
   obstacle: z.string(),
   ifThen: z.string(),

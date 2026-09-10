@@ -15,14 +15,23 @@ export default function GoalScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const state = useMorrow((s) => s);
   const goals = useGoals();
-  const goal = goals.find((g) => g.id === id) ?? goals[0];
+  // Never fall back to another goal. An id that no longer resolves means the
+  // goal was dropped, and showing a different one in its place attributes
+  // somebody's plan and their own sentences to a goal they did not open.
+  const goal = id ? goals.find((g) => g.id === id) : goals[0];
+  const goBack = () => (router.canGoBack() ? router.back() : router.replace('/today'));
 
   if (!goal) {
     return (
       <Studio testID="screen-goal">
         <SafeAreaView style={{ flex: 1, padding: 22, justifyContent: 'center' }}>
-          <Statement>No goal here.</Statement>
-          <InkButton label="Back to today" onPress={() => router.replace('/today')} style={{ marginTop: 16 }} />
+          <Statement>{id ? 'That goal is no longer here.' : 'No goal here.'}</Statement>
+          {id ? (
+            <Body style={{ marginTop: 8 }}>
+              You may have dropped it. Everything you wrote for it is still in your Book.
+            </Body>
+          ) : null}
+          <InkButton label="Back to today" onPress={goBack} style={{ marginTop: 16 }} />
         </SafeAreaView>
       </Studio>
     );
@@ -40,7 +49,7 @@ export default function GoalScreen() {
     <Studio testID="screen-goal">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12 }}>
-          <TextButton testID="goal-back" label="← Today" onPress={() => router.replace('/today')} />
+          <TextButton testID="goal-back" label="← Today" onPress={goBack} />
           <Label>{goal.domainLabel ?? meta.label}</Label>
         </View>
 
@@ -58,6 +67,13 @@ export default function GoalScreen() {
           {portrait?.identityLine ? (
             <View style={{ gap: 4 }}>
               <Label>Who you are becoming</Label>
+              {/*
+                The framing is the app's words and the clause is the user's, so
+                they are set in different faces. Only the serif is theirs.
+              */}
+              {portrait.identityFraming ? (
+                <Label style={{ textTransform: 'none', letterSpacing: 0 }}>{portrait.identityFraming}</Label>
+              ) : null}
               <UserText italic testID="goal-identity">{portrait.identityLine}</UserText>
             </View>
           ) : null}
@@ -115,17 +131,36 @@ export default function GoalScreen() {
                     Milestone 1 · by {ms.targetDate}
                   </Label>
                   <Statement style={{ fontSize: 22, lineHeight: 27 }}>{ms.title}</Statement>
-                  <Body style={{ fontSize: 13 }}>Proof, in your words: “{ms.proof}”</Body>
+                  {/*
+                    "In your words" is only true when a Monitoring line is
+                    behind it. Without one the plan carries a placeholder, and
+                    calling the app's own sentence the user's is the exact thing
+                    the authorship rule exists to prevent.
+                  */}
+                  {ms.proofSourceLineId ? (
+                    <Body style={{ fontSize: 13 }}>
+                      Proof, in your words: <UserText italic style={{ fontSize: 13 }}>“{ms.proof}”</UserText>
+                    </Body>
+                  ) : (
+                    <Body style={{ fontSize: 13 }}>
+                      No proof yet. Write the Monitoring line and it goes here.
+                    </Body>
+                  )}
                 </View>
               ))}
-              {plan.moves.map((m) => (
-                <View key={m.id} testID={`plan-move-${m.id}`} style={{ paddingVertical: 10, borderTopWidth: 1, borderTopColor: day.line2, gap: 3 }}>
-                  <Body style={{ color: day.ink, fontSize: 16 }}>{m.title}</Body>
-                  <UserText italic style={{ fontSize: 13, color: day.ink3 }}>
-                    from “{sourceLineFor(m, analyses) ?? 'your line'}”
-                  </UserText>
-                </View>
-              ))}
+              {plan.moves.map((m) => {
+                const from = sourceLineFor(m, analyses);
+                return (
+                  <View key={m.id} testID={`plan-move-${m.id}`} style={{ paddingVertical: 10, borderTopWidth: 1, borderTopColor: day.line2, gap: 3 }}>
+                    <Body style={{ color: day.ink, fontSize: 16 }}>{m.title}</Body>
+                    {from ? (
+                      <Body style={{ fontSize: 13, color: day.ink2 }}>
+                        from <UserText italic style={{ fontSize: 13, color: day.ink2 }}>“{from}”</UserText>
+                      </Body>
+                    ) : null}
+                  </View>
+                );
+              })}
             </View>
           ) : null}
         </ScrollView>

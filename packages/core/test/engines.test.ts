@@ -28,7 +28,8 @@ import {
   minVersionOf,
   nextNudge,
   polish,
-  proposeIdentityLine,
+  proposeIdentity,
+  identityLineText,
   question,
   reading,
   replyToChip,
@@ -462,9 +463,21 @@ describe('helpers', () => {
   });
 
   it('proposes an identity line only from the user own words', () => {
-    const line = proposeIdentityLine("I am out the back door before the kettle boils, every Tuesday");
-    expect(line).toContain('out the back door');
-    expect(proposeIdentityLine('')).toBe('');
+    const p = proposeIdentity('I am out the back door before the kettle boils, every Tuesday');
+    // The clause is the user's, verbatim, and carries none of the framing.
+    expect(p.clause).toBe('out the back door before the kettle boils, every Tuesday');
+    expect(p.framing).toBe("I'm becoming someone who is");
+    expect(identityLineText(p)).toBe(
+      "I'm becoming someone who is out the back door before the kettle boils, every Tuesday",
+    );
+  });
+
+  it('proposes nothing when the person wrote no state about themselves', () => {
+    // "I run every morning" is an action. Fitting it to the frame would mean
+    // conjugating their verb, and the app does not get to write.
+    expect(proposeIdentity('I run every morning before work').clause).toBe('');
+    expect(proposeIdentity('').clause).toBe('');
+    expect(identityLineText(proposeIdentity(''))).toBe('');
   });
 
   it('assigns 1am to yesterday when the day boundary is 3am', () => {

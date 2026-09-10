@@ -6,7 +6,10 @@
   "scripts": {
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm --filter @morrow/core test",
+    "test:functions": "node scripts/check-functions.mjs",
+    "build:web": "pnpm --filter mobile export:web",
     "test:e2e": "node scripts/e2e.mjs",
+    "verify": "pnpm typecheck && pnpm test && pnpm test:functions && pnpm build:web && pnpm test:e2e",
     "web": "pnpm --filter mobile web",
     "lint": "pnpm -r lint"
   },

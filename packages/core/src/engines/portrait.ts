@@ -26,27 +26,69 @@ function lineOf(analyses: GoalAnalysis[], kind: AnalysisKind): GoalAnalysis | un
   return analyses.find((a) => a.kind === kind && a.line.trim().length > 0);
 }
 
-/** The first sentence of the user's writing, verbatim. */
-export function firstSentence(text: string): string {
-  const t = (text ?? '').trim();
+export const FIRST_SENTENCE_MAX = 180;
+
+/**
+ * The first sentence of the user's writing, verbatim.
+ *
+ * A sentence longer than the cap is cut at a word boundary, never mid-word: a
+ * quotation that ends in the middle of someone's word reads as a bug in the
+ * app rather than as their sentence, which is the opposite of the point.
+ */
+export function firstSentence(text: string, max = FIRST_SENTENCE_MAX): string {
+  const t = (text ?? '').replace(/\s+/g, ' ').trim();
   if (!t) return '';
-  const m = t.match(/^[^.!?\n]{8,180}[.!?]?/);
-  return (m?.[0] ?? t.slice(0, 180)).trim();
+
+  const terminated = t.match(/^[^.!?\n]{1,}?[.!?]/);
+  const candidate = terminated?.[0]?.trim() ?? t;
+  if (candidate.length <= max) return candidate;
+
+  const window = candidate.slice(0, max + 1);
+  const lastSpace = window.lastIndexOf(' ');
+  const cut = lastSpace > Math.floor(max * 0.5) ? window.slice(0, lastSpace) : window.slice(0, max);
+  return cut.replace(/[\s,;:]+$/, '') + '…';
+}
+
+/** The fixed words the identity clause is set against. Chrome, never the user's. */
+export const IDENTITY_FRAMING = "I'm becoming someone who is";
+
+export interface IdentityProposal {
+  /** The user's own clause, verbatim. Empty when nothing they wrote fits. */
+  clause: string;
+  /** The framing to print in front of it, or null when there is no clause. */
+  framing: string | null;
 }
 
 /**
- * The identity line is the one proposal in the product, and it is assembled
- * from the user's own words: we look for something they said they do, and
- * frame it. If nothing fits we hand back a blank for them to write.
+ * The identity line is the one proposal in the product, and even here the app
+ * does not get to write a sentence about someone's life.
+ *
+ * It looks for a clause the person actually wrote after "I am" or "I'm" — a
+ * state, not an action — and hands it back verbatim alongside a fixed framing
+ * the interface prints in front of it. The two are kept apart on purpose: the
+ * clause is set in the serif because it is theirs, and the framing is not.
+ *
+ * Requiring the copula is what keeps the result grammatical. An action clause
+ * ("I run every morning") would need conjugating to fit the frame, and the
+ * moment the app conjugates a verb it is writing, not quoting.
  */
-export function proposeIdentityLine(ideal: string, strategies?: string): string {
+export function proposeIdentity(ideal: string, strategies?: string): IdentityProposal {
   const source = `${strategies ?? ''} ${ideal ?? ''}`;
   const m = source.match(
-    /\b(?:i|I)\s+(?:am\s+|'m\s+)?((?:out|up|in|at|on|back|already|never|always)?\s*[a-z][\w'’-]*(?:\s+[\w'’,-]+){2,10})/,
+    /\b[iI]\s*(?:am|'m|’m)\s+((?:not\s+|no\s+longer\s+|already\s+|finally\s+|still\s+)?[a-z][\w'’-]*(?:\s+[\w'’,-]+){1,10})/,
   );
-  const clause = m?.[1]?.trim().replace(/[.,;]$/, '');
-  if (!clause) return '';
-  return `I'm becoming someone who is ${clause}`.replace(/\s+/g, ' ');
+  const clause = m?.[1]?.trim().replace(/[.,;:]+$/, '').replace(/\s+/g, ' ');
+  if (!clause) return { clause: '', framing: null };
+  return { clause, framing: IDENTITY_FRAMING };
+}
+
+/**
+ * The whole line as one string, for exports and for the plain-text Book where
+ * there is no second typeface to carry the distinction.
+ */
+export function identityLineText(p: IdentityProposal): string {
+  if (!p.clause) return '';
+  return p.framing ? `${p.framing} ${p.clause}` : p.clause;
 }
 
 export function buildPortrait(input: PortraitInput): Portrait {
@@ -70,12 +112,14 @@ export function buildPortrait(input: PortraitInput): Portrait {
   const moves = splitFirstMoves(strategies?.line ?? '');
 
   const quoted = [opener, why, strategies?.line ?? ''].filter((s) => s.trim().length > 0);
+  const identity = proposeIdentity(ideal, strategies?.line);
 
   return {
     goalId: goal.id,
     title: goal.title,
     why,
-    identityLine: proposeIdentityLine(ideal, strategies?.line),
+    identityLine: identity.clause,
+    identityFraming: identity.framing,
     identityLineEdited: false,
     obstacle: obstacleText,
     ifThen,

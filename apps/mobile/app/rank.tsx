@@ -100,10 +100,12 @@ export default function Rank() {
                   testID={`title-framing-${f}`}
                   label={f}
                   selected={framing === f}
-                  onPress={() => {
-                    setFraming(f);
-                    if (!bookTitle) setBookTitle(f.replace('…', ' '));
-                  }}
+                  // The chip is a way in, not an answer. It used to fill the
+                  // field, which meant a tap became the title printed on the
+                  // spine of their Book — a sentence fragment the app wrote,
+                  // counted as their prose. Now it only sets the opening words
+                  // shown in front of the field they type into.
+                  onPress={() => setFraming(framing === f ? null : f)}
                 />
               ))}
             </View>
@@ -111,7 +113,7 @@ export default function Rank() {
               testID="book-title"
               value={bookTitle}
               onChangeText={setBookTitle}
-              placeholder="Your own words"
+              placeholder={framing ? `${framing.replace('…', '')} what?` : 'Your own words'}
             />
           </View>
         </ScrollView>

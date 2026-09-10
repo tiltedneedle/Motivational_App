@@ -45,13 +45,13 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <ErrorBoundary onReset={() => router.replace('/today')}>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: day.ground },
-            animation: 'fade',
-          }}
-        />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: day.ground },
+              animation: 'fade',
+            }}
+          />
         </ErrorBoundary>
         {/* last in the tree, so it paints above whatever screen is showing */}
         <SafetyGate />

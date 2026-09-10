@@ -452,14 +452,29 @@ export function HoldBar({
   }, [fill, onComplete, settle]);
 
   /**
-   * Whether this activation came from a finger.
+   * Whether a finger is part-way through a press on this control.
    *
    * A pointer press always fires onPressIn before onPress. An activation from
    * TalkBack, from a switch, or from the Enter key arrives as a bare press with
    * no press-in at all — and those are exactly the users who cannot hold. So a
-   * press with no press-in behind it seals, and a real tap still has to hold.
+   * press with no pointer sequence behind it seals, and a real tap still has to
+   * hold.
+   *
+   * The flag is lowered a moment after the finger lifts rather than on the
+   * press itself, because a finger that presses down and slides off the control
+   * fires press-in and press-out with no press at all. Left raised, it would
+   * swallow the next activation from assistive technology, which is the one
+   * activation that must never be dropped.
    */
-  const fromPointer = useRef(false);
+  const pointerDown = useRef(false);
+  const pointerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (pointerTimer.current) clearTimeout(pointerTimer.current);
+    },
+    [],
+  );
 
   const width = fill.interpolate({ inputRange: [0, 1], outputRange: ['2%', '100%'] });
 
@@ -467,15 +482,23 @@ export function HoldBar({
     <Pressable
       testID={testID}
       onPressIn={() => {
-        fromPointer.current = true;
+        if (pointerTimer.current) clearTimeout(pointerTimer.current);
+        pointerDown.current = true;
         start();
       }}
-      onPressOut={cancel}
+      onPressOut={() => {
+        cancel();
+        if (pointerTimer.current) clearTimeout(pointerTimer.current);
+        // Long enough that the press that follows a lift still sees the flag,
+        // short enough that a finger sliding off does not leave it raised.
+        pointerTimer.current = setTimeout(() => {
+          pointerDown.current = false;
+        }, 250);
+      }}
       onPress={() => {
-        if (fromPointer.current) {
-          fromPointer.current = false;
-          return;
-        }
+        // A finger already had its go through the hold. Only an activation
+        // with no pointer sequence behind it gets the direct path.
+        if (pointerDown.current) return;
         sealDirectly();
       }}
       accessibilityRole="button"

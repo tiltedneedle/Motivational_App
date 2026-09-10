@@ -231,12 +231,32 @@ function firstMilestoneTitle(goalTitle: string, strategy: string): string {
   return `First two weeks of ${goalTitle.toLowerCase()}`;
 }
 
+export interface ValidateOptions {
+  /**
+   * Construction rules, true only for a plan being born (PRD §7.4: the first
+   * move small and within 48 hours, at most three in week one).
+   *
+   * A plan halfway through a season legitimately breaks all of them — its
+   * first move was kept weeks ago and its later weeks are full — so applying a
+   * replan checks authorship and dates but not these.
+   */
+  asNewPlan?: boolean;
+}
+
 /**
  * The gate. Runs on every plan, whoever built it.
- * PRD §7.4: first move ≤30 min and within 48 hours; every move sourced;
- * no past dates; ≤3 moves in week one; every milestone has a proof.
+ *
+ * Two rules always hold, and they are the ones that carry the authorship
+ * promise: every move and every obstacle plan has a line the user wrote behind
+ * it, and no move the user still has to do is dated in the past.
  */
-export function validatePlan(plan: Plan, analyses: GoalAnalysis[], today: string): string[] {
+export function validatePlan(
+  plan: Plan,
+  analyses: GoalAnalysis[],
+  today: string,
+  options: ValidateOptions = {},
+): string[] {
+  const { asNewPlan = true } = options;
   const problems: string[] = [];
   const ids = new Set(analyses.map((a) => a.id));
 
@@ -244,19 +264,26 @@ export function validatePlan(plan: Plan, analyses: GoalAnalysis[], today: string
     if (!m.sourceLineId || !ids.has(m.sourceLineId)) {
       problems.push(`move "${m.title.slice(0, 40)}" has no user line behind it`);
     }
-    if (m.scheduledFor && daysBetween(today, m.scheduledFor) < 0) {
+    // Only moves still to do. A move kept last Tuesday is supposed to be dated
+    // last Tuesday, and calling that a broken plan would reject every plan that
+    // has ever been used.
+    if (m.status === 'todo' && m.scheduledFor && daysBetween(today, m.scheduledFor) < 0) {
       problems.push(`move "${m.title.slice(0, 40)}" is scheduled in the past`);
     }
   }
-  const first = [...plan.moves].sort((a, b) => a.order - b.order)[0];
-  if (first) {
-    if (first.effort === 'L') problems.push('the first move is too big to start tomorrow');
-    if (first.scheduledFor && daysBetween(today, first.scheduledFor) > 2) {
-      problems.push('the first move is more than 48 hours away');
+
+  if (asNewPlan) {
+    const first = [...plan.moves].sort((a, b) => a.order - b.order)[0];
+    if (first) {
+      if (first.effort === 'L') problems.push('the first move is too big to start tomorrow');
+      if (first.scheduledFor && daysBetween(today, first.scheduledFor) > 2) {
+        problems.push('the first move is more than 48 hours away');
+      }
     }
+    const weekOne = plan.moves.filter((m) => m.week === 1);
+    if (weekOne.length > 3) problems.push('more than three moves in the first week');
   }
-  const weekOne = plan.moves.filter((m) => m.week === 1);
-  if (weekOne.length > 3) problems.push('more than three moves in the first week');
+
   for (const ms of plan.milestones) {
     if (!ms.proof.trim()) problems.push(`milestone "${ms.title}" has no proof`);
   }
@@ -338,7 +365,22 @@ export function proposeReplan(plan: Plan, opts: { done: number; planned: number;
   return changes;
 }
 
-export function applyReplan(plan: Plan, accepted: ReplanChange[], newId: (p: string) => string): Plan {
+/**
+ * Apply the changes the user accepted.
+ *
+ * The result goes through `validatePlan` exactly like a freshly built plan.
+ * A replan is the one moment the plan changes after the Book is sealed, so it
+ * is the last place that should be allowed to skip the gate: an accepted "add"
+ * with a stale source line, or a fourth move landing in week one, would
+ * otherwise be stored unchecked.
+ */
+export function applyReplan(
+  plan: Plan,
+  accepted: ReplanChange[],
+  newId: (p: string) => string,
+  analyses: GoalAnalysis[] = [],
+  today: string = new Date().toISOString().slice(0, 10),
+): Plan {
   let moves = [...plan.moves];
   for (const c of accepted) {
     if (c.target !== 'move') continue;
@@ -356,8 +398,12 @@ export function applyReplan(plan: Plan, accepted: ReplanChange[], newId: (p: str
         effort: 'S',
         energy: base?.energy ?? 'low',
         ifThen: base?.ifThen ?? null,
-        scheduledFor: null,
-        week: 1,
+        // Dated, not null: an undated move never surfaces on Today, so an
+        // accepted "room for one more" would quietly go nowhere.
+        scheduledFor: addDays(today, 1),
+        // The week-one cap counts moves in week one. A move added during a
+        // replan belongs to the week it was added to, not to the first.
+        week: highestWeek(moves) + (weekIsFull(moves, highestWeek(moves)) ? 1 : 0),
         status: 'todo',
         completedAt: null,
         minVersion: minVersionOf(c.after),
@@ -366,7 +412,20 @@ export function applyReplan(plan: Plan, accepted: ReplanChange[], newId: (p: str
       });
     }
   }
-  return { ...plan, version: plan.version + 1, moves };
+
+  const next: Plan = { ...plan, version: plan.version + 1, moves };
+  const problems = validatePlan(next, analyses, today, { asNewPlan: false });
+  if (problems.length) throw new BlueprintInvalid(problems);
+  return next;
+}
+
+/** A move with no week belongs to none, so it cannot raise the count. */
+function highestWeek(moves: Move[]): number {
+  return moves.reduce((n, m) => (m.week === null ? n : Math.max(n, m.week)), 1);
+}
+
+function weekIsFull(moves: Move[], week: number): boolean {
+  return moves.filter((m) => m.week === week).length >= 3;
 }
 
 export { addDays, daysBetween };
