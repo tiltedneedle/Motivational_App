@@ -1,6 +1,6 @@
 import { Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
+import { AppState, View, Text, ActivityIndicator } from 'react-native';
 import { useFonts as useOutfit, Outfit_400Regular, Outfit_500Medium, Outfit_600SemiBold, Outfit_700Bold } from '@expo-google-fonts/outfit';
 import { Newsreader_400Regular, Newsreader_400Regular_Italic, Newsreader_500Medium } from '@expo-google-fonts/newsreader';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -27,6 +27,24 @@ export default function RootLayout() {
   const storageError = useMorrow((s) => s.storageError);
   const [slowFonts, setSlowFonts] = useState(false);
   const [slowStore, setSlowStore] = useState(false);
+
+  /**
+   * Reconcile the schedule once the disk has been read, and again whenever the
+   * app comes back to the front (PRD §7.11: the schedule survives a reboot).
+   *
+   * Idempotent: the planner produces stable ids and the adapter drops anything
+   * already scheduled or already past. Nothing here can fail loudly — a device
+   * with no scheduler, or one that refuses permission, simply stays quiet.
+   */
+  const syncNotifications = useMorrow((s) => s.syncNotifications);
+  useEffect(() => {
+    if (!hydrated) return;
+    void syncNotifications();
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') void syncNotifications();
+    });
+    return () => sub.remove();
+  }, [hydrated, syncNotifications]);
 
   useEffect(() => {
     // Two timers, because the two things they wait for are not alike.

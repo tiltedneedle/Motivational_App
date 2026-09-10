@@ -89,6 +89,7 @@ const EXPO_OWNED = [
   '@react-native-async-storage/async-storage',
   'expo',
   'expo-router',
+  'expo-notifications',
 ];
 
 const mobile = pkgs.find((p) => p.dir.endsWith(join('apps', 'mobile')));

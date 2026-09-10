@@ -718,6 +718,35 @@ async function main() {
     check('and Settings says it too', await seen('settings-is-ai'));
     check('the helplines are reachable without a crisis', await seen('settings-helpline-US'));
 
+    // ---- "Fewer" (PRD §7.11)
+    //
+    // One control that steps down rather than five switches, and it has to say
+    // what is left in words — a person turning notifications down is deciding
+    // how much of this app they want in their day, and deserves a straight
+    // answer about what they just chose.
+    check('Settings says when Morrow speaks', await seen('notify-state'));
+    const notifySteps = [];
+    for (let i = 0; i < 4 && (await seen('notify-fewer')); i++) {
+      await tap('notify-fewer');
+      await page.waitForTimeout(300);
+      notifySteps.push(await text('notify-state'));
+    }
+    check(
+      'Fewer steps down rather than turning everything off at once',
+      notifySteps.length >= 3 && new Set(notifySteps).size === notifySteps.length,
+      notifySteps.join(' | '),
+    );
+    check(
+      'and the last step is honest that it means nothing at all',
+      (notifySteps[notifySteps.length - 1] ?? '').toLowerCase().startsWith('nothing'),
+      notifySteps[notifySteps.length - 1] ?? '(no steps)',
+    );
+    if (await seen('notify-on')) {
+      await tap('notify-on');
+      await page.waitForTimeout(300);
+      check('and they can all be turned back on', (await text('notify-state')).includes('morning'));
+    }
+
     // ---- the safety gate, on its own path
     await page.goto(`${BASE}/coach`, { waitUntil: 'networkidle' });
     await page.clock.runFor(2000);

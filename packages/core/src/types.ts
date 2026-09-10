@@ -444,6 +444,14 @@ export const Profile = z.object({
    * happens to trip the concern band.
    */
   supportOfferedAt: z.string().nullable().default(null),
+  /**
+   * The moments the person has turned off, via "Fewer" on a notification or in
+   * Settings (PRD §7.11). Empty means everything is on; `notificationsOff`
+   * means nothing is, and the two are kept apart so turning them all back on
+   * restores what they actually had rather than the default.
+   */
+  mutedMoments: z.array(z.string()).default([]),
+  notificationsOff: z.boolean().default(false),
 });
 export type Profile = z.infer<typeof Profile>;
 
@@ -461,6 +469,8 @@ export const DEFAULT_PROFILE: Profile = {
   consentedAt: null,
   entitled: false,
   supportOfferedAt: null,
+  mutedMoments: [],
+  notificationsOff: false,
 };
 
 // ---------------------------------------------------------------- domain meta

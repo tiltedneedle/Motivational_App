@@ -6,15 +6,35 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Linking, Platform, Pressable, ScrollView, Share, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { HELPLINES, bookToText, plural } from '@morrow/core';
+import { HELPLINES, bookToText, plural, type Moment } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, accent, day } from '@morrow/ui';
 import { useLatestBook, useMorrow } from '../src/store';
+
+/**
+ * The moments, in the words the person would use for them.
+ *
+ * Keyed by the id the planner uses, so the list on screen is derived from what
+ * is actually muted rather than from a parallel array that has to be kept in
+ * the same order — which is exactly the sort of pairing that drifts and then
+ * tells somebody the evening line is off when it is the morning one.
+ */
+const MOMENT_WORDS: Record<Moment, string> = {
+  wake: 'the morning',
+  evening: 'the evening',
+  sunday: 'Sunday',
+  milestone: 'milestones',
+  return: 'a word after a gap',
+};
+const ALL_MOMENTS = Object.keys(MOMENT_WORDS) as Moment[];
 
 export default function Settings() {
   const router = useRouter();
   const state = useMorrow((s) => s);
   const setProfile = useMorrow((s) => s.setProfile);
   const reset = useMorrow((s) => s.reset);
+  const fewerNotifications = useMorrow((s) => s.fewerNotifications);
+  const muted = (state.profile.mutedMoments ?? []) as Moment[];
+  const left = ALL_MOMENTS.filter((m) => !muted.includes(m));
   const book = useLatestBook();
   const [confirming, setConfirming] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -119,6 +139,35 @@ export default function Settings() {
                   onPress={() => setProfile({ persona: p })}
                 />
               ))}
+            </View>
+          </View>
+
+          <Rule />
+          {/*
+            PRD §7.11. One control rather than five switches: the steps are
+            ordered by how unwelcome each moment is, so "fewer" is a direction
+            somebody can hold down until it is quiet enough, and it says in
+            words what is left rather than showing a row of toggles.
+          */}
+          <View style={{ gap: 10 }}>
+            <Label>When Morrow speaks</Label>
+            <Body testID="notify-state" style={{ fontSize: 14 }}>
+              {state.profile.notificationsOff
+                ? 'Nothing. You will hear from it when you open it, and not before.'
+                : muted.length === 0
+                  ? 'A line in the morning, one in the evening, the Sunday reading, and a milestone when one lands. Never inside quiet hours, and never a count of what you missed.'
+                  : `${plural(left.length, 'moment')} left: ${left.map((m) => MOMENT_WORDS[m]).join(', ')}.`}
+            </Body>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {state.profile.notificationsOff ? (
+                <Chip
+                  testID="notify-on"
+                  label="Turn them back on"
+                  onPress={() => setProfile({ notificationsOff: false, mutedMoments: [] })}
+                />
+              ) : (
+                <Chip testID="notify-fewer" label="Fewer" ghost onPress={() => fewerNotifications()} />
+              )}
             </View>
           </View>
 

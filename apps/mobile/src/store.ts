@@ -7,6 +7,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
 import { STORE_KEY, failureReason, guardedStorage, hasFailed } from './storage';
+import { syncNotices } from './notify';
 import {
   DEFAULT_PROFILE,
   AnthropicProvider,
@@ -18,7 +19,11 @@ import {
   buildPractice,
   dueOn,
   logOf,
+  FEWER_STEPS,
+  fewer,
   movesForDay,
+  planNotices,
+  type Moment,
   movesOpenOn,
   practiceValue,
   dayOf,
@@ -215,6 +220,17 @@ export interface MorrowState {
   /** PRD §7.10: the move they pointed at in the dawn brief this morning. */
   setIntention: (moveId: string) => void;
   noteConcern: () => void;
+  /**
+   * Work out what should be scheduled today and make the OS agree (PRD §7.11).
+   *
+   * Safe to call on every launch: the planner produces stable ids and the
+   * adapter drops anything already scheduled or already past. That is also how
+   * the schedule survives a reboot, which the PRD asks for and which nothing
+   * else in the app would provide.
+   */
+  syncNotifications: () => Promise<{ scheduled: number; cancelled: number; silent: boolean }>;
+  /** One step quieter (PRD §7.11's "Fewer" action). */
+  fewerNotifications: () => void;
   makeBrief: () => Brief | null;
 
   // ui
@@ -925,6 +941,47 @@ export const useMorrow = create<MorrowState>()(
 
       inviteFullTrack: () => set({ fullTrackInvited: true }),
 
+      syncNotifications: async () => {
+        const s = get();
+        const day = dayOf(new Date(), s.profile.dayBoundaryHour);
+        const daysArr = Object.values(s.days);
+        // Days since anything at all was logged. A person who has never logged
+        // anything is not "away": they have not started, and the day-three
+        // nudge is for coming back, not for arriving.
+        const lastActive = daysArr
+          .filter((d) => d.done > 0 || d.evidenceCount > 0 || d.sealedAt)
+          .map((d) => d.day)
+          .sort()
+          .pop();
+        const daysSinceAnything = lastActive ? daysBetween(lastActive, day) : 0;
+
+        const planned = planNotices({
+          day,
+          wakeTime: s.profile.wakeTime,
+          eveningTime: s.profile.eveningTime,
+          sundayHour: s.profile.sundayHour,
+          persona: s.profile.persona,
+          book: s.books[s.books.length - 1] ?? null,
+          moves: todaysMoves(s),
+          yesterday: s.days[day] ?? null,
+          daysSinceAnything,
+          muted: s.profile.notificationsOff === true,
+        });
+
+        const out = await syncNotices(planned, (s.profile.mutedMoments ?? []) as Moment[]);
+        return { scheduled: out.scheduled.length, cancelled: out.cancelled.length, silent: out.silent };
+      },
+
+      fewerNotifications: () =>
+        set((s) => {
+          const next = fewer((s.profile.mutedMoments ?? []) as Moment[]);
+          // The last step is everything, which is the same as off. Saying so
+          // lets Settings show one honest state rather than a list of five
+          // switches that all happen to be down.
+          const off = next.length >= FEWER_STEPS[FEWER_STEPS.length - 1]!.length;
+          return { profile: { ...s.profile, mutedMoments: next, notificationsOff: off } };
+        }),
+
       noteConcern: () =>
         set((s) => ({ concernAt: dayOf(new Date(), s.profile.dayBoundaryHour) })),
 
@@ -1032,6 +1089,14 @@ export const useMorrow = create<MorrowState>()(
 );
 
 // ---------------------------------------------------------------- helpers
+
+/** Whole days from one `YYYY-MM-DD` to another. Negative if `to` is earlier. */
+function daysBetween(from: string, to: string): number {
+  const a = Date.parse(`${from}T00:00:00Z`);
+  const b = Date.parse(`${to}T00:00:00Z`);
+  if (Number.isNaN(a) || Number.isNaN(b)) return 0;
+  return Math.round((b - a) / 86_400_000);
+}
 
 /**
  * Whether this morning is inside the concern band.

@@ -6,6 +6,7 @@ export * from './engines/framings';
 export * from './engines/readback';
 export * from './engines/portrait';
 export * from './engines/practices';
+export * from './engines/notifications';
 export * from './engines/blueprint';
 export * from './engines/book';
 export * from './engines/consistency';
