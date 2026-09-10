@@ -9,6 +9,8 @@ import {
   beginBranches,
   buildDawnBrief,
   clarity,
+  minSecondsToCount,
+  canClose,
   consistencyScore,
   contentGuard,
   dayValue,
@@ -175,7 +177,7 @@ describe('adding to the Interview a second time', () => {
     const area = AREAS.find((a) => a.id === 'health');
     const branch = area?.branches[0];
     s = answer(s, branch?.label ?? '');
-    if (s.stage === 'follow') s = answer(s, branch?.follow?.options[0] ?? 'yes');
+    if (s.stage === 'follow') s = answer(s, branch?.options[0] ?? 'yes');
     s = answer(s, 'This season');
     expect(s.drafts).toHaveLength(1);
 
@@ -189,11 +191,36 @@ describe('adding to the Interview a second time', () => {
     const money = AREAS.find((a) => a.id === 'money');
     const mb = money?.branches[0];
     s = answer(s, mb?.label ?? '');
-    if (s.stage === 'follow') s = answer(s, mb?.follow?.options[0] ?? 'yes');
+    if (s.stage === 'follow') s = answer(s, mb?.options[0] ?? 'yes');
     s = answer(s, 'This season');
 
     expect(s.drafts).toHaveLength(2);
     expect(new Set(s.drafts.map((d) => d.areaId)).size).toBe(2);
+  });
+});
+
+describe('how long a sitting has to be to count', () => {
+  it('lets Starter close at ten minutes and Full only at fifteen', () => {
+    // The two tracks are the honest-dose decision of the whole product, and
+    // the test named for the ten-minute floor asserted fifteen.
+    expect(minSecondsToCount('ideal', 'starter')).toBe(10 * 60);
+    expect(minSecondsToCount('ideal', 'full')).toBe(15 * 60);
+
+    const starter = { ...startWriting('ideal', 'starter'), elapsed: 10 * 60 };
+    expect(canClose(starter)).toBe(true);
+
+    const full = { ...startWriting('ideal', 'full'), elapsed: 10 * 60 };
+    expect(canClose(full)).toBe(false);
+    expect(canClose({ ...full, elapsed: 15 * 60 })).toBe(true);
+  });
+
+  it('does not let a Starter sitting close a minute early', () => {
+    const nearly = { ...startWriting('ideal', 'starter'), elapsed: 10 * 60 - 1 };
+    expect(canClose(nearly)).toBe(false);
+  });
+
+  it('asks the shadow for less on Starter than on Full', () => {
+    expect(targetSeconds('shadow', 'starter')).toBeLessThan(targetSeconds('shadow', 'full'));
   });
 });
 

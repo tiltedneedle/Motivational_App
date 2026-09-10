@@ -51,6 +51,15 @@ export interface ConsistencyReading {
   /** The user's own eight-week baseline band, for the chart. */
   baselineLow: number;
   baselineHigh: number;
+  /**
+   * How many days have any record at all. A score of zero means two entirely
+   * different things — nobody has started, or somebody turned up and finished
+   * nothing — and the caption used to tell the second person they had not
+   * shown up.
+   */
+  logged: number;
+  /** Days the person closed deliberately, whatever they got done. */
+  sealed: number;
 }
 
 export function reading(days: DaySummary[], today: string): ConsistencyReading {
@@ -67,7 +76,15 @@ export function reading(days: DaySummary[], today: string): ConsistencyReading {
   const real = values.filter((v) => v > 0);
   const low = real.length ? Math.min(...real) : 0;
   const high = real.length ? Math.max(...real) : 0;
-  return { score, previous, delta: score - previous, baselineLow: low, baselineHigh: high };
+  return {
+    score,
+    previous,
+    delta: score - previous,
+    baselineLow: low,
+    baselineHigh: high,
+    logged: days.length,
+    sealed: days.filter((d) => Boolean(d.sealedAt)).length,
+  };
 }
 
 export interface ReturnRecord {
@@ -112,7 +129,17 @@ export function isReturning(days: DaySummary[], today: string): { returning: boo
 
 /** The line under the number. Never mentions breaking anything. */
 export function consistencyCaption(r: ConsistencyReading): string {
-  if (r.score === 0) return 'Nothing logged yet. The first day is the whole thing.';
+  if (r.score === 0) {
+    // Turning up and finishing nothing is not the same as never turning up,
+    // and a person who sealed the day deserves to have that noticed.
+    if (r.sealed > 0) {
+      return r.sealed === 1
+        ? 'One day closed, nothing finished on it. Closing it still counted.'
+        : `${r.sealed} days closed, nothing finished on them yet. Closing them still counted.`;
+    }
+    if (r.logged > 0) return 'Nothing finished yet. The first one is the whole thing.';
+    return 'Nothing logged yet. The first day is the whole thing.';
+  }
   if (r.delta > 0) return `${r.score}, up from ${r.previous}.`;
   if (r.delta < 0) return `${r.score}. Quieter week than usual, and that is information.`;
   return `${r.score}, holding.`;

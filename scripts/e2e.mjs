@@ -255,18 +255,71 @@ async function main() {
     check('the Book was sealed', await seen('screen-book'));
     if (await seen('screen-book')) {
       const firstSentence = await text('book-first-sentence');
-      check('the Book opens with the user first sentence', IDEAL.includes(firstSentence), firstSentence);
-      check('the I will line is in the Book', (await text('book-i-will')).includes('back door'));
+      // `IDEAL.includes('')` is true, so the old form of this check passed
+      // when the element rendered nothing at all — the one failure it existed
+      // to catch.
+      check(
+        'the Book opens with the user first sentence',
+        firstSentence.length > 20 && IDEAL.includes(firstSentence),
+        `${firstSentence.length} chars: ${firstSentence.slice(0, 60)}`,
+      );
+      check(
+        'the I will line is in the Book',
+        (await text('book-i-will')).includes('out the back door before the kettle boils'),
+      );
+
+      // ---- the promise the whole product rests on
+      //
+      // Every sentence printed in the Book is one the person typed. Nothing
+      // asserted this anywhere, which meant the central claim of the product
+      // was the least tested thing in it.
+      const bookText = await page.locator('[data-testid="screen-book"]').innerText();
+      const typed = [
+        'I will be out the back door before the kettle boils',
+        'take the stairwell, ten floors, twice',
+      ];
+      const missing = typed.filter((t) => !bookText.includes(t));
+      check('every sentence in the Book is one the user typed', missing.length === 0, missing.join(' | '));
+
+      // And nothing the app writes about their life is in there beside them.
+      const appProse = [
+        'One entry in the ledger',
+        "that's the whole ask",
+        'I have been reading',
+      ];
+      const intruders = appProse.filter((t) => bookText.includes(t));
+      check('no app prose was sealed into the Book', intruders.length === 0, intruders.join(' | '));
     }
 
     // ---- Today
     await tap('book-still-true');
     await page.waitForTimeout(600);
     check('today renders', await seen('screen-today'));
-    check('today quotes the Book', await seen('today-book-line'));
+    // The card carries the quotation and a caption under it, so take the
+    // quoted line itself and strip the typographic quote marks around it.
+    const bookLine = (await text('today-book-line')).split('\n')[0].trim();
+    const quoted = bookLine.replace(/^["'“”\s]+|["'“”\s]+$/g, '');
+    const everythingWritten = `${IDEAL} I will be out the back door before the kettle boils`;
+    // Asserting the element merely exists let an empty quotation pass.
+    check(
+      'today quotes the Book in the user own words',
+      quoted.length > 10 && everythingWritten.includes(quoted),
+      quoted,
+    );
 
     const rows = await page.locator('[data-testid^="stone-mv"]').count();
     check('the plan produced at least one move on Today', rows > 0, `rows=${rows}`);
+
+    // A move is cut from the Strategies line the person wrote. Nothing checked
+    // that the words on Today were ever theirs.
+    if (rows > 0) {
+      const todayText = await page.locator('[data-testid="screen-today"]').innerText();
+      check(
+        'the moves on Today are cut from the user own strategy line',
+        todayText.includes('6:40') || todayText.includes('back door') || todayText.includes('one run'),
+        todayText.slice(0, 160),
+      );
+    }
 
     if (rows > 0) {
       const before = await text('consistency');

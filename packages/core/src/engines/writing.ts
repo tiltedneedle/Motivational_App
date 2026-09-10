@@ -214,11 +214,16 @@ export function formatRemaining(seconds: number): string {
   return `${m}:${sec.toString().padStart(2, '0')}`;
 }
 
-/** Read-only for 24 hours after closing, so the draft is not tinkered into safety. */
+/**
+ * Read-only for 24 hours after closing, so the draft is not tinkered into
+ * safety.
+ *
+ * Twenty-four hours of elapsed time, not "the same clock time tomorrow".
+ * Adding to the local hour field crosses a daylight-saving boundary as 23 or
+ * 25 real hours, which is not the promise the copy on screen makes.
+ */
 export function draftLockUntil(closedAt = new Date()): string {
-  const d = new Date(closedAt);
-  d.setHours(d.getHours() + DRAFT_LOCK_HOURS);
-  return d.toISOString();
+  return new Date(closedAt.getTime() + DRAFT_LOCK_HOURS * 60 * 60 * 1000).toISOString();
 }
 
 export function isLocked(sealedUntil: string | null, now = new Date()): boolean {

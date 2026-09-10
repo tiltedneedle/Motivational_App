@@ -8,7 +8,7 @@
  * letters must quote, and anything that fails falls back to the local engine.
  */
 import { extractSpansLocally, verifySpans, type ReadBackResult, type Span } from '../engines/readback';
-import { screen, type SafetyResult } from '../engines/safety';
+import { screen, worseRisk, type SafetyResult } from '../engines/safety';
 import type { DomainId } from '../types';
 
 export interface ReadBackRequest {
@@ -42,6 +42,13 @@ export interface AiProvider {
 }
 
 // ---------------------------------------------------------------- local
+
+/**
+ * The shortest thing that can count as a detail from someone's writing. Below
+ * this it is a word, not a detail, and it proves nothing about whose life the
+ * scene is describing.
+ */
+export const MIN_SOURCED_DETAIL = 12;
 
 export class LocalProvider implements AiProvider {
   readonly name = 'local';
@@ -203,23 +210,48 @@ export function guarded(provider: AiProvider, opts: GuardOptions = {}): AiProvid
     },
 
     async scene(req) {
+      const haystack = `${req.idealExcerpt} ${req.impactLine}`.toLowerCase();
+
+      /**
+       * A scene has to contain something of this person's life, and the check
+       * has to be worth passing.
+       *
+       * The first version accepted any `sourcedDetail` that appeared anywhere
+       * in their writing, so the single character "a" satisfied it, and it
+       * never checked the narrative actually used the detail — a scene could
+       * be stock footage carrying a receipt for a detail it never mentioned.
+       */
+      const verify = (out: SceneResult): string | null => {
+        const detail = out.sourcedDetail?.trim() ?? '';
+        const narrative = out.narrative?.trim() ?? '';
+        if (!narrative) return 'empty narrative';
+        if (detail.length < MIN_SOURCED_DETAIL) return 'sourcedDetail is too short to be a detail';
+        if (detail.split(/\s+/).filter(Boolean).length < 2) return 'sourcedDetail is a single word';
+        if (!haystack.includes(detail.toLowerCase())) return 'sourcedDetail is not in the user text';
+        if (!narrative.toLowerCase().includes(detail.toLowerCase())) {
+          return 'the narrative does not contain the detail it claims to be built on';
+        }
+        return null;
+      };
+
       try {
         const out = await provider.scene(req);
-        const haystack = `${req.idealExcerpt} ${req.impactLine}`.toLowerCase();
-        const detail = out.sourcedDetail?.trim() ?? '';
-        if (!detail || !haystack.includes(detail.toLowerCase())) {
-          violated('scene', 'sourcedDetail is not in the user text');
-          return fallback.scene(req);
-        }
-        if (!out.narrative?.trim()) {
-          violated('scene', 'empty narrative');
-          return fallback.scene(req);
-        }
-        return out;
+        const problem = verify(out);
+        if (!problem) return out;
+        violated('scene', problem);
       } catch (err) {
         violated('scene', err instanceof Error ? err.message : 'unknown error');
-        return fallback.scene(req);
       }
+
+      // The fallback goes through the same gate. Returning it unchecked meant
+      // the guard could be walked around simply by making the first call fail.
+      const local = await fallback.scene(req);
+      const localProblem = verify(local);
+      if (!localProblem) return local;
+      violated('scene', `fallback also refused: ${localProblem}`);
+      // Nothing that can be shown as this person's future. The device draws its
+      // own typographic scene rather than a picture of somebody else's life.
+      return { ...local, narrative: '', sourcedDetail: '' };
     },
 
     async safety(text) {
@@ -227,9 +259,10 @@ export function guarded(provider: AiProvider, opts: GuardOptions = {}): AiProvid
       if (local.risk === 'crisis') return local;
       try {
         const remote = await provider.safety(text);
-        // The worse verdict wins.
-        const rank = { none: 0, concern: 1, crisis: 2 } as const;
-        return rank[remote.risk] > rank[local.risk] ? remote : local;
+        // The worse verdict wins, by the one comparator both sides use.
+        return worseRisk(remote.risk, local.risk) === remote.risk && remote.risk !== local.risk
+          ? remote
+          : local;
       } catch {
         return local;
       }

@@ -112,7 +112,13 @@ describe('guarded provider', () => {
       return { spans: [{ text: 'I will be a millionaire', start: 0, end: 10, domain: 'money' as const }] };
     },
     async scene() {
-      return { narrative: 'x', imagePrompt: 'y', sourcedDetail: 'a yacht' };
+      // Long enough and specific enough to look like a real detail, and
+      // nowhere in the user's writing. That is the lie being caught.
+      return {
+        narrative: 'You wake on a yacht in the harbour at dawn.',
+        imagePrompt: 'y',
+        sourcedDetail: 'a yacht in the harbour at dawn',
+      };
     },
     async safety() {
       return { risk: 'none' as const, category: null, action: 'continue' as const };
@@ -138,6 +144,59 @@ describe('guarded provider', () => {
     });
     expect(onViolation).toHaveBeenCalledWith({ call: 'scene', reason: 'sourcedDetail is not in the user text' });
     expect(`${IDEAL} Sam would stop worrying`.toLowerCase()).toContain(out.sourcedDetail.toLowerCase());
+  });
+
+  it('rejects a sourced detail too small to prove anything', async () => {
+    // "a" appears in everybody's writing. Accepting it meant a scene could
+    // satisfy the check while containing nothing of this person's life.
+    const vague: AiProvider = {
+      ...liar,
+      async scene() {
+        return { narrative: 'You wake and it is quiet.', imagePrompt: 'y', sourcedDetail: 'a' };
+      },
+    };
+    const onViolation = vi.fn();
+    const out = await guarded(vague, { onViolation }).scene({
+      goalTitle: 'Half marathon',
+      impactLine: 'Sam would stop worrying',
+      idealExcerpt: IDEAL,
+      type: 'practice',
+    });
+    expect(onViolation).toHaveBeenCalledWith({
+      call: 'scene',
+      reason: 'sourcedDetail is too short to be a detail',
+    });
+    // Whatever comes back has been through the gate too.
+    if (out.narrative) {
+      expect(out.narrative.toLowerCase()).toContain(out.sourcedDetail.toLowerCase());
+    }
+  });
+
+  it('rejects a scene that never uses the detail it claims to be built on', async () => {
+    // A real quotation from the user, attached to a narrative that is stock
+    // footage. The receipt was genuine and the picture was somebody else's.
+    const detail = IDEAL.slice(0, 40);
+    const stock: AiProvider = {
+      ...liar,
+      async scene() {
+        return {
+          narrative: 'You wake early. The light is good. It is a fine morning to begin.',
+          imagePrompt: 'y',
+          sourcedDetail: detail,
+        };
+      },
+    };
+    const onViolation = vi.fn();
+    await guarded(stock, { onViolation }).scene({
+      goalTitle: 'Half marathon',
+      impactLine: 'Sam would stop worrying',
+      idealExcerpt: IDEAL,
+      type: 'practice',
+    });
+    expect(onViolation).toHaveBeenCalledWith({
+      call: 'scene',
+      reason: 'the narrative does not contain the detail it claims to be built on',
+    });
   });
 
   it('falls back when the provider throws', async () => {
@@ -294,6 +353,37 @@ describe('the Book', () => {
     };
     const ratio = authorshipRatio(withGenerated, poisoned.chapters);
     expect(ratio).toBeLessThan(MIN_AUTHORSHIP_RATIO);
+  });
+
+  it('refuses the seal when model prose reaches the Book the way it actually would', () => {
+    // The other tests here poison `chapters[].lines[].generated` by hand, a
+    // field no product code writes, so they could not catch a real leak. This
+    // one puts the prose where it would actually arrive — on the analysis
+    // record — and goes through buildBookVersion exactly as sealing does.
+    const withProse = {
+      ...base,
+      analyses: base.analyses.map((a, i) =>
+        i === 0
+          ? {
+              ...a,
+              generated:
+                'You have always been the kind of person who follows through, and this year that finally becomes visible to everyone around you. It was never really in doubt.',
+            }
+          : a,
+      ),
+    };
+    expect(() => buildBookVersion(withProse, sequentialIds())).toThrow(SealRefused);
+  });
+
+  it('carries the generated slot from the analysis into the chapter', () => {
+    const withProse = {
+      ...base,
+      analyses: base.analyses.map((a, i) => (i === 0 ? { ...a, generated: 'not their words' } : a)),
+    };
+    const chapters = buildChapters(withProse);
+    const carried = chapters.some((c) => c.lines.some((l) => l.generated === 'not their words'));
+    // A tripwire nothing can reach is not a tripwire.
+    expect(carried).toBe(true);
   });
 
   it('does not count fixed framing labels against the user', () => {
