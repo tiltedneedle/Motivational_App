@@ -8,6 +8,7 @@ export * from './engines/portrait';
 export * from './engines/blueprint';
 export * from './engines/book';
 export * from './engines/consistency';
+export * from './engines/goals';
 export * from './engines/safety';
 export * from './engines/writing';
 export * from './engines/coach';

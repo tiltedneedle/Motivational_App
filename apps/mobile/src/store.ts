@@ -20,6 +20,7 @@ import {
   guarded,
   isQuotable,
   isWorse,
+  mergeGoalDrafts,
   newId,
   reading,
   screen,
@@ -176,39 +177,31 @@ export const useMorrow = create<MorrowState>()(
        */
       addGoals: (drafts) =>
         set((s) => {
-          const goals = [...s.goals];
-          const key = (t: string) => t.trim().toLowerCase();
-          for (const d of drafts) {
-            const title = d.title.trim();
-            if (!title) continue;
-            const i = goals.findIndex((g) => key(g.title) === key(title));
-            if (i >= 0) {
-              const existing = goals[i]!;
-              goals[i] = {
+          // The merge rule itself lives in the core package so it can be
+          // tested; the store adds the things only it knows about — ids,
+          // timestamps, and the date a horizon phrase resolves to.
+          const merged = mergeGoalDrafts(
+            s.goals.map((g) => ({ ...g, titleAuthored: g.titleAuthored !== false })),
+            drafts,
+          );
+          const byName = new Map(s.goals.map((g) => [g.title.trim().toLowerCase(), g]));
+          const goals: Goal[] = merged.map((m) => {
+            const existing = byName.get(m.title.trim().toLowerCase());
+            if (existing) {
+              return {
                 ...existing,
-                ...(d.sourceSpan && !existing.sourceSpan ? { sourceSpan: d.sourceSpan } : {}),
-                // Naming it in their own words upgrades a bank title.
-                ...(d.sourceSpan || d.authored ? { titleAuthored: true } : {}),
-                ...(existing.horizon === 'No deadline' && d.horizon !== 'No deadline'
-                  ? { horizon: d.horizon, targetDate: horizonToDate(d.horizon) }
-                  : {}),
-              };
-              continue;
+                ...m,
+                ...(existing.horizon !== m.horizon ? { targetDate: horizonToDate(m.horizon) } : {}),
+              } as Goal;
             }
-            goals.push({
+            return {
+              ...m,
               id: newId('goal'),
-              title,
-              domain: d.domain,
-              ...(d.domainLabel ? { domainLabel: d.domainLabel } : {}),
-              horizon: d.horizon,
-              targetDate: horizonToDate(d.horizon),
-              status: 'named',
-              rank: goals.length,
-              ...(d.sourceSpan ? { sourceSpan: d.sourceSpan } : {}),
-              titleAuthored: !!d.sourceSpan || d.authored === true,
+              targetDate: horizonToDate(m.horizon),
+              status: 'named' as const,
               createdAt: new Date().toISOString(),
-            });
-          }
+            } as Goal;
+          });
           return { goals };
         }),
 
@@ -718,11 +711,36 @@ export function todaysMoves(s: MorrowState) {
   if (due.some((m) => m.status === 'todo')) {
     return due.sort((a, b) => a.order - b.order);
   }
-  const upcoming = all
+
+  // Everything the day asked for is closed. Show it as closed.
+  //
+  // This used to promote tomorrow's move into today's list the moment the last
+  // one was seated, so the day never read as finished and there was always one
+  // more thing waiting. A day you can finish is the entire point of the screen,
+  // and the seal at the end of it only means something if the work stops.
+  if (due.length > 0) {
+    return due.sort((a, b) => a.order - b.order);
+  }
+
+  // Nothing was scheduled for today at all — the evening the Book is sealed,
+  // for instance, when the first move is dated tomorrow. Bringing the next one
+  // forward is what keeps that evening from looking empty.
+  const next = all
     .filter((m) => m.status === 'todo' && m.scheduledFor && m.scheduledFor > day)
-    .sort((a, b) => (a.scheduledFor! < b.scheduledFor! ? -1 : 1));
-  const next = upcoming[0];
-  return [...(next ? [next] : []), ...due].sort((a, b) => a.order - b.order);
+    .sort((a, b) => (a.scheduledFor! < b.scheduledFor! ? -1 : 1))[0];
+  return next ? [next] : [];
+}
+
+/**
+ * Whether the day's work is finished: something was asked of them and none of
+ * it is still open. Distinct from an empty day, which asks nothing.
+ */
+export function dayIsDone(s: MorrowState): boolean {
+  const moves = todaysMoves(s);
+  if (moves.length === 0) return false;
+  const day = dayOf(new Date(), s.profile.dayBoundaryHour);
+  const scheduledToday = moves.filter((m) => m.scheduledFor === day || m.status !== 'todo');
+  return scheduledToday.length > 0 && moves.every((m) => m.status !== 'todo');
 }
 
 export function consistency(s: MorrowState) {

@@ -155,6 +155,34 @@ export default function Today() {
             </View>
           ) : null}
 
+          {/*
+            The day is finished. Not an empty screen and not tomorrow's move
+            pulled forward — the work that was asked for is closed, and saying
+            so is what makes the seal at the end of it mean anything.
+          */}
+          {!now && done.length > 0 ? (
+            <View
+              testID="day-done-card"
+              style={{
+                marginTop: 22,
+                backgroundColor: day.surface,
+                borderRadius: 28,
+                padding: 20,
+                gap: 8,
+              }}
+            >
+              <Label style={{ color: accent.coralText }}>Done for today</Label>
+              <Statement style={{ fontSize: 26, lineHeight: 30 }}>
+                {done.filter((m) => m.status === 'done').length === done.length
+                  ? 'Everything you asked of today is closed.'
+                  : 'Today is closed.'}
+              </Statement>
+              <Body style={{ fontSize: 14 }}>
+                Nothing else is due. The next one is tomorrow, and it will be here then.
+              </Body>
+            </View>
+          ) : null}
+
           {/* Now */}
           {now ? (
             <View

@@ -105,7 +105,11 @@ async function main() {
 
   try {
     // The clock is installed before the app boots so every timer is ours.
-    await page.clock.install();
+    // Pinned, not "now". The plan builder schedules from named weekdays, so an
+    // unpinned clock made the suite's result depend on the day it was run: the
+    // same code passed on a Wednesday and could fail on a Sunday. Wednesday is
+    // the interesting case, with named days falling either side of it.
+    await page.clock.install({ time: new Date('2026-09-16T09:00:00') });
     await page.goto(`${BASE}/`, { waitUntil: 'networkidle' });
     await page.clock.runFor(3000);
     await page.waitForTimeout(1200);

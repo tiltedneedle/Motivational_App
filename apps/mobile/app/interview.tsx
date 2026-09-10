@@ -33,7 +33,6 @@ import {
   Studio,
   TextButton,
   UserField,
-  UserText,
   accent,
   day,
   radius,
@@ -111,9 +110,15 @@ export default function Interview() {
           </Ring>
           <View style={{ flex: 1, gap: 3 }}>
             <Label testID="clarity-value">{Math.round(clarity(s) * 100)}% clarity</Label>
-            <UserText italic style={{ fontSize: 15, lineHeight: 20, color: day.ink2 }} testID="guess-line">
+            {/*
+              The app talking, so it cannot be in the serif. UserText is the
+              typeface reserved for the person's own words, and putting the
+              app's running commentary in it is exactly the confusion the whole
+              rule exists to prevent.
+            */}
+            <Body style={{ fontSize: 15, lineHeight: 20, fontStyle: 'italic', color: day.ink2 }} testID="guess-line">
               {guessLine(s)}
-            </UserText>
+            </Body>
           </View>
         </View>
 
