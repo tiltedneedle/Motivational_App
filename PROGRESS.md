@@ -15,13 +15,14 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 1. packages/core: domain model, stores (zustand + persist), engines
 - [x] 2. packages/ui: Studio tokens, Stone/Socket/Ring, HoldBar, Chip, Field, Sheet, text primitives
 - [x] 3. apps/mobile screens (all 16 routes)
-- [x] 4. Tests: 236 core + 33 contrast + 6 storage unit tests, 88 Playwright e2e checks, all green
+- [x] 4. Tests: 278 core + 33 contrast + 6 storage unit tests, 108 Playwright e2e checks, all green
 - [x] 5. supabase/: migrations with RLS and three structural authorship guards, edge functions
 - [x] 6. Hardening: the eight-lens audit's findings, worst first (see below) — 95 of 95
 - [x] 7. Research pass: libraries/versions; the migration against a real Postgres; prebuild
 - [x] 8. Second audit, six lenses over the repairs — 37 of 37
 - [x] 9. Walking the built app in a browser, at three widths (see below)
-- [x] 10. PRD §7 read against the app: notifications, the paywall and the tablet layout built
+- [x] 10. PRD §7 read against the app: notifications, the paywall, the tablet layout,
+      Sunday reading, the Goal Path and letters — all six were unbuilt, all six are built
 
 ## In flight
 
@@ -31,9 +32,9 @@ only tested. What is left needs a machine or a key this one does not have; see
 "Next steps".
 
 - The tree is green and committed: `pnpm verify` runs the toolchain guard,
-  typecheck, 236 core tests, 33 contrast measurements, 6 storage tests, the
+  typecheck, 278 core tests, 33 contrast measurements, 6 storage tests, the
   edge-function guards, the SQL structural guards, 23 checks against a real
-  Postgres, the serif authorship guard, the web build and 88 end-to-end
+  Postgres, the serif authorship guard, the web build and 108 end-to-end
   checks.
 - Three findings were **withdrawn, not fixed**: buildPlan does not construct
   plans its own validator rejects (verified across 560 combinations of strategy
@@ -57,11 +58,11 @@ build, then the end-to-end suite. Nothing ships without it passing.
 
 ```
 pnpm test:deps                  # one toolchain; the RN side left to Expo
-pnpm test                       # 236 core + 33 contrast + 6 storage unit tests
+pnpm test                       # 278 core + 33 contrast + 6 storage unit tests
 pnpm test:sql                   # RLS on every table, the three authorship guards
 pnpm test:migration             # 23 checks against a real Postgres, via PGlite
 pnpm test:authorship            # nothing but the user's words in the serif
-pnpm build:web && pnpm test:e2e # 88 end-to-end checks, serves dist itself
+pnpm build:web && pnpm test:e2e # 108 end-to-end checks, serves dist itself
 node scripts/serve.mjs          # the built app on :8790, to walk it by hand
 cd apps/mobile && npx expo start
 ```
@@ -562,6 +563,53 @@ reading:
   system back gesture, or closing the app on that screen, brought it back the
   next time Today opened.
 
+### Three more P1 sections, found the same way (2026-09-11)
+
+Reading §7 line by line rather than section by section turned up three more
+features with a type, a helper or a promise behind them and nothing a person
+could actually reach.
+
+**§7.3 Sunday reading.** "A reading view with no controls but a page turn; at
+the end, *Still true* or *Something moved*." There was no such view — and the
+Sunday notification written an hour earlier pointed at it, which made it a
+promise the app did not keep. `bookPages()` turns the Book into the pages it is
+already printed as, in the same order, because a reading view that reorders
+somebody's own document is a different document. Two pieces of chrome: which
+page of how many, and a way out.
+
+**§7.7 The Goal Path.** "A single route from now to the target date with
+milestone nodes, the user's dot at the current fraction, You are here, distance
+to next, and the last five evidence entries." The dot is **time, not
+completions**, and that is the whole argument for drawing it: a dot that moved
+with what had been done would put somebody who has done nothing at the start of
+a route whose deadline is a fortnight away. Time says where they are; the nodes
+say what is behind them; the picture is honest because the two may disagree.
+
+**§7.8 Letters.** The `Letter` type existed and nothing wrote one. The clause
+worth enforcing rather than trusting is "they never contain a goal or a plan
+line": a letter that names the plan is the app writing the plan back at
+somebody in a warmer voice, and the plan is in the same store, so it is the
+easiest thing in the world to do by accident. `checkLetter` refuses that, a
+quote that is not a verbatim substring, and anything outside 120–180 words. A
+letter that fails is not stored — there is no third option where it is shown
+with a warning, because the person cannot be expected to audit their own
+encouragement.
+
+That check found an existing defect immediately: **`letterFromFuture` in the
+Portrait printed the goal title** in its middle sentence and would have failed
+its own rule.
+
+Three more small ones came out of building these:
+
+- **`test-migration` counted tables against a hard-coded 14**, so it failed the
+  moment a table was legitimately added — which trains whoever runs it to edit
+  the number rather than look. It counts what the migration declares.
+- **The letter body was walked once per quote**, consuming as it went, so a
+  short quotation sitting before a longer one silently lost the serif.
+- **`check-authorship` counted braces with one non-greedy `{...}`**, so a
+  template literal inside a `UserText` left its own tail behind and the guard
+  reported the leftover punctuation as app prose.
+
 ## Blocked on the user
 - Supabase project URL/anon key, Anthropic API key, fal.ai key, RevenueCat keys: needed to test real providers. Everything runs on local fallbacks without them.
 
@@ -601,10 +649,11 @@ needs either hardware or a credential.
    seam; the paywall, the gates and their tests all go through the `Billing`
    interface. Until then Continue says plainly that nothing was charged, which
    is the honest thing for it to say.
-5. **Widgets and the Live Activity** (§7.11, P1-stretch). WidgetKit and a
-   foreground service are native code with no web equivalent, so nothing about
-   them can be built or checked on this machine. The data they need — the first
-   move, the Consistency figure — is already computed and already on Today.
+5. **Widgets, the Live Activity and wallpapers** (§7.11, §7.8). WidgetKit, a
+   foreground service and writing an image to Photos are native code with no
+   web equivalent, so nothing about them can be built or checked on this
+   machine. What they need is already computed: the first move and the
+   Consistency figure are on Today, and the "I will" line is on the Book.
 6. Then loop: implement, test, harden, research, repeat.
 
 ## Where the walkthrough habits are written down
