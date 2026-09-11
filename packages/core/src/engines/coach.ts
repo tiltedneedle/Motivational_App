@@ -7,7 +7,7 @@
  */
 import type { Brief, BookVersion, DaySummary, GoalAnalysis, Move, Persona } from '../types';
 import { isReturning } from './consistency';
-import { formatDay, plural } from '../ids';
+import { endSentence, formatDay, plural } from '../ids';
 import { firstSentence } from './portrait';
 import { SUPPORT_LINE, isQuotable, screen } from './safety';
 
@@ -163,15 +163,6 @@ export function buildDawnBrief(input: BriefInput, newId: (p: string) => string):
  */
 const PROPER_START =
   /^(?:Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)day\b|^(?:January|February|March|April|May|June|July|August|September|October|November|December)\b|^I\b/;
-
-/** Close a sentence without doubling punctuation the person already wrote. */
-function endSentence(s: string): string {
-  const t = s.trimEnd();
-  if (!t) return t;
-  // Look past a closing quote mark: `way."` is already finished.
-  const meaningful = t.replace(/["'\u201d\u2019]+$/, '');
-  return /[.!?]$/.test(meaningful) ? t : `${t}.`;
-}
 
 function lowerFirst(s: string): string {
   if (PROPER_START.test(s)) return s;
@@ -443,7 +434,9 @@ export function returnsLetter(book: BookVersion | null, gapDays: number, returnN
   const line = book?.iWill?.trim() || book?.firstSentence?.trim();
   const quotes = line ? [line] : [];
   const body = line
-    ? `${gapDays} days. Nothing reset while you were gone, and the Book still says “${line}”. Return #${returnNumber}. Most people never come back once. Start with the smallest thing on the list.`
+    ? `${gapDays} days. Nothing reset while you were gone, and the Book still says ${endSentence(
+        `“${line}”`,
+      )} Return #${returnNumber}. Most people never come back once. Start with the smallest thing on the list.`
     : `${gapDays} days, and you opened it again. Return #${returnNumber}. Start with the smallest thing on the list.`;
   return { body, quotes };
 }
@@ -470,7 +463,7 @@ export function fullTrackInvitation(longestLine: string): {
   const quoted = firstSentence(trimmed, 120);
   const ask = 'You wrote that much about one of them. Want to go that deep on the rest?';
   return {
-    text: `You wrote this much about it: “${quoted}”. ${ask}`,
+    text: `You wrote this much about it: ${endSentence(`“${quoted}”`)} ${ask}`,
     quoted,
     ask,
     quotes: [trimmed],

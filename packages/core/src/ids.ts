@@ -102,6 +102,21 @@ const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
  * The year is added only when it is not the current one, because on a plan that
  * runs twelve weeks it is noise.
  */
+/**
+ * Close a sentence without doubling punctuation the person already wrote.
+ *
+ * The app's prose ends a great many sentences with a quotation of theirs, and
+ * theirs usually ends in a full stop already: `…the whole way.".` was the
+ * app's punctuation landing on top of the person's. Looks past a closing
+ * quote mark, so `way.”` is already finished.
+ */
+export function endSentence(s: string): string {
+  const t = s.trimEnd();
+  if (!t) return t;
+  const meaningful = t.replace(/["'\u201d\u2019]+$/, '');
+  return /[.!?]$/.test(meaningful) ? t : `${t}.`;
+}
+
 export function formatDay(iso: string, opts: { weekday?: boolean; today?: string } = {}): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec((iso ?? '').trim());
   if (!m) return iso ?? '';

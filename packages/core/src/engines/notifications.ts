@@ -18,7 +18,7 @@
  * own fits, it goes in the body verbatim and its span is listed in `quotes`.
  */
 import type { BookVersion, DaySummary, Move, Persona } from '../types';
-import { formatDay } from '../ids';
+import { endSentence, formatDay } from '../ids';
 
 export type Moment = 'wake' | 'evening' | 'sunday' | 'milestone' | 'return';
 
@@ -168,7 +168,7 @@ export function planNotices(input: NoticeInput): Notice[] {
         title: 'Still here',
         route: '/today',
         body: line
-          ? `Nothing reset. The Book still says “${line}”.`
+          ? `Nothing reset. The Book still says ${endSentence(`“${line}”`)}`
           : 'Nothing reset while you were away. It is all still here.',
         quotes: line ? [line] : [],
       },

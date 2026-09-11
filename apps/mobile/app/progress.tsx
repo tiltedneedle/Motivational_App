@@ -260,12 +260,15 @@ function Almanac({ marks, today }: { marks: AlmanacMark[]; today: string }) {
               <View
                 key={m.day}
                 accessible
+                // Spoken, so a date a person would say and a count in the
+                // right number. "2026-09-11, 1 in the ledger" is what a screen
+                // reader used to read out for every stone on the shelf.
                 accessibilityLabel={
                   m.sealed
-                    ? `${m.day}, sealed, ${m.evidence} in the ledger`
+                    ? `${formatDay(m.day, { weekday: true, today })}, sealed, ${plural(m.evidence, 'entry', 'entries')} in the ledger`
                     : m.quiet
-                      ? `${m.day}, a quiet day`
-                      : `${m.day}, ${m.evidence} in the ledger`
+                      ? `${formatDay(m.day, { weekday: true, today })}, a quiet day`
+                      : `${formatDay(m.day, { weekday: true, today })}, ${plural(m.evidence, 'entry', 'entries')} in the ledger`
                 }
                 style={{
                   opacity: m.day > today ? 0.25 : 1,

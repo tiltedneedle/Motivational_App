@@ -57,7 +57,7 @@ import {
   type DaySummary,
   type GoalAnalysis,
 } from '../src/index';
-import { dayOf, sequentialIds } from '../src/ids';
+import { dayOf, endSentence, sequentialIds } from '../src/ids';
 
 describe('the Interview', () => {
   it('runs entirely on taps and ends with a named goal', () => {
@@ -937,5 +937,29 @@ describe('the Book turns into pages', () => {
     if (opening.kind !== 'opening') throw new Error('first page is not the opening');
     expect(opening.rest.startsWith('It is 6:40')).toBe(false);
     expect(opening.rest).toContain('Sam is still asleep');
+  });
+});
+
+/**
+ * `endSentence`, now shared. The app ends a great many sentences with a
+ * quotation of theirs, and theirs usually ends in a full stop already. Every
+ * one of these shapes was on screen at some point: `way.".`, `blue.”.`
+ */
+describe('one full stop, whoever wrote it', () => {
+  it('adds a stop when the quotation has none', () => {
+    expect(endSentence('“out the back door”')).toBe('“out the back door”.');
+  });
+
+  it('does not double one the person already wrote', () => {
+    expect(endSentence('“Rained the whole way.”')).toBe('“Rained the whole way.”');
+    expect(endSentence('“Did it!”')).toBe('“Did it!”');
+    expect(endSentence('“Really?”')).toBe('“Really?”');
+  });
+
+  it('is happy with plain prose and with nothing', () => {
+    expect(endSentence('Say it out loud')).toBe('Say it out loud.');
+    expect(endSentence('Say it out loud.')).toBe('Say it out loud.');
+    expect(endSentence('')).toBe('');
+    expect(endSentence('   ')).toBe('');
   });
 });

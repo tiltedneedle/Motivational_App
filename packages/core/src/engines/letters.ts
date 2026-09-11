@@ -21,6 +21,7 @@
  * encouragement.
  */
 import type { Evidence, Goal, Letter, Move } from '../types';
+import { endSentence } from '../ids';
 
 export type LetterTrigger = 'portrait' | 'first-return' | 'milestone' | 'monthly';
 
@@ -218,10 +219,12 @@ function middle(kept: string[], quoted: string[]): string {
   if (quoted[0]) bits.push(`You wrote “${quoted[0]}” and I have thought about that line more than you did.`);
   if (kept.length >= 2) {
     bits.push(
-      `Since then the ledger has ${kept.length} entries in your own handwriting, and two of them are “${kept[0]}” and “${kept[1]}”.`,
+      `Since then the ledger has ${kept.length} entries in your own handwriting, and two of them are “${kept[0]}” and ${endSentence(
+        `“${kept[1]}”`,
+      )}`,
     );
   } else if (kept.length === 1) {
-    bits.push(`The ledger has one entry in your own handwriting so far, and it is “${kept[0]}”.`);
+    bits.push(`The ledger has one entry in your own handwriting so far, and it is ${endSentence(`“${kept[0]}”`)}`);
   } else {
     bits.push('The ledger is still empty, which is the ordinary state of a thing that has just begun.');
   }
