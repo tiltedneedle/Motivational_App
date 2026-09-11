@@ -25,6 +25,8 @@ export interface MoveStoneProps {
   label: string;
   testID?: string;
   reducedMotion?: boolean;
+  /** The slow light sweep, for the one stone that is the hero of Today. */
+  hero?: boolean;
 }
 
 export function MoveStone({
@@ -34,6 +36,7 @@ export function MoveStone({
   steps,
   onSeat,
   onPark,
+  hero = false,
   label,
   testID,
   reducedMotion = false,
@@ -85,6 +88,7 @@ export function MoveStone({
         seated={seated}
         parked={parked}
         sunk={steps ? steps.done / steps.total : 0}
+        sweep={hero && !seated && !reducedMotion}
       />
     </Animated.View>
   );

@@ -5,7 +5,7 @@
  */
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, Platform, ScrollView, TextInput, View } from 'react-native';
+import { Animated, AppState, Easing, Platform, ScrollView, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   DOORWAY,
@@ -26,7 +26,7 @@ import {
   type WritingMode,
   type WritingSessionState,
 } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Question, Ring, Statement, Stone, Studio, UserText, accent, focusRing, night, type as fonts, webOnlyStyle } from '@morrow/ui';
+import { Body, Chip, InkButton, Label, Question, Ring, Statement, Stone, Studio, UserText, accent, focusRing, night, type as fonts, useReducedMotion, webOnlyStyle } from '@morrow/ui';
 import { latestText, useMorrow } from '../src/store';
 import { dictation } from '../src/dictation';
 
@@ -68,6 +68,28 @@ export default function Write() {
   const [micNote, setMicNote] = useState<string | null>(null);
   const anchorRef = useRef('');
   const dictationRef = useRef(dictation());
+
+  /**
+   * The stone bobs on a 4.5 s cycle and stops when writing starts (PRD 8.5).
+   * A room waiting is a room breathing; a room being written in is still.
+   */
+  const reduced = useReducedMotion();
+  const bob = useRef(new Animated.Value(0)).current;
+  const writing = phase === 'writing' && session.body.trim().length > 0;
+  useEffect(() => {
+    if (reduced || phase !== 'writing' || writing) {
+      Animated.timing(bob, { toValue: 0, duration: 400, useNativeDriver: true }).start();
+      return;
+    }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(bob, { toValue: -5, duration: 2250, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(bob, { toValue: 0, duration: 2250, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [bob, phase, reduced, writing]);
   // The autosave reads the newest session without re-arming its timer on
   // every keystroke, which would make the timer useless.
   const sessionRef = useRef(session);
@@ -394,7 +416,9 @@ export default function Write() {
             accessibilityLabel="Time left in this sitting"
             valueText={`${formatRemaining(remaining(session))} left, ${words} words`}
           >
-            <Stone size={64} domain="health" polish={polish(words)} />
+            <Animated.View style={{ transform: [{ translateY: bob }] }}>
+              <Stone size={64} domain="health" polish={polish(words)} />
+            </Animated.View>
           </Ring>
         </View>
 

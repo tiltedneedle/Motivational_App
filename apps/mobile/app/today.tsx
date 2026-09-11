@@ -369,6 +369,7 @@ export default function Today() {
               <MoveStone
                 testID={`stone-${now.id}`}
                 size={62}
+                hero
                 domain={goals.find((g) => g.id === now.goalId)?.domain ?? 'health'}
                 status={now.status}
                 label={now.title}

@@ -5,8 +5,8 @@
  * end-to-end tests drive. Skia can replace this later for the grain pass; the
  * props are the contract and would not change.
  */
-import React, { useMemo } from 'react';
-import { View, type ViewStyle } from 'react-native';
+import React, { useEffect, useMemo, useRef } from 'react';
+import { Animated, Easing, View, type ViewStyle } from 'react-native';
 import Svg, { Circle, Defs, Ellipse, RadialGradient, Stop } from 'react-native-svg';
 import { domainMeta, type DomainId } from '@morrow/core';
 
@@ -21,6 +21,8 @@ export interface StoneProps {
   sunk?: number;
   seated?: boolean;
   parked?: boolean;
+  /** The slow light sweep (PRD 8.1), for a stone that is the hero of its screen. */
+  sweep?: boolean;
   testID?: string;
   style?: ViewStyle;
 }
@@ -33,6 +35,7 @@ export function Stone({
   sunk = 0,
   seated = false,
   parked = false,
+  sweep = false,
   testID,
   style,
 }: StoneProps) {
@@ -99,6 +102,7 @@ export function Stone({
           <Circle cx={r} cy={r} r={r * 0.98} fill="none" stroke="#FFFFFF" strokeOpacity={0.22} strokeWidth={1} />
         ) : null}
       </Svg>
+      {sweep ? <Sweep size={size} /> : null}
       {sunk > 0 && sunk < 1 ? (
         <View
           pointerEvents="none"
@@ -114,6 +118,40 @@ export function Stone({
           }}
         />
       ) : null}
+    </View>
+  );
+}
+
+/**
+ * A band of light crossing the sphere, once every six seconds, clipped to
+ * the circle. Slow enough to be noticed only when looked at.
+ */
+function Sweep({ size }: { size: number }) {
+  const x = useRef(new Animated.Value(-size)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(x, { toValue: size, duration: 2600, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.delay(3400),
+        Animated.timing(x, { toValue: -size, duration: 0, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [size, x]);
+  return (
+    <View pointerEvents="none" style={{ position: 'absolute', left: 0, top: 0, width: size, height: size, borderRadius: size / 2, overflow: 'hidden' }}>
+      <Animated.View
+        style={{
+          position: 'absolute',
+          top: -size * 0.2,
+          width: size * 0.34,
+          height: size * 1.4,
+          backgroundColor: '#FFFFFF',
+          opacity: 0.16,
+          transform: [{ translateX: x }, { rotate: '22deg' }],
+        }}
+      />
     </View>
   );
 }

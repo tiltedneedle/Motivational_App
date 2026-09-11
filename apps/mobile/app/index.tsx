@@ -28,7 +28,7 @@ export default function Welcome() {
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
         <View style={{ flex: 1, justifyContent: 'center', gap: 22 }}>
           <Rise index={0} reducedMotion={reduced} style={{ alignItems: 'center', gap: 20 }}>
-            <Stone size={112} domain="health" polish={1} testID="welcome-stone" />
+            <Stone size={112} domain="health" polish={1} sweep={!reduced} testID="welcome-stone" />
             <Statement style={{ fontSize: 48, lineHeight: 52, textAlign: 'center' }}>Morrow</Statement>
             <Body style={{ textAlign: 'center', fontSize: 19, lineHeight: 26, maxWidth: 300 }}>
               Write your future in your own words. Then live by it.
