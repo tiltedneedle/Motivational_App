@@ -121,6 +121,23 @@ export default function Write() {
     setSession((s) => ({ ...s, body, idleMs: 0, nudge: null }));
   }, []);
 
+  /**
+   * Where the room goes when it closes (PRD 7.2).
+   *
+   * The ideal goes to the read-back — unless this is the Full track, where the
+   * shadow is required *before* What I heard, so it goes to the shadow's
+   * doorway instead. The shadow itself always goes on to the read-back. And
+   * an addition goes back to the Book it was added to.
+   *
+   * The shadow was reachable from nowhere: the room accepted `kind=shadow` and
+   * nothing in the app ever sent anyone there, on either track.
+   */
+  const after = (): string => {
+    if (kind === 'shadow') return '/heard';
+    if (kind === 'addition') return '/book';
+    return track === 'full' ? '/write?kind=shadow' : '/heard';
+  };
+
   const close = () => {
     const saved = saveText(kind, session.body, mode, session.elapsed);
     // saveText clears the draft on success; a crisis pause must clear it too,
@@ -136,7 +153,7 @@ export default function Write() {
       setPaused(true);
       return;
     }
-    router.replace('/heard');
+    router.replace(after());
   };
 
   if (phase === 'doorway') {
@@ -250,7 +267,43 @@ export default function Write() {
               />
             </View>
           ) : (
-            <InkButton testID="write-continue" label="Read it back to me" onPress={close} />
+            <View style={{ gap: 10 }}>
+              <InkButton
+                testID="write-continue"
+                label={
+                  kind === 'shadow'
+                    ? 'Closed. Read the ideal back to me'
+                    : kind === 'addition'
+                      ? 'Back to the Book'
+                      : track === 'full'
+                        ? 'On to the other road'
+                        : 'Read it back to me'
+                }
+                onPress={close}
+              />
+              {/*
+                PRD 7.2: the shadow is optional on Starter, eight minutes, always
+                after the ideal and never the default view. Offered here once,
+                as the second of two buttons, and again on Envision's other
+                road card if they walk past it now.
+              */}
+              {kind === 'ideal' && track !== 'full' ? (
+                <InkButton
+                  testID="write-shadow"
+                  label="Write the other road first · 8 minutes"
+                  onPress={() => {
+                    const saved = saveText(kind, session.body, mode, session.elapsed);
+                    clearDraft(kind);
+                    if (!saved) {
+                      setPaused(true);
+                      return;
+                    }
+                    router.replace('/write?kind=shadow');
+                  }}
+                  style={{ backgroundColor: 'transparent', borderWidth: 1.5, borderColor: night.line }}
+                />
+              ) : null}
+            </View>
           )}
         </SafeAreaView>
       </Studio>

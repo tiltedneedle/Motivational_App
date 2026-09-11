@@ -28,6 +28,9 @@ export function analysisPlan(rank: number, track: 'starter' | 'full'): AnalysisK
   return CORE_ANALYSES;
 }
 
+/** PRD 7.2: the Full track's soft floor. Polish, never an error. */
+const FULL_FLOOR = 600;
+
 export default function StoneScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ goal?: string; kind?: string }>();
@@ -211,6 +214,21 @@ export default function StoneScreen() {
                 multiline
                 minHeight={140}
               />
+              {/*
+                PRD 7.2: "a soft floor of 600 characters shown as polish, never
+                an error". So: a count, in the quiet ink, that stops being
+                shown once it is past. Nothing blocks on it and nothing turns
+                red.
+              */}
+              {paragraph.trim().length < FULL_FLOOR ? (
+                <Label testID="stone-paragraph-polish" style={{ color: day.ink3 }}>
+                  {paragraph.trim().length} of {FULL_FLOOR} · the studied dose is about a paragraph
+                </Label>
+              ) : (
+                <Label testID="stone-paragraph-polish" style={{ color: accent.success }}>
+                  The studied dose
+                </Label>
+              )}
             </View>
           ) : null}
         </ScrollView>

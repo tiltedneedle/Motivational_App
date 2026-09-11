@@ -567,6 +567,45 @@ async function main() {
       check('a scene it cannot source says so rather than inventing one', await seen('scene-empty-practice'));
     }
 
+    // ---- the other road (PRD 7.2, 7.8)
+    //
+    // Optional on Starter, always after the ideal, never the default view —
+    // and drawn from the shadow, so if the shadow was never written the
+    // eight-minute write is offered here rather than a scene made up in its
+    // place. The room accepted kind=shadow and nothing had ever sent anyone
+    // there.
+    check('an unwritten other road offers the write, not a picture', await seen('scene-write-shadow'));
+    check('and does not offer to draw what does not exist', !(await seen('scene-draw-other_road')));
+
+    await tap('scene-write-shadow');
+    await page.waitForTimeout(400);
+    check('the shadow has its own doorway', await seen('screen-write-doorway'));
+    const shadowDoor = await page.locator('body').innerText();
+    check('at eight minutes on Starter', shadowDoor.includes('8 minutes'), shadowDoor.slice(0, 120));
+
+    await tap('write-begin');
+    await page.waitForTimeout(300);
+    await page.locator('[data-testid="write-input"]').fill(
+      'The alarm goes and I turn it off. The kitchen is still blue but I am not in it. Sam stopped asking.',
+    );
+    // Eight minutes, on the clock the product actually ships.
+    await page.clock.runFor(8 * 60 * 1000 + 2000);
+    await page.waitForTimeout(600);
+    check('the shadow closes on its own clock', await seen('write-continue'));
+    check(
+      'and goes on to the read-back of the ideal, not of itself',
+      (await text('write-continue')).toLowerCase().includes('read the ideal'),
+      await text('write-continue'),
+    );
+    await tap('write-continue');
+    await page.waitForTimeout(600);
+    check('which is What I heard', await seen('screen-heard'));
+
+    await page.goto(`${BASE}/envision`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(2000);
+    await page.waitForTimeout(900);
+    check('and once written, the other road can be drawn', await seen('scene-draw-other_road'));
+
     // ---- Progress: the ledger, the almanac and the score
     await page.goto(`${BASE}/progress`, { waitUntil: 'networkidle' });
     await page.clock.runFor(1500);

@@ -49,6 +49,7 @@ export default function Envision() {
   const goals = useGoals();
   const scenes = useMorrow((s) => s.scenes);
   const makeScene = useMorrow((s) => s.makeScene);
+  const hasShadow = useMorrow((s) => s.texts.some((t) => t.kind === 'shadow' && t.body.trim().length > 0));
   const goBack = () => (router.canGoBack() ? router.back() : router.replace('/today'));
 
   const [goalId, setGoalId] = useState<string | null>(goals[0]?.id ?? null);
@@ -145,6 +146,27 @@ export default function Envision() {
 
           {SCENES.map(({ type, title, blurb }) => {
             const scene = scenes.find((s) => s.goalId === goal.id && s.type === type);
+            // PRD 7.8: the other road is drawn from the shadow, and if the
+            // shadow was never written, the eight-minute write is offered here
+            // rather than a scene made up in its place.
+            if (type === 'other_road' && !hasShadow) {
+              return (
+                <View key={type} testID="envision-other_road" style={{ gap: 8 }}>
+                  <Label style={{ color: night.ink3 }}>{title}</Label>
+                  <View style={{ borderWidth: 1, borderColor: night.line, borderRadius: 22, padding: 18, gap: 6 }}>
+                    <Body style={{ color: night.ink2 }}>
+                      Nothing is drawn here until you have written it. Eight minutes, the same distance ahead, and the
+                      habits won.
+                    </Body>
+                    <TextButton
+                      testID="scene-write-shadow"
+                      label="Write the other road"
+                      onPress={() => router.push('/write?kind=shadow')}
+                    />
+                  </View>
+                </View>
+              );
+            }
             const missing = why[`${goal.id}:${type}`];
             const busy = drawing === type;
             return (
