@@ -15,14 +15,15 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 1. packages/core: domain model, stores (zustand + persist), engines
 - [x] 2. packages/ui: Studio tokens, Stone/Socket/Ring, HoldBar, Chip, Field, Sheet, text primitives
 - [x] 3. apps/mobile screens (all 16 routes)
-- [x] 4. Tests: 278 core + 33 contrast + 6 storage unit tests, 108 Playwright e2e checks, all green
+- [x] 4. Tests: 278 core + 33 contrast + 6 storage unit tests, 120 Playwright e2e checks, all green
 - [x] 5. supabase/: migrations with RLS and three structural authorship guards, edge functions
 - [x] 6. Hardening: the eight-lens audit's findings, worst first (see below) — 95 of 95
 - [x] 7. Research pass: libraries/versions; the migration against a real Postgres; prebuild
 - [x] 8. Second audit, six lenses over the repairs — 37 of 37
 - [x] 9. Walking the built app in a browser, at three widths (see below)
 - [x] 10. PRD §7 read against the app: notifications, the paywall, the tablet layout,
-      Sunday reading, the Goal Path and letters — all six were unbuilt, all six are built
+      Sunday reading, the Goal Path, letters, the Portrait reveal and Replan —
+      all eight were unbuilt, all eight are built
 
 ## In flight
 
@@ -34,7 +35,7 @@ only tested. What is left needs a machine or a key this one does not have; see
 - The tree is green and committed: `pnpm verify` runs the toolchain guard,
   typecheck, 278 core tests, 33 contrast measurements, 6 storage tests, the
   edge-function guards, the SQL structural guards, 23 checks against a real
-  Postgres, the serif authorship guard, the web build and 108 end-to-end
+  Postgres, the serif authorship guard, the web build and 120 end-to-end
   checks.
 - Three findings were **withdrawn, not fixed**: buildPlan does not construct
   plans its own validator rejects (verified across 560 combinations of strategy
@@ -58,11 +59,12 @@ build, then the end-to-end suite. Nothing ships without it passing.
 
 ```
 pnpm test:deps                  # one toolchain; the RN side left to Expo
+pnpm test:dates                 # no local date turned into a UTC day
 pnpm test                       # 278 core + 33 contrast + 6 storage unit tests
 pnpm test:sql                   # RLS on every table, the three authorship guards
 pnpm test:migration             # 23 checks against a real Postgres, via PGlite
 pnpm test:authorship            # nothing but the user's words in the serif
-pnpm build:web && pnpm test:e2e # 108 end-to-end checks, serves dist itself
+pnpm build:web && pnpm test:e2e # 120 end-to-end checks, serves dist itself
 node scripts/serve.mjs          # the built app on :8790, to walk it by hand
 cd apps/mobile && npx expo start
 ```
@@ -609,6 +611,38 @@ Three more small ones came out of building these:
 - **`check-authorship` counted braces with one non-greedy `{...}`**, so a
   template literal inside a `UserText` left its own tail behind and the guard
   reported the leftover punctuation as app prose.
+
+### The last two in §7.4, and a rule about days (2026-09-11)
+
+**The Portrait reveal.** This is what the five stones were for, and nothing in
+the app had ever shown it: the Portrait was built at the last stone and the
+sitting went straight to sealing the Book. It has its own screen and the
+sitting ends there. Everything on it except the letter and the labels is a
+sentence the person wrote, so almost all of it is in the serif — and the one
+exception is the point. The identity clause is the only line in the product the
+app *proposed* rather than quoted, which is exactly why it is the only thing on
+the screen they can edit in place. Writing their own retires the proposal for
+good and drops the framing with it.
+
+**Replan as a diff.** `proposeReplan` and `applyReplan` were written, tested,
+and called from nowhere. Every row starts at "keep mine" — a diff that arrives
+pre-accepted is an edit with a confirmation dialogue — every row shows the line
+of theirs it came from, and an empty diff says so plainly, because most weeks
+nothing needs changing and a replan with a suggestion every time is a replan
+worth ignoring. Accepted rows land as a new version, not an edit in place.
+
+**One rule about days.** `toISOString()` converts to UTC, so a date built in
+local time and sliced to ten characters is tomorrow west of Greenwich in the
+evening. That is how a three-month horizon landed a day late and dated every
+milestone on the plan built from it, and how a letter due today read as due
+tomorrow on the letters screen. `scripts/check-dates.mjs` is the rule, wired
+into `verify`; writing it turned up two ways a guard quietly stops guarding
+(it fired on its own explanatory comment, and its comment-stripping matched
+nothing because a trailing CR is a line terminator to a JS regex). Verified to
+fail on both of the bugs it was written for before being kept.
+
+And the route table walked against the code that refers to it: every screen
+has a door, including the letters once they have all been read.
 
 ## Blocked on the user
 - Supabase project URL/anon key, Anthropic API key, fal.ai key, RevenueCat keys: needed to test real providers. Everything runs on local fallbacks without them.
