@@ -8,13 +8,16 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import type { PaywallMoment } from '@morrow/core';
+import { ordinal, type PaywallMoment } from '@morrow/core';
 import { Body, HoldBar, InkButton, Label, Statement, Stone, Studio, UserField, useReducedMotion, night } from '@morrow/ui';
 import { useGoals, useMorrow } from '../src/store';
 
 export default function SealBook() {
   const router = useRouter();
   const goals = useGoals();
+  // Every seal is a new edition and nothing is overwritten (PRD §7.3), so the
+  // label has to count. It said "first edition" on every seal there was.
+  const editions = useMorrow((s) => s.books.length);
   const iWill = useMorrow((s) => s.iWill);
   const setIWill = useMorrow((s) => s.setIWill);
   const sealBook = useMorrow((s) => s.sealBook);
@@ -91,15 +94,38 @@ export default function SealBook() {
 
           {unplanned.length ? (
             <View testID="seal-unplanned" style={{ gap: 12, borderTopWidth: 1, borderTopColor: night.line, paddingTop: 18 }}>
-              <Statement style={{ color: night.ink, fontSize: 22, lineHeight: 28 }}>
-                Your Book is sealed. {unplanned.length === 1 ? 'One goal' : `${unplanned.length} goals`} still
-                {unplanned.length === 1 ? ' needs' : ' need'} a first step.
-              </Statement>
-              <Body style={{ color: night.ink2 }}>
-                Nothing is lost. A plan is built out of the line you wrote about how you will do it, and{' '}
-                {unplanned.length === 1 ? 'this one has' : 'these have'} nothing in {unplanned.length === 1 ? 'it' : 'them'} to
-                start from yet.
-              </Body>
+              {/*
+                Two different reasons a goal can be here, and they need two
+                different sentences. "Nothing in it to start from yet" is true
+                of a goal missing its Strategies line and flatly false of one
+                held back by the plan limit — that one has everything it needs,
+                and telling somebody otherwise sends them off to rewrite a line
+                they have already written.
+              */}
+              {unplanned.every((u) => u.moment) ? (
+                <>
+                  <Statement style={{ color: night.ink, fontSize: 22, lineHeight: 28 }}>
+                    Your Book is sealed. {unplanned.length === 1 ? 'One goal is' : `${unplanned.length} goals are`}{' '}
+                    written and waiting for a plan.
+                  </Statement>
+                  <Body style={{ color: night.ink2 }}>
+                    Everything you wrote for {unplanned.length === 1 ? 'it' : 'them'} is in the Book. The free plan
+                    builds one Blueprint, and the first goal has it.
+                  </Body>
+                </>
+              ) : (
+                <>
+                  <Statement style={{ color: night.ink, fontSize: 22, lineHeight: 28 }}>
+                    Your Book is sealed. {unplanned.length === 1 ? 'One goal' : `${unplanned.length} goals`} still
+                    {unplanned.length === 1 ? ' needs' : ' need'} a first step.
+                  </Statement>
+                  <Body style={{ color: night.ink2 }}>
+                    Nothing is lost. A plan is built out of the line you wrote about how you will do it, and{' '}
+                    {unplanned.filter((u) => !u.moment).length === 1 ? 'this one has' : 'these have'} nothing in{' '}
+                    {unplanned.filter((u) => !u.moment).length === 1 ? 'it' : 'them'} to start from yet.
+                  </Body>
+                </>
+              )}
               {unplanned.map((u) => (
                 <View key={u.id} style={{ gap: 4 }}>
                   <Label style={{ color: night.ink }}>{u.title}</Label>
@@ -112,21 +138,26 @@ export default function SealBook() {
                 a Strategies line they have already written would be the app
                 lying about why it stopped.
               */}
-              {unplanned[0]?.moment ? (
+              {unplanned.some((u) => u.moment) ? (
                 <InkButton
                   testID="seal-see-plans"
                   label="See what Pro adds"
-                  onPress={() => router.push(`/paywall?moment=${unplanned[0]!.moment}&from=/book`)}
+                  onPress={() => router.push(`/paywall?moment=${unplanned.find((u) => u.moment)!.moment}`)}
                 />
               ) : null}
-              <InkButton
-                testID="seal-fix-plan"
-                label={unplanned.length === 1 ? 'Write that line now' : 'Start with the first one'}
-                onPress={() => {
-                  const first = unplanned.find((u) => !u.moment) ?? unplanned[0];
-                  if (first) router.replace(`/stone?goal=${first.id}&kind=strategies`);
-                }}
-              />
+              {/* Only for a goal that is actually missing its line. */}
+              {unplanned.some((u) => !u.moment) ? (
+                <InkButton
+                  testID="seal-fix-plan"
+                  label={
+                    unplanned.filter((u) => !u.moment).length === 1 ? 'Write that line now' : 'Start with the first one'
+                  }
+                  onPress={() => {
+                    const first = unplanned.find((u) => !u.moment);
+                    if (first) router.replace(`/stone?goal=${first.id}&kind=strategies`);
+                  }}
+                />
+              ) : null}
               <InkButton
                 testID="seal-continue-anyway"
                 label="Read my Book first"
@@ -141,7 +172,7 @@ export default function SealBook() {
           <HoldBar
             testID="seal-hold"
             label={iWill.trim() ? 'Hold to seal' : 'Write the last line first'}
-            doneLabel="Sealed · first edition"
+            doneLabel={`Sealed · ${ordinal(editions + 1).toLowerCase()} edition`}
             done={sealed}
             reducedMotion={reduced}
             // Both branches have to RETURN the refusal. The bar releases its
