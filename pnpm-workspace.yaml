@@ -55,3 +55,4 @@ minimumReleaseAgeExclude:
   - expo-splash-screen@57.0.9
   - expo-symbols@57.0.3
   - expo-system-ui@57.0.4
+  - expo-media-library@57.0.5

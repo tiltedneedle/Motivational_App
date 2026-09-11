@@ -293,6 +293,8 @@ export default function BookScreen() {
             dialogue, which has Save as PDF in it everywhere.
           */}
           <Chip testID="book-pdf" label={printing ? 'Making it…' : 'PDF'} onPress={() => void onPdf()} />
+          {/* The I will line as a lock screen (PRD §7.8). */}
+          <Chip testID="book-wallpaper" label="Lock screen" onPress={() => router.push('/wallpaper')} />
           {/*
             The Sunday reading (PRD §7.3) has a door. The notification points at
             it and so does Today on a Sunday, but somebody who simply opened

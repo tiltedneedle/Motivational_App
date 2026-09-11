@@ -15,7 +15,7 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 1. packages/core: domain model, stores (zustand + persist), engines
 - [x] 2. packages/ui: Studio tokens, Stone/Socket/Ring, HoldBar, Chip, Field, Sheet, text primitives
 - [x] 3. apps/mobile screens (all 16 routes)
-- [x] 4. Tests: 352 core + 43 ui + 8 storage unit tests, 37 real-Postgres checks, 140 Playwright e2e checks, all green
+- [x] 4. Tests: 352 core + 43 ui + 8 storage unit tests, 37 real-Postgres checks, 144 Playwright e2e checks, all green
 - [x] 5. supabase/: migrations with RLS and three structural authorship guards, edge functions
 - [x] 6. Hardening: the eight-lens audit's findings, worst first (see below) — 95 of 95
 - [x] 7. Research pass: libraries/versions; the migration against a real Postgres; prebuild
@@ -44,6 +44,9 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
       is dark or the person pins it; System / Day / Night in Settings
 - [x] 20. Voice into the coach (§7.9): the same recogniser as the room, into the
       field where it can be read before it is sent
+- [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
+      lock-screen pixels — to Photos on a phone, a PNG download on the web —
+      from the Book and from Envision
 - [x] 16. The feel of the controls (§8): haptics on seat, park and seal, with the
       off switch in Settings; analytics as a seam with a fixed vocabulary and no
       free text (PostHog HTTP, nothing without a key); the Google sign-in half
@@ -60,7 +63,7 @@ see "Next steps".
   typecheck, lint, 352 core tests, 43 ui tests (contrast and the quoted-span
   split), 8 storage tests, the edge-function guards, the SQL structural
   guards, 37 checks against a real Postgres, the serif authorship guard, the
-  web build and 140 end-to-end checks.
+  web build and 144 end-to-end checks.
 - **The account's spend limit is the month's, not the run's.** The fourth
   audit was ten agents and 1.59M tokens and tripped the monthly limit with
   two verifiers still running; their lenses' findings were verified by hand.
@@ -947,6 +950,18 @@ microphone, so the fallback is what was seen); the recogniser itself needs a
 phone. Expo's patch releases of the day were taken with `expo install --fix`;
 expo-doctor is 18/18 again.
 
+### The lock screen (2026-09-12)
+
+§7.8's wallpaper. `/wallpaper` is the print — the I will line in the serif on
+the night ground, the goal's stone, the seal date, nothing else — drawn at a
+third of lock-screen pixels or as wide as the phone allows, and captured at
+the full 1170×2532 by `react-native-view-shot`. `src/wallpaper.ts` is the
+edge: Photos on a phone through `expo-media-library`'s add-only permission,
+the share sheet as the other door, a PNG download on the web (html2canvas
+under view-shot). Both modules lazy behind a try/catch. The e2e intercepts
+the download and checks it is a PNG. What only a phone can show: the capture
+of a native view, and the permission prompt.
+
 ### Dark mode (2026-09-12)
 
 §7.14: "the user can pin light or dark". A hundred and seventy reads of `day.ink`
@@ -1042,7 +1057,7 @@ needs either hardware or a credential.
    seam; the paywall, the gates and their tests all go through the `Billing`
    interface. Until then Continue says plainly that nothing was charged, which
    is the honest thing for it to say.
-5. **Widgets, the Live Activity and wallpapers** (§7.11, §7.8). WidgetKit, a
+5. **Widgets and the Live Activity** (§7.11). WidgetKit, a
    foreground service and writing an image to Photos are native code with no
    web equivalent, so nothing about them can be built or checked on this
    machine. What they need is already computed: the first move and the

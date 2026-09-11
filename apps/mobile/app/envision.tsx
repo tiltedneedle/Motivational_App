@@ -256,6 +256,11 @@ export default function Envision() {
             scenes and letters in the same room, so this is that room.
           */}
           <TextButton testID="envision-letters" label="Letters →" onPress={() => router.push('/letters')} />
+          <TextButton
+            testID="envision-wallpaper"
+            label="Lock screen →"
+            onPress={() => router.push(goal ? `/wallpaper?goal=${goal.id}` : '/wallpaper')}
+          />
 
           <Body style={{ color: night.ink3, fontSize: 12, lineHeight: 18 }}>
             Every one of these is built from something you wrote. If there is nothing of yours to build it from, nothing

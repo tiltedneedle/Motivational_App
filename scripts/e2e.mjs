@@ -375,6 +375,23 @@ async function main() {
       ];
       const intruders = appProse.filter((t) => bookText.includes(t));
       check('no app prose was sealed into the Book', intruders.length === 0, intruders.join(' | '));
+
+      // ---- the lock screen (PRD 7.8): the I will line as an image
+      //
+      // On the web the capture is a PNG the browser downloads; the download
+      // itself is intercepted so the check is on the image, not on the dialog.
+      await tap('book-wallpaper');
+      check('the Book offers the I will line as a lock screen', await seen('screen-wallpaper'));
+      if (await seen('screen-wallpaper')) {
+        check('and the print carries their line', (await text('wallpaper-line')).includes('out the back door before the kettle boils'));
+        const download = page.waitForEvent('download', { timeout: 15_000 }).catch(() => null);
+        await tap('wallpaper-save');
+        const got = await download;
+        check('the capture is a PNG', Boolean(got && /\.png$/.test(got.suggestedFilename())), got ? got.suggestedFilename() : 'no download');
+        await tap('wallpaper-back');
+        await page.waitForTimeout(400);
+        check('and Back returns to the Book', await seen('screen-book'));
+      }
     }
 
     // ---- the one paywall moment, on the way to Today (PRD §7.13, §8.9)

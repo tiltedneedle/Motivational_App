@@ -47,6 +47,13 @@
       "expo-sharing",
       "expo-apple-authentication",
       [
+        "expo-media-library",
+        {
+          "savePhotosPermission": "Morrow saves your lock screen — your own line, typeset — to Photos. It never reads your photos.",
+          "photosPermission": "Morrow only ever adds an image to Photos; it does not look at what is there."
+        }
+      ],
+      [
         "expo-speech-recognition",
         {
           "microphonePermission": "Morrow listens so you can say the Fifteen instead of typing it. Nothing is recorded; only the words are kept.",
