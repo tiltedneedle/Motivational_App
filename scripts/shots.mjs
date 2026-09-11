@@ -9,7 +9,7 @@
  *   node scripts/shots.mjs                 # all routes → scripts/shots/
  *   node scripts/shots.mjs today book      # some
  *   OUT=some/dir node scripts/shots.mjs    # elsewhere
- *   DARK=1 node scripts/shots.mjs          # the night studio pinned
+ *   DARK=1 node scripts/shots.mjs          # the night studio pinned → scripts/shots/dark/
  */
 import { chromium } from 'playwright';
 import { createServer } from 'node:http';
@@ -21,7 +21,7 @@ const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 const DIST = join(ROOT, 'apps', 'mobile', 'dist');
 const PORT = Number(process.env.PORT ?? 8798);
 const BASE = `http://localhost:${PORT}`;
-const OUT = process.env.OUT ?? join(ROOT, 'scripts', 'shots');
+const OUT = process.env.OUT ?? join(ROOT, 'scripts', 'shots', process.env.DARK ? 'dark' : '.');
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',

@@ -400,7 +400,7 @@ export default function Coach() {
               />
             </View>
             <Chip testID="coach-mic" label={listening ? 'Listening' : 'Say it'} selected={listening} onPress={() => void listen()} />
-            <InkButton testID="coach-send" label="Send" onPress={send} style={{ height: 46, paddingHorizontal: 20 }} />
+            <InkButton testID="coach-send" label="Send" onPress={send} compact />
           </View>
           {micNote ? (
             <Label testID="coach-mic-note" style={{ color: day.ink3 }}>

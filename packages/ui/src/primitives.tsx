@@ -448,11 +448,12 @@ export function Chip({
           opacity: pressed ? 0.85 : 1,
           transform: [{ scale: pressed ? 0.97 : 1 }],
           justifyContent: 'center',
+          alignItems: 'center',
         },
         style,
       ]}
     >
-      <Text style={{ fontFamily: fonts.sansSemi, fontSize: 14, lineHeight: 20, color: ghost ? p.ink2 : fg }}>{label}</Text>
+      <Text style={{ fontFamily: fonts.sansSemi, fontSize: 14, lineHeight: 20, textAlign: 'center', color: ghost ? p.ink2 : fg }}>{label}</Text>
     </Pressable>
   );
 }
@@ -462,6 +463,7 @@ export function InkButton({
   onPress,
   disabled = false,
   busy = false,
+  compact = false,
   testID,
   style,
 }: {
@@ -469,6 +471,8 @@ export function InkButton({
   onPress?: () => void;
   disabled?: boolean;
   busy?: boolean;
+  /** A chip's height, for the one ink action in a row of chips. */
+  compact?: boolean;
   testID?: string;
   style?: StyleProp<ViewStyle>;
 }) {
@@ -493,9 +497,9 @@ export function InkButton({
             style={{
               // A floor, not a ceiling. At 200% type a fixed 58 clipped the
               // label inside the button that was supposed to carry it.
-              minHeight: 56,
-              paddingVertical: 14,
-              paddingHorizontal: 22,
+              minHeight: compact ? 40 : 56,
+              paddingVertical: compact ? 9 : 14,
+              paddingHorizontal: compact ? 18 : 22,
               borderRadius: radius.chip,
               backgroundColor: p.ink,
               alignItems: 'center',
@@ -506,7 +510,7 @@ export function InkButton({
             {busy ? (
               <ActivityIndicator color={p.onInk} />
             ) : (
-              <Text style={{ fontFamily: fonts.sansSemi, fontSize: 17, lineHeight: 22, textAlign: 'center', color: p.onInk }}>{label}</Text>
+              <Text style={{ fontFamily: fonts.sansSemi, fontSize: compact ? 14 : 17, lineHeight: compact ? 20 : 22, textAlign: 'center', color: p.onInk }}>{label}</Text>
             )}
           </View>
         </View>

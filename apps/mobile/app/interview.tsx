@@ -228,7 +228,7 @@ export default function Interview() {
                       onSubmitEditing={useCustom}
                     />
                   </View>
-                  <InkButton testID="custom-use" label="Use this" onPress={useCustom} style={{ height: 42, paddingHorizontal: 16 }} />
+                  <InkButton testID="custom-use" label="Use this" onPress={useCustom} compact />
                 </View>
               ) : null}
             </ScrollView>

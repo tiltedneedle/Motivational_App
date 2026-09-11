@@ -537,7 +537,8 @@ export default function Today() {
                 <Label>Consistency</Label>
                 <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
                   <Readout testID="consistency">{score.score}</Readout>
-                  {score.delta !== 0 ? (
+                  {/* No "+100" beside a first week: there was nothing to be up from. */}
+                  {score.delta !== 0 && score.previous !== 0 ? (
                     <Text style={{ fontFamily: fonts.sansSemi, fontSize: 14, color: score.delta > 0 ? accent.success : day.ink2 }}>
                       {score.delta > 0 ? `+${score.delta}` : score.delta}
                     </Text>

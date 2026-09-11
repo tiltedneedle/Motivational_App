@@ -5,7 +5,8 @@
  * typeset in the serif; export to Photos on iOS." The image is the night
  * studio with their line on it and nothing else — no logo, no chrome — so
  * what they see forty times a day is a sentence they wrote. The print on
- * screen is the image at a third; the capture is at lock-screen pixels.
+ * screen is as large as the phone allows with its controls still in view;
+ * the capture is at lock-screen pixels.
  */
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
@@ -23,7 +24,7 @@ export default function Wallpaper() {
   const goals = useGoals();
   const boundary = useMorrow((s) => s.profile.dayBoundaryHour);
   const printRef = useRef<View>(null);
-  const { width: windowWidth } = useWindowDimensions();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
 
@@ -64,9 +65,13 @@ export default function Wallpaper() {
     );
   }
 
-  // The print at a third of lock-screen pixels, or as wide as the phone
-  // allows; the capture is upsampled to the full size either way.
-  const w = Math.min(WALLPAPER.width / WALLPAPER.scale, windowWidth - 44);
+  // The print at a third of lock-screen pixels, or as large as the phone
+  // allows with the header, the chips and the hint still on screen — the
+  // first frame should show the print and the way to save it. The capture
+  // is upsampled to the full size either way.
+  const CHROME = 250;
+  const wByHeight = ((windowHeight - CHROME) * WALLPAPER.width) / WALLPAPER.height;
+  const w = Math.round(Math.max(200, Math.min(WALLPAPER.width / WALLPAPER.scale, windowWidth - 44, wByHeight)));
   const h = Math.round((w * WALLPAPER.height) / WALLPAPER.width);
 
   return (
@@ -82,26 +87,30 @@ export default function Wallpaper() {
             is the same on every platform, and the OS's clock and widgets sit
             in the top third, which is why the line sits low.
           */}
-          <View
-            ref={printRef}
-            testID="wallpaper-print"
-            collapsable={false}
-            style={{
-              width: w,
-              height: h,
-              borderRadius: 28,
-              overflow: 'hidden',
-              backgroundColor: night.ground,
-              justifyContent: 'flex-end',
-              padding: 28,
-              gap: 18,
-            }}
-          >
-            <Stone size={44} domain={goal?.domain ?? 'health'} polish={1} />
-            <UserText testID="wallpaper-line" style={{ fontSize: 26, lineHeight: 34, color: night.ink }}>
-              {line}
-            </UserText>
-            <Label style={{ color: night.ink3 }}>{formatDay(sealedOn(book.sealedAt, boundary))}</Label>
+          {/* A hairline frame around the print, outside the capture, so the
+              print's own night reads as an object on the night studio. */}
+          <View style={{ borderRadius: 29, borderWidth: 1, borderColor: night.line2 }}>
+            <View
+              ref={printRef}
+              testID="wallpaper-print"
+              collapsable={false}
+              style={{
+                width: w,
+                height: h,
+                borderRadius: 28,
+                overflow: 'hidden',
+                backgroundColor: night.ground,
+                justifyContent: 'flex-end',
+                padding: 28,
+                gap: 18,
+              }}
+            >
+              <Stone size={44} domain={goal?.domain ?? 'health'} polish={1} />
+              <UserText testID="wallpaper-line" style={{ fontSize: 26, lineHeight: 34, color: night.ink }}>
+                {line}
+              </UserText>
+              <Label style={{ color: night.ink3 }}>{formatDay(sealedOn(book.sealedAt, boundary))}</Label>
+            </View>
           </View>
 
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>

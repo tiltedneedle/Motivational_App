@@ -284,7 +284,12 @@ function Almanac({ marks, today }: { marks: AlmanacMark[]; today: string }) {
                       : `${formatDay(m.day, { weekday: true, today })}, ${plural(m.evidence, 'entry', 'entries')} in the ledger`
                 }
                 style={{
-                  opacity: m.day > today ? 0.25 : 1,
+                  // Three weights on the shelf: a day not yet here is a
+                  // shadow, a quiet day is a dull stone, a day with
+                  // something in it is the stone at full weight. At eight
+                  // points the polish alone cannot tell them apart, so the
+                  // opacity carries it, on both studios.
+                  opacity: m.day > today ? 0.18 : m.quiet && m.day !== today ? 0.42 : 1,
                   borderRadius: 999,
                   padding: m.day === today ? 1.5 : 0,
                   borderWidth: m.day === today ? 1.5 : 0,
@@ -295,7 +300,7 @@ function Almanac({ marks, today }: { marks: AlmanacMark[]; today: string }) {
                   size={stone}
                   domain="custom"
                   // Polish is what the day held; seating is the person closing it.
-                  polish={m.quiet ? 0.25 : Math.min(1, 0.45 + m.evidence * 0.18)}
+                  polish={m.quiet ? 0.25 : Math.min(1, 0.6 + m.evidence * 0.15)}
                   seated={m.sealed}
                 />
               </View>

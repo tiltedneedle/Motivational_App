@@ -236,7 +236,7 @@ export default function Envision() {
                     <ActivityIndicator color={night.ink3} />
                   </View>
                 ) : (
-                  <View style={{ gap: 6 }}>
+                  <View style={{ gap: 10, alignItems: 'flex-start' }}>
                     <Body style={{ color: night.ink3, fontSize: 13 }}>{blurb}</Body>
                     <Chip testID={`scene-draw-${type}`} label="Picture it" ghost onPress={() => void draw(type)} />
                   </View>
