@@ -90,6 +90,9 @@ const EXPO_OWNED = [
   'expo',
   'expo-router',
   'expo-notifications',
+  'expo-print',
+  'expo-sharing',
+  'eslint-config-expo',
 ];
 
 const mobile = pkgs.find((p) => p.dir.endsWith(join('apps', 'mobile')));

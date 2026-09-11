@@ -83,7 +83,7 @@ export const guardedStorage: StateStorage = {
       // of this failure: a write interrupted halfway.
       try {
         JSON.parse(raw);
-      } catch (err) {
+      } catch {
         await quarantine(name, raw);
         latch('the stored writing could not be read back');
         // Returning null tells zustand there is nothing to rehydrate. The

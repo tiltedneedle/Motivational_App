@@ -4,7 +4,7 @@
  */
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Linking, Platform, Pressable, ScrollView, Share, View } from 'react-native';
+import { Linking, Platform, Pressable, ScrollView, Share, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { HELPLINES, bookToText, plural, type Moment } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, accent, day } from '@morrow/ui';
@@ -176,7 +176,7 @@ export default function Settings() {
           <View style={{ gap: 6 }}>
             <Label>About the coach</Label>
             <Body testID="settings-is-ai" style={{ fontSize: 14 }}>
-              Morrow's coach is an AI. It asks and it quotes you. It never writes a goal, a plan line or a sentence of
+              Morrow’s coach is an AI. It asks and it quotes you. It never writes a goal, a plan line or a sentence of
               your Book — and if it produces text that is not yours, the app throws it away rather than showing it to
               you.
             </Body>

@@ -52,7 +52,6 @@ export default function Interview() {
 
   const q = question(s);
   const areas = allAreas(s);
-  const picked = pickedAreas(s);
 
   const options = useMemo(() => {
     if (q.stage === 'areas') return areas.map((a) => a.label);

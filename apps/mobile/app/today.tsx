@@ -25,7 +25,6 @@ import {
   Label,
   Readout,
   Ring,
-  Rule,
   Statement,
   Stone,
   Studio,

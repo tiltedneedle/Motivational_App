@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { Share, View } from 'react-native';
 import { ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ANALYSIS_TITLES, bookToText, formatDay, ordinal, pageCount } from '@morrow/core';
+import { ANALYSIS_TITLES, bookToHtml, bookToText, formatDay, ordinal, pageCount } from '@morrow/core';
 import {
   Body,
   Chip,
@@ -18,11 +18,11 @@ import {
   Studio,
   TextButton,
   UserText,
-  day,
   night,
   radius,
   useTwoColumn,
 } from '@morrow/ui';
+import { printBook } from '../src/print';
 import { useLatestBook, useMorrow } from '../src/store';
 
 /**
@@ -49,6 +49,11 @@ export default function BookScreen() {
   // Kept: this one is read on Today, which is where it navigates to.
   const setToast = useMorrow((s) => s.setToast);
   const [exportError, setExportError] = useState<string | null>(null);
+  // Above the early return, with the other hooks. Declared below it, this
+  // would be called on one render and not the next the moment a Book appeared
+  // or was deleted, and React would throw on the screen that shows the Book.
+  // `react-hooks/rules-of-hooks` now fails the build on exactly that.
+  const [printing, setPrinting] = useState(false);
   const twoColumn = useTwoColumn();
 
   if (!book) {
@@ -62,6 +67,15 @@ export default function BookScreen() {
       </Studio>
     );
   }
+
+  const onPdf = async () => {
+    if (!book || printing) return;
+    setPrinting(true);
+    setExportError(null);
+    const out = await printBook(bookToHtml(book), book.title);
+    setPrinting(false);
+    if (!out.ok) setExportError(out.error);
+  };
 
   const onExport = async () => {
     const text = bookToText(book);
@@ -271,6 +285,12 @@ export default function BookScreen() {
         */}
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingVertical: 14 }}>
           <Chip testID="book-export" label="Export" onPress={onExport} />
+          {/*
+            The Book as a PDF (PRD §7.3). The same page, typeset the same way,
+            handed to the platform's own renderer; on the web it is the print
+            dialogue, which has Save as PDF in it everywhere.
+          */}
+          <Chip testID="book-pdf" label={printing ? 'Making it…' : 'PDF'} onPress={() => void onPdf()} />
           {/*
             The Sunday reading (PRD §7.3) has a door. The notification points at
             it and so does Today on a Sunday, but somebody who simply opened

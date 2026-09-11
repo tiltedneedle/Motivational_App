@@ -14,7 +14,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ANALYSIS_TITLES, bookPages, formatDay, plural } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, UserText, day, night, radius } from '@morrow/ui';
+import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, UserText, night, radius } from '@morrow/ui';
 import { useGoals, useLatestBook, useMorrow } from '../src/store';
 
 export default function Reading() {

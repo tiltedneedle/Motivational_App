@@ -47,7 +47,6 @@ export async function scheduler(): Promise<Scheduler> {
     return resolved;
   }
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mod: any = await import('expo-notifications');
     if (!mod?.scheduleNotificationAsync) {
       resolved = noScheduler;

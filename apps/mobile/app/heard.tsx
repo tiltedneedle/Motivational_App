@@ -7,7 +7,7 @@
  */
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { domainMeta, plural, type Span } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Statement, Stone, Studio, UserField, UserText, day } from '@morrow/ui';

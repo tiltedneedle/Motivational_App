@@ -22,14 +22,13 @@ import {
   type CoachReply,
 } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Rule, Statement, Stone, Studio, TextButton, Toast, UserField, UserText, accent, day } from '@morrow/ui';
-import { useConsistency, useGoals, useLatestBook, useMorrow, useTodaysMoves } from '../src/store';
+import { useConsistency, useLatestBook, useMorrow, useTodaysMoves } from '../src/store';
 
 export default function Coach() {
   const router = useRouter();
   const state = useMorrow((s) => s);
   const book = useLatestBook();
   const moves = useTodaysMoves();
-  const goals = useGoals();
   const score = useConsistency();
   const shrinkMove = useMorrow((s) => s.shrinkMove);
   const toast = useMorrow((s) => s.toast);
@@ -165,7 +164,7 @@ export default function Coach() {
         */}
         {thread.length === 0 ? (
           <Body testID="coach-is-ai" style={{ fontSize: 13, color: day.ink2, paddingTop: 10 }}>
-            Morrow's coach is an AI. It asks and it quotes you. It never writes a goal, a plan line or a sentence of
+            Morrow’s coach is an AI. It asks and it quotes you. It never writes a goal, a plan line or a sentence of
             your Book.
           </Body>
         ) : null}

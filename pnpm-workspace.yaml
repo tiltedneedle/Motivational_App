@@ -21,3 +21,7 @@ allowBuilds:
   esbuild: true
   "@swc/core": true
   sharp: true
+  # eslint's import resolver ships a native binary with a JS fallback; the
+  # build script only downloads the binary. Not needed to lint, and a build
+  # script that reaches the network on install is not something to nod through.
+  unrs-resolver: false

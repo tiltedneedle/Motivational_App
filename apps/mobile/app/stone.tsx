@@ -19,7 +19,7 @@ import {
   specificityCaption,
   type AnalysisKind,
 } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Question, Ring, Statement, Stone, Studio, TextButton, UserField, accent, day, night } from '@morrow/ui';
+import { Body, Chip, InkButton, Label, Question, Statement, Stone, Studio, TextButton, UserField, accent, day } from '@morrow/ui';
 import { analysesFor, useGoals, useMorrow } from '../src/store';
 
 /** Which analyses this goal gets, on this track, at this rank. */
