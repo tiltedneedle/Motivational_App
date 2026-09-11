@@ -41,21 +41,52 @@ export const QUARANTINE_PREFIX = 'morrow-unreadable-';
  */
 export const STORE_KEY = 'morrow-v1';
 
+export type StorageFailure = {
+  /** A read that failed latches before anything is shown; a write fails later, mid-use. */
+  kind: 'read' | 'write';
+  detail: string;
+};
+
 let failed = false;
-let failureDetail: string | null = null;
+let failure: StorageFailure | null = null;
 
 export function hasFailed(): boolean {
   return failed;
 }
 
 export function failureReason(): string | null {
-  return failureDetail;
+  return failure?.detail ?? null;
+}
+
+export function storageFailure(): StorageFailure | null {
+  return failure;
+}
+
+type FailureListener = (failure: StorageFailure) => void;
+const listeners = new Set<FailureListener>();
+
+/**
+ * Be told when the latch closes.
+ *
+ * The store reads `hasFailed()` once, when it rehydrates. A write that fails
+ * an hour later closed the latch just the same — every save after it was
+ * dropped — but nothing was watching, so the app carried on looking as if it
+ * were saving. This is what the store subscribes to so the banner can go up
+ * the moment it stops. A listener added after the latch closed is told at
+ * once.
+ */
+export function onStorageFailure(listener: FailureListener): () => void {
+  listeners.add(listener);
+  if (failure) listener(failure);
+  return () => {
+    listeners.delete(listener);
+  };
 }
 
 /** Tests only: forget a previous failure. */
 export function resetStorageLatch(): void {
   failed = false;
-  failureDetail = null;
+  failure = null;
 }
 
 async function quarantine(key: string, raw: string | null): Promise<void> {
@@ -68,9 +99,18 @@ async function quarantine(key: string, raw: string | null): Promise<void> {
   }
 }
 
-function latch(detail: string): void {
+function latch(kind: StorageFailure['kind'], detail: string): void {
+  const first = !failed;
   failed = true;
-  failureDetail = detail;
+  failure = { kind, detail };
+  if (!first) return;
+  for (const listener of listeners) {
+    try {
+      listener(failure);
+    } catch {
+      // A listener that throws must not stop the others being told.
+    }
+  }
 }
 
 export const guardedStorage: StateStorage = {
@@ -85,7 +125,7 @@ export const guardedStorage: StateStorage = {
         JSON.parse(raw);
       } catch {
         await quarantine(name, raw);
-        latch('the stored writing could not be read back');
+        latch('read', 'the stored writing could not be read back');
         // Returning null tells zustand there is nothing to rehydrate. The
         // original bytes are untouched on disk and copied to a dated key, and
         // the latch means nothing will be written over them.
@@ -93,7 +133,7 @@ export const guardedStorage: StateStorage = {
       }
       return raw;
     } catch (err) {
-      latch(err instanceof Error ? err.message : 'the device would not open its own storage');
+      latch('read', err instanceof Error ? err.message : 'the device would not open its own storage');
       return null;
     }
   },
@@ -106,7 +146,7 @@ export const guardedStorage: StateStorage = {
     try {
       await AsyncStorage.setItem(name, value);
     } catch (err) {
-      latch(err instanceof Error ? err.message : 'the device would not write to its own storage');
+      latch('write', err instanceof Error ? err.message : 'the device would not write to its own storage');
     }
   },
 

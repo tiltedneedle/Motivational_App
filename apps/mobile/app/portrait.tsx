@@ -18,8 +18,9 @@ import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { domainMeta } from '@morrow/core';
-import { Body, InkButton, Label, Rule, Statement, Stone, Studio, TextButton, UserField, UserText, accent, day, radius } from '@morrow/ui';
+import { Body, InkButton, Label, Quoted, Rule, Statement, Stone, Studio, TextButton, UserField, UserText, accent, day, radius } from '@morrow/ui';
 import { useGoals, useMorrow } from '../src/store';
+import { hasSupabase } from '../src/supabase';
 
 export default function PortraitScreen() {
   const router = useRouter();
@@ -27,6 +28,8 @@ export default function PortraitScreen() {
   const goals = useGoals();
   const portraits = useMorrow((s) => s.portraits);
   const editIdentityLine = useMorrow((s) => s.editIdentityLine);
+  const account = useMorrow((s) => s.account);
+  const accountAsked = useMorrow((s) => s.accountAsked);
 
   const goal = goalId ? goals.find((g) => g.id === goalId) : goals[0];
   const portrait = goal ? portraits.find((p) => p.goalId === goal.id) : undefined;
@@ -47,6 +50,13 @@ export default function PortraitScreen() {
    */
   const onwards = () => {
     const to = typeof next === 'string' && /^\/[a-z-]+$/i.test(next) ? next : '';
+    // PRD §7.12: "account creation follows the reveal". Once, on the way to
+    // the seal, and only when there is an account service to ask about —
+    // a build with none has nothing to offer and does not pretend to.
+    if (to === '/seal-book' && hasSupabase && !account && !accountAsked) {
+      router.replace(`/account?next=${to}`);
+      return;
+    }
     if (to) {
       router.replace(to);
       return;
@@ -177,9 +187,13 @@ export default function PortraitScreen() {
             The one piece of prose on this screen the app wrote. It quotes the
             Fifteen and names nothing from the plan — see `letterFromFuture`.
           */}
-          <Body testID="portrait-letter" style={{ fontSize: 16, lineHeight: 26, color: day.ink }}>
-            {portrait.letterFromFuture}
-          </Body>
+          <Quoted
+            testID="portrait-letter"
+            text={portrait.letterFromFuture}
+            // The opener, as the letter prints it: without its own full stop.
+            spans={portrait.quotedSpans.slice(0, 1).map((s) => s.replace(/[.!?]+$/, ''))}
+            style={{ fontSize: 16, lineHeight: 26, color: day.ink }}
+          />
 
           <View style={{ gap: 10, paddingTop: 4 }}>
             <InkButton testID="portrait-accept" label="Make this my Blueprint" onPress={onwards} />

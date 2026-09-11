@@ -14,7 +14,8 @@
  */
 import type { BookVersion } from '../types';
 import { ANALYSIS_TITLES } from './framings';
-import { formatDay, ordinal, plural } from '../ids';
+import { formatDay, ordinal, plural, sealedOn } from '../ids';
+import { restOfIdeal } from './portrait';
 
 /** The one place text meets markup. Nothing the person wrote is trusted as HTML. */
 export function escapeHtml(s: string): string {
@@ -40,10 +41,10 @@ const CSS = `
   .page { max-width: 640pt; margin: 0 auto; padding: 24pt 0; }
   .theirs { font-family: Georgia, "Times New Roman", Times, serif; }
   .label {
-    font-size: 8.5pt; letter-spacing: 0.08em; text-transform: uppercase; color: #8B7F6A;
+    font-size: 8.5pt; letter-spacing: 0.08em; text-transform: uppercase; color: #6F6552;
     margin: 18pt 0 4pt;
   }
-  .spine-framing { font-size: 11pt; color: #8B7F6A; margin-bottom: 2pt; }
+  .spine-framing { font-size: 11pt; color: #6F6552; margin-bottom: 2pt; }
   .spine { font-size: 22pt; line-height: 1.25; margin: 0 0 14pt; }
   .first { font-size: 20pt; line-height: 1.3; margin: 0 0 10pt; }
   .body { font-size: 12pt; line-height: 1.6; margin: 0; white-space: pre-wrap; }
@@ -56,6 +57,8 @@ const CSS = `
   .line { margin: 0 0 8pt; }
   .line p { margin: 0; font-size: 12pt; line-height: 1.55; }
   .line .then { font-style: italic; color: #5A5750; }
+  /* The app's framing, not their words: the sans, upright, small. */
+  .line .then .framing { font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-style: normal; font-size: 9.5pt; color: #6F6552; }
   .iwill { font-size: 17pt; line-height: 1.4; margin: 0; }
   .colophon { margin-top: 24pt; }
 `;
@@ -72,8 +75,8 @@ function chapterName(name: string, authored: boolean): string {
  * it — because an export that reorders somebody's own document is a different
  * document.
  */
-export function bookToHtml(book: BookVersion): string {
-  const rest = book.ideal.slice(book.firstSentence.length).trim();
+export function bookToHtml(book: BookVersion, boundaryHour = 3): string {
+  const rest = restOfIdeal(book.ideal, book.firstSentence);
   const authoredTitle = book.titleAuthored !== false;
 
   const contents = book.chapters
@@ -90,7 +93,7 @@ export function bookToHtml(book: BookVersion): string {
       const lines = c.lines
         .map((l) => {
           const label = `${ANALYSIS_TITLES[l.kind]}${l.framingLabel ? ` · ${escapeHtml(l.framingLabel)}` : ''}`;
-          const then = l.text2 ? `<p class="theirs then">…then I ${escapeHtml(l.text2)}</p>` : '';
+          const then = l.text2 ? `<p class="theirs then"><span class="framing">…then I</span> ${escapeHtml(l.text2)}</p>` : '';
           return `<div class="line"><div class="label">${label}</div><p class="theirs">${escapeHtml(l.text)}</p>${then}</div>`;
         })
         .join('');
@@ -134,7 +137,7 @@ export function bookToHtml(book: BookVersion): string {
   <hr class="rule" />
   <div class="label">I will</div>
   <p class="iwill theirs">${escapeHtml(book.iWill)}</p>
-  <div class="label colophon">Sealed ${escapeHtml(formatDay(book.sealedAt.slice(0, 10)))} · written by you</div>
+  <div class="label colophon">Sealed ${escapeHtml(formatDay(sealedOn(book.sealedAt, boundaryHour)))} · written by you</div>
 </main>
 </body>
 </html>`;

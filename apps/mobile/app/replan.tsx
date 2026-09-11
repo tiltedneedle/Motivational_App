@@ -19,7 +19,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { plural, type ReplanChange } from '@morrow/core';
+import { dayOf, formatDay, plural, type ReplanChange } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, UserText, accent, day, radius } from '@morrow/ui';
 import { analysesFor, useGoals, useMorrow } from '../src/store';
 
@@ -46,6 +46,8 @@ export default function Replan() {
   const [problem, setProblem] = useState<string | null>(null);
 
   const analyses = goal ? analysesFor(state, goal.id) : [];
+  const plan = goal ? state.plans.find((p) => p.goalId === goal.id && p.status === 'active') : undefined;
+  const today = dayOf(new Date(), state.profile.dayBoundaryHour);
 
   const back = () => (router.canGoBack() ? router.back() : router.replace('/today'));
 
@@ -63,6 +65,9 @@ export default function Replan() {
     const out = apply(goal.id, rows);
     if (!out.ok) {
       setProblem(out.error);
+      // The monthly cap (PRD §13.3). The proposal stays on screen behind the
+      // paywall, and Not now brings them straight back to it.
+      if (out.moment) router.push(`/paywall?moment=${out.moment}`);
       return;
     }
     router.replace(`/goal?id=${goal.id}`);
@@ -128,8 +133,29 @@ export default function Replan() {
                   >
                     <Label style={{ color: on ? accent.coralText : day.ink3 }}>{VERB[c.op]}</Label>
 
+                    {/*
+                      A date change: before and after are days, not their
+                      words, so they are set in the app's face and read as
+                      days. The sentence being moved is theirs, and is the
+                      only serif on the row.
+                    */}
+                    {c.op === 'move' ? (
+                      <>
+                        {(() => {
+                          const moved = c.id ? plan?.moves.find((m) => m.id === c.id) : undefined;
+                          return moved ? (
+                            <UserText style={{ fontSize: 16, lineHeight: 24, color: day.ink }}>{moved.title}</UserText>
+                          ) : null;
+                        })()}
+                        <Body style={{ fontSize: 14, color: day.ink2 }}>
+                          {c.before ? formatDay(c.before, { today }) : 'Undated'}
+                          {c.after ? ` → ${formatDay(c.after, { today })}` : ''}
+                        </Body>
+                      </>
+                    ) : null}
+
                     {/* Their sentence, struck through when it is the one going. */}
-                    {c.before ? (
+                    {c.op !== 'move' && c.before ? (
                       <UserText
                         style={{
                           fontSize: 16,
@@ -141,7 +167,7 @@ export default function Replan() {
                         {c.before}
                       </UserText>
                     ) : null}
-                    {c.after ? (
+                    {c.op !== 'move' && c.after ? (
                       <UserText style={{ fontSize: 16, lineHeight: 24, color: day.ink }}>{c.after}</UserText>
                     ) : null}
 

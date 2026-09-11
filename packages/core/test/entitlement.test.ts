@@ -30,6 +30,7 @@ const free: EntitlementContext = {
   blueprintsBuilt: 0,
   coachTurnsToday: 0,
   afterBlueprintShown: false,
+  replansThisMonth: 0,
 };
 
 describe('the free plan is a whole product', () => {

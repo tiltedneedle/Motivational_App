@@ -50,6 +50,60 @@ export function dayOf(instant: Date, boundaryHour = 3): string {
   return `${y}-${m}-${day}`;
 }
 
+/**
+ * The person's if-then as one sentence, without a full stop.
+ *
+ * The stone shows the framing — "If ___ happens" above the first field,
+ * "…then I" above the second — and the person completes both. So the halves
+ * arrive without the framing words, mostly: some people type the "if" and
+ * some type "then I" and a few type "I'll", and printed naively that came out
+ * as "then I I'll put the phone in the hall". The framing is supplied here,
+ * once, and whatever of it they typed themselves is not supplied twice.
+ *
+ * `spans` are the parts of the sentence that are theirs, verbatim, for the
+ * screens that set their words in their face: their half with its own
+ * framing words and trailing stop trimmed is still a substring of what they
+ * wrote, so it still passes the guard.
+ */
+export function ifThenOf(line: string, line2: string): { sentence: string; spans: string[] } {
+  const cond = line
+    .trim()
+    .replace(/^if\s+/i, '')
+    .replace(/[\s,;.!?]+$/, '');
+  let act = line2
+    .trim()
+    .replace(/^,?\s*then\s+/i, '')
+    .replace(/[\s.!?]+$/, '');
+  // They typed the subject the framing supplies. "I put …" loses its "I" to
+  // the framing's; "I'll put …" keeps its contraction and the framing stops
+  // at "then".
+  let then: string;
+  if (/^I\s+/.test(act)) {
+    act = act.replace(/^I\s+/, '');
+    then = `then I ${act}`;
+  } else if (/^I['’]/.test(act)) {
+    then = `then ${act}`;
+  } else {
+    then = `then I ${act}`;
+  }
+  return { sentence: `if ${cond}, ${then}`, spans: [cond, act].filter((s) => s.length > 0) };
+}
+
+/**
+ * The day something was sealed, as the app counts days.
+ *
+ * A seal is an instant; the label on it is a day, and the day is the one the
+ * person was living in when they pressed — a Book sealed at half past
+ * midnight is sealed on the evening it was written, not the calendar date
+ * that has just ticked over. `sealedAt.slice(0, 10)` gave the UTC date,
+ * which east of Greenwich is a different day for most of every evening.
+ */
+export function sealedOn(sealedAt: string, boundaryHour = 3): string {
+  const at = new Date(sealedAt);
+  if (Number.isNaN(at.getTime())) return (sealedAt ?? '').slice(0, 10);
+  return dayOf(at, boundaryHour);
+}
+
 const ORDINALS = [
   'Zeroth',
   'First',

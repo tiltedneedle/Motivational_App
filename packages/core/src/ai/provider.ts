@@ -156,6 +156,14 @@ export interface AnthropicOptions {
   endpoint: string;
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
+  /**
+   * Headers to send with every call — the person's session, when there is one.
+   * Every function is deployed with `verify_jwt = true`, so a call without an
+   * Authorization header is refused at the door, and this provider used to
+   * send none: deployed as written, every read-back would have come back 401
+   * and the app would have fallen back to the local extractor forever, silently.
+   */
+  headers?: () => Promise<Record<string, string>>;
 }
 
 export class AnthropicProvider implements AiProvider {
@@ -171,9 +179,10 @@ export class AnthropicProvider implements AiProvider {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.opts.timeoutMs ?? 20_000);
     try {
+      const extra = this.opts.headers ? await this.opts.headers() : {};
       const res = await this.f(`${this.opts.endpoint}/${path}`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', ...extra },
         body: JSON.stringify(body),
         signal: controller.signal,
       });

@@ -44,6 +44,23 @@ export const night = {
   scrim: 'rgba(0,0,0,0.55)',
 } as const;
 
+/**
+ * The paper the Book is printed on, on screen and in the PDF.
+ *
+ * Warmer than the studio ground, because a Book is a different object from
+ * the room it is read in. The inks are measured against it the same way the
+ * studio inks are: the label ink used to be #8B7F6A, which read at 3.71:1 on
+ * this ground — fine for a heading, not for the twelve-point caption it was
+ * carrying.
+ */
+export const paper = {
+  ground: '#FBF8F2',
+  ink: '#3B3A36',
+  ink2: '#5A5750',
+  ink3: '#6F6552',
+  line: 'rgba(59,58,54,0.14)',
+} as const;
+
 export type Palette = typeof day;
 
 /**

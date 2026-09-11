@@ -105,6 +105,83 @@ describe('what a letter is allowed to say', () => {
     expect(body).toContain('ledger is still empty');
   });
 
+  it('stays inside the ceiling when the quotations are long', () => {
+    // A thirty-word first sentence and two ninety-character ledger lines used
+    // to add up to 230 words, which the composer's own check then refused.
+    const longIdeal = 'It is six forty in the morning and the kitchen is still blue and quiet and I am standing at the back door with my shoes on before the kettle has even started to boil.';
+    const long = {
+      ...sources,
+      ideal: longIdeal,
+      evidence: [
+        ev('a', 'Went anyway, in the rain, with the wrong socks and no breakfast and it was fine in the end.'),
+        ev('bb', 'Ten floors twice before work and then once more at lunch because the lift was broken.'),
+      ],
+    };
+    for (const trigger of ['portrait', 'first-return', 'milestone', 'monthly'] as const) {
+      const { check, quotes } = composeLetter(trigger, long, 'Samantha');
+      expect(check.ok, ).toBe(true);
+      expect(quotes.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('reaches the floor with one short ledger line and no Fifteen', () => {
+    const thin = { ...sources, ideal: '', evidence: [ev('a', 'Went.')] };
+    const { check } = composeLetter('monthly', thin);
+    expect(check.ok, check.problems.join('; ')).toBe(true);
+  });
+
+  it('counts the whole ledger, not just the lines it quotes', () => {
+    const many = { ...sources, evidence: [...sources.evidence, ev('ccc', 'Third.'), ev('dddd', 'Fourth.')] };
+    const { body } = composeLetter('monthly', many);
+    expect(body).toContain('the ledger has 4 entries');
+  });
+
+  it('does not describe mornings that are not in the ledger', () => {
+    const bare = { ...sources, evidence: [] };
+    const { body } = composeLetter('portrait', bare);
+    expect(body).not.toContain('mornings you did it anyway');
+    expect(body).not.toContain('None of it was the day');
+  });
+
+  it('stays inside the ceiling when the quotations are long', () => {
+    // A thirty-word first sentence and two ninety-character ledger lines used
+    // to add up to 230 words, which the composer's own check then refused.
+    const longIdeal =
+      'It is six forty in the morning and the kitchen is still blue and quiet and I am standing at the back door with my shoes on before the kettle has even started to boil.';
+    const long = {
+      ...sources,
+      ideal: longIdeal,
+      evidence: [
+        ev('a', 'Went anyway, in the rain, with the wrong socks and no breakfast and it was fine in the end.'),
+        ev('bb', 'Ten floors twice before work and then once more at lunch because the lift was broken.'),
+      ],
+    };
+    for (const trigger of ['portrait', 'first-return', 'milestone', 'monthly'] as const) {
+      const { check, quotes } = composeLetter(trigger, long, 'Samantha');
+      expect(check.ok, `${trigger}: ${check.problems.join('; ')}`).toBe(true);
+      expect(quotes.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('reaches the floor with one short ledger line and no Fifteen', () => {
+    const thin = { ...sources, ideal: '', evidence: [ev('a', 'Went.')] };
+    const { check } = composeLetter('monthly', thin);
+    expect(check.ok, check.problems.join('; ')).toBe(true);
+  });
+
+  it('counts the whole ledger, not just the lines it quotes', () => {
+    const many = { ...sources, evidence: [...sources.evidence, ev('ccc', 'Third.'), ev('dddd', 'Fourth.')] };
+    const { body } = composeLetter('monthly', many);
+    expect(body).toContain('the ledger has 4 entries');
+  });
+
+  it('does not describe mornings that are not in the ledger', () => {
+    const bare = { ...sources, evidence: [] };
+    const { body } = composeLetter('portrait', bare);
+    expect(body).not.toContain('mornings you did it anyway');
+    expect(body).not.toContain('None of it was the day');
+  });
+
   it('passes its own check on every occasion there is', () => {
     for (const trigger of ['portrait', 'first-return', 'milestone', 'monthly'] as const) {
       const { check } = composeLetter(trigger, sources);

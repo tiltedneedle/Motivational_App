@@ -22,7 +22,9 @@ export type PaywallMoment =
   /** The Bench doorway. */
   | 'bench'
   /** The coach's daily turn cap. */
-  | 'coach-cap';
+  | 'coach-cap'
+  /** A second replan in the same month. */
+  | 'replan';
 
 /** PRD §13.3. Free is a whole product, not a demo. */
 export const FREE = {
@@ -90,7 +92,10 @@ export const HIGHLIGHTED: PricePlan['id'] = 'annual';
 /** The three lines on the paywall. App chrome; never set in the serif. */
 export const BENEFITS = [
   'Every goal gets its own Blueprint, not just the first.',
-  'Re-author the Book when it stops being true, and go deeper when you want to.',
+  // What Pro gates in this build, and nothing it does not yet: re-authoring
+  // the Book is a later release, and a paywall that promises it is a paywall
+  // that lies.
+  'A scene for every goal, drawn from what you wrote about it.',
   'The coach every day, with the whole Book in front of it.',
 ] as const;
 
@@ -102,6 +107,8 @@ export interface EntitlementContext {
   coachTurnsToday: number;
   /** Whether the once-ever post-Blueprint moment has already been shown. */
   afterBlueprintShown: boolean;
+  /** Replans applied, to any plan, since the first of this month. */
+  replansThisMonth: number;
 }
 
 export type Gate =
@@ -123,6 +130,21 @@ export function canBuildBlueprint(ctx: EntitlementContext): Gate {
     allowed: false,
     moment: 'second-blueprint',
     reason: 'The free plan builds one Blueprint. Everything you have written is still yours and still here.',
+  };
+}
+
+/**
+ * Whether another replan may be applied this month (PRD §13.3: one a month
+ * on the free plan). Proposing is never gated — reading what the app would
+ * change costs nothing and is theirs to see — only applying is.
+ */
+export function canReplan(ctx: EntitlementContext): Gate {
+  const cap = limits(ctx.entitled).replansPerMonth;
+  if (ctx.replansThisMonth < cap) return { allowed: true };
+  return {
+    allowed: false,
+    moment: 'replan',
+    reason: 'The free plan changes a plan once a month. The proposal is still here, and next month it can be taken.',
   };
 }
 
@@ -157,6 +179,7 @@ export const MOMENT_HEADING: Record<PaywallMoment, string> = {
   reauthor: 'Ninety days. Time to write it again.',
   bench: 'The Bench.',
   'coach-cap': 'That is today’s turns.',
+  replan: 'Change it again this month.',
 };
 
 /**

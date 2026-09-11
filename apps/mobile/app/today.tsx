@@ -10,6 +10,7 @@ import {
   consistencyCaption,
   paywallMoment,
   dayOf,
+  detectReturns,
   domainMeta,
   formatDay,
   greeting,
@@ -23,6 +24,7 @@ import {
   Chip,
   InkButton,
   Label,
+  Quoted,
   Readout,
   Ring,
   Statement,
@@ -63,7 +65,7 @@ export default function Today() {
   const setStatus = useMorrow((s) => s.setMoveStatus);
   const makeBrief = useMorrow((s) => s.makeBrief);
 
-  const [returnCard, setReturnCard] = useState<{ body: string } | null>(null);
+  const [returnCard, setReturnCard] = useState<{ body: string; quotes: string[] } | null>(null);
 
   const today = dayOf(new Date(), state.profile.dayBoundaryHour);
   const intendedMoveId = state.days[today]?.intentionMoveId ?? null;
@@ -101,8 +103,11 @@ export default function Today() {
     makeBrief();
     const r = isReturning(days, today);
     if (r.returning) {
-      const count = days.filter((d) => d.sealedAt).length;
-      setReturnCard({ body: returnsLetter(book, r.gapDays, Math.max(1, count)).body });
+      // "Return #n" is the nth time they came back from a gap, not the
+      // number of sealed days — the coach counts it the same way.
+      const returns = detectReturns(days, today).length;
+      const letter = returnsLetter(book, r.gapDays, Math.max(1, returns));
+      setReturnCard({ body: letter.body, quotes: letter.quotes });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -221,14 +226,14 @@ export default function Today() {
           {returnCard ? (
             <View testID="return-card" style={{ marginTop: 16, backgroundColor: day.surface, borderRadius: radius.card, padding: 18, gap: 10 }}>
               <Label style={{ color: accent.coralText }}>Welcome back</Label>
-              <Body style={{ color: day.ink }}>{returnCard.body}</Body>
+              <Quoted text={returnCard.body} spans={returnCard.quotes} style={{ color: day.ink }} />
               <Chip label="Start small" onPress={() => setReturnCard(null)} />
             </View>
           ) : null}
 
           {/* the goal row */}
           {goals.length ? (
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 20 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 4, marginTop: 20 }}>
               {goals.slice(0, 4).map((g) => {
                 const plan = plansById.get(g.id);
                 const total = plan?.moves.length ?? 0;
@@ -241,10 +246,13 @@ export default function Today() {
                     accessibilityRole="button"
                     accessibilityLabel={`${g.title}, ${Math.round(pct * 100)} percent`}
                     onPress={() => router.push(`/goal?id=${g.id}`)}
-                    style={{ alignItems: 'center', gap: 8, width: 78 }}
+                    // Four of these have to share a 320-point screen with
+                    // 44 points of margin: a fixed 78 each did not, and the
+                    // fourth stone was pushed off the right edge.
+                    style={{ alignItems: 'center', gap: 8, flex: 1, minWidth: 0, maxWidth: 88 }}
                   >
-                    <Ring size={64} progress={pct} color={domainMeta(g.domain).hex} width={3.5}>
-                      <Stone size={44} domain={g.domain} polish={0.5 + pct * 0.5} />
+                    <Ring size={60} progress={pct} color={domainMeta(g.domain).hex} width={3.5}>
+                      <Stone size={42} domain={g.domain} polish={0.5 + pct * 0.5} />
                     </Ring>
                     <Text numberOfLines={1} style={{ fontFamily: fonts.sansMedium, fontSize: 12, color: day.ink2 }}>
                       {g.title}
@@ -317,7 +325,8 @@ export default function Today() {
                   ritual, and being remembered is the whole reward for it.
                 */}
                 <Label style={{ color: accent.coralText }}>{intendedMoveId === now.id ? 'You said this one' : 'Now'}</Label>
-                <Statement style={{ fontSize: 26, lineHeight: 30 }}>{now.title}</Statement>
+                {/* Their sentence, cut from their own line: the serif, as everywhere else. */}
+                <UserText style={{ fontSize: 24, lineHeight: 30 }}>{now.title}</UserText>
                 {/*
                   When they said they were stuck and took the smaller version,
                   it is shown here rather than written over their title. The
@@ -389,17 +398,17 @@ export default function Today() {
                         setToast({ text: `${m.title} · not today`, kind: 'park', undoId: m.id });
                       }}
                     />
-                    <Text
+                    <UserText
                       style={{
                         flex: 1,
-                        fontFamily: fonts.sansMedium,
-                        fontSize: 16,
+                        fontSize: 17,
+                        lineHeight: 23,
                         color: m.status === 'todo' ? day.ink : day.ink3,
                         textDecorationLine: m.status === 'done' ? 'line-through' : 'none',
                       }}
                     >
                       {m.title}
-                    </Text>
+                    </UserText>
                     <Label>{m.status === 'skip' ? 'not today' : m.status === 'done' ? 'done' : m.effort === 'S' ? '10 min' : '25 min'}</Label>
                   </View>
                 );

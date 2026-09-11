@@ -11,6 +11,7 @@ export * from './engines/entitlement';
 export * from './engines/path';
 export * from './engines/letters';
 export * from './engines/book-html';
+export * from './engines/sync';
 export * from './engines/blueprint';
 export * from './engines/book';
 export * from './engines/consistency';

@@ -13,8 +13,8 @@ import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ANALYSIS_TITLES, bookPages, formatDay, plural } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, UserText, night, radius } from '@morrow/ui';
+import { ANALYSIS_TITLES, bookPages, formatDay, plural, sealedOn } from '@morrow/core';
+import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, UserText, night, paper, radius } from '@morrow/ui';
 import { useGoals, useLatestBook, useMorrow } from '../src/store';
 
 export default function Reading() {
@@ -22,6 +22,7 @@ export default function Reading() {
   const book = useLatestBook();
   const goals = useGoals();
   const setToast = useMorrow((s) => s.setToast);
+  const boundary = useMorrow((s) => s.profile.dayBoundaryHour);
 
   const pages = useMemo(() => (book ? bookPages(book) : []), [book]);
   const [index, setIndex] = useState(0);
@@ -72,39 +73,39 @@ export default function Reading() {
         >
           <ScrollView
             showsVerticalScrollIndicator={false}
-            style={{ flex: 1, backgroundColor: '#FBF8F2', borderRadius: radius.card }}
+            style={{ flex: 1, backgroundColor: paper.ground, borderRadius: radius.card }}
             contentContainerStyle={{ padding: 26, paddingBottom: 40, gap: 16, flexGrow: 1, justifyContent: 'center' }}
           >
             {page.kind === 'opening' ? (
               <>
-                <Label style={{ color: '#8B7F6A' }}>Chapter one · the Fifteen</Label>
+                <Label style={{ color: paper.ink3 }}>Chapter one · the Fifteen</Label>
                 <UserText testID="reading-first-sentence" style={{ fontSize: 28, lineHeight: 36, color: '#15181F' }}>
                   {page.firstSentence}
                 </UserText>
-                <UserText style={{ fontSize: 17, lineHeight: 28, color: '#3B3A36' }}>{page.rest}</UserText>
+                <UserText style={{ fontSize: 17, lineHeight: 28, color: paper.ink }}>{page.rest}</UserText>
               </>
             ) : null}
 
             {page.kind === 'shadow' ? (
               <>
-                <Label style={{ color: '#8B7F6A' }}>The other road</Label>
-                <UserText style={{ fontSize: 17, lineHeight: 28, color: '#5A5750' }}>{page.text}</UserText>
+                <Label style={{ color: paper.ink3 }}>The other road</Label>
+                <UserText style={{ fontSize: 17, lineHeight: 28, color: paper.ink2 }}>{page.text}</UserText>
               </>
             ) : null}
 
             {page.kind === 'contents' ? (
               <>
-                <Label style={{ color: '#8B7F6A' }}>Contents</Label>
+                <Label style={{ color: paper.ink3 }}>Contents</Label>
                 {page.chapters.map((c) => (
                   <View key={c.goalId} style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
                     <View style={{ flex: 1 }}>
                       {c.nameAuthored === false ? (
-                        <Body style={{ fontSize: 17, color: '#3B3A36' }}>{c.name}</Body>
+                        <Body style={{ fontSize: 17, color: paper.ink }}>{c.name}</Body>
                       ) : (
                         <UserText style={{ fontSize: 18, lineHeight: 25, color: '#15181F' }}>{c.name}</UserText>
                       )}
                     </View>
-                    <Label style={{ color: '#8B7F6A' }}>{c.horizon}</Label>
+                    <Label style={{ color: paper.ink3 }}>{c.horizon}</Label>
                   </View>
                 ))}
               </>
@@ -113,20 +114,20 @@ export default function Reading() {
             {page.kind === 'chapter' ? (
               <>
                 {page.chapter.nameAuthored === false ? (
-                  <Body style={{ fontSize: 21, color: '#3B3A36' }}>{page.chapter.name}</Body>
+                  <Body style={{ fontSize: 21, color: paper.ink }}>{page.chapter.name}</Body>
                 ) : (
                   <UserText style={{ fontSize: 22, lineHeight: 30, color: '#15181F' }}>{page.chapter.name}</UserText>
                 )}
                 {page.chapter.lines.map((l, i) => (
                   <View key={`${page.chapter.goalId}-${i}`} style={{ gap: 3 }}>
-                    <Label style={{ color: '#8B7F6A' }}>
+                    <Label style={{ color: paper.ink3 }}>
                       {ANALYSIS_TITLES[l.kind]}
                       {l.framingLabel ? ` · ${l.framingLabel}` : ''}
                     </Label>
-                    <UserText style={{ fontSize: 17, lineHeight: 27, color: '#3B3A36' }}>{l.text}</UserText>
+                    <UserText style={{ fontSize: 17, lineHeight: 27, color: paper.ink }}>{l.text}</UserText>
                     {l.text2 ? (
-                      <UserText italic style={{ fontSize: 16, lineHeight: 25, color: '#5A5750' }}>
-                        …then I {l.text2}
+                      <UserText italic framing="…then I" style={{ fontSize: 16, lineHeight: 25, color: paper.ink2 }}>
+                        {l.text2}
                       </UserText>
                     ) : null}
                   </View>
@@ -136,12 +137,12 @@ export default function Reading() {
 
             {page.kind === 'i-will' ? (
               <>
-                <Label style={{ color: '#8B7F6A' }}>I will</Label>
+                <Label style={{ color: paper.ink3 }}>I will</Label>
                 <UserText testID="reading-i-will" style={{ fontSize: 26, lineHeight: 36, color: '#15181F' }}>
                   {page.text}
                 </UserText>
                 <Rule style={{ backgroundColor: '#E2DACB' }} />
-                <Label style={{ color: '#8B7F6A' }}>Sealed {formatDay(page.sealedAt.slice(0, 10))}</Label>
+                <Label style={{ color: paper.ink3 }}>Sealed {formatDay(sealedOn(page.sealedAt, boundary))}</Label>
               </>
             ) : null}
           </ScrollView>

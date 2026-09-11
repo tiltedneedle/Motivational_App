@@ -27,7 +27,7 @@ const lower = sql.toLowerCase();
  *
  * Every per-table assertion below runs against its own slice. Searching the
  * whole file meant `moves.source_line_id is NOT NULL` was satisfied by any
- * NOT NULL uuid column anywhere in the schema — both of these guards stayed
+ * NOT NULL text column anywhere in the schema — both of these guards stayed
  * green with the columns they name made nullable.
  */
 function tableBody(name) {
@@ -62,7 +62,7 @@ check('every table has at least one policy', tables.every((t) => policied.has(t)
 const movesTable = tableBody('moves');
 check(
   'a move cannot exist without the user line behind it',
-  /source_line_id\s+uuid\s+not null/.test(movesTable),
+  /source_line_id\s+text\s+not null/.test(movesTable),
   'moves.source_line_id must be NOT NULL',
 );
 check(
@@ -71,12 +71,12 @@ check(
 );
 check(
   'a move names the plan it belongs to',
-  /plan_id\s+uuid\s+not null\s+references public\.plans/.test(movesTable),
+  /plan_id\s+text\s+not null\s+references public\.plans/.test(movesTable),
   'moves.plan_id must be NOT NULL: milestone_id is nullable, so without it a move has no path to its plan',
 );
 check(
   'a ledger row can name the move it is proof of',
-  /move_id\s+uuid\s+references public\.moves/.test(tableBody('evidence')),
+  /move_id\s+text\s+references public\.moves/.test(tableBody('evidence')),
   'evidence.move_id: undo removes a move\'s own row, and matching on the title deleted the wrong one',
 );
 check(
@@ -127,7 +127,8 @@ const EXEMPT = new Set([
 ]);
 const pointers = [];
 for (const [, table, body] of sql.matchAll(/create table public\.(\w+) \(([\s\S]*?)\n\);/g)) {
-  for (const [, col, parent] of body.matchAll(/^\s*(\w+)\s+uuid[^\n]*references public\.(\w+)/gm)) {
+  // App-made ids are text (the device mints them); only user_id is a uuid.
+  for (const [, col, parent] of body.matchAll(/^\s*(\w+)\s+text[^\n]*references public\.(\w+)/gm)) {
     if (OWNED.has(parent) && !EXEMPT.has(`${table}.${col}`)) pointers.push({ table, col, parent });
   }
 }

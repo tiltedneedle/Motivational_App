@@ -8,6 +8,7 @@
  */
 import type { GoalAnalysis, Goal, Milestone, Move, ObstaclePlan, Plan } from '../types';
 import { splitFirstMoves } from './portrait';
+import { ifThenOf } from '../ids';
 
 export interface BlueprintOptions {
   /** ISO date the plan is generated on. */
@@ -169,9 +170,7 @@ export function buildPlan(input: BuildInput, opts: BlueprintOptions): Plan {
       title: text,
       effort: i === 0 ? 'S' : effortFor(text),
       energy: energyFor(text),
-      ifThen: obstacles?.line2?.trim()
-        ? `If ${obstacles.line.trim().replace(/^if\s+/i, '')}, then I ${obstacles.line2.trim().replace(/^then i\s+/i, '')}`
-        : null,
+      ifThen: obstacles?.line2?.trim() ? ifThenOf(obstacles.line, obstacles.line2).sentence.replace(/^if/, 'If') : null,
       scheduledFor: scheduled,
       week: 1,
       status: 'todo',
@@ -220,6 +219,7 @@ export function buildPlan(input: BuildInput, opts: BlueprintOptions): Plan {
     seasonWeeks,
     status: 'active',
     createdAt: new Date().toISOString(),
+    replannedAt: [],
     milestones,
     moves,
     obstaclePlans,
@@ -404,6 +404,17 @@ export function applyReplan(
       moves = moves.map((m) => (m.id === c.id ? { ...m, scheduledFor: c.after } : m));
     }
     if (c.op === 'add' && c.after && c.sourceLineId) {
+      // The title has to be in the line it is attributed to. `validatePlan`
+      // checks that the source line exists; it did not check that the words
+      // came from it, so an accepted row could put any sentence on Today
+      // under the person's own name.
+      const line = analyses.find((a) => a.id === c.sourceLineId);
+      // A title the plan already carries was checked when it was made, and
+      // "room for one more of the same" proposes exactly that title.
+      const known = plan.moves.some((m) => m.title === c.after);
+      if (line && !known && !isCutFrom(c.after, line)) {
+        throw new BlueprintInvalid([`added move is not in its source line: "${c.after.slice(0, 40)}"`]);
+      }
       const base = plan.moves[0];
       moves.push({
         id: newId('mv'),
@@ -432,6 +443,54 @@ export function applyReplan(
   const problems = validatePlan(next, analyses, today, { asNewPlan: false });
   if (problems.length) throw new BlueprintInvalid(problems);
   return next;
+}
+
+/**
+ * Which milestones have been reached, by the only evidence there is.
+ *
+ * A milestone is a date with the person's Monitoring line as its proof. It is
+ * reached on the first day its date has passed with something in the ledger
+ * for this goal since the milestone before it — a kept move, a practice run,
+ * a line they wrote. Nothing set `reachedAt` before this: the letters engine
+ * had a whole occasion for it and the Goal screen a whole branch, and both
+ * were dead code because no plan ever recorded that a milestone was reached.
+ *
+ * Stamped once, never unstamped: a milestone reached is a letter written and
+ * a date on the Path, and a ledger row deleted later does not unhappen the
+ * morning it recorded.
+ */
+export function reachMilestones(
+  plan: Plan,
+  ledger: readonly { goalId: string | null; day: string }[],
+  today: string,
+  now: string,
+): Plan {
+  const days = ledger.filter((e) => e.goalId === plan.goalId).map((e) => e.day);
+  if (days.length === 0) return plan;
+  const ordered = [...plan.milestones].sort((a, b) => a.order - b.order);
+  let changed = false;
+  const stamped = new Map<string, string>();
+  let since = plan.createdAt.slice(0, 10);
+  for (const ms of ordered) {
+    if (!ms.reachedAt && ms.targetDate <= today && days.some((d) => d > since && d <= ms.targetDate)) {
+      stamped.set(ms.id, now);
+      changed = true;
+    }
+    since = ms.targetDate;
+  }
+  if (!changed) return plan;
+  return { ...plan, milestones: plan.milestones.map((ms) => (stamped.has(ms.id) ? { ...ms, reachedAt: stamped.get(ms.id)! } : ms)) };
+}
+
+/** Whether a move's words are somewhere in the line they are attributed to. */
+function isCutFrom(title: string, line: GoalAnalysis): boolean {
+  const norm = (s: string) => s.replace(/\s+/g, ' ').trim().toLowerCase();
+  // `splitFirstMoves` sets a day name in front of the body — "Tuesday: at
+  // 6:40, out the back door" — which is the app sorting their sentence into
+  // days, not writing one. The day is chrome; the body has to be theirs.
+  const needle = norm(title).replace(/^(?:mon|tues|wednes|thurs|fri|satur|sun)day:\s*/, '');
+  if (!needle) return false;
+  return [line.line, line.line2 ?? '', line.paragraph ?? ''].some((s) => norm(s).includes(needle));
 }
 
 /** A move with no week belongs to none, so it cannot raise the count. */

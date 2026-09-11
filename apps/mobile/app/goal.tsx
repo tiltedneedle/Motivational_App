@@ -104,9 +104,22 @@ export default function GoalScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
             <View style={{ flex: 1, gap: 6 }}>
               <Label style={{ color: meta.ink }}>{goal.horizon}</Label>
-              <Statement testID="goal-title">{goal.title}</Statement>
+              {/* Their name for it, when they named it — as the Portrait shows it. */}
+              {goal.titleAuthored === false ? (
+                <Statement testID="goal-title">{goal.title}</Statement>
+              ) : (
+                <UserText testID="goal-title" style={{ fontSize: 28, lineHeight: 34 }}>
+                  {goal.title}
+                </UserText>
+              )}
             </View>
-            <Ring size={72} progress={pct} color={meta.hex} width={4}>
+            <Ring
+              size={72}
+              progress={pct}
+              color={meta.hex}
+              width={4}
+              accessibilityLabel={plan ? `${plural(doneCount, 'move')} done of ${plan.moves.length}` : 'No plan yet'}
+            >
               <Stone size={50} domain={goal.domain} polish={0.5 + pct * 0.5} />
             </Ring>
           </View>
@@ -180,7 +193,9 @@ export default function GoalScreen() {
                           <>
                             <UserText style={{ fontSize: 16, lineHeight: 23 }}>{a.paragraph?.trim() || a.line}</UserText>
                             {a.line2 ? (
-                              <UserText italic style={{ fontSize: 15, color: day.ink2 }}>…then I {a.line2}</UserText>
+                              <UserText italic framing="…then I" style={{ fontSize: 15, color: day.ink2 }}>
+                                {a.line2}
+                              </UserText>
                             ) : null}
                           </>
                         ) : (
@@ -242,7 +257,9 @@ export default function GoalScreen() {
                   */}
                   {recent.length ? (
                     <View testID="goal-path-evidence" style={{ gap: 6, marginTop: 4 }}>
-                      <Label style={{ color: day.ink2 }}>The last {plural(recent.length, 'thing')} you did</Label>
+                      <Label style={{ color: day.ink2 }}>
+                        {recent.length === 1 ? 'The last thing you did' : `The last ${recent.length} things you did`}
+                      </Label>
                       {recent.map((e) => (
                         <View key={e.id} style={{ flexDirection: 'row', gap: 10 }}>
                           <Label style={{ color: day.ink3, minWidth: 62 }}>{formatDay(e.day, { today })}</Label>
@@ -360,7 +377,9 @@ export default function GoalScreen() {
                       <>
                         <UserText style={{ fontSize: 16, lineHeight: 23 }}>{a.paragraph?.trim() || a.line}</UserText>
                         {a.line2 ? (
-                          <UserText italic style={{ fontSize: 15, color: day.ink2 }}>…then I {a.line2}</UserText>
+                          <UserText italic framing="…then I" style={{ fontSize: 15, color: day.ink2 }}>
+                                {a.line2}
+                              </UserText>
                         ) : null}
                       </>
                     ) : (
@@ -420,7 +439,9 @@ export default function GoalScreen() {
               */}
               {recent.length ? (
                 <View testID="goal-path-evidence" style={{ gap: 6, marginTop: 4 }}>
-                  <Label style={{ color: day.ink2 }}>The last {plural(recent.length, 'thing')} you did</Label>
+                  <Label style={{ color: day.ink2 }}>
+                    {recent.length === 1 ? 'The last thing you did' : `The last ${recent.length} things you did`}
+                  </Label>
                   {recent.map((e) => (
                     <View key={e.id} style={{ flexDirection: 'row', gap: 10 }}>
                       <Label style={{ color: day.ink3, minWidth: 62 }}>{formatDay(e.day, { today })}</Label>

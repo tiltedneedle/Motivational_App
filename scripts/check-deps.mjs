@@ -92,6 +92,7 @@ const EXPO_OWNED = [
   'expo-notifications',
   'expo-print',
   'expo-sharing',
+  'expo-apple-authentication',
   'eslint-config-expo',
 ];
 

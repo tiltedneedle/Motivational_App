@@ -13,9 +13,15 @@
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { accent, day, radius, type as fonts } from '@morrow/ui';
+import { storageFailure } from '../storage';
 
 export function StorageWarning({ onExport }: { onExport?: () => void }) {
   const [open, setOpen] = useState(true);
+  // Which way it failed decides what to say was kept. A read failure means
+  // the old writing is safe underneath and nothing since launch is; a write
+  // failure means everything up to the failed save is on disk and only what
+  // came after it is not.
+  const kind = storageFailure()?.kind ?? 'read';
 
   return (
     <View
@@ -43,9 +49,9 @@ export function StorageWarning({ onExport }: { onExport?: () => void }) {
       {open ? (
         <>
           <Text style={{ fontFamily: fonts.sans, fontSize: 13, lineHeight: 19, color: 'rgba(255,255,255,0.92)' }}>
-            Morrow could not read its own storage, so anything you write now will be here until you close the app and
-            no longer. Whatever was already saved has not been touched and is still on the device. Restarting the app
-            usually clears this.
+            {kind === 'write'
+              ? 'Morrow could not write to its own storage, so what you have done since the last save is here until you close the app and no longer. Everything saved before that is still on the device. Restarting the app usually clears this.'
+              : 'Morrow could not read its own storage, so anything you write now will be here until you close the app and no longer. Whatever was already saved has not been touched and is still on the device. Restarting the app usually clears this.'}
           </Text>
           {onExport ? (
             <Pressable

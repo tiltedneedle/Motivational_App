@@ -83,7 +83,7 @@ export default function SealBook() {
           </View>
 
           <Body style={{ color: night.ink2, textAlign: 'center' }}>
-            {goals.length} {goals.length === 1 ? 'goal' : 'goals'}. Hold, and it&apos;s yours. You can rewrite it in ninety days.
+            {goals.length} {goals.length === 1 ? 'goal' : 'goals'}. Hold, and it&apos;s yours. Nothing in it is fixed for good; a new edition is one sitting away.
           </Body>
 
           {error ? (
@@ -172,7 +172,9 @@ export default function SealBook() {
           <HoldBar
             testID="seal-hold"
             label={iWill.trim() ? 'Hold to seal' : 'Write the last line first'}
-            doneLabel={`Sealed · ${ordinal(editions + 1).toLowerCase()} edition`}
+            // `editions` counts the Books in the store, which the seal has
+            // just added to: read after the seal, "first edition" said second.
+            doneLabel={`Sealed · ${ordinal(sealed ? editions : editions + 1).toLowerCase()} edition`}
             done={sealed}
             reducedMotion={reduced}
             // Both branches have to RETURN the refusal. The bar releases its

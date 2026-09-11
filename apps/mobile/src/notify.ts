@@ -95,6 +95,64 @@ export async function scheduler(): Promise<Scheduler> {
   }
 }
 
+/**
+ * The routes a notification is allowed to open: the app's own screens, by
+ * name, with at most a query string of plain characters. A route is data
+ * that came back from the OS, and the OS got it from whatever scheduled the
+ * notification, so it is checked against this shape rather than followed.
+ */
+const ROUTE_SHAPE = /^\/[a-z-]+(\?[a-z0-9_=&-]*)?$/i;
+
+export function routeFrom(data: unknown): string | null {
+  const route = (data as { route?: unknown } | null | undefined)?.route;
+  return typeof route === 'string' && ROUTE_SHAPE.test(route) ? route : null;
+}
+
+/**
+ * What happens when the person taps a notification (PRD §7.11: each one
+ * "deep-links to its screen").
+ *
+ * Two cases, because the OS has two: the app was running and the tap is an
+ * event, or the app was closed and the tap is the reason it opened, in
+ * which case the response is waiting to be asked for. Both go through the
+ * same shape check and the same handler. Returns the unsubscribe.
+ */
+export async function onNotificationOpened(handler: (route: string) => void): Promise<() => void> {
+  if (Platform.OS === 'web') return () => {};
+  try {
+    const mod: any = await import('expo-notifications');
+    if (!mod?.addNotificationResponseReceivedListener) return () => {};
+
+    // A notification that arrives while the app is open is still shown —
+    // the planner only schedules for moments the person is not expected to
+    // be in the app, but a morning line that arrives while Today is open is
+    // not a reason to swallow it.
+    mod.setNotificationHandler?.({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
+        shouldPlaySound: false,
+        shouldSetBadge: false,
+      }),
+    });
+
+    const sub = mod.addNotificationResponseReceivedListener((response: any) => {
+      const route = routeFrom(response?.notification?.request?.content?.data);
+      if (route) handler(route);
+    });
+
+    // Cold start: the tap that opened the app.
+    const last = await mod.getLastNotificationResponseAsync?.();
+    const route = routeFrom(last?.notification?.request?.content?.data);
+    if (route) handler(route);
+
+    return () => sub?.remove?.();
+  } catch {
+    return () => {};
+  }
+}
+
 export interface SyncResult {
   scheduled: string[];
   cancelled: string[];

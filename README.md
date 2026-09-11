@@ -72,8 +72,8 @@ Everything runs on local fallbacks without one. To go beyond them:
 
 | Key | Where | What it turns on |
 |---|---|---|
-| Supabase URL + anon key | `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY` | sign-in and sync (wired once the key arrives) |
-| Anthropic | the edge functions' `ANTHROPIC_API_KEY`; the app's `EXPO_PUBLIC_MORROW_API` | the read-back, the coach, letters, scenes |
+| Supabase URL + anon key | `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY` | the account: email code, Sign in with Apple, push/pull of the whole store, and the edge functions on the project's own host. Run `supabase db push` and `supabase functions deploy` once. |
+| Anthropic | the edge functions' `ANTHROPIC_API_KEY` (`EXPO_PUBLIC_MORROW_API` only if the functions live somewhere other than Supabase) | the read-back, the second safety opinion, scenes |
 | fal.ai | the scene function's `FAL_KEY` | scene images |
 | RevenueCat | `EXPO_PUBLIC_RC_IOS`, `EXPO_PUBLIC_RC_ANDROID` | purchases |
 

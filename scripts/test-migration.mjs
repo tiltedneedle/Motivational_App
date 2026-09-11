@@ -89,6 +89,8 @@ const db = await PGlite.create({ extensions: { pgcrypto } });
 async function as(userId, sql, params) {
   await db.exec('reset role');
   await db.query(`select set_config('request.jwt.claim.sub', $1, false)`, [userId]);
+  // Supabase also exposes the whole JWT; the entitlement guard reads this one.
+  await db.query(`select set_config('request.jwt.claims', $1, false)`, [JSON.stringify({ sub: userId, role: 'authenticated' })]);
   await db.exec('set role authenticated');
   try {
     return await db.query(sql, params);
@@ -502,6 +504,23 @@ try {
     [BOB, goalId],
     'another person',
   );
+
+  // ---- the entitlement is not the app's to set (PRD 13.3)
+  await asRejects(
+    'a user session cannot give itself Pro',
+    ALICE,
+    `update public.profiles set entitlement = 'pro' where id = $1`,
+    [ALICE],
+    "not the app's to set",
+  );
+  await as(ALICE, `update public.profiles set display_name = 'Alice' where id = $1`, [ALICE]);
+  check('but can still change the rest of the profile', true);
+  // The service role carries no JWT claims; that is what lets it through.
+  await db.exec('reset role');
+  await db.query(`select set_config('request.jwt.claims', '', false)`);
+  await db.query(`update public.profiles set entitlement = 'pro' where id = $1`, [ALICE]);
+  const entitled = await as(ALICE, `select entitlement from public.profiles where id = $1`, [ALICE]);
+  check('the billing webhook can', entitled.rows[0]?.entitlement === 'pro');
 
   // ---- scenes (PRD 7.8): no sourced detail, no scene.
   await asRejects(

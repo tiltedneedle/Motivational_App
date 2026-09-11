@@ -7,7 +7,7 @@
  */
 import type { Brief, BookVersion, DaySummary, GoalAnalysis, Move, Persona } from '../types';
 import { isReturning } from './consistency';
-import { endSentence, formatDay, plural } from '../ids';
+import { endSentence, formatDay, ifThenOf, plural } from '../ids';
 import { firstSentence } from './portrait';
 import { SUPPORT_LINE, isQuotable, screen } from './safety';
 
@@ -118,19 +118,25 @@ export function buildDawnBrief(input: BriefInput, newId: (p: string) => string):
   const first = [...moves]
     .filter((m) => m.status === 'todo')
     .sort((a, b) => a.order - b.order)[0];
+  // The move is their sentence, cut from their own line; it is quoted so the
+  // screen can set it in their face. Mid-sentence, so its first letter is
+  // lowered unless it is a name — the same string, so the span still matches.
   const todayLine = first
     ? reg.push(`Start with ${lowerFirst(first.title)}.`)
     : 'Nothing is scheduled. One small thing, chosen by you, is a whole day.';
+  if (first) quotes.push(lowerFirst(first.title));
 
   // If: the user's own if-then, quoted.
   const obstacle = analyses.find((a) => a.kind === 'obstacles' && a.line.trim());
   let ifLine: string;
   if (obstacle?.line2?.trim()) {
-    const written = `if ${obstacle.line.trim().replace(/^if\s+/i, '')}, then I ${obstacle.line2.trim().replace(/^then i\s+/i, '')}`;
-    quotes.push(obstacle.line.trim());
+    const written = ifThenOf(obstacle.line, obstacle.line2);
+    quotes.push(...written.spans);
+    // Their half may end in its own full stop; `ifThenOf` took it off so the
+    // sentence gets exactly one, here.
     ifLine = input.raining
-      ? `You wrote: ${written}. It is raining.`
-      : `You wrote: ${written}.`;
+      ? `You wrote: ${endSentence(written.sentence)} It is raining.`
+      : `You wrote: ${endSentence(written.sentence)}`;
   } else if (first?.minVersion) {
     ifLine = `If today gets away from you: ${lowerFirst(first.minVersion)}`;
   } else {
@@ -246,12 +252,10 @@ export function replyToChip(chip: ChipId, ctx: ChipContext): CoachReply {
         // into the second person, which is the app editing their words and
         // then quoting the edit back as theirs. The Book and the brief both
         // print "then I …", and so does this.
-        const written = `if ${obstacle.line.trim().replace(/^if\s+/i, '')}, then I ${obstacle.line2
-          .trim()
-          .replace(/^then i\s+/i, '')}`;
+        const written = ifThenOf(obstacle.line, obstacle.line2);
         return {
-          text: `You already wrote the answer: ${endSentence(written)} Do that version, not the big one.`,
-          quotedSpans: [obstacle.line.trim(), obstacle.line2.trim()],
+          text: `You already wrote the answer: ${endSentence(written.sentence)} Do that version, not the big one.`,
+          quotedSpans: written.spans,
           action: next
             ? {
                 kind: 'shrink-move',

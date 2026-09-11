@@ -15,7 +15,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WRITE_TO_FUTURE_MAX_DAYS, dayOf, formatDay, plural, type Letter } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, UserField, UserText, accent, day, radius } from '@morrow/ui';
+import { Body, Chip, InkButton, Label, Quoted, Rule, Statement, Studio, TextButton, UserField, UserText, accent, day, radius } from '@morrow/ui';
 import { useMorrow } from '../src/store';
 
 /** The delivery distances offered, in days. A year is the ceiling. */
@@ -38,48 +38,10 @@ function LetterBody({ letter }: { letter: Letter }) {
     return <UserText style={{ fontSize: 17, lineHeight: 27, color: day.ink }}>{letter.body}</UserText>;
   }
 
-  // Every span located against the whole body, then laid out in the order they
-  // appear in it. Walking the body once per quote and consuming as it went
-  // meant a short quotation that happened to sit *before* a longer one was
-  // swallowed into the unhighlighted run and silently lost its face.
-  const found = letter.quotes
-    .map((q) => ({ q, at: letter.body.indexOf(q) }))
-    .filter((m) => m.at >= 0 && m.q.length > 0)
-    // Longest first so that when two overlap, the larger claim wins.
-    .sort((a, b) => b.q.length - a.q.length);
-
-  const taken: { from: number; to: number; q: string }[] = [];
-  for (const m of found) {
-    const to = m.at + m.q.length;
-    if (taken.some((t) => m.at < t.to && t.from < to)) continue;
-    taken.push({ from: m.at, to, q: m.q });
-  }
-  taken.sort((a, b) => a.from - b.from);
-
-  const parts: { text: string; theirs: boolean }[] = [];
-  let cursor = 0;
-  for (const t of taken) {
-    if (t.from > cursor) parts.push({ text: letter.body.slice(cursor, t.from), theirs: false });
-    parts.push({ text: t.q, theirs: true });
-    cursor = t.to;
-  }
-  if (cursor < letter.body.length) parts.push({ text: letter.body.slice(cursor), theirs: false });
-
-  return (
-    <Body style={{ fontSize: 16, lineHeight: 26, color: day.ink }}>
-      {parts.map((p, i) =>
-        p.theirs ? (
-          <UserText key={i} italic style={{ fontSize: 16, lineHeight: 26, color: day.ink }}>
-            {p.text}
-          </UserText>
-        ) : (
-          <Body key={i} style={{ fontSize: 16, lineHeight: 26, color: day.ink }}>
-            {p.text}
-          </Body>
-        ),
-      )}
-    </Body>
-  );
+  // The app's sentences around the person's own: the quotations in their
+  // face, the rest in ours. The split itself lives in the ui package, where
+  // every other mixed sentence in the product uses it.
+  return <Quoted text={letter.body} spans={letter.quotes} style={{ fontSize: 16, lineHeight: 26, color: day.ink }} />;
 }
 
 export default function Letters() {

@@ -7,6 +7,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { day } from '@morrow/ui';
 import { useMorrow } from '../src/store';
+import { onNotificationOpened } from '../src/notify';
 import { SafetyGate } from '../src/components/SafetyGate';
 import { StorageWarning } from '../src/components/StorageWarning';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
@@ -45,6 +46,49 @@ export default function RootLayout() {
     });
     return () => sub.remove();
   }, [hydrated, syncNotifications]);
+
+  /**
+   * The copy, kept current (PRD §7.12). Once the disk has been read and the
+   * session is known, and again whenever the app goes to the background —
+   * the moment the process can be reaped is the moment the copy should be
+   * whole. Nothing here can fail loudly; Settings says when the last copy
+   * landed, and the next launch tries again.
+   */
+  const account = useMorrow((s) => s.account);
+  const pushToAccount = useMorrow((s) => s.pushToAccount);
+  const setAccount = useMorrow((s) => s.setAccount);
+  useEffect(() => {
+    if (!hydrated) return;
+    // The auth layer may hold a session the store does not know about yet —
+    // a relaunch after signing in — so ask it first.
+    void setAccount().then(() => {
+      if (useMorrow.getState().account) void pushToAccount();
+    });
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next !== 'active' && useMorrow.getState().account) void pushToAccount();
+    });
+    return () => sub.remove();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, account?.userId]);
+
+  /**
+   * A tapped notification opens its screen (PRD §7.11). Subscribed once the
+   * store is readable, so the screen it opens has something to show, and
+   * only routes of the app's own shape are followed.
+   */
+  useEffect(() => {
+    if (!hydrated) return;
+    let off: (() => void) | null = null;
+    let gone = false;
+    void onNotificationOpened((route) => router.push(route as never)).then((unsubscribe) => {
+      if (gone) unsubscribe();
+      else off = unsubscribe;
+    });
+    return () => {
+      gone = true;
+      off?.();
+    };
+  }, [hydrated, router]);
 
   useEffect(() => {
     // Two timers, because the two things they wait for are not alike.

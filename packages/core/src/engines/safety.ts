@@ -216,7 +216,13 @@ export const RESOURCES_COPY = {
   title: 'Let’s stop here for a moment.',
   body: 'What you wrote sounds heavy, and it deserves a person, not an app. If you are in danger right now, contact your local emergency number. Otherwise these lines are free and answered by people:',
   dismiss: "I'm okay to continue",
-  note: 'Nothing you wrote was sent anywhere or added to what Morrow remembers.',
+  note: 'Nothing you wrote was added to what Morrow remembers.',
+  /**
+   * The same sentence for a build with a remote screen. The verdict came
+   * back from a service, so "sent nowhere" would be untrue; what is true is
+   * that the service keeps nothing, and that Morrow does not either.
+   */
+  noteRemote: 'Nothing you wrote was added to what Morrow remembers. The screen that read it keeps nothing.',
 };
 
 /** Content rules the coach obeys regardless of what was asked (PRD §11.6). */

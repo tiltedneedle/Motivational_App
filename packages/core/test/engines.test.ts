@@ -57,7 +57,8 @@ import {
   type DaySummary,
   type GoalAnalysis,
 } from '../src/index';
-import { dayOf, endSentence, sequentialIds } from '../src/ids';
+import { dayOf, endSentence, ifThenOf, sequentialIds } from '../src/ids';
+import { firstSentence, restOfIdeal } from '../src/engines/portrait';
 
 describe('the Interview', () => {
   it('runs entirely on taps and ends with a named goal', () => {
@@ -961,5 +962,64 @@ describe('one full stop, whoever wrote it', () => {
     expect(endSentence('Say it out loud.')).toBe('Say it out loud.');
     expect(endSentence('')).toBe('');
     expect(endSentence('   ')).toBe('');
+  });
+});
+
+describe('the body of the Fifteen after its first sentence', () => {
+  it('starts where the shown sentence stops, not at its character count', () => {
+    const ideal = 'It is 6:40 and the kitchen is still blue. Sam is still asleep.';
+    expect(restOfIdeal(ideal, firstSentence(ideal))).toBe('Sam is still asleep.');
+  });
+
+  it('survives a line break inside the opening sentence', () => {
+    const ideal = 'It is 6:40 and the\nkitchen is still blue.\n\nSam is still asleep.';
+    const shown = firstSentence(ideal);
+    expect(shown).toBe('It is 6:40 and the kitchen is still blue.');
+    expect(restOfIdeal(ideal, shown)).toBe('Sam is still asleep.');
+  });
+
+  it('prints nothing twice when the sentence was cut with an ellipsis', () => {
+    const long = `${'The kitchen is still blue and the kettle is not on yet and the dog has not stirred, '.repeat(3)}and I am up. Then the rest.`;
+    const shown = firstSentence(long);
+    expect(shown.endsWith('…')).toBe(true);
+    const rest = restOfIdeal(long, shown);
+    const head = shown.slice(0, -1).split(' ').slice(-3).join(' ');
+    expect(rest.startsWith(head)).toBe(false);
+    expect(rest.startsWith(',')).toBe(false);
+    expect(`${shown.slice(0, -1)} ${rest}`.replace(/\s+/g, ' ')).toBe(long.replace(/\s+/g, ' '));
+  });
+
+  it('falls back to the whole text when the sentence is not from it', () => {
+    expect(restOfIdeal('Something else entirely.', 'It is 6:40.')).toBe('Something else entirely.');
+  });
+});
+
+describe('the if-then as one sentence', () => {
+  it('supplies the framing once, whatever of it they typed', () => {
+    expect(ifThenOf('I stay up too late', 'put the phone in the hall').sentence).toBe('if I stay up too late, then I put the phone in the hall');
+    expect(ifThenOf('If I stay up too late,', 'then I put the phone in the hall.').sentence).toBe(
+      'if I stay up too late, then I put the phone in the hall',
+    );
+    expect(ifThenOf('it rains', 'I put the phone in the hall').sentence).toBe('if it rains, then I put the phone in the hall');
+  });
+
+  it("keeps their contraction rather than printing 'then I I'll'", () => {
+    expect(ifThenOf('it rains', "I'll go anyway").sentence).toBe("if it rains, then I'll go anyway");
+    expect(ifThenOf('it rains', 'I’m going anyway').sentence).toBe('if it rains, then I’m going anyway');
+  });
+
+  it('takes their full stop off so the sentence gets exactly one', () => {
+    const { sentence } = ifThenOf('it rains.', 'go anyway.');
+    expect(endSentence(sentence)).toBe('if it rains, then I go anyway.');
+  });
+
+  it('hands back spans that are still substrings of what they wrote', () => {
+    const line = 'If I stay up too late,';
+    const line2 = "then I'll put the phone in the hall.";
+    const { spans, sentence } = ifThenOf(line, line2);
+    for (const s of spans) {
+      expect(line.includes(s) || line2.includes(s), s).toBe(true);
+      expect(sentence).toContain(s);
+    }
   });
 });

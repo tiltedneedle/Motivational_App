@@ -6,9 +6,10 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Linking, Platform, Pressable, ScrollView, Share, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { HELPLINES, bookToText, plural, type Moment } from '@morrow/core';
+import { HELPLINES, bookToText, formatDay, plural, sealedOn, type Moment } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, accent, day } from '@morrow/ui';
 import { useLatestBook, useMorrow } from '../src/store';
+import { hasSupabase } from '../src/supabase';
 
 /**
  * The moments, in the words the person would use for them.
@@ -33,6 +34,34 @@ export default function Settings() {
   const setProfile = useMorrow((s) => s.setProfile);
   const reset = useMorrow((s) => s.reset);
   const fewerNotifications = useMorrow((s) => s.fewerNotifications);
+  const account = useMorrow((s) => s.account);
+  const pushToAccount = useMorrow((s) => s.pushToAccount);
+  const signOutAccount = useMorrow((s) => s.signOutAccount);
+  const deleteAccountAndCopy = useMorrow((s) => s.deleteAccountAndCopy);
+  const [accountNote, setAccountNote] = useState<string | null>(null);
+  const [accountBusy, setAccountBusy] = useState(false);
+  const [confirmingAccount, setConfirmingAccount] = useState(false);
+
+  const backUp = async () => {
+    setAccountBusy(true);
+    setAccountNote(null);
+    const out = await pushToAccount();
+    setAccountBusy(false);
+    setAccountNote(out.ok ? 'Copied. The Book has a second home.' : out.error);
+  };
+
+  const removeAccount = async () => {
+    setAccountBusy(true);
+    setAccountNote(null);
+    const out = await deleteAccountAndCopy();
+    setAccountBusy(false);
+    setConfirmingAccount(false);
+    setAccountNote(
+      out.ok
+        ? 'The account is closed and its copy will be gone within seven days. Everything is still on this phone.'
+        : out.error,
+    );
+  };
   const muted = (state.profile.mutedMoments ?? []) as Moment[];
   const left = ALL_MOMENTS.filter((m) => !muted.includes(m));
   const book = useLatestBook();
@@ -81,6 +110,10 @@ export default function Settings() {
       plans: state.plans,
       evidence: state.evidence,
       days: state.days,
+      // Letters are theirs twice over: the ones they wrote to themselves, and
+      // the ones written to them out of their own lines. Neither was in here.
+      letters: state.letters,
+      briefs: state.briefs,
     };
     const message = book ? `${bookToText(book)}\n\n---\n${JSON.stringify(payload, null, 2)}` : JSON.stringify(payload, null, 2);
     try {
@@ -223,6 +256,61 @@ export default function Settings() {
               </Body>
             ) : null}
           </View>
+
+          {/*
+            The account (PRD §7.12). Never a gate: a build with no account
+            service shows nothing here, and one with a service says plainly
+            what the account is for and where things stand. The "quiet
+            banner" for a declined account is the second line below.
+          */}
+          {hasSupabase ? (
+            <>
+              <Rule />
+              <View testID="settings-account" style={{ gap: 10 }}>
+                <Label>A copy, off this phone</Label>
+                {account ? (
+                  <>
+                    <Body testID="settings-account-who" style={{ fontSize: 14, color: day.ink }}>
+                      Signed in{account.email ? ` as ${account.email}` : ''}.{' '}
+                      {account.lastPushAt
+                        ? `Last copied ${formatDay(sealedOn(account.lastPushAt, state.profile.dayBoundaryHour))}.`
+                        : 'Nothing copied yet.'}
+                    </Body>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                      <Chip testID="settings-account-push" label={accountBusy ? 'Copying…' : 'Copy it now'} onPress={() => void backUp()} />
+                      <Chip testID="settings-account-signout" label="Sign out" ghost onPress={() => void signOutAccount()} />
+                    </View>
+                    {confirmingAccount ? (
+                      <View style={{ gap: 8, backgroundColor: day.surface, padding: 16, borderRadius: 18 }}>
+                        <Body style={{ color: day.ink }}>
+                          This closes the account and deletes its copy of your writing within seven days. Nothing on
+                          this phone is touched.
+                        </Body>
+                        <View style={{ flexDirection: 'row', gap: 8 }}>
+                          <Chip label="Keep it" onPress={() => setConfirmingAccount(false)} />
+                          <Chip testID="settings-account-delete-confirm" label="Close the account" selected onPress={() => void removeAccount()} />
+                        </View>
+                      </View>
+                    ) : (
+                      <TextButton testID="settings-account-delete" label="Close the account and delete its copy" onPress={() => setConfirmingAccount(true)} />
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <Body testID="settings-account-none" style={{ fontSize: 14, color: day.ink }}>
+                      Not signed in. Everything is on this phone and nowhere else; a lost phone loses the Book.
+                    </Body>
+                    <Chip testID="settings-account-signin" label="Keep a copy" onPress={() => router.push('/account')} />
+                  </>
+                )}
+                {accountNote ? (
+                  <Body testID="settings-account-note" style={{ fontSize: 13, color: day.ink }}>
+                    {accountNote}
+                  </Body>
+                ) : null}
+              </View>
+            </>
+          ) : null}
 
           <Rule />
           <View style={{ gap: 10 }}>

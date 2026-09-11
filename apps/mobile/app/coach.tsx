@@ -21,7 +21,7 @@ import {
   fullTrackInvitation,
   type CoachReply,
 } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Rule, Statement, Stone, Studio, TextButton, Toast, UserField, UserText, accent, day } from '@morrow/ui';
+import { Body, Chip, InkButton, Label, Quoted, Rule, Stone, Studio, TextButton, Toast, UserField, UserText, accent, day, type as fonts } from '@morrow/ui';
 import { useConsistency, useLatestBook, useMorrow, useTodaysMoves } from '../src/store';
 
 export default function Coach() {
@@ -38,7 +38,12 @@ export default function Coach() {
   const takeCoachTurn = useMorrow((s) => s.takeCoachTurn);
   const inviteFullTrack = useMorrow((s) => s.inviteFullTrack);
 
-  const [thread, setThread] = useState<{ who: 'me' | 'coach'; text: string }[]>([]);
+  /**
+   * The thread. A coach message carries the spans that are the person's own
+   * words, so they can be set in their face rather than the app's — a reply
+   * that quotes their if-then is half theirs and the type has to say so.
+   */
+  const [thread, setThread] = useState<{ who: 'me' | 'coach'; text: string; spans?: string[] }[]>([]);
   const [draft, setDraft] = useState('');
   const [capped, setCapped] = useState<PaywallMoment | null>(null);
 
@@ -96,8 +101,17 @@ export default function Coach() {
   };
 
   const say = (chip: ChipId, label: string) => {
+    // A chip is a turn like any other (PRD §13.3's cap is on turns, not on
+    // typing). Without this the four chips were an unlimited coach for
+    // anyone who never used the field.
+    const turn = takeCoachTurn();
+    if (!turn.allowed) {
+      setThread((t) => [...t, { who: 'me', text: label }, { who: 'coach', text: turn.reason }]);
+      setCapped(turn.moment);
+      return;
+    }
     const reply: CoachReply = replyToChip(chip, ctx);
-    setThread((t) => [...t, { who: 'me', text: label }, { who: 'coach', text: reply.text }]);
+    setThread((t) => [...t, { who: 'me', text: label }, { who: 'coach', text: reply.text, spans: reply.quotedSpans }]);
     if (!reply.action) return;
     // Shrink the move they are stuck on rather than adding another one like it.
     // The store raises its own toast either way.
@@ -121,7 +135,9 @@ export default function Coach() {
     setDraft('');
     const risk = screen(text);
     if (risk.risk === 'crisis') {
-      useMorrow.setState({ safetyPause: { risk: risk.risk, at: new Date().toISOString() } });
+      // No row: the thread is not kept, so there is nothing for the appeal
+      // to clear — it closes the card and that is all.
+      useMorrow.setState({ safetyPause: { risk: risk.risk, at: new Date().toISOString(), source: null } });
       return;
     }
     // Not a crisis, but not nothing either. The thread is not kept, so without
@@ -141,7 +157,7 @@ export default function Coach() {
     // The screen used to inline the generic line and never call this at all.
     const reply = replyToText(text, ctx);
     if (!reply.text) return;
-    setThread((t) => [...t, { who: 'me', text }, { who: 'coach', text: reply.text }]);
+    setThread((t) => [...t, { who: 'me', text }, { who: 'coach', text: reply.text, spans: reply.quotedSpans }]);
   };
 
   return (
@@ -172,7 +188,17 @@ export default function Coach() {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18, gap: 16 }}>
           {thread.length === 0 && brief ? (
             <View testID="dawn-brief" style={{ gap: 14 }}>
-              <Statement style={{ fontSize: 27, lineHeight: 33 }}>{brief.today}</Statement>
+              {/*
+                The brief is the app's sentences around the person's own —
+                "Your line" is theirs, "Start with" is not — and the two are
+                set in their two faces so nobody has to guess which is which.
+              */}
+              <Quoted
+                text={brief.today}
+                spans={brief.quotedSpans}
+                italic={false}
+                style={{ fontFamily: fonts.sansBold, fontSize: 27, lineHeight: 33, letterSpacing: -1, color: day.ink }}
+              />
               <Rule />
               {/*
                 Label above value, not beside it. A fixed-width column cannot
@@ -181,12 +207,12 @@ export default function Coach() {
               */}
               <View style={{ gap: 4 }}>
                 <Label style={{ color: accent.coralText }}>Yesterday</Label>
-                <Body style={{ color: day.ink }}>{brief.yesterday}</Body>
+                <Quoted text={brief.yesterday} spans={brief.quotedSpans} style={{ color: day.ink }} />
               </View>
               <Rule />
               <View style={{ gap: 4 }}>
                 <Label style={{ color: accent.coralText }}>If</Label>
-                <Body style={{ color: day.ink }}>{brief.ifThen}</Body>
+                <Quoted text={brief.ifThen} spans={brief.quotedSpans} style={{ color: day.ink }} />
               </View>
               {firstMove ? (
                 <>
@@ -281,7 +307,7 @@ export default function Coach() {
                 {m.who === 'me' ? (
                   <UserText style={{ color: '#FFFFFF', fontSize: 16, lineHeight: 22 }}>{m.text}</UserText>
                 ) : (
-                  <Body style={{ color: day.ink, fontSize: 16, lineHeight: 22 }}>{m.text}</Body>
+                  <Quoted text={m.text} spans={m.spans ?? []} style={{ color: day.ink, fontSize: 16, lineHeight: 22 }} />
                 )}
               </View>
             </View>

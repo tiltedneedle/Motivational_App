@@ -58,8 +58,6 @@ export default function Write() {
   // every keystroke, which would make the timer useless.
   const sessionRef = useRef(session);
   sessionRef.current = session;
-  const phaseRef = useRef(phase);
-  phaseRef.current = phase;
 
   const doorway = DOORWAY[kind];
   const seeds = goals
@@ -96,23 +94,27 @@ export default function Write() {
   // Autosave. Fifteen minutes is the most expensive thing a person gives this
   // product, and a phone that gets killed in the background must not take it.
   const flush = useCallback(() => {
-    if (phaseRef.current !== 'writing') return;
     const live = sessionRef.current;
     if (!live.body.trim() && live.elapsed < 5) return;
     saveDraft(live);
   }, [saveDraft]);
 
   useEffect(() => {
-    if (phase !== 'writing') return;
-    const id = setInterval(flush, 4_000);
+    // While the room is open, every four seconds. While it is closed and the
+    // words are still only in memory — the read-back has not been reached —
+    // on backgrounding only. The cleanup used to check the phase through a
+    // ref, which had already moved on to 'closed' by the time it ran, so the
+    // last flush on the way out of the room was the one that never happened.
+    if (phase === 'doorway') return;
+    const id = phase === 'writing' ? setInterval(flush, 4_000) : null;
     const sub = AppState.addEventListener('change', (next) => {
       // Backgrounding is the moment the process can be reaped, so write now.
       if (next !== 'active') flush();
     });
     return () => {
-      clearInterval(id);
+      if (id) clearInterval(id);
       sub.remove();
-      flush();
+      if (phase === 'writing') flush();
     };
   }, [phase, flush]);
 

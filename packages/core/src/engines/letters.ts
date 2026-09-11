@@ -208,34 +208,96 @@ const CLOSERS: Record<LetterTrigger, string> = {
 };
 
 /**
- * The one long middle sentence, built only out of what is in front of it.
+ * The middle of the letter, built only out of what is in front of it.
  *
  * The shape is fixed and the content is theirs. Nothing in here describes the
  * person — it describes what is in the ledger, which is a different thing and
  * the only kind of claim this app is entitled to make about somebody's life.
+ *
+ * Every piece carries a rank. When the whole letter runs past the ceiling —
+ * a thirty-word first sentence and two long ledger lines will do it — the
+ * highest-ranked optional pieces go first, quotations last, so the composer
+ * cannot hand its own check a letter the check refuses.
  */
-function middle(kept: string[], quoted: string[]): string {
-  const bits: string[] = [];
-  if (quoted[0]) bits.push(`You wrote “${quoted[0]}” and I have thought about that line more than you did.`);
+interface Piece {
+  text: string;
+  /** Quotations this piece carries, so dropping it drops them from the list. */
+  quotes: string[];
+  /** 0 is always kept. Higher numbers are the first to go when it runs long. */
+  optional: number;
+}
+
+function middlePieces(first: string, kept: string[], total: number): Piece[] {
+  const pieces: Piece[] = [];
+  if (first) {
+    pieces.push({
+      text: `You wrote “${first}” and I have thought about that line more than you did.`,
+      quotes: [first],
+      // Only ever dropped when there is a ledger line to quote instead: a
+      // letter that quotes nothing of theirs is not a letter.
+      optional: kept.length > 0 ? 3 : 0,
+    });
+  }
   if (kept.length >= 2) {
-    bits.push(
-      `Since then the ledger has ${kept.length} entries in your own handwriting, and two of them are “${kept[0]}” and ${endSentence(
+    pieces.push({
+      text: `Since then the ledger has ${total} entries in your own handwriting, and two of them are “${kept[0]}” and ${endSentence(
         `“${kept[1]}”`,
       )}`,
-    );
+      quotes: [kept[0]!, kept[1]!],
+      optional: 0,
+    });
   } else if (kept.length === 1) {
-    bits.push(`The ledger has one entry in your own handwriting so far, and it is ${endSentence(`“${kept[0]}”`)}`);
+    pieces.push({
+      text: `The ledger has ${total === 1 ? 'one entry' : `${total} entries`} in your own handwriting so far, and one of them is ${endSentence(`“${kept[0]}”`)}`,
+      quotes: [kept[0]!],
+      optional: 0,
+    });
   } else {
-    bits.push('The ledger is still empty, which is the ordinary state of a thing that has just begun.');
+    pieces.push({
+      text: 'The ledger is still empty, which is the ordinary state of a thing that has just begun.',
+      quotes: [],
+      optional: 0,
+    });
   }
-  bits.push(
-    'None of it was the day you felt like it. That is the part nobody tells you: the feeling arrives afterwards, if it arrives at all, and the work goes first either way.',
-  );
-  bits.push(
-    'I am not writing to tell you it gets easier. I am writing because somebody should have a record of the mornings you did it anyway, and it turns out that somebody is you, later.',
-  );
-  return bits.join(' ');
+  if (kept.length > 0) {
+    // These two presume a morning in the ledger. With none there yet they
+    // would be describing a life the app has no record of.
+    pieces.push({
+      text: 'None of it was the day you felt like it. That is the part nobody tells you: the feeling arrives afterwards, if it arrives at all, and the work goes first either way.',
+      quotes: [],
+      optional: 2,
+    });
+    pieces.push({
+      text: 'I am not writing to tell you it gets easier. I am writing because somebody should have a record of the mornings you did it anyway, and it turns out that somebody is you, later.',
+      quotes: [],
+      optional: 1,
+    });
+  } else {
+    pieces.push({
+      text: 'An empty page is not a verdict. The first line goes in the same way the last one will, on a morning that does not feel like it, and nobody is counting how long the page stayed blank.',
+      quotes: [],
+      optional: 2,
+    });
+    pieces.push({
+      text: 'I am not writing to tell you it gets easier. I am writing because somebody should keep a record of what you decided tonight, and it turns out that somebody is you, later.',
+      quotes: [],
+      optional: 1,
+    });
+  }
+  return pieces;
 }
+
+/**
+ * Sentences that say nothing about anybody, for a letter that comes in under
+ * the floor — one short ledger line and no first sentence will do that. Added
+ * in order, only as far as needed, so a letter is never padded for its own
+ * sake.
+ */
+const FILLER = [
+  'Keep the ledger honest and keep it small. A line a day is more than most people ever write down about their own lives.',
+  'Read this once and then close it. It was not written to be kept open, and the next one will find you when it is due.',
+  'What you wrote is still where you left it, and it will still be yours on the days you do not want to look at it.',
+];
 
 export interface ComposedLetter {
   body: string;
@@ -254,15 +316,48 @@ export interface ComposedLetter {
 export function composeLetter(trigger: LetterTrigger, sources: LetterSources, name?: string): ComposedLetter {
   const who = name?.trim() ? `${name.trim()}, ` : '';
   const first = firstSentenceOf(sources.ideal);
-  const kept = sources.evidence
-    .map((e) => e.text.trim())
-    .filter((t) => t.length > 0 && t.length <= 90)
-    .slice(0, 2);
+  const entries = sources.evidence.map((e) => e.text.trim()).filter((t) => t.length > 0);
+  const kept = entries.filter((t) => t.length <= 90).slice(0, 2);
 
-  const quoted = [first, ...kept].filter((s) => s.length > 0);
-  const body = [`${who}${OPENERS[trigger]}`, middle(kept, quoted), CLOSERS[trigger]].join(' ');
+  const opener = `${who}${OPENERS[trigger]}`;
+  const closer = CLOSERS[trigger];
+  let pieces = middlePieces(first, kept, entries.length);
 
-  return { body, quotes: quoted, check: checkLetter(body, quoted, sources) };
+  const assemble = (ps: Piece[]) => [opener, ...ps.map((p) => p.text), closer].join(' ');
+
+  // Too long: shed the most optional piece and look again. The quotation of
+  // the Fifteen goes only after the prose has, and only when a ledger line is
+  // still there to be quoted instead.
+  while (words(assemble(pieces)) > LETTER_MAX_WORDS) {
+    const top = Math.max(...pieces.map((p) => p.optional));
+    if (top === 0) break;
+    const idx = pieces.findIndex((p) => p.optional === top);
+    pieces = pieces.filter((_, i) => i !== idx);
+  }
+  // Two long ledger lines with nothing else to shed: keep one of them.
+  if (words(assemble(pieces)) > LETTER_MAX_WORDS && kept.length === 2) {
+    pieces = pieces.map((p) =>
+      p.quotes.length === 2
+        ? {
+            text: `The ledger has ${entries.length} entries in your own handwriting so far, and one of them is ${endSentence(`“${kept[0]}”`)}`,
+            quotes: [kept[0]!],
+            optional: 0,
+          }
+        : p,
+    );
+  }
+
+  // Too short: one plain sentence at a time, before the closer.
+  const middle = pieces.map((p) => p.text);
+  let body = [opener, ...middle, closer].join(' ');
+  for (const line of FILLER) {
+    if (words(body) >= LETTER_MIN_WORDS) break;
+    middle.push(line);
+    body = [opener, ...middle, closer].join(' ');
+  }
+
+  const quotes = pieces.flatMap((p) => p.quotes);
+  return { body, quotes, check: checkLetter(body, quotes, sources) };
 }
 
 /** The first sentence of the Fifteen, uncut. Quoting half a sentence is worse than quoting none. */

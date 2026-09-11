@@ -7,7 +7,7 @@
  * designer's calibrated screen is not a colour anyone else has.
  */
 import { describe, expect, it } from 'vitest';
-import { accent, day, night } from '../src/tokens';
+import { accent, day, night, paper } from '../src/tokens';
 
 /** sRGB relative luminance, WCAG 2.x definition. */
 function luminance(hex: string): number {
@@ -50,6 +50,16 @@ describe('the day studio', () => {
       expect(ratio(day.ink3, bg)).toBeGreaterThanOrEqual(AA_BODY);
     });
   }
+});
+
+describe('the paper the Book is printed on', () => {
+  it('sets every ink legibly on the paper', () => {
+    expect(ratio(paper.ink, paper.ground)).toBeGreaterThanOrEqual(AA_BODY);
+    expect(ratio(paper.ink2, paper.ground)).toBeGreaterThanOrEqual(AA_BODY);
+    // The label ink carries the small captions above every line of the
+    // Book, so it is held to the body threshold, not the large one.
+    expect(ratio(paper.ink3, paper.ground)).toBeGreaterThanOrEqual(AA_BODY);
+  });
 });
 
 describe('the night studio', () => {

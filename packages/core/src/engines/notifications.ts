@@ -126,7 +126,9 @@ export function outOfQuiet(hhmm: string, quiet: QuietHours = DEFAULT_QUIET): str
  * decided the day is over.
  */
 const REGISTER: Record<Persona, (s: string) => string> = {
-  gentle: (s) => `When you're ready: ${s}`,
+  // The same shape the coach uses ("When you're ready, start with…"): a
+  // sentence, not a label with a colon after it.
+  gentle: (s) => `When you're ready, ${lower(s)}`,
   straight: (s) => s,
   fierce: (s) => s,
 };

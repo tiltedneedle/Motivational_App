@@ -124,7 +124,11 @@ export default function Envision() {
             <Stone size={54} domain={goal.domain} polish={0.85} />
             <View style={{ flex: 1, gap: 3 }}>
               <Label style={{ color: meta.inkNight }}>{goal.domainLabel ?? meta.label}</Label>
-              <Statement style={{ color: night.ink, fontSize: 24, lineHeight: 29 }}>{goal.title}</Statement>
+              {goal.titleAuthored === false ? (
+                <Statement style={{ color: night.ink, fontSize: 24, lineHeight: 29 }}>{goal.title}</Statement>
+              ) : (
+                <UserText style={{ color: night.ink, fontSize: 24, lineHeight: 30 }}>{goal.title}</UserText>
+              )}
             </View>
           </View>
 

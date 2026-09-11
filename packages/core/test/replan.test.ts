@@ -10,6 +10,8 @@ import { describe, expect, it } from 'vitest';
 import {
   BlueprintInvalid,
   applyReplan,
+  canReplan,
+  reachMilestones,
   buildPlan,
   proposeReplan,
   validatePlan,
@@ -84,7 +86,7 @@ describe('applying a replan', () => {
     const p = plan();
     const next = applyReplan(
       p,
-      [{ op: 'add', target: 'move', id: null, before: null, after: 'One more of the same', reason: 'x', sourceLineId: 'a_str' }],
+      [{ op: 'add', target: 'move', id: null, before: null, after: 'out the back door', reason: 'x', sourceLineId: 'a_str' }],
       sequentialIds(),
       analyses,
       TODAY,
@@ -94,13 +96,44 @@ describe('applying a replan', () => {
     expect(validatePlan(next, analyses, TODAY, { asNewPlan: false })).toEqual([]);
   });
 
+  it('refuses an added move whose words are not in the line it claims', () => {
+    // The row names a real line and a title that is not in it. validatePlan
+    // only checked that the line existed, so this used to land on Today
+    // under the person's name.
+    const p = plan();
+    expect(() =>
+      applyReplan(
+        p,
+        [{ op: 'add', target: 'move', id: null, before: null, after: 'Run a marathon', reason: 'x', sourceLineId: 'a_str' }],
+        sequentialIds(),
+        analyses,
+        TODAY,
+      ),
+    ).toThrow(/not in its source line/);
+  });
+
+  it('accepts the composed title the proposal itself makes', () => {
+    // "Tuesday: at 6:40, out the back door" is the app sorting their line
+    // into days; the day is chrome and the body is theirs.
+    const p = plan();
+    const seed = p.moves[0]!;
+    const next = applyReplan(
+      p,
+      [{ op: 'add', target: 'move', id: null, before: null, after: seed.title, reason: 'x', sourceLineId: seed.sourceLineId }],
+      sequentialIds(),
+      analyses,
+      TODAY,
+    );
+    expect(next.moves.length).toBe(p.moves.length + 1);
+  });
+
   it('dates an added move rather than leaving it nowhere', () => {
     // An undated move never surfaces on Today, so "room for one more" would
     // have quietly gone nowhere at all.
     const p = plan();
     const next = applyReplan(
       p,
-      [{ op: 'add', target: 'move', id: null, before: null, after: 'One more', reason: 'x', sourceLineId: 'a_str' }],
+      [{ op: 'add', target: 'move', id: null, before: null, after: 'Thursday', reason: 'x', sourceLineId: 'a_str' }],
       sequentialIds(),
       analyses,
       TODAY,
@@ -116,7 +149,7 @@ describe('applying a replan', () => {
     for (let i = 0; i < 3; i++) {
       next = applyReplan(
         next,
-        [{ op: 'add', target: 'move', id: null, before: null, after: `Extra ${i}`, reason: 'x', sourceLineId: 'a_str' }],
+        [{ op: 'add', target: 'move', id: null, before: null, after: ['Tuesday', 'Thursday', 'Saturday'][i]!, reason: 'x', sourceLineId: 'a_str' }],
         sequentialIds(),
         analyses,
         TODAY,
@@ -157,5 +190,53 @@ describe('applying a replan', () => {
     const p = plan();
     const next = applyReplan(p, [], sequentialIds(), analyses, TODAY);
     expect(next.moves).toEqual(p.moves);
+  });
+});
+
+describe('reaching a milestone', () => {
+  const ledger = (days: string[]) => days.map((day) => ({ goalId: 'g1', day }));
+
+  it('stamps the first milestone once its date has passed with a ledger row behind it', () => {
+    const p = { ...plan(), createdAt: `${TODAY}T09:00:00.000Z` };
+    const first = [...p.milestones].sort((a, b) => a.order - b.order)[0]!;
+    const before = reachMilestones(p, ledger(['2026-09-12']), first.targetDate, '2026-10-01T09:00:00.000Z');
+    expect(before.milestones.find((m) => m.id === first.id)?.reachedAt).toBe('2026-10-01T09:00:00.000Z');
+  });
+
+  it('does not stamp a milestone whose date has not come', () => {
+    const p = { ...plan(), createdAt: `${TODAY}T09:00:00.000Z` };
+    const out = reachMilestones(p, ledger(['2026-09-12']), '2026-09-13', '2026-09-13T09:00:00.000Z');
+    expect(out.milestones.every((m) => m.reachedAt === null)).toBe(true);
+    expect(out).toBe(p);
+  });
+
+  it('does not stamp on an empty stretch, or on another goal’s rows', () => {
+    const p = { ...plan(), createdAt: `${TODAY}T09:00:00.000Z` };
+    const first = [...p.milestones].sort((a, b) => a.order - b.order)[0]!;
+    const empty = reachMilestones(p, [], first.targetDate, 'now');
+    expect(empty).toBe(p);
+    const other = reachMilestones(p, [{ goalId: 'g2', day: '2026-09-12' }], first.targetDate, 'now');
+    expect(other.milestones.every((m) => m.reachedAt === null)).toBe(true);
+  });
+
+  it('never unstamps', () => {
+    const p = { ...plan(), createdAt: `${TODAY}T09:00:00.000Z` };
+    const first = [...p.milestones].sort((a, b) => a.order - b.order)[0]!;
+    const stamped = reachMilestones(p, ledger(['2026-09-12']), first.targetDate, 'then');
+    const again = reachMilestones(stamped, [], first.targetDate, 'later');
+    expect(again.milestones.find((m) => m.id === first.id)?.reachedAt).toBe('then');
+  });
+});
+
+describe('the monthly replan cap', () => {
+  const ctx = { entitled: false, blueprintsBuilt: 1, coachTurnsToday: 0, afterBlueprintShown: true, replansThisMonth: 0 };
+  it('allows one a month on the free plan, then refuses with the moment', () => {
+    expect(canReplan(ctx).allowed).toBe(true);
+    const refused = canReplan({ ...ctx, replansThisMonth: 1 });
+    expect(refused.allowed).toBe(false);
+    if (!refused.allowed) expect(refused.moment).toBe('replan');
+  });
+  it('does not cap Pro', () => {
+    expect(canReplan({ ...ctx, entitled: true, replansThisMonth: 12 }).allowed).toBe(true);
   });
 });

@@ -229,6 +229,12 @@ export const Plan = z.object({
   seasonWeeks: z.number().int(),
   status: z.enum(['active', 'superseded']),
   createdAt: z.string(),
+  /**
+   * When each accepted replan was applied, newest last. The free plan allows
+   * one a month (PRD §13.3), and the only honest way to count "this month"
+   * is to remember when the others were.
+   */
+  replannedAt: z.array(z.string()).default([]),
   milestones: z.array(Milestone),
   moves: z.array(Move),
   obstaclePlans: z.array(ObstaclePlan),
@@ -337,7 +343,8 @@ export const DaySummary = z.object({
   planned: z.number().int(),
   done: z.number().int(),
   skipped: z.number().int(),
-  partial: z.number().int(),
+  /** Fractions of practices kept — the two-minute version is worth a whole one. 0–1 per practice, summed. */
+  partial: z.number().min(0),
   evidenceCount: z.number().int(),
   sealedAt: z.string().nullable(),
   moodWord: z.string().nullable(),

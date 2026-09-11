@@ -6,6 +6,7 @@
  * edit (the identity line). Nothing is invented prose about their life.
  */
 import type { AnalysisKind, Goal, GoalAnalysis, Portrait } from '../types';
+import { ifThenOf } from '../ids';
 
 export interface PortraitInput {
   goal: Goal;
@@ -27,6 +28,52 @@ function lineOf(analyses: GoalAnalysis[], kind: AnalysisKind): GoalAnalysis | un
 }
 
 export const FIRST_SENTENCE_MAX = 180;
+
+/** "if …" → "If …", for the one place the if-then stands as its own line. */
+function capitalise(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/**
+ * Everything in the Fifteen after the first sentence, for the Book.
+ *
+ * Not `ideal.slice(firstSentence.length)`. `firstSentence` normalises
+ * whitespace and cuts a long sentence at a word with an ellipsis, so its
+ * length is not an offset into the raw text: a sentence that was cut printed
+ * its own tail twice, and a Fifteen with a line break in its opening lost a
+ * character at the join. The shown sentence is walked against the raw text
+ * instead, whitespace run for whitespace run, and the body starts where it
+ * stops — so nothing the person wrote is printed twice or dropped.
+ */
+export function restOfIdeal(ideal: string, shown: string): string {
+  const raw = ideal ?? '';
+  const first = shown.endsWith('…') ? shown.slice(0, -1) : shown;
+  let i = 0;
+  let j = 0;
+  const ws = (c: string) => /\s/.test(c);
+  while (i < raw.length && ws(raw[i]!)) i++;
+  while (j < first.length && i < raw.length) {
+    if (ws(first[j]!)) {
+      while (i < raw.length && ws(raw[i]!)) i++;
+      j++;
+    } else if (raw[i] === first[j]) {
+      i++;
+      j++;
+    } else {
+      break;
+    }
+  }
+  if (j < first.length) {
+    // The shown sentence is not a prefix of the text it came from, which
+    // means the Book was built by an older rule. Fall back to the whole text
+    // rather than to a guess at an offset: printing a sentence twice is a
+    // smaller wrong than dropping one.
+    return raw.trim();
+  }
+  // A cut sentence lost its trailing comma to the ellipsis; the body should
+  // not begin with it.
+  return raw.slice(i).replace(/^[\s,;:]+/, '').trim();
+}
 
 /**
  * The first sentence of the user's writing, verbatim.
@@ -109,9 +156,7 @@ export function buildPortrait(input: PortraitInput): Portrait {
   const opener = firstSentence(ideal);
   const why = motives?.paragraph?.trim() || motives?.line?.trim() || '';
   const obstacleText = obstacles?.line?.trim() ?? '';
-  const ifThen = obstacles?.line2?.trim()
-    ? `If ${obstacleText.replace(/^if\s+/i, '')}, then I ${obstacles.line2.trim().replace(/^then i\s+/i, '')}`
-    : obstacleText;
+  const ifThen = obstacles?.line2?.trim() ? capitalise(ifThenOf(obstacles.line, obstacles.line2).sentence) : obstacleText;
 
   const moves = splitFirstMoves(strategies?.line ?? '');
 
@@ -185,7 +230,9 @@ export function splitFirstMoves(strategyLine: string): string[] {
  */
 export function letterFromFuture(opener: string, name?: string): string {
   const who = name?.trim() ? `${name.trim()}, ` : '';
-  const quoted = opener ? `“${opener}”` : 'what you wrote tonight';
+  // Their full stop comes off inside the quotation: “…still blue.” for a
+  // while now is two sentences' punctuation in one, and the sentence is ours.
+  const quoted = opener ? `“${opener.replace(/[.!?]+$/, '')}”` : 'what you wrote tonight';
   return [
     `${who}I have been reading ${quoted} for a while now.`,
     'It is not the finish I remember most. It is the ordinary morning you did it anyway, when nobody would have known either way.',

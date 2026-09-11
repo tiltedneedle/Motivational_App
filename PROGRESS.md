@@ -15,7 +15,7 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 1. packages/core: domain model, stores (zustand + persist), engines
 - [x] 2. packages/ui: Studio tokens, Stone/Socket/Ring, HoldBar, Chip, Field, Sheet, text primitives
 - [x] 3. apps/mobile screens (all 16 routes)
-- [x] 4. Tests: 299 core + 33 contrast + 6 storage unit tests, 128 Playwright e2e checks, all green
+- [x] 4. Tests: 333 core + 40 ui + 8 storage unit tests, 33 real-Postgres checks, 128 Playwright e2e checks, all green
 - [x] 5. supabase/: migrations with RLS and three structural authorship guards, edge functions
 - [x] 6. Hardening: the eight-lens audit's findings, worst first (see below) — 95 of 95
 - [x] 7. Research pass: libraries/versions; the migration against a real Postgres; prebuild
@@ -24,19 +24,29 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 10. PRD §7 read against the app: notifications, the paywall, the tablet layout,
       Sunday reading, the Goal Path, letters, the Portrait reveal, Replan, the PDF
       and the other road — all ten were unbuilt, all ten are built
+- [x] 11. Third audit, ten lenses over the whole tree — 47 of 47 (see below)
+- [x] 12. The account (§7.12): email code and Sign in with Apple behind a seam,
+      push/pull sync of the whole store, the delete-account function, the
+      migration brought level with the app — everything but the key
 
 ## In flight
 
-Nothing is half-done. Both audits are closed — 95 of 95, then 37 of 37 — and
-the app has been walked end to end in a browser on the built bundle rather than
-only tested. What is left needs a machine or a key this one does not have; see
-"Next steps".
+Nothing is half-done. Three audits are closed — 95 of 95, 37 of 37, then 47 of
+47 — and the app has been walked end to end in a browser on the built bundle
+rather than only tested. What is left needs a machine or a key this one does
+not have; see "Next steps".
 
 - The tree is green and committed: `pnpm verify` runs the toolchain guard,
-  typecheck, lint, 299 core tests, 33 contrast measurements, 6 storage tests, the
-  edge-function guards, the SQL structural guards, 30 checks against a real
-  Postgres, the serif authorship guard, the web build and 128 end-to-end
-  checks.
+  typecheck, lint, 333 core tests, 40 ui tests (contrast and the quoted-span
+  split), 8 storage tests, the edge-function guards, the SQL structural
+  guards, 33 checks against a real Postgres, the serif authorship guard, the
+  web build and 128 end-to-end checks.
+- The account is wired end to end but has never talked to a real Supabase:
+  `hasSupabase` is false in every build so far, so the account screen, the
+  Settings row and the launch-time push are all present and all dormant. The
+  moment `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` exist
+  they come on, and the edge functions are called through the same host with
+  the session's token.
 - Three findings were **withdrawn, not fixed**: buildPlan does not construct
   plans its own validator rejects (verified across 560 combinations of strategy
   line, weekday and target date), and splitFirstMoves no longer eats the first
@@ -740,6 +750,95 @@ unwritten other road offers the write and does not offer to draw what does not
 exist. Walked live and covered by eight e2e checks on the product's own clock.
 The Full track's 600-character soft floor is shown as polish, never an error.
 
+## Third audit (2026-09-11)
+
+Ten agents over the whole tree — authorship, state, safety, copy, contrast,
+the migration, the edge, the screens — with an adversarial verify on every
+finding; 47 confirmed and one left unverified (the paywall's BENEFITS line,
+fixed anyway). All 47 are closed. The ones that mattered most:
+
+- **The Book printed part of the Fifteen twice.** `ideal.slice(firstSentence.length)`
+  used the length of the *displayed* first sentence, which is whitespace-
+  normalised and cut with an ellipsis when long. `restOfIdeal` walks the
+  shown sentence against the raw text and starts the body where it stops.
+  Book screen, reading view, plain text and PDF all go through it.
+- **The letter composer could write a letter its own check refused.** A
+  thirty-word first sentence and two long ledger lines came to 230 words
+  against a 180 ceiling, and the letter was silently never written. Pieces
+  now carry a rank and are shed longest-optional-first, quotations last; a
+  short letter is brought up to the floor one plain sentence at a time; the
+  ledger count is the whole ledger, not the two lines quoted; and the empty
+  ledger gets prose that does not describe mornings it has no record of.
+- **The person's words were set in the app's face** in the dawn brief, the
+  coach's replies, the welcome-back card, the Portrait letter, the Now card,
+  the Later rows and the replan rows — and the app's "…then I" framing was
+  set in theirs. One primitive, `Quoted`, splits a sentence on the verified
+  spans and sets each half in its face; `UserText` took a `framing` prop for
+  the chrome in front of a line. The serif now means one thing everywhere.
+- **"then I I'll put the phone in the hall."** and a double stop after it:
+  three engines composed the if-then three ways. `ifThenOf` composes it once,
+  supplies the framing only where the person did not type it, keeps their
+  contraction, takes their full stop off, and hands back spans that are still
+  substrings of what they wrote.
+- **`Milestone.reachedAt` was never set.** The letters engine had an occasion
+  for it and the Path a branch, both dead. `reachMilestones` stamps a
+  milestone on the first launch after its date with something in the ledger
+  for that goal since the milestone before; never unstamped.
+- **Crisis-flagged lines reached the Portrait, the plan, a practice, a scene
+  and a letter.** Every builder now takes `quotable()` rows only.
+- **The safety appeal un-flagged the wrong row.** "This was not about me"
+  always cleared the newest flagged *sitting*, whatever had raised the card.
+  `safetyPause` carries its source row and the appeal clears exactly that.
+- **A write failure never surfaced.** The storage latch closed and every save
+  after it was dropped, but the banner only read the latch at rehydrate.
+  `onStorageFailure` tells the store the moment it closes, and the banner
+  says whether it was a read or a write that failed and what that means was
+  kept.
+- **Android could not dial a helpline.** `canOpenURL('tel:')` is false on
+  Android 11+ without a manifest query, so every number read as undiallable.
+  Only iOS asks first now; Android and the web go straight to `openURL`.
+- **The web PDF printed the app.** expo-print's web build ignores the html it
+  is handed. The Book is written into a frame of its own and that prints.
+- **Tapping a notification did nothing.** No response listener existed.
+  `onNotificationOpened` handles both the running and the cold-start case and
+  follows only routes of the app's own shape.
+- State: a second tap on a stone doubled the ledger; sealing a day twice
+  appended a second proof line; the replan argued from every goal's week and
+  had no monthly cap; a rewritten Monitoring line never reached its
+  milestone; dropping a goal left its practices on Today; a recount after a
+  seal dropped the proof line's safety verdict; chips took no coach turn;
+  `partial` was a fraction in an int column.
+- The migration: app ids are `text` (the device mints them); `goals.title_authored`,
+  `moves.doing_min_version`, `plans.replanned_at`, `profiles.sunday_hour`,
+  `reduced_motion`, `deleted_at`; whitespace-only checks on every free-text
+  column; `entitlement` constrained to free/pro and refused from any user
+  session by trigger (the sync no longer sends it up); a letter from the
+  future must quote something.
+- Copy and contrast: the paper's label ink cleared 3.71:1 and now clears 4.5:1
+  (`paper` tokens, measured); "Sealed" uses the app's day, not UTC's; the
+  seal-book label said "second edition" on the first; "The last 1 thing";
+  the gentle notification's colon; the paywall promised re-authoring, which
+  is not built; the crisis card said nothing was sent anywhere, which is
+  untrue with a remote screen; the consent screen now names the safety
+  screening and the scene.
+
+## The account (2026-09-11)
+
+PRD §7.12, built to the key. `src/supabase.ts` is the seam: a client only when
+both public values exist, email one-time code, Sign in with Apple from the
+identity token, sign out, and `deleteAccount` through a function. `src/sync.ts`
+pushes every table in foreign-key order as an upsert on the device's own ids,
+and pulls only onto a device with nothing of its own — two devices with two
+Books is a merge, which this product does not have, and pretending otherwise
+would risk the one thing the account exists to protect. `packages/core/
+engines/sync.ts` is the store as rows and back, round-trip tested field for
+field. The account screen asks once after the Portrait and only when there is
+a service to ask about; "Not now" keeps everything local; Settings has the row
+for whenever, with the last time the copy landed, a sign-out and a close. The
+app pushes on launch and on backgrounding when signed in. `delete-account` is
+the fourth function: soft delete now, the sweep after seven days, the person
+read out of their own token and never out of the body.
+
 ## Blocked on the user
 - Supabase project URL/anon key, Anthropic API key, fal.ai key, RevenueCat keys: needed to test real providers. Everything runs on local fallbacks without them.
 
@@ -770,7 +869,10 @@ needs either hardware or a credential.
    paths is currently exercised only against `LocalProvider`, and
    `hasRemoteProvider` is false in every build so far — which is why the app
    says ten regular expressions rather than implying a second opinion it cannot
-   get.
+   get. With the Supabase values set, the functions are reached through the
+   project's own host with the session's token; `EXPO_PUBLIC_MORROW_API` still
+   wins when set. Then: sign in on the built app, push, wipe, sign in on a
+   second install, pull, and compare the two stores.
 3. **One `supabase db reset` against the real service** before launch. PGlite is
    Postgres, but Supabase is Postgres plus its own roles, extensions and `auth`
    schema, and `scripts/test-migration.mjs` stubs the last of those.

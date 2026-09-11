@@ -20,7 +20,7 @@ import { useEffect, useState } from 'react';
 import { Linking, Platform, Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { HELPLINES, RESOURCES_COPY } from '@morrow/core';
 import { day, night, radius, type as fonts } from '@morrow/ui';
-import { useMorrow } from '../store';
+import { hasRemoteProvider, useMorrow } from '../store';
 
 /**
  * How long the way out is inert. Long enough that the second half of a double
@@ -53,15 +53,20 @@ export function SafetyGate() {
       ? `https://${contact}`
       : `tel:${contact.replace(/\s/g, '')}`;
     try {
-      // `canOpenURL` first, because on the web build `openURL` resolves whether
-      // or not anything handled it — a browser with no dialler simply does
-      // nothing and reports success. Waiting for a rejection that never comes
-      // meant the fallback could not fire on the one platform most likely to
-      // need it.
-      const handled = await Linking.canOpenURL(target).catch(() => true);
-      if (!handled) {
-        setDialFailed(contact);
-        return;
+      // `canOpenURL` is only asked on iOS. On Android 11 and later it answers
+      // "no" for tel: unless the manifest declares a dial query, so every
+      // helpline read as undiallable on exactly the phones that could dial
+      // it; on the web it is hard-coded to "yes", so it says nothing. Both
+      // of those platforms go straight to `openURL` and treat a rejection as
+      // the failure — which is what Android actually gives when there is no
+      // dialler, and what the note under the numbers already covers on the
+      // web, where a browser with no handler simply does nothing.
+      if (Platform.OS === 'ios') {
+        const handled = await Linking.canOpenURL(target).catch(() => true);
+        if (!handled) {
+          setDialFailed(contact);
+          return;
+        }
       }
       await Linking.openURL(target);
       setDialFailed(null);
@@ -186,7 +191,7 @@ export function SafetyGate() {
           ) : null}
 
           <Text style={{ fontFamily: fonts.sans, fontSize: 14, lineHeight: 20, color: day.ink2, marginTop: 18 }}>
-            {RESOURCES_COPY.note}
+            {hasRemoteProvider ? RESOURCES_COPY.noteRemote : RESOURCES_COPY.note}
           </Text>
         </ScrollView>
 

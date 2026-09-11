@@ -41,6 +41,14 @@ for (const name of names) {
       // ...and the scene is refused outright when it does not.
       /degraded/,
     ],
+    'delete-account': [
+      // The person is read out of their own token, never out of the body.
+      /auth\.getUser\(\)/,
+      // A soft delete now, the hard one after the grace period.
+      /deleted_at/,
+      /GRACE_DAYS/,
+      /admin\.deleteUser/,
+    ],
     safety: [
       // The verdict is read out of the model's tool call, not guessed.
       /input\?\.risk === 'crisis'/,

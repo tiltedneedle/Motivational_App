@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { Share, View } from 'react-native';
 import { ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ANALYSIS_TITLES, bookToHtml, bookToText, formatDay, ordinal, pageCount } from '@morrow/core';
+import { ANALYSIS_TITLES, bookToHtml, bookToText, formatDay, ordinal, pageCount, restOfIdeal, sealedOn } from '@morrow/core';
 import {
   Body,
   Chip,
@@ -19,6 +19,7 @@ import {
   TextButton,
   UserText,
   night,
+  paper,
   radius,
   useTwoColumn,
 } from '@morrow/ui';
@@ -39,7 +40,7 @@ function ChapterName({ name, authored, size }: { name: string; authored: boolean
     return <UserText style={{ fontSize: size, lineHeight: size * 1.3, color: '#15181F' }}>{name}</UserText>;
   }
   return (
-    <Body style={{ fontSize: size - 1, lineHeight: size * 1.3, color: '#3B3A36' }}>{name}</Body>
+    <Body style={{ fontSize: size - 1, lineHeight: size * 1.3, color: paper.ink }}>{name}</Body>
   );
 }
 
@@ -48,6 +49,7 @@ export default function BookScreen() {
   const book = useLatestBook();
   // Kept: this one is read on Today, which is where it navigates to.
   const setToast = useMorrow((s) => s.setToast);
+  const boundary = useMorrow((s) => s.profile.dayBoundaryHour);
   const [exportError, setExportError] = useState<string | null>(null);
   // Above the early return, with the other hooks. Declared below it, this
   // would be called on one render and not the next the moment a Book appeared
@@ -72,13 +74,13 @@ export default function BookScreen() {
     if (!book || printing) return;
     setPrinting(true);
     setExportError(null);
-    const out = await printBook(bookToHtml(book), book.title);
+    const out = await printBook(bookToHtml(book, boundary), book.title);
     setPrinting(false);
     if (!out.ok) setExportError(out.error);
   };
 
   const onExport = async () => {
-    const text = bookToText(book);
+    const text = bookToText(book, boundary);
     try {
       await Share.share({ message: text, title: book.title });
       setExportError(null);
@@ -103,7 +105,7 @@ export default function BookScreen() {
         <ScrollView
           testID="book-page"
           showsVerticalScrollIndicator={false}
-          style={{ flex: 1, backgroundColor: '#FBF8F2', borderRadius: radius.card }}
+          style={{ flex: 1, backgroundColor: paper.ground, borderRadius: radius.card }}
           contentContainerStyle={{ padding: 26, paddingBottom: 40, gap: 18 }}
         >
           {/*
@@ -127,7 +129,7 @@ export default function BookScreen() {
           */}
           <View style={{ gap: 2 }}>
             {book.titleFraming ? (
-              <Body testID="book-spine-framing" style={{ fontSize: 15, color: '#8B7F6A' }}>
+              <Body testID="book-spine-framing" style={{ fontSize: 15, color: paper.ink3 }}>
                 {book.titleFraming}
               </Body>
             ) : null}
@@ -154,30 +156,30 @@ export default function BookScreen() {
           {twoColumn ? (
             <View testID="book-two-column" style={{ flexDirection: 'row', gap: 34 }}>
               <View style={{ flex: 1, gap: 18 }}>
-              <Label style={{ color: '#8B7F6A' }}>Chapter one · the Fifteen</Label>
+              <Label style={{ color: paper.ink3 }}>Chapter one · the Fifteen</Label>
               <UserText testID="book-first-sentence" style={{ fontSize: 28, lineHeight: 34, color: '#15181F' }}>
                 {book.firstSentence}
               </UserText>
-              <UserText style={{ fontSize: 17, lineHeight: 27, color: '#3B3A36' }}>
-                {book.ideal.slice(book.firstSentence.length).trim()}
+              <UserText style={{ fontSize: 17, lineHeight: 27, color: paper.ink }}>
+                {restOfIdeal(book.ideal, book.firstSentence)}
               </UserText>
 
               {book.shadow ? (
                 <>
                   <Rule style={{ backgroundColor: 'rgba(21,24,31,0.12)' }} />
-                  <Label style={{ color: '#8B7F6A' }}>The other road</Label>
-                  <UserText style={{ fontSize: 16, lineHeight: 25, color: '#5A5750' }}>{book.shadow}</UserText>
+                  <Label style={{ color: paper.ink3 }}>The other road</Label>
+                  <UserText style={{ fontSize: 16, lineHeight: 25, color: paper.ink2 }}>{book.shadow}</UserText>
                 </>
               ) : null}
 
               <Rule style={{ backgroundColor: 'rgba(21,24,31,0.12)' }} />
-              <Label style={{ color: '#8B7F6A' }}>Contents</Label>
+              <Label style={{ color: paper.ink3 }}>Contents</Label>
               {book.chapters.map((c) => (
                 <View key={c.goalId} style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
                   <View style={{ flex: 1 }}>
                     <ChapterName name={c.name} authored={c.nameAuthored !== false} size={17} />
                   </View>
-                  <Label style={{ color: '#8B7F6A' }}>{c.horizon}</Label>
+                  <Label style={{ color: paper.ink3 }}>{c.horizon}</Label>
                 </View>
               ))}
               </View>
@@ -188,14 +190,14 @@ export default function BookScreen() {
                   <ChapterName name={c.name} authored={c.nameAuthored !== false} size={22} />
                   {c.lines.map((l, i) => (
                     <View key={`${c.goalId}-${i}`} style={{ gap: 3 }}>
-                      <Label style={{ color: '#8B7F6A' }}>
+                      <Label style={{ color: paper.ink3 }}>
                         {ANALYSIS_TITLES[l.kind]}
                         {l.framingLabel ? ` · ${l.framingLabel}` : ''}
                       </Label>
-                      <UserText style={{ fontSize: 17, lineHeight: 26, color: '#3B3A36' }}>{l.text}</UserText>
+                      <UserText style={{ fontSize: 17, lineHeight: 26, color: paper.ink }}>{l.text}</UserText>
                       {l.text2 ? (
-                        <UserText italic style={{ fontSize: 16, lineHeight: 24, color: '#5A5750' }}>
-                          …then I {l.text2}
+                        <UserText italic framing="…then I" style={{ fontSize: 16, lineHeight: 24, color: paper.ink2 }}>
+                          {l.text2}
                         </UserText>
                       ) : null}
                     </View>
@@ -203,41 +205,41 @@ export default function BookScreen() {
                 </View>
               ))}
               <Rule style={{ backgroundColor: 'rgba(21,24,31,0.12)' }} />
-              <Label style={{ color: '#8B7F6A' }}>I will</Label>
+              <Label style={{ color: paper.ink3 }}>I will</Label>
               <UserText testID="book-i-will" style={{ fontSize: 24, lineHeight: 32, color: '#15181F' }}>
                 {book.iWill}
               </UserText>
-              <Label style={{ color: '#8B7F6A', marginTop: 8 }}>
-                Sealed {formatDay(book.sealedAt.slice(0, 10))} · written by you
+              <Label style={{ color: paper.ink3, marginTop: 8 }}>
+                Sealed {formatDay(sealedOn(book.sealedAt, boundary))} · written by you
               </Label>
               </View>
             </View>
           ) : (
             <>
-          <Label style={{ color: '#8B7F6A' }}>Chapter one · the Fifteen</Label>
+          <Label style={{ color: paper.ink3 }}>Chapter one · the Fifteen</Label>
           <UserText testID="book-first-sentence" style={{ fontSize: 28, lineHeight: 34, color: '#15181F' }}>
             {book.firstSentence}
           </UserText>
-          <UserText style={{ fontSize: 17, lineHeight: 27, color: '#3B3A36' }}>
-            {book.ideal.slice(book.firstSentence.length).trim()}
+          <UserText style={{ fontSize: 17, lineHeight: 27, color: paper.ink }}>
+            {restOfIdeal(book.ideal, book.firstSentence)}
           </UserText>
 
           {book.shadow ? (
             <>
               <Rule style={{ backgroundColor: 'rgba(21,24,31,0.12)' }} />
-              <Label style={{ color: '#8B7F6A' }}>The other road</Label>
-              <UserText style={{ fontSize: 16, lineHeight: 25, color: '#5A5750' }}>{book.shadow}</UserText>
+              <Label style={{ color: paper.ink3 }}>The other road</Label>
+              <UserText style={{ fontSize: 16, lineHeight: 25, color: paper.ink2 }}>{book.shadow}</UserText>
             </>
           ) : null}
 
           <Rule style={{ backgroundColor: 'rgba(21,24,31,0.12)' }} />
-          <Label style={{ color: '#8B7F6A' }}>Contents</Label>
+          <Label style={{ color: paper.ink3 }}>Contents</Label>
           {book.chapters.map((c) => (
             <View key={c.goalId} style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
               <View style={{ flex: 1 }}>
                 <ChapterName name={c.name} authored={c.nameAuthored !== false} size={17} />
               </View>
-              <Label style={{ color: '#8B7F6A' }}>{c.horizon}</Label>
+              <Label style={{ color: paper.ink3 }}>{c.horizon}</Label>
             </View>
           ))}
           {book.chapters.map((c) => (
@@ -246,14 +248,14 @@ export default function BookScreen() {
               <ChapterName name={c.name} authored={c.nameAuthored !== false} size={22} />
               {c.lines.map((l, i) => (
                 <View key={`${c.goalId}-${i}`} style={{ gap: 3 }}>
-                  <Label style={{ color: '#8B7F6A' }}>
+                  <Label style={{ color: paper.ink3 }}>
                     {ANALYSIS_TITLES[l.kind]}
                     {l.framingLabel ? ` · ${l.framingLabel}` : ''}
                   </Label>
-                  <UserText style={{ fontSize: 17, lineHeight: 26, color: '#3B3A36' }}>{l.text}</UserText>
+                  <UserText style={{ fontSize: 17, lineHeight: 26, color: paper.ink }}>{l.text}</UserText>
                   {l.text2 ? (
-                    <UserText italic style={{ fontSize: 16, lineHeight: 24, color: '#5A5750' }}>
-                      …then I {l.text2}
+                    <UserText italic framing="…then I" style={{ fontSize: 16, lineHeight: 24, color: paper.ink2 }}>
+                      {l.text2}
                     </UserText>
                   ) : null}
                 </View>
@@ -261,12 +263,12 @@ export default function BookScreen() {
             </View>
           ))}
           <Rule style={{ backgroundColor: 'rgba(21,24,31,0.12)' }} />
-          <Label style={{ color: '#8B7F6A' }}>I will</Label>
+          <Label style={{ color: paper.ink3 }}>I will</Label>
           <UserText testID="book-i-will" style={{ fontSize: 24, lineHeight: 32, color: '#15181F' }}>
             {book.iWill}
           </UserText>
-          <Label style={{ color: '#8B7F6A', marginTop: 8 }}>
-            Sealed {formatDay(book.sealedAt.slice(0, 10))} · written by you
+          <Label style={{ color: paper.ink3, marginTop: 8 }}>
+            Sealed {formatDay(sealedOn(book.sealedAt, boundary))} · written by you
           </Label>
             </>
           )}

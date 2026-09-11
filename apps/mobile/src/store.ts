@@ -6,9 +6,11 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
-import { STORE_KEY, failureReason, guardedStorage, hasFailed } from './storage';
+import { STORE_KEY, failureReason, guardedStorage, hasFailed, onStorageFailure } from './storage';
 import { syncNotices } from './notify';
 import { billing, type BillingResult, type PlanId } from './billing';
+import { FUNCTIONS_URL, currentSession, deleteAccount, functionHeaders, hasSupabase, signOut } from './supabase';
+import { pullAll, pushAll } from './sync';
 import {
   DEFAULT_PROFILE,
   AnthropicProvider,
@@ -24,6 +26,9 @@ import {
   applyReplan,
   canBuildBlueprint,
   canDeliverOn,
+  canReplan,
+  reachMilestones,
+  quotable,
   composeLetter,
   deliverable,
   detectReturns,
@@ -73,6 +78,7 @@ import {
   type PracticeLog,
   type RunnerState,
   type Profile,
+  type SyncBundle,
   type SafetyRisk,
   type Scene,
   type WritingDraft,
@@ -80,6 +86,30 @@ import {
   type WritingMode,
   type WritingSessionState,
 } from '@morrow/core';
+
+/**
+ * The screen fired, and on what.
+ *
+ * `source` is the row that raised it, so "this was not about me" can clear
+ * exactly that row. Without it the appeal always un-flagged the newest
+ * flagged sitting, which for a flag raised on a ledger line or a stone was
+ * some other piece of writing entirely — or nothing, when no sitting was
+ * flagged, leaving the actual row excluded with no way back. The coach chat
+ * has no row, so its pause has no source and the appeal only closes the card.
+ */
+export interface SafetyPause {
+  risk: SafetyRisk;
+  at: string;
+  source?: { kind: 'text' | 'analysis' | 'evidence' | 'day'; id: string } | null;
+}
+
+export interface AccountState {
+  userId: string;
+  email: string | null;
+  signedInAt: string;
+  /** When the last full push landed, or null if none has yet. */
+  lastPushAt: string | null;
+}
 
 export interface ToastState {
   text: string;
@@ -130,8 +160,18 @@ export interface MorrowState {
    * on a particular day and rewriting it later would make it a template.
    */
   letters: Letter[];
+  /**
+   * The account, when there is one (PRD §7.12).
+   *
+   * The device is the truth and the account is the copy, so this holds only
+   * what the app needs to say "signed in as" and when the copy last landed.
+   * `accountAsked` is the once: the question is put after the Portrait and
+   * never again on the way through; Settings has it for whenever.
+   */
+  account: AccountState | null;
+  accountAsked: boolean;
   /** Set when the safety screen fires; the UI shows the resources card. */
-  safetyPause: { risk: SafetyRisk; at: string } | null;
+  safetyPause: SafetyPause | null;
   /**
    * The last day the coach heard something in the concern band.
    *
@@ -211,7 +251,7 @@ export interface MorrowState {
    */
   proposeReplanFor: (goalId: string) => ReplanChange[];
   /** Apply the rows they accepted, as a new version of the plan. */
-  applyReplanFor: (goalId: string, accepted: ReplanChange[]) => { ok: true } | { ok: false; error: string };
+  applyReplanFor: (goalId: string, accepted: ReplanChange[]) => { ok: true } | { ok: false; error: string; moment?: PaywallMoment };
   makePortraitAndPlan: (
     goalId: string,
   ) => { ok: true } | { ok: false; error: string; moment?: PaywallMoment };
@@ -310,6 +350,21 @@ export interface MorrowState {
   writeToFuture: (body: string, days: number) => { ok: true; letter: Letter } | { ok: false; error: string };
   markLetterRead: (id: string) => void;
 
+  // account (PRD §7.12)
+  markAccountAsked: () => void;
+  /** Read the session the auth layer holds and remember who it is. */
+  setAccount: () => Promise<void>;
+  /**
+   * Right after signing in: a device with writing pushes it up; an empty
+   * device pulls the account's copy down. Never a merge — see src/sync.ts.
+   */
+  afterSignIn: () => Promise<{ ok: true } | { ok: false; error: string }>;
+  /** Everything on the device, up. Safe to call on every launch. */
+  pushToAccount: () => Promise<{ ok: true } | { ok: false; error: string }>;
+  signOutAccount: () => Promise<void>;
+  /** The account and its copy, gone. The device keeps everything. */
+  deleteAccountAndCopy: () => Promise<{ ok: true } | { ok: false; error: string }>;
+
   // ui
   setToast: (t: ToastState | null) => void;
   clearSafety: () => void;
@@ -339,7 +394,7 @@ export interface MorrowState {
  * app has to be honest about running on ten regular expressions rather than
  * implying a second opinion it cannot actually get.
  */
-const EDGE_URL = process.env.EXPO_PUBLIC_MORROW_API ?? '';
+const EDGE_URL = (process.env.EXPO_PUBLIC_MORROW_API ?? '').trim() || FUNCTIONS_URL;
 
 /**
  * The provider the app asks, and the rules it is held to.
@@ -356,7 +411,14 @@ const EDGE_URL = process.env.EXPO_PUBLIC_MORROW_API ?? '';
  */
 export const hasRemoteProvider = EDGE_URL.length > 0;
 
-export const ai = guarded(hasRemoteProvider ? new AnthropicProvider({ endpoint: EDGE_URL }) : new LocalProvider(), {
+export const ai = guarded(
+  hasRemoteProvider
+    ? // Every function is deployed with verify_jwt on, so each call carries
+      // the session's token — or the anon key when nobody is signed in,
+      // which is enough for the read-back and the screen.
+      new AnthropicProvider({ endpoint: EDGE_URL, headers: functionHeaders })
+    : new LocalProvider(),
+  {
   fallback: new LocalProvider(),
   onViolation: (info) => {
     // In the product this is a PostHog event with no free text.
@@ -380,6 +442,8 @@ const EMPTY = {
   scenes: [] as Scene[],
   briefs: [],
   letters: [],
+  account: null,
+  accountAsked: false,
   safetyPause: null,
   concernAt: null,
   coachTurns: {},
@@ -458,6 +522,13 @@ export const useMorrow = create<MorrowState>()(
           plans: s.plans.filter((p) => p.goalId !== id),
           portraits: s.portraits.filter((p) => p.goalId !== id),
           scenes: s.scenes.filter((sc) => sc.goalId !== id),
+          // A practice built from this goal's line is archived, not deleted:
+          // its runs are days that happened, and they stay in the log the
+          // same way the ledger rows stay. Left active, it kept appearing on
+          // Today with nothing behind it to tap through to.
+          practices: s.practices.map((p) =>
+            p.goalId === id && !p.archivedAt ? { ...p, archivedAt: new Date().toISOString() } : p,
+          ),
           evidence: s.evidence.map((e) => (e.goalId === id ? { ...e, goalId: null } : e)),
         })),
 
@@ -492,7 +563,7 @@ export const useMorrow = create<MorrowState>()(
             // overwritten here; the newest one is simply the one that is read.
             texts: [...s.texts, text],
             drafts,
-            safetyPause: risk.risk === 'crisis' ? { risk: risk.risk, at: new Date().toISOString() } : s.safetyPause,
+            safetyPause: risk.risk === 'crisis' ? pauseOn(risk.risk, 'text', text.id) : s.safetyPause,
           };
         });
         // The second opinion (PRD §11.6). The local screen above is ten
@@ -515,10 +586,7 @@ export const useMorrow = create<MorrowState>()(
               if (!isWorse(second.risk, risk.risk)) return;
               set((s) => ({
                 texts: s.texts.map((t) => (t.id === text.id ? { ...t, safetyRisk: second.risk } : t)),
-                safetyPause:
-                  second.risk === 'crisis'
-                    ? { risk: second.risk, at: new Date().toISOString() }
-                    : s.safetyPause,
+                safetyPause: second.risk === 'crisis' ? pauseOn(second.risk, 'text', text.id) : s.safetyPause,
               }));
             })
             .catch(() => {
@@ -576,8 +644,7 @@ export const useMorrow = create<MorrowState>()(
           return {
             analyses,
             goals,
-            safetyPause:
-              risk.risk === 'crisis' ? { risk: risk.risk, at: new Date().toISOString() } : s.safetyPause,
+            safetyPause: risk.risk === 'crisis' ? pauseOn(risk.risk, 'analysis', row.id) : s.safetyPause,
           };
         });
       },
@@ -643,16 +710,18 @@ export const useMorrow = create<MorrowState>()(
         // The last seven days of this plan's own work, not the whole app's:
         // a replan for one goal argued from another goal's week would be the
         // app telling somebody they are behind on the wrong thing.
-        const ids = new Set(plan.moves.map((m) => m.id));
-        const week = Object.values(s.days)
-          .filter((d) => d.day <= day && d.day > shiftDay(day, -7))
-          .reduce((n, d) => n + d.planned, 0);
-        const kept = plan.moves.filter(
-          (m) => m.status === 'done' && (closedOn(m, s.profile.dayBoundaryHour) ?? '') > shiftDay(day, -7),
-        ).length;
+        // `days[].planned` counts every plan's moves and every practice, so
+        // a second goal's busy week used to be argued against this one. Only
+        // this plan's own moves count: the ones asked for in the window, by
+        // the same rule that scores a day.
+        const boundary = s.profile.dayBoundaryHour;
+        const since = shiftDay(day, -7);
+        let week = 0;
+        for (let d = shiftDay(since, 1); d <= day; d = shiftDay(d, 1)) week += movesForDay(plan.moves, d, boundary).length;
+        const kept = plan.moves.filter((m) => m.status === 'done' && (closedOn(m, boundary) ?? '') > since).length;
         return proposeReplan(plan, {
           done: kept,
-          planned: Math.max(kept, week > 0 ? week : ids.size),
+          planned: Math.max(kept, week > 0 ? week : plan.moves.length),
           newId,
           today: day,
         });
@@ -664,6 +733,10 @@ export const useMorrow = create<MorrowState>()(
         const plan = s.plans.find((p) => p.goalId === goalId);
         if (!plan) return { ok: false, error: 'That plan is gone.' };
         const day = dayOf(new Date(), s.profile.dayBoundaryHour);
+        // PRD §13.3: one replan a month on the free plan. Proposing was never
+        // gated and still is not; applying is, and the proposal keeps.
+        const gate = canReplan(entitlementOf(s, day));
+        if (!gate.allowed) return { ok: false, error: gate.reason, moment: gate.moment };
         try {
           // A new version, not an edit in place: the plan they had is a record
           // of what they decided last time, and a replan is a second decision
@@ -675,9 +748,17 @@ export const useMorrow = create<MorrowState>()(
             s.analyses.filter((a) => a.goalId === goalId),
             day,
           );
+          const stamped = new Date().toISOString();
           set((st) => ({
             plans: st.plans.map((p) =>
-              p.goalId === goalId ? { ...next, version: plan.version + 1, status: 'active' as const } : p,
+              p.goalId === goalId
+                ? {
+                    ...next,
+                    version: plan.version + 1,
+                    status: 'active' as const,
+                    replannedAt: [...(plan.replannedAt ?? []), stamped],
+                  }
+                : p,
             ),
           }));
           return { ok: true };
@@ -726,7 +807,10 @@ export const useMorrow = create<MorrowState>()(
           const gate = canBuildBlueprint(entitlementOf(s, day));
           if (!gate.allowed) return { ok: false, error: gate.reason, moment: gate.moment };
         }
-        const analyses = s.analyses.filter((a) => a.goalId === goalId);
+        // Only lines the screen let through. A stone in the crisis band is
+        // excluded from the Book and the brief; it must not be the one the
+        // Portrait quotes or the plan is cut from either.
+        const analyses = quotable(s.analyses.filter((a) => a.goalId === goalId));
         const existingPlan = s.plans.find((p) => p.goalId === goalId);
         const existingPortrait = s.portraits.find((p) => p.goalId === goalId);
         try {
@@ -757,10 +841,14 @@ export const useMorrow = create<MorrowState>()(
             existingPlan && monitoring
               ? {
                   ...existingPlan,
+                  // A milestone with no proof takes the line; one whose proof
+                  // came from this same line takes the rewrite. The stone can
+                  // be edited, and a milestone that kept the first draft after
+                  // the person changed it was quoting words they had retracted.
                   milestones: existingPlan.milestones.map((ms) =>
-                    ms.proofSourceLineId
-                      ? ms
-                      : { ...ms, proof: monitoring.line.trim(), proofSourceLineId: monitoring.id },
+                    !ms.proofSourceLineId || ms.proofSourceLineId === monitoring.id
+                      ? { ...ms, proof: monitoring.line.trim(), proofSourceLineId: monitoring.id }
+                      : ms,
                   ),
                 }
               : existingPlan;
@@ -780,7 +868,7 @@ export const useMorrow = create<MorrowState>()(
       addPractice: (input) => {
         const s = get();
         const source = s.analyses.find(
-          (a) => a.goalId === input.goalId && a.kind === 'strategies' && a.line.trim(),
+          (a) => a.goalId === input.goalId && a.kind === 'strategies' && a.line.trim() && isQuotable(a),
         );
         if (!source) {
           set({ toast: { text: 'Write the Strategies line for this goal first.', kind: 'info' } });
@@ -853,7 +941,7 @@ export const useMorrow = create<MorrowState>()(
 
         // Built from their own material and nothing else: the Impact line for
         // who else it changes, and the Fifteen for the texture of the morning.
-        const impact = s.analyses.find((a) => a.goalId === goalId && a.kind === 'impact' && a.line.trim());
+        const impact = s.analyses.find((a) => a.goalId === goalId && a.kind === 'impact' && a.line.trim() && isQuotable(a));
         const ideal = latestText(s.texts, 'ideal')?.body ?? '';
         if (!ideal.trim() && !impact?.line.trim()) return { ok: false as const, reason: 'nothing-to-build-from' as const };
 
@@ -902,6 +990,11 @@ export const useMorrow = create<MorrowState>()(
           // its score exactly where it was, so the number went on counting work
           // whose record had just been deleted.
           const before = s.plans.flatMap((p) => p.moves).find((m) => m.id === moveId);
+          // The same status twice is nothing — a double tap, or a Today and a
+          // Goal screen both wired to the same stone. Appending a second
+          // ledger row for it doubled the day's evidence count and the
+          // ledger's length.
+          if (!before || before.status === status) return {};
           const touched = new Set<string>([day]);
           if (before?.completedAt) touched.add(dayOf(new Date(before.completedAt), boundary));
           if (before?.scheduledFor) touched.add(before.scheduledFor);
@@ -921,7 +1014,7 @@ export const useMorrow = create<MorrowState>()(
           const ev =
             status === 'done'
               ? [
-                  ...s.evidence,
+                  ...s.evidence.filter((e) => e.moveId !== moveId),
                   {
                     id: newId('ev'),
                     goalId: plans.find((p) => p.moves.some((m) => m.id === moveId))?.goalId ?? null,
@@ -1007,23 +1100,20 @@ export const useMorrow = create<MorrowState>()(
           if (!clean) return {};
           const day = dayOf(new Date(), s.profile.dayBoundaryHour);
           const risk = screen(clean);
-          const evidence = [
-            ...s.evidence,
-            {
-              id: newId('ev'),
-              goalId: goalId ?? null,
-              kind: 'capture' as const,
-              text: clean,
-              day,
-              safetyRisk: risk.risk,
-              createdAt: new Date().toISOString(),
-            },
-          ];
+          const row = {
+            id: newId('ev'),
+            goalId: goalId ?? null,
+            kind: 'capture' as const,
+            text: clean,
+            day,
+            safetyRisk: risk.risk,
+            createdAt: new Date().toISOString(),
+          };
+          const evidence = [...s.evidence, row];
           return {
             evidence,
             days: recomputeDay(s, s.plans, evidence, day),
-            safetyPause:
-              risk.risk === 'crisis' ? { risk: risk.risk, at: new Date().toISOString() } : s.safetyPause,
+            safetyPause: risk.risk === 'crisis' ? pauseOn(risk.risk, 'evidence', row.id) : s.safetyPause,
           };
         }),
 
@@ -1034,19 +1124,22 @@ export const useMorrow = create<MorrowState>()(
           // it back the next morning as "and you wrote …". It gets the same
           // screen as everything else the app quotes.
           const risk = screen([proof, gladOf].join(' '));
-          const evidence = proof.trim()
-            ? [
-                ...s.evidence,
-                {
-                  id: newId('ev'),
-                  goalId: null,
-                  kind: 'seal' as const,
-                  text: proof.trim(),
-                  day,
-                  safetyRisk: risk.risk,
-                  createdAt: new Date().toISOString(),
-                },
-              ]
+          const sealRow = proof.trim()
+            ? {
+                id: newId('ev'),
+                goalId: null,
+                kind: 'seal' as const,
+                text: proof.trim(),
+                day,
+                safetyRisk: risk.risk,
+                createdAt: new Date().toISOString(),
+              }
+            : null;
+          // One seal row a day. Sealing twice — the screen can be reached
+          // again after a seal — appended a second proof line and counted it
+          // as a second piece of evidence.
+          const evidence = sealRow
+            ? [...s.evidence.filter((e) => !(e.kind === 'seal' && e.day === day)), sealRow]
             : s.evidence;
           const days = recomputeDay(s, s.plans, evidence, day);
           const existing = days[day];
@@ -1063,8 +1156,7 @@ export const useMorrow = create<MorrowState>()(
           return {
             evidence,
             days,
-            safetyPause:
-              risk.risk === 'crisis' ? { risk: risk.risk, at: new Date().toISOString() } : s.safetyPause,
+            safetyPause: risk.risk === 'crisis' ? pauseOn(risk.risk, 'day', day) : s.safetyPause,
           };
         }),
 
@@ -1183,8 +1275,17 @@ export const useMorrow = create<MorrowState>()(
       },
 
       catchUpLetters: () => {
+        const day = dayOf(new Date(), get().profile.dayBoundaryHour);
+        // Milestones are reached by what is in the ledger, and this is the
+        // launch-time pass that notices. Stamped before the occasions are
+        // read, so the letter for a milestone is written the day it is due.
+        {
+          const st = get();
+          const now = new Date().toISOString();
+          const stamped = st.plans.map((p) => reachMilestones(p, st.evidence, day, now));
+          if (stamped.some((p, i) => p !== st.plans[i])) set({ plans: stamped });
+        }
         const s = get();
-        const day = dayOf(new Date(), s.profile.dayBoundaryHour);
         const occasions = dueLetters({
           today: day,
           portraitReady: s.portraits.length > 0,
@@ -1201,7 +1302,10 @@ export const useMorrow = create<MorrowState>()(
 
         const sources = {
           ideal: latestText(s.texts, 'ideal')?.body ?? '',
-          evidence: [...s.evidence].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)),
+          // Only what the screen let through. A letter that quoted a flagged
+          // ledger line back at somebody months later would be the worst
+          // possible use of the one place the app writes prose.
+          evidence: quotable(s.evidence).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)),
           goals: s.goals,
           moves: s.plans.flatMap((p) => p.moves),
         };
@@ -1243,7 +1347,7 @@ export const useMorrow = create<MorrowState>()(
         // them in six months.
         const risk = screen(text);
         if (risk.risk === 'crisis') {
-          set({ safetyPause: { risk: risk.risk, at: new Date().toISOString() } });
+          set({ safetyPause: pauseOn(risk.risk, null) });
           return { ok: false, error: 'Not this one.' };
         }
 
@@ -1311,18 +1415,91 @@ export const useMorrow = create<MorrowState>()(
         return brief;
       },
 
+      markAccountAsked: () => set({ accountAsked: true }),
+
+      setAccount: async () => {
+        const session = await currentSession();
+        if (!session) return;
+        set((s) => ({
+          accountAsked: true,
+          account: {
+            userId: session.user.id,
+            email: session.user.email ?? null,
+            signedInAt: new Date().toISOString(),
+            lastPushAt: s.account?.userId === session.user.id ? s.account.lastPushAt : null,
+          },
+        }));
+      },
+
+      afterSignIn: async () => {
+        const s = get();
+        if (hasWriting(s)) return get().pushToAccount();
+        const pulled = await pullAll(false);
+        if (!pulled.ok) return { ok: false, error: pulled.error };
+        const b = pulled.bundle;
+        if (!hasWriting(b)) return { ok: true };
+        // A new phone, handed the same shape back. The profile merges over
+        // the defaults the same way a rehydrate does, so a field this build
+        // added since the copy was made is not undefined.
+        set({
+          profile: { ...DEFAULT_PROFILE, ...b.profile },
+          goals: b.goals,
+          texts: b.texts,
+          analyses: b.analyses,
+          books: b.books,
+          plans: b.plans,
+          evidence: b.evidence,
+          days: b.days,
+          practices: b.practices,
+          practiceLogs: b.practiceLogs,
+          scenes: b.scenes,
+          letters: b.letters,
+          briefs: b.briefs,
+        });
+        return { ok: true };
+      },
+
+      pushToAccount: async () => {
+        if (!hasSupabase || !get().account) return { ok: false, error: 'Not signed in.' };
+        const out = await pushAll(bundleOf(get()));
+        if (!out.ok) return { ok: false, error: out.error };
+        set((st) => (st.account ? { account: { ...st.account, lastPushAt: new Date().toISOString() } } : {}));
+        return { ok: true };
+      },
+
+      signOutAccount: async () => {
+        await signOut();
+        // The writing stays. Signing out is about the copy, not the device.
+        set({ account: null });
+      },
+
+      deleteAccountAndCopy: async () => {
+        const out = await deleteAccount();
+        if (!out.ok) return out;
+        set({ account: null });
+        return { ok: true };
+      },
+
       setToast: (t) => set({ toast: t }),
       reconsiderLatestFlag: () =>
         set((st) => {
-          // The most recent flagged sitting: the one the card is about.
-          const flagged = [...st.texts]
-            .filter((t) => t.safetyRisk === 'crisis')
-            .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))[0];
-          if (!flagged) return { safetyPause: null };
-          return {
-            texts: st.texts.map((t) => (t.id === flagged.id ? { ...t, safetyRisk: 'none' as const } : t)),
-            safetyPause: null,
-          };
+          // The row the card is about, and only that row. A pause with no
+          // source — the coach chat, a refused letter — has nothing to clear.
+          const source = st.safetyPause?.source ?? null;
+          if (!source) return { safetyPause: null };
+          const clear = <T extends { safetyRisk?: SafetyRisk | null }>(row: T): T => ({ ...row, safetyRisk: 'none' as const });
+          switch (source.kind) {
+            case 'text':
+              return { texts: st.texts.map((t) => (t.id === source.id ? clear(t) : t)), safetyPause: null };
+            case 'analysis':
+              return { analyses: st.analyses.map((a) => (a.id === source.id ? clear(a) : a)), safetyPause: null };
+            case 'evidence':
+              return { evidence: st.evidence.map((e) => (e.id === source.id ? clear(e) : e)), safetyPause: null };
+            case 'day': {
+              const d = st.days[source.id];
+              return { days: d ? { ...st.days, [source.id]: clear(d) } : st.days, safetyPause: null };
+            }
+          }
         }),
 
       clearSafety: () => set({ safetyPause: null }),
@@ -1374,6 +1551,16 @@ export const useMorrow = create<MorrowState>()(
   ),
 );
 
+/**
+ * A write that fails after launch closes the latch just as a failed read does,
+ * and from then on nothing is saved. The banner has to go up then, not on
+ * the next launch. With the latch closed this setState is dropped by the
+ * storage layer rather than persisted, so it is safe to make at any time.
+ */
+onStorageFailure(() => {
+  if (!useMorrow.getState().storageError) useMorrow.setState({ storageError: true });
+});
+
 // ---------------------------------------------------------------- helpers
 
 /**
@@ -1389,7 +1576,37 @@ export function entitlementOf(s: MorrowState, day: string): EntitlementContext {
     blueprintsBuilt: new Set(s.plans.map((p) => p.goalId)).size,
     coachTurnsToday: s.coachTurns[day] ?? 0,
     afterBlueprintShown: (s.profile.paywallSeen ?? []).includes('after-blueprint'),
+    replansThisMonth: s.plans.flatMap((p) => p.replannedAt ?? []).filter((at) => dayOf(new Date(at), s.profile.dayBoundaryHour).slice(0, 7) === day.slice(0, 7)).length,
   };
+}
+
+/** Whether there is anything of theirs on this device — the sync's one question. */
+function hasWriting(s: Pick<SyncBundle, 'texts' | 'goals' | 'analyses' | 'books'>): boolean {
+  return s.texts.length > 0 || s.goals.length > 0 || s.analyses.length > 0 || s.books.length > 0;
+}
+
+/** The store as the sync sees it: everything that is theirs, nothing that is the screen's. */
+function bundleOf(s: MorrowState): SyncBundle {
+  return {
+    profile: s.profile,
+    goals: s.goals,
+    texts: s.texts,
+    analyses: s.analyses,
+    books: s.books,
+    plans: s.plans,
+    evidence: s.evidence,
+    days: s.days,
+    practices: s.practices,
+    practiceLogs: s.practiceLogs,
+    scenes: s.scenes,
+    letters: s.letters,
+    briefs: s.briefs,
+  };
+}
+
+/** A pause on the screen, stamped with the row that raised it. */
+function pauseOn(risk: SafetyRisk, kind: NonNullable<SafetyPause['source']>['kind'] | null, id?: string): SafetyPause {
+  return { risk, at: new Date().toISOString(), source: kind && id ? { kind, id } : null };
 }
 
 /** `YYYY-MM-DD`, moved by whole days. UTC arithmetic on a UTC-anchored date. */
@@ -1506,6 +1723,10 @@ function recomputeDay(
       // Carried, not recomputed. It is a thing the person did this morning, and
       // recounting the moves later must not quietly forget it.
       intentionMoveId: prev?.intentionMoveId ?? null,
+      // Carried too. The seal's verdict on the proof line is what keeps a
+      // flagged line out of tomorrow's brief; recounting the moves after a
+      // seal used to drop it, and the line came back at breakfast.
+      ...(prev?.safetyRisk ? { safetyRisk: prev.safetyRisk } : {}),
     },
   };
 }

@@ -22,6 +22,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { accent, day, focusRing, motion, night, radius, size, type as fonts, webOnlyStyle, type Palette } from './tokens';
+import { splitQuoted } from './quoted';
 
 export const PaletteContext = React.createContext<{ p: Palette; dark: boolean }>({ p: day, dark: false });
 
@@ -200,7 +201,17 @@ export function UserText({
   numberOfLines,
   testID,
   accessibilityLabel,
-}: TextProps & { italic?: boolean }) {
+  framing,
+}: TextProps & {
+  italic?: boolean;
+  /**
+   * The app's few words in front of theirs — "…then I" before the second
+   * half of an if-then — set in the sans on the same line. The framing is
+   * chrome, the same chrome the stone showed above the field, and printing
+   * it in the serif would claim it as something they wrote.
+   */
+  framing?: string;
+}) {
   const { p } = usePalette();
   return (
     <Text
@@ -217,7 +228,56 @@ export function UserText({
         style,
       ]}
     >
+      {framing ? <Text style={{ fontFamily: fonts.sansMedium, fontSize: 14, letterSpacing: 0.4 }}>{framing} </Text> : null}
       {children}
+    </Text>
+  );
+}
+
+/**
+ * App prose with the person's own words set inside it.
+ *
+ * A brief, a coach reply, a letter from the future self: each is a sentence
+ * the app wrote around a span the person wrote, and the two are not the same
+ * kind of text. The span is set in the serif — the one face that means
+ * "these are your words" — and everything around it in the sans, so the eye
+ * can tell at a glance which words were typed and which were only typeset.
+ *
+ * `spans` are the verified substrings the engine already checked; nothing
+ * here decides what counts as theirs, it only shows what was decided.
+ */
+export function Quoted({
+  text,
+  spans,
+  style,
+  testID,
+  accessibilityLabel,
+  italic = true,
+}: {
+  text: string;
+  spans: readonly string[];
+  style?: StyleProp<TextStyle>;
+  testID?: string;
+  accessibilityLabel?: string;
+  /** The serif face for the spans. Italic by default, as a quotation is. */
+  italic?: boolean;
+}) {
+  const { p } = usePalette();
+  const parts = splitQuoted(text, spans);
+  const base: TextStyle = { fontFamily: fonts.sans, fontSize: size.body, lineHeight: 23, color: p.ink2 };
+  return (
+    <Text accessibilityLabel={accessibilityLabel} testID={testID} style={[base, style]}>
+      {parts.map((part, i) =>
+        part.theirs ? (
+          <Text key={i} style={[base, style, { fontFamily: italic ? fonts.serifItalic : fonts.serif }]}>
+            {part.text}
+          </Text>
+        ) : (
+          <Text key={i} style={[base, style]}>
+            {part.text}
+          </Text>
+        ),
+      )}
     </Text>
   );
 }
@@ -368,6 +428,8 @@ export function UserField({
   testID,
   onSubmitEditing,
   minHeight,
+  autoCapitalize,
+  keyboardType,
 }: {
   value: string;
   onChangeText: (t: string) => void;
@@ -386,6 +448,13 @@ export function UserField({
   testID?: string;
   onSubmitEditing?: () => void;
   minHeight?: number;
+  /**
+   * For the two fields that are not prose — an email address and a six-digit
+   * code. The rest of the product never sets these: a sentence is typed as a
+   * sentence, with whatever keyboard the person prefers.
+   */
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+  keyboardType?: 'default' | 'email-address' | 'number-pad';
 }) {
   const { p } = usePalette();
   const [focused, setFocused] = useState(false);
@@ -398,6 +467,9 @@ export function UserField({
       placeholderTextColor={p.ink3}
       multiline={multiline}
       autoFocus={autoFocus}
+      autoCapitalize={autoCapitalize}
+      keyboardType={keyboardType}
+      autoCorrect={keyboardType ? false : undefined}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
       onSubmitEditing={onSubmitEditing}

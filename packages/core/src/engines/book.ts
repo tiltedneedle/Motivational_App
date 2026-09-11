@@ -17,8 +17,8 @@ import type {
 import { ANALYSIS_ORDER } from '../types';
 import { framingLabel } from './framings';
 import { isQuotable } from './safety';
-import { formatDay, plural } from '../ids';
-import { firstSentence } from './portrait';
+import { formatDay, plural, sealedOn } from '../ids';
+import { firstSentence, restOfIdeal } from './portrait';
 
 export const MIN_AUTHORSHIP_RATIO = 0.95;
 
@@ -197,7 +197,7 @@ export type BookPage =
   | { kind: 'i-will'; text: string; sealedAt: string };
 
 export function bookPages(book: BookVersion): BookPage[] {
-  const rest = book.ideal.slice(book.firstSentence.length).trim();
+  const rest = restOfIdeal(book.ideal, book.firstSentence);
   const pages: BookPage[] = [{ kind: 'opening', firstSentence: book.firstSentence, rest }];
   if (book.shadow) pages.push({ kind: 'shadow', text: book.shadow });
   pages.push({ kind: 'contents', chapters: book.chapters });
@@ -235,12 +235,12 @@ export function diffBooks(previous: BookVersion, next: BookVersion): BookDiff {
 }
 
 /** Plain-text export. The PDF renderer uses the same shape. */
-export function bookToText(book: BookVersion): string {
+export function bookToText(book: BookVersion, boundaryHour = 3): string {
   const out: string[] = [];
   // The framing is the app's words and the title is theirs; the plain text has
   // no second face to say so, so they simply run together as one line.
   out.push([book.titleFraming, book.title].filter(Boolean).join(' ').toUpperCase());
-  out.push(`Sealed ${formatDay(book.sealedAt.slice(0, 10))} · ${plural(book.chapters.length, 'goal')} · ${book.track}`);
+  out.push(`Sealed ${formatDay(sealedOn(book.sealedAt, boundaryHour))} · ${plural(book.chapters.length, 'goal')} · ${book.track}`);
   out.push('');
   out.push('CHAPTER ONE · THE FIFTEEN');
   out.push(book.ideal);

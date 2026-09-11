@@ -26,7 +26,9 @@ import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, User
 import { useLatestBook, useMorrow } from '../src/store';
 
 function isMoment(s: string | undefined): s is PaywallMoment {
-  return Boolean(s && s in MOMENT_HEADING);
+  // Own keys only. `in` walks the prototype, so "?moment=constructor" was a
+  // valid moment with an undefined heading.
+  return Boolean(s && Object.prototype.hasOwnProperty.call(MOMENT_HEADING, s));
 }
 
 export default function Paywall() {
@@ -83,17 +85,41 @@ export default function Paywall() {
   const notNow = () => goBack();
 
   const buy = async () => {
+    if (busy) return;
     setBusy(true);
     setProblem(null);
-    const out = await purchase(choice);
-    setBusy(false);
-    if (out.ok) {
-      // Same door out. Somebody who has just paid should land back in the thing
-      // they were doing, not be dropped on Today as though they had restarted.
-      goBack();
-      return;
+    try {
+      const out = await purchase(choice);
+      if (out.ok) {
+        // Same door out. Somebody who has just paid should land back in the
+        // thing they were doing, not be dropped on Today as though they had
+        // restarted.
+        goBack();
+        return;
+      }
+      setProblem(out.error);
+    } catch {
+      // The store adapter answers with a result, never a throw — but a native
+      // billing module can, and a paywall stuck on "One moment…" is a paywall
+      // that took the money and never said so.
+      setProblem('That did not go through. Nothing was charged; try again in a moment.');
+    } finally {
+      setBusy(false);
     }
-    setProblem(out.error);
+  };
+
+  const onRestore = async () => {
+    if (busy) return;
+    setBusy(true);
+    setProblem(null);
+    try {
+      const r = await restore();
+      setProblem(r.ok ? null : r.error);
+    } catch {
+      setProblem('Nothing could be restored just now. Try again in a moment.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -101,7 +127,7 @@ export default function Paywall() {
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12 }}>
           <Label>Morrow Pro</Label>
-          <TextButton testID="paywall-restore" label="Restore" onPress={() => void restore().then((r) => setProblem(r.ok ? null : r.error))} />
+          <TextButton testID="paywall-restore" label="Restore" onPress={() => void onRestore()} />
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18, gap: 18 }}>
@@ -167,7 +193,7 @@ export default function Paywall() {
             </Body>
           ) : null}
 
-          <InkButton testID="paywall-continue" label={busy ? 'One moment…' : 'Continue'} onPress={() => void buy()} />
+          <InkButton testID="paywall-continue" label={busy ? 'One moment…' : 'Continue'} busy={busy} onPress={() => void buy()} />
           {/*
             Tertiary, and it always works. PRD §7.13: "Not now always returns
             the user to where they were with nothing lost."
