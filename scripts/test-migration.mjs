@@ -132,7 +132,18 @@ try {
   const { rows: tables } = await db.query(
     `select tablename from pg_tables where schemaname = 'public' order by tablename`,
   );
-  check('every table was created', tables.length === 14, `${tables.length} tables`);
+  // Counted from the migration rather than written down here. A hard-coded 14
+  // made this a check that failed every time a table was legitimately added,
+  // which trains the person running it to edit the number rather than look —
+  // and a check people edit past is worse than no check.
+  const declared = [...sql.matchAll(/create table public\.(\w+)/g)].map((m) => m[1]).sort();
+  const built = tables.map((t) => t.tablename).sort();
+  const missing = declared.filter((t) => !built.includes(t));
+  check(
+    'every table the migration declares exists in the database',
+    missing.length === 0 && declared.length === built.length,
+    missing.length ? `missing: ${missing.join(', ')}` : `${declared.length} declared, ${built.length} built`,
+  );
 
   const { rows: unprotected } = await db.query(
     `select c.relname from pg_class c

@@ -249,6 +249,27 @@ create table public.day_summaries (
   safety_risk text not null default 'none' check (safety_risk in ('none','concern','crisis'))
 );
 
+-- ---------------------------------------------------------------- letters
+
+-- PRD 7.8. `trigger` is the occasion key, unique per user, which is what stops
+-- the same milestone producing a second letter after a sync or a re-reach.
+create table public.letters (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users on delete cascade,
+  goal_id uuid references public.goals on delete set null,
+  direction text not null check (direction in ('from_future','to_future')),
+  body text not null check (length(btrim(body)) > 0),
+  -- Every span here is a verbatim substring of the person's own writing,
+  -- checked in `checkLetter` before the row is ever written.
+  quotes jsonb not null default '[]'::jsonb,
+  trigger text not null,
+  deliver_at date not null,
+  read_at timestamptz,
+  created_at timestamptz not null default now(),
+  unique (user_id, trigger)
+);
+create index letters_user_deliver on public.letters (user_id, deliver_at);
+
 create table public.briefs (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users on delete cascade,
@@ -286,6 +307,7 @@ alter table public.moves              enable row level security;
 alter table public.obstacle_plans     enable row level security;
 alter table public.evidence           enable row level security;
 alter table public.day_summaries      enable row level security;
+alter table public.letters            enable row level security;
 alter table public.briefs             enable row level security;
 
 -- profiles key on id; everything else on user_id.
@@ -333,6 +355,9 @@ create policy "own evidence" on public.evidence
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 create policy "own day_summaries" on public.day_summaries
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "own letters" on public.letters
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 create policy "own briefs" on public.briefs

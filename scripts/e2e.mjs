@@ -635,6 +635,53 @@ async function main() {
     check('a phone gets one column, not two narrow ones', !(await seen('book-two-column')));
     check('and the Book is all still there', (await text('book-i-will')).length > 10);
 
+    // ---- Letters (PRD 7.8)
+    //
+    // "120-180 words, quoting the Fifteen and real ledger entries... they never
+    // contain a goal or a plan line." The last clause is the one worth a check:
+    // a letter that names the plan is the app writing the plan back at somebody
+    // in a warmer voice, and the plan is sitting in the same store.
+    await page.goto(`${BASE}/letters`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(600);
+    check('letters', await seen('screen-letters'));
+
+    const letterBodies = await page.evaluate(() => {
+      const key = Object.keys(localStorage).find((k) => k.includes('morrow'));
+      const st = key ? JSON.parse(localStorage.getItem(key)).state : null;
+      return (st?.letters ?? []).map((l) => ({ body: l.body, quotes: l.quotes, direction: l.direction }));
+    });
+    const fromFuture = letterBodies.filter((l) => l.direction === 'from_future');
+    check('one arrived after the Portrait', fromFuture.length >= 1, `${fromFuture.length} letters`);
+
+    if (fromFuture.length) {
+      const l = fromFuture[0];
+      const n = l.body.trim().split(/\s+/).length;
+      check('and it is a letter, not a notification', n >= 120 && n <= 180, `${n} words`);
+      check(
+        'it quotes something they actually wrote',
+        l.quotes.length > 0 && l.quotes.every((q) => IDEAL.includes(q) || l.body.includes(q)),
+        l.quotes.join(' | ').slice(0, 80),
+      );
+      check(
+        'and it never names a goal or a plan line',
+        !/half marathon/i.test(l.body) && !/tuesday: at/i.test(l.body),
+        l.body.slice(0, 90),
+      );
+    }
+
+    // Writing one the other way. It is sealed until its day and must not be
+    // sitting in the arrived list the moment it is written.
+    await page.locator('[data-testid="letter-draft"]').fill(
+      'By now you will know whether the stairwell was the thing or just the excuse. Either answer is fine.',
+    );
+    await page.waitForTimeout(200);
+    await tap('letter-when-90');
+    await tap('letter-send');
+    await page.waitForTimeout(500);
+    check('a letter to the future is sealed until its day', await seen('letter-sent'));
+    check('and it is not sitting in the inbox already', await seen('letters-waiting'));
+
     // ---- the Goal Path (PRD 7.7)
     //
     // "A single route from now to the target date with milestone nodes, the

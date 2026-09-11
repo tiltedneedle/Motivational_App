@@ -128,7 +128,7 @@ export function buildPortrait(input: PortraitInput): Portrait {
     obstacle: obstacleText,
     ifThen,
     firstMoves: moves,
-    letterFromFuture: letterFromFuture(opener, goal.title, input.firstName),
+    letterFromFuture: letterFromFuture(opener, input.firstName),
     quotedSpans: quoted,
   };
 }
@@ -175,13 +175,20 @@ export function splitFirstMoves(strategyLine: string): string[] {
 /**
  * The letter is the one piece of coach prose in the Portrait. It must quote the
  * user (checked by `Letter.quotes` at the call site) and promises nothing.
+ *
+ * It does not name the goal. PRD §7.8: letters "never contain a goal or a plan
+ * line", and this one used to print the goal title in the middle sentence —
+ * which is the app reading its own database back at somebody in a warmer voice,
+ * the exact thing the rule exists to stop. `checkLetter` refuses a letter that
+ * does it; this one was written before that check existed and would have failed
+ * it. "The finish" says the same thing and is not a row in a table.
  */
-export function letterFromFuture(opener: string, goalTitle: string, name?: string): string {
+export function letterFromFuture(opener: string, name?: string): string {
   const who = name?.trim() ? `${name.trim()}, ` : '';
   const quoted = opener ? `“${opener}”` : 'what you wrote tonight';
   return [
     `${who}I have been reading ${quoted} for a while now.`,
-    `It is not the ${goalTitle.toLowerCase()} I remember most. It is the ordinary morning you did it anyway, when nobody would have known either way.`,
+    'It is not the finish I remember most. It is the ordinary morning you did it anyway, when nobody would have known either way.',
     'Start there tomorrow. I will keep the rest.',
   ].join(' ');
 }

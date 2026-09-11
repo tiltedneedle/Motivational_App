@@ -22,6 +22,11 @@ import {
   logOf,
   FEWER_STEPS,
   canBuildBlueprint,
+  canDeliverOn,
+  composeLetter,
+  deliverable,
+  detectReturns,
+  dueLetters,
   canTakeCoachTurn,
   fewer,
   movesForDay,
@@ -58,6 +63,7 @@ import {
   type Goal,
   type GoalAnalysis,
   type Move,
+  type Letter,
   type Plan,
   type Portrait,
   type Practice,
@@ -112,6 +118,15 @@ export interface MorrowState {
   days: Record<string, DaySummary>;
   scenes: Scene[];
   briefs: Brief[];
+  /**
+   * Letters from the future self, and to it (PRD §7.8).
+   *
+   * Written when an occasion arrives and read when their delivery date comes —
+   * which for the ones the person writes themselves may be a year away. Kept
+   * whole rather than regenerated, because a letter is a thing that was written
+   * on a particular day and rewriting it later would make it a template.
+   */
+  letters: Letter[];
   /** Set when the safety screen fires; the UI shows the resources card. */
   safetyPause: { risk: SafetyRisk; at: string } | null;
   /**
@@ -260,6 +275,18 @@ export interface MorrowState {
   /** Take one coach turn, or refuse with the moment that refused it. */
   takeCoachTurn: () => Gate;
   makeBrief: () => Brief | null;
+  /**
+   * Write any letters today has earned, and hand back what is ready to read.
+   *
+   * Safe on every launch: occasions are keyed, so the same milestone cannot
+   * produce two letters however many times this is called. A letter that fails
+   * its own check is not stored — the person cannot be expected to audit their
+   * own encouragement, so a letter that names their plan simply does not exist.
+   */
+  catchUpLetters: () => Letter[];
+  /** Their own letter, to themselves, delivered in `days`. */
+  writeToFuture: (body: string, days: number) => { ok: true; letter: Letter } | { ok: false; error: string };
+  markLetterRead: (id: string) => void;
 
   // ui
   setToast: (t: ToastState | null) => void;
@@ -329,7 +356,8 @@ const EMPTY = {
   evidence: [] as Evidence[],
   days: {} as Record<string, DaySummary>,
   scenes: [] as Scene[],
-  briefs: [] as Brief[],
+  briefs: [],
+  letters: [],
   safetyPause: null,
   concernAt: null,
   coachTurns: {},
@@ -1053,6 +1081,92 @@ export const useMorrow = create<MorrowState>()(
         set((st) => ({ coachTurns: { ...st.coachTurns, [day]: (st.coachTurns[day] ?? 0) + 1 } }));
         return gate;
       },
+
+      catchUpLetters: () => {
+        const s = get();
+        const day = dayOf(new Date(), s.profile.dayBoundaryHour);
+        const occasions = dueLetters({
+          today: day,
+          portraitReady: s.portraits.length > 0,
+          returns: detectReturns(Object.values(s.days), day).length,
+          reachedMilestones: s.plans
+            .flatMap((p) => p.milestones)
+            .filter((m) => m.reachedAt)
+            .map((m) => ({ id: m.id, goalId: m.goalId, reachedAt: m.reachedAt as string })),
+          existing: s.letters.map((l) => l.trigger),
+          firstSealedOn: s.books[0]?.sealedAt?.slice(0, 10) ?? null,
+        });
+
+        if (occasions.length === 0) return deliverable(s.letters, day);
+
+        const sources = {
+          ideal: latestText(s.texts, 'ideal')?.body ?? '',
+          evidence: [...s.evidence].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)),
+          goals: s.goals,
+          moves: s.plans.flatMap((p) => p.moves),
+        };
+
+        const written: Letter[] = [];
+        for (const occasion of occasions) {
+          const { body, quotes, check } = composeLetter(occasion.trigger, sources, s.profile.displayName);
+          // Refused rather than shown with a caveat. See `checkLetter`.
+          if (!check.ok) {
+            if (__DEV__) console.warn('[morrow] letter refused', occasion.key, check.problems.join('; '));
+            continue;
+          }
+          written.push({
+            id: newId('letter'),
+            goalId: occasion.goalId,
+            direction: 'from_future',
+            body,
+            quotes,
+            trigger: occasion.key,
+            deliverAt: day,
+            readAt: null,
+          });
+        }
+
+        if (written.length === 0) return deliverable(s.letters, day);
+        set((st) => ({ letters: [...st.letters, ...written] }));
+        return deliverable(get().letters, day);
+      },
+
+      writeToFuture: (body, days) => {
+        const text = body.trim();
+        if (!text) return { ok: false, error: 'Write something first.' };
+        const when = canDeliverOn(days);
+        if (!when.ok) return { ok: false, error: when.reason ?? 'Pick a day.' };
+
+        const s = get();
+        // Their own words to themselves, screened like everything else they
+        // write — and a crisis line is not put in a box to be handed back to
+        // them in six months.
+        const risk = screen(text);
+        if (risk.risk === 'crisis') {
+          set({ safetyPause: { risk: risk.risk, at: new Date().toISOString() } });
+          return { ok: false, error: 'Not this one.' };
+        }
+
+        const day = dayOf(new Date(), s.profile.dayBoundaryHour);
+        const deliverAt = new Date(Date.parse(`${day}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
+        const letter: Letter = {
+          id: newId('letter'),
+          goalId: null,
+          direction: 'to_future',
+          body: text,
+          quotes: [],
+          trigger: `self:${deliverAt}`,
+          deliverAt,
+          readAt: null,
+        };
+        set((st) => ({ letters: [...st.letters, letter] }));
+        return { ok: true, letter };
+      },
+
+      markLetterRead: (id) =>
+        set((s) => ({
+          letters: s.letters.map((l) => (l.id === id ? { ...l, readAt: new Date().toISOString() } : l)),
+        })),
 
       noteConcern: () =>
         set((s) => ({ concernAt: dayOf(new Date(), s.profile.dayBoundaryHour) })),

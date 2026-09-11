@@ -70,6 +70,15 @@ export default function Today() {
   const intendedMoveId = state.days[today]?.intentionMoveId ?? null;
   const isSunday = new Date(`${today}T00:00:00Z`).getUTCDay() === 0;
 
+  // Any the occasions have earned, written on arrival here. Keyed, so calling
+  // it on every visit cannot produce a second letter for the same milestone.
+  const catchUpLetters = useMorrow((s) => s.catchUpLetters);
+  useEffect(() => {
+    if (!state.hydrated) return;
+    catchUpLetters();
+  }, [state.hydrated, catchUpLetters]);
+  const unreadLetters = state.letters.filter((l) => !l.readAt && l.deliverAt.slice(0, 10) <= today).length;
+
   /**
    * The one appearance nobody asked for: once, after the first Blueprint
    * (PRD §7.13). Soft and dismissible, and "Not now" comes straight back here
@@ -157,6 +166,26 @@ export default function Today() {
           <Statement style={{ marginTop: 12 }}>
             {greeting(new Date(), state.profile.displayName)}
           </Statement>
+
+          {/*
+            A letter that has arrived (PRD §7.8). Offered once, on the day it
+            arrives, and never counted or nagged about: a letter you are
+            reminded to read three times is a notification.
+          */}
+          {unreadLetters > 0 ? (
+            <Pressable
+              testID="today-letters"
+              accessibilityRole="button"
+              accessibilityLabel={`${plural(unreadLetters, 'letter')} waiting`}
+              onPress={() => router.push('/letters')}
+              style={{ marginTop: 16, backgroundColor: day.surface, borderRadius: radius.card, padding: 18, gap: 6 }}
+            >
+              <Label style={{ color: accent.coralText }}>
+                {unreadLetters === 1 ? 'A letter' : plural(unreadLetters, 'letter')}
+              </Label>
+              <Body style={{ color: day.ink, fontSize: 16 }}>Waiting, from the other end of this.</Body>
+            </Pressable>
+          ) : null}
 
           {/*
             Sunday (PRD §7.3). Offered rather than imposed: it is a card on the
