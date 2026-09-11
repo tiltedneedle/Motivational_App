@@ -31,6 +31,8 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 13. Fourth audit, five lenses over the day's new code — 43 of 43 (see below)
 - [x] 14. The five stones renamed in Morrow's own words; the Full-track prompts
       rewritten; no "Self Authoring" anywhere a person or a store could see it
+- [x] 15. Saying the Fifteen (§7.2): dictation through expo-speech-recognition,
+      on-device where the phone can, with a typed room as the fallback
 
 ## In flight
 
@@ -914,6 +916,21 @@ there and only replaces when there is none. Eleven screens, one call each,
 and a check that counts Todays after a seal. Also: sealing a day twice is
 covered end to end now (the second visit opens on the first's words, a blank
 re-seal keeps them, one ledger row).
+
+### Saying it (2026-09-11)
+
+"Say it" was the Fifteen's default mode in the PRD and a label in the app: the
+chip changed nothing. `src/dictation.ts` is the seam — `expo-speech-recognition`
+loaded lazily behind a try/catch, on-device recognition where the phone
+supports it, the OS recogniser where not, the Web Speech API in a browser —
+and the room is anchor + current stretch, a final stretch moving the anchor
+and the recogniser starting again, which is the one behaviour every platform
+shares. No microphone, no permission, no module: one sentence under the ring
+and the room is a typed one, nothing lost. The consent screen says the
+recogniser is the phone's own. Walked on the web build (the pane has no
+microphone, so the fallback is what was seen); the recogniser itself needs a
+phone. Expo's patch releases of the day were taken with `expo install --fix`;
+expo-doctor is 18/18 again.
 
 ## The stones, renamed (2026-09-11)
 

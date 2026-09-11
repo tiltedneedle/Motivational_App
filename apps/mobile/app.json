@@ -47,6 +47,13 @@
       "expo-sharing",
       "expo-apple-authentication",
       [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Morrow listens so you can say the Fifteen instead of typing it. Nothing is recorded; only the words are kept.",
+          "speechRecognitionPermission": "Turns what you say into the words of your Book, on this phone where it can."
+        }
+      ],
+      [
         "expo-notifications",
         {
           "icon": "./assets/notification-icon.png",

@@ -15,7 +15,7 @@ const ROWS: { label: string; body: string }[] = [
   },
   {
     label: 'What is sent, and when',
-    body: 'Only when a screen needs it: your writing goes to an AI service to be read back to you as your own phrases, to build the plan from the lines you wrote, to be checked for signs you may need a person rather than an app, and to draw a scene from a detail you wrote. Never for advertising.',
+    body: 'Only when a screen needs it: your writing goes to an AI service to be read back to you as your own phrases, to build the plan from the lines you wrote, to be checked for signs you may need a person rather than an app, and to draw a scene from a detail you wrote. If you say the Fifteen rather than type it, your phone’s own recogniser turns it into words — on the phone itself where it can, and nothing is recorded. Never for advertising.',
   },
   {
     label: 'What the AI is not allowed to do',

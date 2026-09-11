@@ -28,6 +28,7 @@ import {
 } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Ring, Statement, Stone, Studio, UserText, accent, focusRing, night, type as fonts, webOnlyStyle } from '@morrow/ui';
 import { latestText, useMorrow } from '../src/store';
+import { dictation } from '../src/dictation';
 
 const TICK_MS = 250;
 
@@ -54,6 +55,17 @@ export default function Write() {
   const [paused, setPaused] = useState(false);
   const typingRef = useRef(false);
   const inputRef = useRef<TextInput>(null);
+  /**
+   * Talking as writing. The recogniser hands back the running text of the
+   * current stretch; `anchor` is everything committed before it, so the
+   * body is always anchor + stretch and a final stretch simply moves the
+   * anchor. A problem — no microphone, permission refused — is one sentence
+   * under the ring and the room becomes a typed one; nothing is lost.
+   */
+  const [listening, setListening] = useState(false);
+  const [micNote, setMicNote] = useState<string | null>(null);
+  const anchorRef = useRef('');
+  const dictationRef = useRef(dictation());
   // The autosave reads the newest session without re-arming its timer on
   // every keystroke, which would make the timer useless.
   const sessionRef = useRef(session);
@@ -80,6 +92,41 @@ export default function Write() {
   useEffect(() => {
     if (session.closed && phase === 'writing') setPhase('closed');
   }, [session.closed, phase]);
+
+  useEffect(() => {
+    if (phase !== 'writing' || mode === 'type') {
+      if (listening) {
+        dictationRef.current.stop();
+        setListening(false);
+      }
+      return;
+    }
+    let gone = false;
+    anchorRef.current = sessionRef.current.body;
+    void dictationRef.current
+      .start({
+        onText: (text, final) => {
+          if (gone) return;
+          typingRef.current = true;
+          const joined = [anchorRef.current.trim(), text.trim()].filter(Boolean).join(' ');
+          setSession((s) => ({ ...s, body: joined, idleMs: 0, nudge: null }));
+          if (final) anchorRef.current = joined;
+        },
+        onProblem: (message) => {
+          if (gone) return;
+          setMicNote(message);
+          setListening(false);
+        },
+      })
+      .then((ok) => {
+        if (!gone) setListening(ok);
+      });
+    return () => {
+      gone = true;
+      dictationRef.current.stop();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, mode]);
 
   // A sitting may be picked up once. Arriving on a draft that has already been
   // resumed ends it — but what was written still counts, so the person lands on
@@ -123,6 +170,8 @@ export default function Write() {
 
   const onChange = useCallback((body: string) => {
     typingRef.current = true;
+    // Typed over a transcript: what is on screen is the whole of it now.
+    anchorRef.current = body;
     setSession((s) => ({ ...s, body, idleMs: 0, nudge: null }));
   }, []);
 
@@ -411,6 +460,32 @@ export default function Write() {
         </View>
 
         <View style={{ paddingBottom: 16, gap: 10, alignItems: 'center' }}>
+          {mode !== 'type' ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              {/* The one sign the room is listening, and the way to stop it. */}
+              <Chip
+                testID="write-mic"
+                label={listening ? 'Listening' : micNote ? 'Type instead' : 'Starting…'}
+                selected={listening}
+                onPress={() => {
+                  if (listening) {
+                    dictationRef.current.stop();
+                    setListening(false);
+                    setMode('type');
+                    setTimeout(() => inputRef.current?.focus(), 60);
+                  } else if (micNote) {
+                    setMode('type');
+                    setTimeout(() => inputRef.current?.focus(), 60);
+                  }
+                }}
+              />
+              {micNote ? (
+                <Label testID="write-mic-note" style={{ color: night.ink3, flex: 1 }}>
+                  {micNote}
+                </Label>
+              ) : null}
+            </View>
+          ) : null}
           <Label testID="write-nudge" style={{ color: night.ink3, textAlign: 'center', minHeight: 16 }}>
             {session.nudge ?? ''}
           </Label>
