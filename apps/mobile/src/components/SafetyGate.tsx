@@ -221,7 +221,7 @@ export function SafetyGate() {
             transform: [{ translateY: pressed && armed ? 2 : 0 }],
           })}
         >
-          <Text style={{ fontFamily: fonts.sansSemi, fontSize: 17, color: '#FFFFFF', textAlign: 'center' }}>
+          <Text style={{ fontFamily: fonts.sansSemi, fontSize: 17, color: day.onInk, textAlign: 'center' }}>
             {RESOURCES_COPY.dismiss}
           </Text>
         </Pressable>

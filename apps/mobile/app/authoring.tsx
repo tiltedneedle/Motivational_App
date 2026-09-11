@@ -56,7 +56,7 @@ export default function Authoring() {
                     gap: 4,
                   }}
                 >
-                  <Text style={{ fontFamily: fonts.sansSemi, fontSize: 16, color: on ? '#FFFFFF' : day.ink }}>
+                  <Text style={{ fontFamily: fonts.sansSemi, fontSize: 16, color: on ? day.onInk : day.ink }}>
                     {t.title}
                   </Text>
                   <Text

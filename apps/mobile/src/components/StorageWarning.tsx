@@ -12,7 +12,7 @@
  */
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { accent, day, radius, type as fonts } from '@morrow/ui';
+import { day, radius, type as fonts } from '@morrow/ui';
 import { storageFailure } from '../storage';
 
 export function StorageWarning({ onExport }: { onExport?: () => void }) {
@@ -28,7 +28,9 @@ export function StorageWarning({ onExport }: { onExport?: () => void }) {
       testID="storage-warning"
       accessibilityLiveRegion="assertive"
       style={{
-        backgroundColor: accent.coralText,
+        // The one deep coral that stays put in the night studio: the banner
+        // carries white text and must in both.
+        backgroundColor: '#CB3014',
         paddingHorizontal: 18,
         paddingTop: 12,
         paddingBottom: 14,

@@ -135,7 +135,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
             justifyContent: 'center',
           }}
         >
-          <Text style={{ fontFamily: fonts.sansSemi, fontSize: 17, color: '#FFFFFF' }}>Try again</Text>
+          <Text style={{ fontFamily: fonts.sansSemi, fontSize: 17, color: day.onInk }}>Try again</Text>
         </Pressable>
 
         {/*

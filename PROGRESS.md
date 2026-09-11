@@ -15,7 +15,7 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 1. packages/core: domain model, stores (zustand + persist), engines
 - [x] 2. packages/ui: Studio tokens, Stone/Socket/Ring, HoldBar, Chip, Field, Sheet, text primitives
 - [x] 3. apps/mobile screens (all 16 routes)
-- [x] 4. Tests: 352 core + 40 ui + 8 storage unit tests, 37 real-Postgres checks, 140 Playwright e2e checks, all green
+- [x] 4. Tests: 352 core + 43 ui + 8 storage unit tests, 37 real-Postgres checks, 140 Playwright e2e checks, all green
 - [x] 5. supabase/: migrations with RLS and three structural authorship guards, edge functions
 - [x] 6. Hardening: the eight-lens audit's findings, worst first (see below) — 95 of 95
 - [x] 7. Research pass: libraries/versions; the migration against a real Postgres; prebuild
@@ -40,6 +40,8 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 18. The plus (§7.6): the New move sheet — which goal, what (cut from their
       own line, or their words), how long — and quick capture into the ledger
       with undo
+- [x] 19. Dark mode (§7.14): the night studio as the whole app when the system
+      is dark or the person pins it; System / Day / Night in Settings
 - [x] 16. The feel of the controls (§8): haptics on seat, park and seal, with the
       off switch in Settings; analytics as a seam with a fixed vocabulary and no
       free text (PostHog HTTP, nothing without a key); the Google sign-in half
@@ -53,7 +55,7 @@ only tested. What is left needs a machine or a key this one does not have;
 see "Next steps".
 
 - The tree is green and committed: `pnpm verify` runs the toolchain guard,
-  typecheck, lint, 352 core tests, 40 ui tests (contrast and the quoted-span
+  typecheck, lint, 352 core tests, 43 ui tests (contrast and the quoted-span
   split), 8 storage tests, the edge-function guards, the SQL structural
   guards, 37 checks against a real Postgres, the serif authorship guard, the
   web build and 140 end-to-end checks.
@@ -942,6 +944,20 @@ recogniser is the phone's own. Walked on the web build (the pane has no
 microphone, so the fallback is what was seen); the recogniser itself needs a
 phone. Expo's patch releases of the day were taken with `expo install --fix`;
 expo-doctor is 18/18 again.
+
+### Dark mode (2026-09-12)
+
+§7.14: "the user can pin light or dark". A hundred and seventy reads of `day.ink`
+and its siblings across forty screens, none through a hook. Rather than teach
+every screen one, `day` is now a view over whichever studio is on — the day
+studio, or the night studio when the person pinned dark or the system is dark
+and they left it to the system — and `accent` answers each `…Text` hue with
+its `…Night` form on charcoal. The store derives the mode from the setting and
+the OS; every screen re-renders on a change because the store hook they all
+use subscribes to it. White-on-ink became `day.onInk`, which is charcoal on
+the night ink; the storage banner keeps its deep coral. The Book stays paper
+in both. Walked live in the pane (which prefers dark): System, Day, Night,
+and back. Three contrast tests more.
 
 ### The plus (2026-09-12)
 

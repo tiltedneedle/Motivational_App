@@ -176,7 +176,7 @@ export default function Interview() {
                       flex: 1,
                       fontFamily: fonts.sansSemi,
                       fontSize: 17,
-                      color: isSelected(label) ? '#FFFFFF' : day.ink,
+                      color: isSelected(label) ? day.onInk : day.ink,
                     }}
                   >
                     {label}

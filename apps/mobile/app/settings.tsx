@@ -176,6 +176,22 @@ export default function Settings() {
           </View>
 
           <View style={{ gap: 10 }}>
+            <Label>The studio</Label>
+            {/* PRD 7.14: the day studio, the night studio, or whichever the system is in. */}
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {(['system', 'light', 'dark'] as const).map((a) => (
+                <Chip
+                  key={a}
+                  testID={`settings-appearance-${a}`}
+                  label={a === 'system' ? 'With the system' : a === 'light' ? 'Day' : 'Night'}
+                  selected={(state.profile.appearance ?? 'system') === a}
+                  onPress={() => setProfile({ appearance: a })}
+                />
+              ))}
+            </View>
+          </View>
+
+          <View style={{ gap: 10 }}>
             <Label>The feel of it</Label>
             {/* A stone seating and a seal completing are felt as well as seen; this is the off switch. */}
             <View style={{ flexDirection: 'row', gap: 8 }}>

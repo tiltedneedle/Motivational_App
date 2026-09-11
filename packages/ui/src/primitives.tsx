@@ -5,7 +5,7 @@
  * component that sets the serif, and it is the only one the user's own words go
  * through. If a screen wants to render app prose in the serif, it cannot.
  */
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import {
   AccessibilityInfo,
   ActivityIndicator,
@@ -21,7 +21,7 @@ import {
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
-import { accent, day, focusRing, motion, night, radius, size, type as fonts, webOnlyStyle, type Palette } from './tokens';
+import { accent, day, focusRing, isDark, motion, night, radius, size, subscribeDark, type as fonts, webOnlyStyle, type Palette } from './tokens';
 import { splitQuoted } from './quoted';
 
 export const PaletteContext = React.createContext<{ p: Palette; dark: boolean }>({ p: day, dark: false });
@@ -48,9 +48,11 @@ export function Studio({
   style?: StyleProp<ViewStyle>;
   testID?: string;
 }) {
-  const p = dark ? (night as unknown as Palette) : day;
+  const globalDark = useSyncExternalStore(subscribeDark, isDark, isDark);
+  const isNight = dark || globalDark;
+  const p = isNight ? (night as unknown as Palette) : day;
   return (
-    <PaletteContext.Provider value={{ p, dark }}>
+    <PaletteContext.Provider value={{ p, dark: isNight }}>
       {/*
         The ground is full bleed; the writing is not.
 

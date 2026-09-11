@@ -1,6 +1,6 @@
 import { Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { AppState, View, Text, ActivityIndicator } from 'react-native';
+import { AppState, View, Text, ActivityIndicator, useColorScheme } from 'react-native';
 import { useFonts as useOutfit, Outfit_400Regular, Outfit_500Medium, Outfit_600SemiBold, Outfit_700Bold } from '@expo-google-fonts/outfit';
 import { Newsreader_400Regular, Newsreader_400Regular_Italic, Newsreader_500Medium } from '@expo-google-fonts/newsreader';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -25,6 +25,12 @@ export default function RootLayout() {
   });
   const router = useRouter();
   const hydrated = useMorrow((s) => s.hydrated);
+  // PRD 7.14: dark when the system is, unless they pinned one. The store
+  // derives the mode; the tokens are a view over it.
+  const scheme = useColorScheme();
+  useEffect(() => {
+    useMorrow.setState({ systemDark: scheme === 'dark' });
+  }, [scheme]);
   const paused = useMorrow((s) => s.safetyPause !== null);
   const storageError = useMorrow((s) => s.storageError);
   const [slowFonts, setSlowFonts] = useState(false);

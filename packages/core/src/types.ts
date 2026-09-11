@@ -449,6 +449,8 @@ export const Profile = z.object({
   soundOn: z.boolean(),
   hapticsOn: z.boolean(),
   reducedMotion: z.boolean(),
+  /** PRD 7.14: the day studio, the night studio, or whichever the system is in. */
+  appearance: z.enum(['system', 'light', 'dark']).default('system'),
   consentedAt: z.string().nullable(),
   entitled: z.boolean(),
   /**
@@ -485,6 +487,7 @@ export const DEFAULT_PROFILE: Profile = {
   soundOn: true,
   hapticsOn: true,
   reducedMotion: false,
+  appearance: 'system',
   consentedAt: null,
   entitled: false,
   supportOfferedAt: null,

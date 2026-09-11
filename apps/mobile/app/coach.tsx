@@ -308,11 +308,11 @@ export default function Coach() {
                 }}
               >
                 {m.who === 'me' && m.typed ? (
-                  <UserText style={{ color: '#FFFFFF', fontSize: 16, lineHeight: 22 }}>{m.text}</UserText>
+                  <UserText style={{ color: day.onInk, fontSize: 16, lineHeight: 22 }}>{m.text}</UserText>
                 ) : m.who === 'me' ? (
                   // A chip is the app's sentence, tapped rather than typed:
                   // their turn, not their words, so not their face.
-                  <Body style={{ color: '#FFFFFF', fontSize: 16, lineHeight: 22 }}>{m.text}</Body>
+                  <Body style={{ color: day.onInk, fontSize: 16, lineHeight: 22 }}>{m.text}</Body>
                 ) : (
                   <Quoted text={m.text} spans={m.spans ?? []} style={{ color: day.ink, fontSize: 16, lineHeight: 22 }} />
                 )}

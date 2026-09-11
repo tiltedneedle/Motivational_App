@@ -29,6 +29,8 @@ create table public.profiles (
   sunday_hour smallint not null default 9 check (sunday_hour between 0 and 23),
   -- PRD 8.7: the app's own reduced-motion switch, beside the OS one.
   reduced_motion boolean not null default false,
+  -- PRD 7.14: the studio they pinned, or the system's.
+  appearance text not null default 'system' check (appearance in ('system','light','dark')),
   timezone text not null default 'UTC',
   sound_on boolean not null default true,
   haptics_on boolean not null default true,

@@ -6,6 +6,8 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
+import { useSyncExternalStore } from 'react';
+import { isDark, setDark, subscribeDark } from '@morrow/ui';
 import { STORE_KEY, failureReason, guardedStorage, hasFailed, onStorageFailure } from './storage';
 import { syncNotices } from './notify';
 import { billing, type BillingResult, type PlanId } from './billing';
@@ -144,6 +146,8 @@ export interface MorrowState {
   drafts: Record<string, WritingDraft>;
   /** True when the local store could not be read. Writing is unsafe. */
   storageError: boolean;
+  /** What the OS says, fed in by the root layout. Not persisted. */
+  systemDark: boolean;
   books: BookVersion[];
   portraits: Portrait[];
   plans: Plan[];
@@ -436,6 +440,7 @@ const EMPTY = {
   texts: [] as AuthoringText[],
   drafts: {} as Record<string, WritingDraft>,
   storageError: false,
+  systemDark: false,
   books: [] as BookVersion[],
   portraits: [] as Portrait[],
   plans: [] as Plan[],
@@ -458,7 +463,7 @@ const EMPTY = {
   iWill: '',
 };
 
-export const useMorrow = create<MorrowState>()(
+const store = create<MorrowState>()(
   persist(
     (set, get) => ({
       hydrated: false,
@@ -1579,7 +1584,7 @@ export const useMorrow = create<MorrowState>()(
       // recovery path was the thing destroying the data. See src/storage.ts.
       storage: createJSONStorage(() => guardedStorage),
       partialize: (s) => {
-        const { hydrated: _h, toast: _t, storageError: _e, ...rest } = s as MorrowState & Record<string, unknown>;
+        const { hydrated: _h, toast: _t, storageError: _e, systemDark: _d, ...rest } = s as MorrowState & Record<string, unknown>;
         return rest as Partial<MorrowState>;
       },
       /**
@@ -1609,11 +1614,36 @@ export const useMorrow = create<MorrowState>()(
         }
         // Safe either way now: with the latch closed this write is dropped
         // rather than persisted, so it cannot overwrite anything.
-        useMorrow.setState({ hydrated: true, storageError: broken });
+        store.setState({ hydrated: true, storageError: broken });
       },
     },
   ),
 );
+
+/**
+ * The store hook every screen uses — and, through it, the one subscription
+ * to the studio mode. `day.ink` and the rest are read at render time, so a
+ * screen has to render again when the mode changes; every screen calls this
+ * at least once, which makes it the one place that can promise that.
+ */
+export const useMorrow: typeof store = Object.assign(
+  (<T,>(selector: (s: MorrowState) => T): T => {
+    useSyncExternalStore(subscribeDark, isDark, isDark);
+    return store(selector);
+  }) as typeof store,
+  store,
+);
+
+/**
+ * The mode the studios are in, kept in step with the setting and the system.
+ * The tokens are a view over it, and every screen's store hook subscribes to
+ * it below, so a change repaints the screen that is open.
+ */
+export function darkOf(s: Pick<MorrowState, 'profile' | 'systemDark'>): boolean {
+  const a = s.profile.appearance ?? 'system';
+  return a === 'dark' || (a === 'system' && s.systemDark);
+}
+useMorrow.subscribe((s) => setDark(darkOf(s)));
 
 /**
  * A write that fails after launch closes the latch just as a failed read does,

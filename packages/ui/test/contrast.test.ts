@@ -7,7 +7,7 @@
  * designer's calibrated screen is not a colour anyone else has.
  */
 import { describe, expect, it } from 'vitest';
-import { accent, day, night, paper } from '../src/tokens';
+import { accent, day, night, paper, setDark } from '../src/tokens';
 
 /** sRGB relative luminance, WCAG 2.x definition. */
 function luminance(hex: string): number {
@@ -129,5 +129,40 @@ describe('white on a filled control', () => {
   it('reads on the ink button and on coral', () => {
     expect(ratio('#FFFFFF', day.ink)).toBeGreaterThanOrEqual(AA_BODY);
     expect(ratio('#FFFFFF', accent.coral)).toBeGreaterThanOrEqual(AA_LARGE);
+  });
+});
+
+describe('the night studio as dark mode', () => {
+  it('sets the status colours legibly on the night ground too', () => {
+    expect(ratio(accent.successNight, night.ground)).toBeGreaterThanOrEqual(AA_BODY);
+    expect(ratio(accent.successNight, night.surface)).toBeGreaterThanOrEqual(AA_BODY);
+    expect(ratio(accent.destructiveNight, night.ground)).toBeGreaterThanOrEqual(AA_BODY);
+    expect(ratio(accent.destructiveNight, night.surface)).toBeGreaterThanOrEqual(AA_BODY);
+  });
+
+  it('turns the day palette into the night palette, and the text accents with it', () => {
+    // `day` is a view over whichever studio is on (PRD 7.14). Off, it is the
+    // day studio; on, every read is the night studio's, and each `…Text`
+    // accent answers with its `…Night` form so a label set in coral is still a
+    // colour on charcoal.
+    setDark(true);
+    try {
+      expect(day.ground).toBe(night.ground);
+      expect(day.ink).toBe(night.ink);
+      expect(day.onInk).toBe(night.onInk);
+      expect(accent.coralText).toBe(accent.coralNight);
+      expect(accent.success).toBe(accent.successNight);
+      expect(accent.coral).toBe('#EA4B2E');
+      expect(ratio(day.ink, day.ground)).toBeGreaterThanOrEqual(AA_BODY);
+      expect(ratio(day.onInk, day.ink)).toBeGreaterThanOrEqual(AA_BODY);
+    } finally {
+      setDark(false);
+    }
+    expect(day.ground).toBe('#F1F0EC');
+    expect(accent.coralText).toBe('#CB3014');
+  });
+
+  it('sets white on the ink fill legibly in the day studio', () => {
+    expect(ratio(day.onInk, day.ink)).toBeGreaterThanOrEqual(AA_BODY);
   });
 });

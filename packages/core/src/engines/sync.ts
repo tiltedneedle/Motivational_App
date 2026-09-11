@@ -130,6 +130,7 @@ export function toRows(bundle: SyncBundle, userId: string, timezone: string): Ta
           sound_on: p.soundOn,
           haptics_on: p.hapticsOn,
           reduced_motion: p.reducedMotion,
+          appearance: p.appearance ?? 'system',
           // A push from a signed-in device is a person still here: a soft
           // delete inside its week is undone by it.
           deleted_at: null,
@@ -473,6 +474,7 @@ export function fromRows(tables: Partial<Record<(typeof TABLE_ORDER)[number], Ro
         soundOn: bool(pr.sound_on, defaults.soundOn),
         hapticsOn: bool(pr.haptics_on, defaults.hapticsOn),
         reducedMotion: bool(pr.reduced_motion, defaults.reducedMotion),
+        appearance: (['system', 'light', 'dark'] as const).find((a) => a === pr.appearance) ?? defaults.appearance,
         consentedAt: strOrNull(pr.consented_at),
         entitled: pr.entitlement === 'pro',
         supportOfferedAt: strOrNull(pr.support_offered_at),

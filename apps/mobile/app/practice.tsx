@@ -232,7 +232,7 @@ export default function PracticeBuilder() {
                       backgroundColor: on ? day.ink : day.surface,
                     }}
                   >
-                    <Text style={{ fontFamily: fonts.sansSemi, fontSize: 14, color: on ? '#FFFFFF' : day.ink2 }}>
+                    <Text style={{ fontFamily: fonts.sansSemi, fontSize: 14, color: on ? day.onInk : day.ink2 }}>
                       {letter}
                     </Text>
                   </Pressable>

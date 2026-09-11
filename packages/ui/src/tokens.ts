@@ -16,7 +16,7 @@
  * two steps of colour (5.55 and 4.53) and is carried the rest of the way by
  * weight and size, which cost nobody their eyesight.
  */
-export const day = {
+export const dayStudio = {
   ground: '#F1F0EC',
   groundTop: '#F8F7F4',
   groundBottom: '#E4E3DF',
@@ -25,6 +25,8 @@ export const day = {
   ink: '#17181C',
   ink2: '#55585F',
   ink3: '#62656E',
+  /** Text set on a fill of `ink`: the one place white is a colour here. */
+  onInk: '#FFFFFF',
   line: 'rgba(23,24,28,0.12)',
   line2: 'rgba(23,24,28,0.06)',
   scrim: 'rgba(23,24,28,0.38)',
@@ -39,10 +41,47 @@ export const night = {
   ink: '#F2F1ED',
   ink2: '#B4B6BC',
   ink3: '#8B8E95',
+  onInk: '#17181C',
   line: 'rgba(255,255,255,0.14)',
   line2: 'rgba(255,255,255,0.07)',
   scrim: 'rgba(0,0,0,0.55)',
 } as const;
+
+/**
+ * Dark mode (PRD §7.14: "the user can pin light or dark").
+ *
+ * Every screen reads `day.ink` and the rest at render time, so rather than
+ * teaching forty screens a hook, `day` is a view over whichever studio is
+ * on: the day studio by default, the night studio when the person pinned
+ * dark or the system is dark and they left it to the system. The writing
+ * rooms and the seal are the night studio whatever the mode; nothing here
+ * changes them. A screen re-renders when the mode changes because the
+ * store hook every screen uses subscribes to it.
+ */
+let darkNow = false;
+const listeners = new Set<() => void>();
+
+export function setDark(dark: boolean): void {
+  if (darkNow === dark) return;
+  darkNow = dark;
+  for (const l of listeners) l();
+}
+
+export function isDark(): boolean {
+  return darkNow;
+}
+
+/** For useSyncExternalStore: subscribe to the mode. */
+export function subscribeDark(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+export const day: typeof dayStudio = new Proxy(dayStudio, {
+  get: (light, key) => (darkNow ? night : light)[key as keyof typeof dayStudio],
+}) as typeof dayStudio;
 
 /**
  * The paper the Book is printed on, on screen and in the PDF.
@@ -61,7 +100,7 @@ export const paper = {
   line: 'rgba(59,58,54,0.14)',
 } as const;
 
-export type Palette = typeof day;
+export type Palette = typeof dayStudio;
 
 /**
  * Each domain colour comes in three forms, because one colour cannot do all
@@ -76,7 +115,7 @@ export type Palette = typeof day;
  * White is only legible on `…Text`, never on the mark, so a filled control that
  * carries a white label takes the text form as its fill.
  */
-export const accent = {
+const accentStudio = {
   coral: '#EA4B2E',
   coralText: '#CB3014',
   coralNight: '#ED6147',
@@ -103,8 +142,29 @@ export const accent = {
   // Score, where it measured 2.68:1 against the ground it sits on — a colour
   // that means "this went well" and could not be read.
   success: '#167442',
+  successNight: '#5BC48A',
   destructive: '#B23A1E',
+  destructiveNight: '#F0765A',
 } as const;
+
+/**
+ * The accents, in the same arrangement: the `…Text` form of each hue is the
+ * `…Night` form when the night studio is on, because a colour dark enough
+ * to read on cream is not one that reads on charcoal. The marks stay.
+ */
+export const accent: typeof accentStudio = new Proxy(accentStudio, {
+  get: (a, key) => {
+    const k = key as keyof typeof accentStudio;
+    if (!darkNow) return a[k];
+    if (k === 'success') return a.successNight;
+    if (k === 'destructive') return a.destructiveNight;
+    if (typeof k === 'string' && k.endsWith('Text')) {
+      const night = `${k.slice(0, -4)}Night` as keyof typeof accentStudio;
+      return a[night] ?? a[k];
+    }
+    return a[k];
+  },
+}) as typeof accentStudio;
 
 /**
  * The focus ring, on web.
