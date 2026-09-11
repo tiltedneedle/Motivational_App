@@ -9,7 +9,7 @@
  * morning". These tests hold the three promises still.
  */
 import { describe, expect, it } from 'vitest';
-import { buildDawnBrief, fullTrackInvitation, replyToChip } from '../src/engines/coach';
+import { buildDawnBrief, fullTrackInvitation, replyToChip, replyToText } from '../src/engines/coach';
 import { SUPPORT_LINE, contentGuard, screen, shouldOfferSupport, softenFrom, withinSoftenWindow } from '../src/engines/safety';
 import type { BookVersion, DaySummary, GoalAnalysis, Move } from '../src/types';
 
@@ -274,5 +274,51 @@ describe('the coach refuses a calorie target however it is asked for', () => {
   it('does not refuse ordinary talk about food', () => {
     expect(contentGuard('I ate well today and the run felt easy').allowed).toBe(true);
     expect(contentGuard('cooking dinner at home three nights this week').allowed).toBe(true);
+  });
+});
+
+describe('the coach with no model behind it', () => {
+  const analyses = [
+    { id: 'an_s', goalId: 'g_1', kind: 'strategies', line: 'Tuesday, Thursday, Saturday at 6:40, out the back door', safetyRisk: 'none' },
+    { id: 'an_o', goalId: 'g_1', kind: 'obstacles', line: 'I stay up too late', line2: 'put the phone in the hall', safetyRisk: 'none' },
+  ] as unknown as GoalAnalysis[];
+  const ctx = { book, analyses, moves: [move], days: [], today: DAY, returns: 0, persona: 'straight' as const };
+
+  it('quotes the line of theirs the message touches, and then asks', () => {
+    const r = replyToText('I keep missing the Thursday one', ctx);
+    expect(r.text).toContain('Thursday, Saturday at 6:40');
+    expect(r.quotedSpans).toEqual(['Tuesday, Thursday, Saturday at 6:40, out the back door']);
+    expect(r.text.trim().endsWith('?')).toBe(true);
+  });
+
+  it('asks rather than invents when nothing of theirs is touched', () => {
+    const r = replyToText('what is the meaning of life', ctx);
+    expect(r.quotedSpans).toEqual([]);
+    expect(r.text.startsWith('Say more about that.')).toBe(true);
+    expect(r.text.trim().endsWith('?')).toBe(true);
+  });
+
+  it('gives the same message the same question, and different messages different ones', () => {
+    const a = replyToText('I have no idea where to start', ctx);
+    const b = replyToText('I have no idea where to start', ctx);
+    expect(a.text).toBe(b.text);
+    const seen = new Set(
+      ['one', 'another thing entirely', 'a third message here', 'and a fourth', 'five', 'six six six'].map(
+        (t) => replyToText(t, ctx).text,
+      ),
+    );
+    expect(seen.size).toBeGreaterThan(1);
+  });
+
+  it('does not treat a common word as a match', () => {
+    // "about" and "today" are in half of everything anybody writes.
+    const r = replyToText('I want to talk about today', ctx);
+    expect(r.quotedSpans).toEqual([]);
+  });
+
+  it('never quotes a line the screen flagged', () => {
+    const flagged = [{ ...analyses[0], safetyRisk: 'crisis' }] as unknown as GoalAnalysis[];
+    const r = replyToText('the Thursday run', { ...ctx, analyses: flagged });
+    expect(r.quotedSpans).toEqual([]);
   });
 });

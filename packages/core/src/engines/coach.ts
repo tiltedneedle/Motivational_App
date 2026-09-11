@@ -353,11 +353,89 @@ export function replyToText(text: string, ctx: ChipContext): CoachReply {
       action: null,
     };
   }
-  return {
-    text: 'Say more about that. What would have to be true for the next hour to go differently?',
-    quotedSpans: [],
-    action: null,
-  };
+  // Without a model behind it the coach can still do the two things it is
+  // allowed to do: quote and ask. If what they typed touches a line they wrote
+  // — a word of four letters or more in common with a stone — that line comes
+  // back to them before the question. Otherwise one of four questions, chosen
+  // by the text rather than at random, so the same message gets the same
+  // reply and the coach does not look like it is shuffling cards.
+  const words = new Set(
+    text
+      .toLowerCase()
+      .split(/[^a-z']+/)
+      .filter((w) => w.length >= 4 && !STOP.has(w)),
+  );
+  const touched = ctx.analyses.find((a) =>
+    a.line
+      .toLowerCase()
+      .split(/[^a-z']+/)
+      .some((w) => w.length >= 4 && words.has(w)),
+  );
+  const ask = QUESTIONS[hash(text) % QUESTIONS.length]!;
+  if (touched && isQuotable(touched)) {
+    const line = touched.line.trim();
+    return {
+      text: `You wrote ${endSentence(`“${line}”`)} ${ask}`,
+      quotedSpans: [line],
+      action: null,
+    };
+  }
+  return { text: `Say more about that. ${ask}`, quotedSpans: [], action: null };
+}
+
+const QUESTIONS = [
+  'What would have to be true for the next hour to go differently?',
+  'What is the two-minute version of it?',
+  'When did it last go the way you wanted, and what was different that day?',
+  'What would you tell a friend who said exactly that?',
+] as const;
+
+/** Words too common to mean the message is about a particular stone. */
+const STOP = new Set([
+  'that',
+  'this',
+  'with',
+  'have',
+  'just',
+  'about',
+  'really',
+  'want',
+  'like',
+  'know',
+  'think',
+  'feel',
+  'today',
+  'been',
+  'will',
+  'would',
+  'could',
+  'should',
+  'what',
+  'when',
+  'there',
+  'their',
+  'they',
+  'them',
+  'from',
+  'into',
+  'some',
+  'more',
+  'much',
+  'very',
+  'then',
+  'than',
+  'also',
+  'dont',
+  "don't",
+  'cant',
+  "can't",
+]);
+
+/** Small and stable: the same text always lands on the same question. */
+function hash(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
 }
 
 /** The Returns letter (PRD §7.7): quotes the user, never mentions a streak. */
