@@ -644,6 +644,27 @@ fail on both of the bugs it was written for before being kept.
 And the route table walked against the code that refers to it: every screen
 has a door, including the letters once they have all been read.
 
+### The final walkthrough, from nothing (2026-09-11)
+
+Cleared the device and went through everything on the final bundle, in the
+browser, reading the DOM at every step: Welcome → consent → the Interview → the
+Fifteen (killed and resumed) → What I heard (a kept line named in my own words)
+→ rank and the spine title → ten stones across two goals → the Portrait reveal
+(the identity line rewritten) → seal the Book → the Book → the one paywall →
+Today → the letter → the Coach (the intention and the one invitation) → seat
+the stone → seal the day → Progress → Settings. Every screen did what it says,
+and the ledger carried the proof line typed at the seal.
+
+One more defect, which only a two-goal walk could show: **sealing the Book said
+"this one has nothing in it to start from yet"** and offered "Write that line
+now" — for a goal that had every line it needed and was held back only by the
+free plan's one-Blueprint limit. That sends somebody off to rewrite a Strategies
+line they have already written. Two reasons, two sentences now. And the seal's
+own label said "first edition" on every seal there was.
+
+The route table was walked against the code that refers to it. Every screen has
+a door.
+
 ## Blocked on the user
 - Supabase project URL/anon key, Anthropic API key, fal.ai key, RevenueCat keys: needed to test real providers. Everything runs on local fallbacks without them.
 
