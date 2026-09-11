@@ -38,17 +38,32 @@ function LetterBody({ letter }: { letter: Letter }) {
     return <UserText style={{ fontSize: 17, lineHeight: 27, color: day.ink }}>{letter.body}</UserText>;
   }
 
-  const parts: { text: string; theirs: boolean }[] = [];
-  let rest = letter.body;
-  // Longest first, so a short span inside a long one cannot split it in half.
-  for (const q of [...letter.quotes].sort((a, b) => b.length - a.length)) {
-    const at = rest.indexOf(q);
-    if (at === -1) continue;
-    if (at > 0) parts.push({ text: rest.slice(0, at), theirs: false });
-    parts.push({ text: q, theirs: true });
-    rest = rest.slice(at + q.length);
+  // Every span located against the whole body, then laid out in the order they
+  // appear in it. Walking the body once per quote and consuming as it went
+  // meant a short quotation that happened to sit *before* a longer one was
+  // swallowed into the unhighlighted run and silently lost its face.
+  const found = letter.quotes
+    .map((q) => ({ q, at: letter.body.indexOf(q) }))
+    .filter((m) => m.at >= 0 && m.q.length > 0)
+    // Longest first so that when two overlap, the larger claim wins.
+    .sort((a, b) => b.q.length - a.q.length);
+
+  const taken: { from: number; to: number; q: string }[] = [];
+  for (const m of found) {
+    const to = m.at + m.q.length;
+    if (taken.some((t) => m.at < t.to && t.from < to)) continue;
+    taken.push({ from: m.at, to, q: m.q });
   }
-  if (rest) parts.push({ text: rest, theirs: false });
+  taken.sort((a, b) => a.from - b.from);
+
+  const parts: { text: string; theirs: boolean }[] = [];
+  let cursor = 0;
+  for (const t of taken) {
+    if (t.from > cursor) parts.push({ text: letter.body.slice(cursor, t.from), theirs: false });
+    parts.push({ text: t.q, theirs: true });
+    cursor = t.to;
+  }
+  if (cursor < letter.body.length) parts.push({ text: letter.body.slice(cursor), theirs: false });
 
   return (
     <Body style={{ fontSize: 16, lineHeight: 26, color: day.ink }}>
