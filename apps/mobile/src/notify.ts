@@ -18,6 +18,8 @@ import { toSchedule, withoutMuted, type Moment, type Notice } from '@morrow/core
 /** What a scheduler has to be able to do. Deliberately tiny. */
 export interface Scheduler {
   ids(): Promise<string[]>;
+  /** Whether the person has said yes, asking once if they have not been asked. */
+  allowed(): Promise<boolean>;
   schedule(notice: Notice): Promise<void>;
   cancel(id: string): Promise<void>;
 }
@@ -26,6 +28,9 @@ export interface Scheduler {
 export const noScheduler: Scheduler = {
   async ids() {
     return [];
+  },
+  async allowed() {
+    return false;
   },
   async schedule() {},
   async cancel() {},
@@ -56,6 +61,18 @@ export async function scheduler(): Promise<Scheduler> {
       async ids() {
         const all = await mod.getAllScheduledNotificationsAsync();
         return (all ?? []).map((n: { identifier: string }) => n.identifier);
+      },
+      async allowed() {
+        // Asked once, and only here — which is to say only when the planner
+        // has produced something worth asking for. A permission prompt on
+        // first launch, before the person has written a word, is the app
+        // asking for attention it has not earned yet; asking on the morning
+        // the first plan exists is asking for exactly the thing it will use.
+        const current = await mod.getPermissionsAsync();
+        if (current?.granted) return true;
+        if (current?.canAskAgain === false) return false;
+        const asked = await mod.requestPermissionsAsync();
+        return Boolean(asked?.granted);
       },
       async schedule(notice) {
         await mod.scheduleNotificationAsync({
@@ -129,8 +146,16 @@ export async function syncNotices(
     }
   }
 
+  const due = toSchedule(wanted, now, existing);
+  // Only ask when there is something to schedule. On iOS a schedule call
+  // without permission is silently dropped, so without this the app would
+  // have looked like it was scheduling and never shown a single one.
+  if (due.length > 0 && !(await sched.allowed().catch(() => false))) {
+    return { scheduled: [], cancelled, silent };
+  }
+
   const scheduled: string[] = [];
-  for (const notice of toSchedule(wanted, now, existing)) {
+  for (const notice of due) {
     try {
       await sched.schedule(notice);
       scheduled.push(notice.id);

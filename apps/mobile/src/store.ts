@@ -29,6 +29,7 @@ import {
   detectReturns,
   dueLetters,
   canTakeCoachTurn,
+  paywallMoment,
   fewer,
   closedOn,
   movesForDay,
@@ -1108,6 +1109,12 @@ export const useMorrow = create<MorrowState>()(
       syncNotifications: async () => {
         const s = get();
         const day = dayOf(new Date(), s.profile.dayBoundaryHour);
+        // Not while the one paywall moment is still owed. The first thing worth
+        // scheduling appears the moment the first plan exists, which is the
+        // same moment the paywall opens; asking for notification permission
+        // over the top of it is two prompts on the one screen that should have
+        // none. The next launch or foreground is soon enough.
+        if (paywallMoment(entitlementOf(s, day))) return { scheduled: 0, cancelled: 0, silent: true };
         const daysArr = Object.values(s.days);
         // Days since anything at all was logged. A person who has never logged
         // anything is not "away": they have not started, and the day-three
