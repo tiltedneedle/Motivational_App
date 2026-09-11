@@ -3,12 +3,13 @@
  * same hold that seals a Book. Unsealed days seal themselves as quiet days.
  */
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Body, Chip, HoldBar, Label, Statement, Stone, Studio, UserField, night, useReducedMotion } from '@morrow/ui';
+import { Chip, HoldBar, Label, Quoted, Statement, Stone, Studio, UserField, night, useReducedMotion } from '@morrow/ui';
 import { dayOf } from '@morrow/core';
 import { feelSealed } from '../src/feel';
+import { dictation } from '../src/dictation';
 import { track } from '../src/analytics';
 import { useMorrow } from '../src/store';
 
@@ -26,6 +27,33 @@ export default function SealDay() {
   const [proof, setProof] = useState(today?.proof ?? '');
   const [gladOf, setGladOf] = useState(today?.gladOf ?? '');
   const [sealed, setSealed] = useState(false);
+  /** PRD §7.6: "optional sixty seconds by voice". Into the proof field, to be read before it is sealed. */
+  const [listening, setListening] = useState(false);
+  const [micNote, setMicNote] = useState<string | null>(null);
+  const anchorRef = useRef('');
+  const dictationRef = useRef(dictation());
+  const listen = async () => {
+    if (listening) {
+      dictationRef.current.stop();
+      setListening(false);
+      return;
+    }
+    setMicNote(null);
+    anchorRef.current = proof;
+    const ok = await dictationRef.current.start({
+      onText: (text, final) => {
+        const joined = [anchorRef.current.trim(), text.trim()].filter(Boolean).join(' ');
+        setProof(joined);
+        if (final) anchorRef.current = joined;
+      },
+      onProblem: (message) => {
+        setMicNote(message);
+        setListening(false);
+      },
+    });
+    setListening(ok);
+  };
+  useEffect(() => () => dictationRef.current.stop(), []);
 
   // The evidence rule is the user's own Monitoring line.
   const rule = analyses.find((a) => a.kind === 'monitoring')?.line;
@@ -50,15 +78,27 @@ export default function SealDay() {
 
           <View style={{ gap: 8 }}>
             <Label style={{ color: night.ink3 }}>One piece of proof</Label>
-            {rule ? <Body style={{ color: night.ink3, fontSize: 13 }}>Your rule: “{rule}”</Body> : null}
+            {/* Their own rule for what counts, in their face. */}
+            {rule ? <Quoted text={`Your rule: “${rule}”`} spans={[rule]} style={{ color: night.ink3, fontSize: 13, lineHeight: 19 }} /> : null}
             <UserField
               testID="seal-proof"
               label="What actually happened today"
               value={proof}
-              onChangeText={setProof}
+              onChangeText={(t) => {
+                anchorRef.current = t;
+                setProof(t);
+              }}
               placeholder="What actually happened"
               multiline
             />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <Chip testID="seal-mic" label={listening ? 'Listening' : 'Say it instead'} selected={listening} onPress={() => void listen()} />
+              {micNote ? (
+                <Label testID="seal-mic-note" style={{ color: night.ink3, flex: 1 }}>
+                  {micNote}
+                </Label>
+              ) : null}
+            </View>
           </View>
 
           <View style={{ gap: 8 }}>
