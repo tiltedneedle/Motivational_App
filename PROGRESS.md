@@ -15,7 +15,7 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 1. packages/core: domain model, stores (zustand + persist), engines
 - [x] 2. packages/ui: Studio tokens, Stone/Socket/Ring, HoldBar, Chip, Field, Sheet, text primitives
 - [x] 3. apps/mobile screens (all 16 routes)
-- [x] 4. Tests: 348 core + 40 ui + 8 storage unit tests, 37 real-Postgres checks, 132 Playwright e2e checks, all green
+- [x] 4. Tests: 351 core + 40 ui + 8 storage unit tests, 37 real-Postgres checks, 136 Playwright e2e checks, all green
 - [x] 5. supabase/: migrations with RLS and three structural authorship guards, edge functions
 - [x] 6. Hardening: the eight-lens audit's findings, worst first (see below) — 95 of 95
 - [x] 7. Research pass: libraries/versions; the migration against a real Postgres; prebuild
@@ -33,6 +33,10 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
       rewritten; no "Self Authoring" anywhere a person or a store could see it
 - [x] 15. Saying the Fifteen (§7.2): dictation through expo-speech-recognition,
       on-device where the phone can, with a typed room as the fallback
+- [x] 17. The Horizon Review (§7.9): on the last page of the Sunday reading —
+      the consistency trend as a number, the next milestone per goal with its
+      distance, one sentence they wrote this week quoted, and what a replan
+      would change, with the door to it
 - [x] 16. The feel of the controls (§8): haptics on seat, park and seal, with the
       off switch in Settings; analytics as a seam with a fixed vocabulary and no
       free text (PostHog HTTP, nothing without a key); the Google sign-in half
@@ -46,10 +50,10 @@ only tested. What is left needs a machine or a key this one does not have;
 see "Next steps".
 
 - The tree is green and committed: `pnpm verify` runs the toolchain guard,
-  typecheck, lint, 348 core tests, 40 ui tests (contrast and the quoted-span
+  typecheck, lint, 351 core tests, 40 ui tests (contrast and the quoted-span
   split), 8 storage tests, the edge-function guards, the SQL structural
   guards, 37 checks against a real Postgres, the serif authorship guard, the
-  web build and 132 end-to-end checks.
+  web build and 136 end-to-end checks.
 - **The account's spend limit is the month's, not the run's.** The fourth
   audit was ten agents and 1.59M tokens and tripped the monthly limit with
   two verifiers still running; their lenses' findings were verified by hand.
@@ -935,6 +939,17 @@ recogniser is the phone's own. Walked on the web build (the pane has no
 microphone, so the fallback is what was seen); the recogniser itself needs a
 phone. Expo's patch releases of the day were taken with `expo install --fix`;
 expo-doctor is 18/18 again.
+
+### The Horizon Review (2026-09-11)
+
+§7.9 asked for it on Sunday after the reading and the reading ended on two
+buttons. `engines/review.ts` computes four facts and writes none of them: the
+consistency trend as a sentence with numbers in it, the next milestone for
+each goal with its distance, one insight that is either a proof line the
+person wrote this week (quoted, never a flagged one) or a count of moves
+kept, and how many rows a replan would change per goal with a door to the
+replan. It sits under the I will line on the last page. Three engine tests
+and four end-to-end checks.
 
 ## The stones, renamed (2026-09-11)
 

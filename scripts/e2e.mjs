@@ -946,6 +946,24 @@ async function main() {
       check('and the counter moved with it', (await text('reading-progress')) !== firstPage);
       check('the last page is the I will line', (await text('reading-i-will')).includes('kettle boils'));
 
+      // The Horizon Review (PRD 7.9) sits under the I will line: a number,
+      // the next milestone, one sentence they wrote this week, and what a
+      // replan would change. Nothing on it is a sentence the app wrote about
+      // their week.
+      check('the last page carries the Horizon Review', await seen('horizon-review'));
+      if (await seen('horizon-review')) {
+        check('with the consistency trend as a number', /Consistency \d+|No days/.test(await text('review-consistency')), await text('review-consistency'));
+        check('and the next milestone with its distance', await seen(`review-next-${pathGoal}`));
+        if (await seen('review-insight')) {
+          const insight = await text('review-insight');
+          check(
+            'and the one insight is their own proof line, quoted',
+            insight.includes('ten floors, twice, in the rain') || /kept \d+ of/.test(insight),
+            insight,
+          );
+        }
+      }
+
       // "Something moved" opens the review with a goal to pick, and never
       // strands them: Never mind puts the two decisions back.
       await tap('reading-moved');

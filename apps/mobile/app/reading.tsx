@@ -13,8 +13,8 @@ import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ANALYSIS_TITLES, bookPages, formatDay, plural, sealedOn, thenHalf } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, UserText, night, paper, radius } from '@morrow/ui';
+import { ANALYSIS_TITLES, bookPages, dayOf, distanceLabel, formatDay, horizonReview, plural, sealedOn, thenHalf } from '@morrow/core';
+import { Body, Chip, InkButton, Label, Quoted, Rule, Statement, Studio, TextButton, UserText, night, paper, radius } from '@morrow/ui';
 import { useGoals, useLatestBook, useMorrow } from '../src/store';
 
 export default function Reading() {
@@ -27,6 +27,28 @@ export default function Reading() {
   const pages = useMemo(() => (book ? bookPages(book) : []), [book]);
   const [index, setIndex] = useState(0);
   const [choosing, setChoosing] = useState(false);
+
+  /**
+   * The Horizon Review (PRD §7.9), on the last page: the week in four facts
+   * — a number, the next milestones, one sentence they wrote this week, and
+   * what a replan would change. Computed once for the sitting; the reading
+   * is ten minutes and the ground should not move under it.
+   */
+  const days = useMorrow((s) => s.days);
+  const plans = useMorrow((s) => s.plans);
+  const propose = useMorrow((s) => s.proposeReplanFor);
+  const review = useMemo(
+    () =>
+      horizonReview({
+        today: dayOf(new Date(), boundary),
+        days: Object.values(days),
+        goals,
+        plans,
+        proposals: goals.map((g) => ({ goalId: g.id, changes: propose(g.id).length })),
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [book?.id],
+  );
 
   if (!book || pages.length === 0) {
     return (
@@ -143,6 +165,34 @@ export default function Reading() {
                 </UserText>
                 <Rule style={{ backgroundColor: '#E2DACB' }} />
                 <Label style={{ color: paper.ink3 }}>Sealed {formatDay(sealedOn(page.sealedAt, boundary))}</Label>
+
+                <View testID="horizon-review" style={{ marginTop: 26, gap: 10 }}>
+                  <Label style={{ color: paper.ink3 }}>This week</Label>
+                  <Body testID="review-consistency" style={{ color: paper.ink }}>
+                    {review.consistency.line}
+                  </Body>
+                  {review.next.slice(0, 3).map((n) => (
+                    <Body key={n.goalId} testID={`review-next-${n.goalId}`} style={{ color: paper.ink2, fontSize: 14 }}>
+                      {n.goalTitle}: {n.title} · {distanceLabel(n.daysAway).toLowerCase()}
+                    </Body>
+                  ))}
+                  {review.insight ? (
+                    <Quoted
+                      testID="review-insight"
+                      text={review.insight.text}
+                      spans={review.insight.quotes}
+                      style={{ color: paper.ink, fontSize: 15, lineHeight: 23 }}
+                    />
+                  ) : null}
+                  {review.replans.map((r) => (
+                    <View key={r.goalId} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                      <Body testID={`review-replan-${r.goalId}`} style={{ color: paper.ink2, fontSize: 14 }}>
+                        A replan would change {plural(r.changes, 'row')} for {r.goalTitle}.
+                      </Body>
+                      <Chip testID={`review-replan-open-${r.goalId}`} label="See it" onPress={() => router.push(`/replan?goal=${r.goalId}`)} />
+                    </View>
+                  ))}
+                </View>
               </>
             ) : null}
           </ScrollView>
