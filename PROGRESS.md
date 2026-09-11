@@ -758,14 +758,13 @@ Everything that can be done on this machine, without a key, is done. Both
 audits are closed and the built app has been walked end to end. What remains
 needs either hardware or a credential.
 
-1. **Build it natively, once.** `cd apps/mobile && npx expo run:ios` (or
-   `run:android`, which needs an Android SDK this machine does not have).
-   Everything so far has run through react-native-web. Autolinking and the
-   manifest are verified via prebuild, so what remains is what only a device can
-   show: the fonts, the hold gesture, the drag on Today, the safety card, and
-   Dynamic Type at 200%. This is the largest untested surface in the project,
-   and the layout sweep at 320/375/1280 pt is the closest a browser can get to
-   the last of those.
+1. **Build it natively, once.** The tree is ready for it: `npx expo-doctor`
+   passes 18/18, the Android prebuild generates cleanly, the icon and splash
+   are committed, and `README.md` has the Mac steps. `cd apps/mobile && npx
+   expo run:ios` on a Mac with Xcode, or `run:android` with an Android SDK.
+   What only a device can show: the fonts, the hold gesture, the drag on Today,
+   the safety card, Dynamic Type at 200%, and the notification permission
+   prompt landing at the right moment.
 2. **Wire the real providers** once the keys arrive, and confirm `guarded()`
    still refuses what it should with a real model behind it. Every one of those
    paths is currently exercised only against `LocalProvider`, and
