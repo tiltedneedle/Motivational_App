@@ -757,6 +757,79 @@ async function main() {
       );
     }
 
+    // ---- Replan (PRD 7.4)
+    //
+    // "Proposes changes as a diff, each with a reason and its source line,
+    // Accept or Keep mine per row, applied as a new version." proposeReplan and
+    // applyReplan were written and tested and had no call site at all.
+    if (pathGoal) {
+      // A week where most of it did not happen, so there is something to
+      // propose. Left to the run's own figures this lands in the band where
+      // nothing needs changing — which is the honest common case and also a
+      // branch that never exercises the part worth testing.
+      const dayBefore = await page.evaluate(() => {
+        const key = Object.keys(localStorage).find((k) => k.includes('morrow'));
+        const raw = JSON.parse(localStorage.getItem(key));
+        const before = JSON.stringify(raw.state.days);
+        for (const d of Object.values(raw.state.days)) d.planned = Math.max(4, d.planned);
+        localStorage.setItem(key, JSON.stringify(raw));
+        return before;
+      });
+
+      await page.goto(`${BASE}/replan?goal=${pathGoal}`, { waitUntil: 'networkidle' });
+      await page.clock.runFor(1500);
+      await page.waitForTimeout(500);
+      check('replan', await seen('screen-replan'));
+
+      const hasRows = await seen('replan-row-0');
+      check(
+        'it either proposes something or says plainly that it does not',
+        hasRows || (await seen('replan-nothing')),
+      );
+
+      if (hasRows) {
+        // Nothing starts accepted. A diff that arrives pre-accepted is an edit
+        // with a confirmation dialogue.
+        check('nothing is accepted to begin with', !(await seen('replan-keep-0')));
+        check(
+          'and the row shows the line of theirs it came from',
+          (await text('replan-row-0')).includes('from'),
+          (await text('replan-row-0')).slice(0, 90),
+        );
+
+        const versionBefore = await page.evaluate((g) => {
+          const key = Object.keys(localStorage).find((k) => k.includes('morrow'));
+          const st = key ? JSON.parse(localStorage.getItem(key)).state : null;
+          return st?.plans?.find((p) => p.goalId === g)?.version ?? 0;
+        }, pathGoal);
+
+        await tap('replan-accept-0');
+        await page.waitForTimeout(300);
+        check('accepting a row offers to keep theirs instead', await seen('replan-keep-0'));
+        await tap('replan-apply');
+        await page.waitForTimeout(800);
+
+        const versionAfter = await page.evaluate((g) => {
+          const key = Object.keys(localStorage).find((k) => k.includes('morrow'));
+          const st = key ? JSON.parse(localStorage.getItem(key)).state : null;
+          return st?.plans?.find((p) => p.goalId === g)?.version ?? 0;
+        }, pathGoal);
+        check(
+          'and it lands as a new version of the plan',
+          versionAfter === versionBefore + 1,
+          `${versionBefore} -> ${versionAfter}`,
+        );
+      }
+
+      // Put the week back the way the run actually went.
+      await page.evaluate((before) => {
+        const key = Object.keys(localStorage).find((k) => k.includes('morrow'));
+        const raw = JSON.parse(localStorage.getItem(key));
+        raw.state.days = JSON.parse(before);
+        localStorage.setItem(key, JSON.stringify(raw));
+      }, dayBefore);
+    }
+
     // ---- Sunday reading (PRD 7.3)
     //
     // "A reading view with no controls but a page turn; at the end, Still true

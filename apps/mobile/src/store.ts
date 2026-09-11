@@ -21,6 +21,7 @@ import {
   dueOn,
   logOf,
   FEWER_STEPS,
+  applyReplan,
   canBuildBlueprint,
   canDeliverOn,
   composeLetter,
@@ -29,7 +30,9 @@ import {
   dueLetters,
   canTakeCoachTurn,
   fewer,
+  closedOn,
   movesForDay,
+  proposeReplan,
   planNotices,
   type Moment,
   movesOpenOn,
@@ -65,6 +68,7 @@ import {
   type Move,
   type Letter,
   type Plan,
+  type ReplanChange,
   type Portrait,
   type Practice,
   type PracticeLog,
@@ -199,6 +203,16 @@ export interface MorrowState {
    * to come back. Clearing it hands the proposal back.
    */
   editIdentityLine: (goalId: string, line: string) => void;
+  /**
+   * What a replan would change, for one goal (PRD §7.4).
+   *
+   * Proposes only; nothing moves until the person accepts a row. Empty when
+   * there is nothing worth changing, which is most weeks — a replan that always
+   * has a suggestion is a replan nobody trusts.
+   */
+  proposeReplanFor: (goalId: string) => ReplanChange[];
+  /** Apply the rows they accepted, as a new version of the plan. */
+  applyReplanFor: (goalId: string, accepted: ReplanChange[]) => { ok: true } | { ok: false; error: string };
   makePortraitAndPlan: (
     goalId: string,
   ) => { ok: true } | { ok: false; error: string; moment?: PaywallMoment };
@@ -622,6 +636,60 @@ export const useMorrow = create<MorrowState>()(
        * The Portrait is derived and safe to rebuild, except for an identity
        * line the person has written themselves. That is theirs and survives.
        */
+      proposeReplanFor: (goalId) => {
+        const s = get();
+        const plan = s.plans.find((p) => p.goalId === goalId);
+        if (!plan) return [];
+        const day = dayOf(new Date(), s.profile.dayBoundaryHour);
+        // The last seven days of this plan's own work, not the whole app's:
+        // a replan for one goal argued from another goal's week would be the
+        // app telling somebody they are behind on the wrong thing.
+        const ids = new Set(plan.moves.map((m) => m.id));
+        const week = Object.values(s.days)
+          .filter((d) => d.day <= day && d.day > shiftDay(day, -7))
+          .reduce((n, d) => n + d.planned, 0);
+        const kept = plan.moves.filter(
+          (m) => m.status === 'done' && (closedOn(m, s.profile.dayBoundaryHour) ?? '') > shiftDay(day, -7),
+        ).length;
+        return proposeReplan(plan, {
+          done: kept,
+          planned: Math.max(kept, week > 0 ? week : ids.size),
+          newId,
+          today: day,
+        });
+      },
+
+      applyReplanFor: (goalId, accepted) => {
+        if (accepted.length === 0) return { ok: false, error: 'Nothing was accepted, so nothing changed.' };
+        const s = get();
+        const plan = s.plans.find((p) => p.goalId === goalId);
+        if (!plan) return { ok: false, error: 'That plan is gone.' };
+        const day = dayOf(new Date(), s.profile.dayBoundaryHour);
+        try {
+          // A new version, not an edit in place: the plan they had is a record
+          // of what they decided last time, and a replan is a second decision
+          // rather than a correction of the first.
+          const next = applyReplan(
+            plan,
+            accepted,
+            newId,
+            s.analyses.filter((a) => a.goalId === goalId),
+            day,
+          );
+          set((st) => ({
+            plans: st.plans.map((p) =>
+              p.goalId === goalId ? { ...next, version: plan.version + 1, status: 'active' as const } : p,
+            ),
+          }));
+          return { ok: true };
+        } catch (err) {
+          // `applyReplan` re-validates: an accepted row that would put a move
+          // in the past, or leave one with no line of theirs behind it, is
+          // refused here rather than stored and discovered on Today.
+          return { ok: false, error: err instanceof Error ? err.message : 'That change did not hold up.' };
+        }
+      },
+
       editIdentityLine: (goalId, line) =>
         set((s) => ({
           portraits: s.portraits.map((p) =>
@@ -1317,6 +1385,13 @@ export function entitlementOf(s: MorrowState, day: string): EntitlementContext {
     coachTurnsToday: s.coachTurns[day] ?? 0,
     afterBlueprintShown: (s.profile.paywallSeen ?? []).includes('after-blueprint'),
   };
+}
+
+/** `YYYY-MM-DD`, moved by whole days. UTC arithmetic on a UTC-anchored date. */
+function shiftDay(day: string, by: number): string {
+  const t = Date.parse(`${day}T00:00:00Z`);
+  if (Number.isNaN(t)) return day;
+  return new Date(t + by * 86_400_000).toISOString().slice(0, 10);
 }
 
 /** Whole days from one `YYYY-MM-DD` to another. Negative if `to` is earlier. */
