@@ -1031,7 +1031,7 @@ program's actual prompt text by someone with a licensed copy.
 
 ## Next steps
 
-Everything that can be done on this machine, without a key, is done. Both
+Everything that can be done on this machine, without a key, is done. Four
 audits are closed and the built app has been walked end to end. What remains
 needs either hardware or a credential.
 
@@ -1040,8 +1040,10 @@ needs either hardware or a credential.
    are committed, and `README.md` has the Mac steps. `cd apps/mobile && npx
    expo run:ios` on a Mac with Xcode, or `run:android` with an Android SDK.
    What only a device can show: the fonts, the hold gesture, the drag on Today,
-   the safety card, Dynamic Type at 200%, and the notification permission
-   prompt landing at the right moment.
+   the safety card, Dynamic Type at 200%, the notification permission prompt
+   landing at the right moment, the microphone prompt and the recogniser in
+   the room, the haptics, the wallpaper landing in Photos, and dark mode
+   following the OS.
 2. **Wire the real providers** once the keys arrive, and confirm `guarded()`
    still refuses what it should with a real model behind it. Every one of those
    paths is currently exercised only against `LocalProvider`, and
@@ -1050,20 +1052,27 @@ needs either hardware or a credential.
    get. With the Supabase values set, the functions are reached through the
    project's own host with the session's token; `EXPO_PUBLIC_MORROW_API` still
    wins when set. Then: sign in on the built app, push, wipe, sign in on a
-   second install, pull, and compare the two stores.
+   second install, pull, and compare the two stores; close the account and
+   confirm the sweep.
 3. **One `supabase db reset` against the real service** before launch. PGlite is
    Postgres, but Supabase is Postgres plus its own roles, extensions and `auth`
-   schema, and `scripts/test-migration.mjs` stubs the last of those.
+   schema, and `scripts/test-migration.mjs` stubs the last of those. Then the
+   email template with `{{ .Token }}` and the Apple provider (README).
 4. **The store keys.** `apps/mobile/src/billing.ts` is one function and one
    seam; the paywall, the gates and their tests all go through the `Billing`
    interface. Until then Continue says plainly that nothing was charged, which
    is the honest thing for it to say.
-5. **Widgets and the Live Activity** (§7.11). WidgetKit, a
-   foreground service and writing an image to Photos are native code with no
-   web equivalent, so nothing about them can be built or checked on this
-   machine. What they need is already computed: the first move and the
-   Consistency figure are on Today, and the "I will" line is on the Book.
-6. Then loop: implement, test, harden, research, repeat.
+5. **Google sign-in, crash reporting, sound.** Each is a key or an asset away:
+   the Google OAuth client ids for the native module, a Sentry DSN for the
+   SDK, a recording for the seal. See "Blocked on the user".
+6. **Widgets and the Live Activity** (§7.11). WidgetKit and a foreground
+   service are native code with no web equivalent, so nothing about them can
+   be built or checked on this machine. What they need is already computed:
+   the first move and the Consistency figure are on Today, and the "I will"
+   line is on the Book and the lock screen.
+7. **Counsel's read of the prompts** against the program's real text, with a
+   licensed copy (see "The stones, renamed").
+8. Then loop: implement, test, harden, research, repeat.
 
 ## Where the walkthrough habits are written down
 
