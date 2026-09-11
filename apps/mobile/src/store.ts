@@ -1408,7 +1408,11 @@ function horizonToDate(horizon: string): string | null {
   const add = (months: number) => {
     const d = new Date(now);
     d.setMonth(d.getMonth() + months);
-    return d.toISOString().slice(0, 10);
+    // `dayOf` with no boundary, not `toISOString()`. The months are added in
+    // local time and toISOString converts to UTC, so west of Greenwich in the
+    // evening a three-month horizon landed a day late — which then dated every
+    // milestone on the plan built from it.
+    return dayOf(d, 0);
   };
   switch (horizon) {
     case 'Three months':

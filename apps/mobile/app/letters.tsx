@@ -14,7 +14,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { WRITE_TO_FUTURE_MAX_DAYS, formatDay, plural, type Letter } from '@morrow/core';
+import { WRITE_TO_FUTURE_MAX_DAYS, dayOf, formatDay, plural, type Letter } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, UserField, UserText, accent, day, radius } from '@morrow/ui';
 import { useMorrow } from '../src/store';
 
@@ -101,11 +101,11 @@ export default function Letters() {
     catchUpLetters();
   }, [catchUpLetters]);
 
-  const today = useMemo(() => {
-    const d = new Date();
-    if (d.getHours() < boundary) d.setDate(d.getDate() - 1);
-    return d.toISOString().slice(0, 10);
-  }, [boundary]);
+  // `dayOf`, not a hand-rolled copy of it. The version this screen had built
+  // the local date and then called `toISOString()`, which converts to UTC — so
+  // west of Greenwich a letter due today read as due tomorrow, on the one
+  // screen whose whole job is knowing which day it is.
+  const today = useMemo(() => dayOf(new Date(), boundary), [boundary]);
 
   const arrived = letters.filter((l) => l.deliverAt.slice(0, 10) <= today);
   const waiting = letters.filter((l) => l.deliverAt.slice(0, 10) > today);

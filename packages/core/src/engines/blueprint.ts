@@ -389,7 +389,12 @@ export function applyReplan(
   accepted: ReplanChange[],
   newId: (p: string) => string,
   analyses: GoalAnalysis[] = [],
-  today: string = new Date().toISOString().slice(0, 10),
+  // Required, and deliberately not defaulted. It used to fall back to
+  // `new Date().toISOString().slice(0, 10)`, which is the UTC date rather than
+  // the person's day — a day late for everyone west of Greenwich, on the
+  // function that decides when their moves are scheduled. Core does not know
+  // anybody's day boundary, so it asks rather than guesses.
+  today: string,
 ): Plan {
   let moves = [...plan.moves];
   for (const c of accepted) {
