@@ -15,7 +15,7 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 1. packages/core: domain model, stores (zustand + persist), engines
 - [x] 2. packages/ui: Studio tokens, Stone/Socket/Ring, HoldBar, Chip, Field, Sheet, text primitives
 - [x] 3. apps/mobile screens (all 16 routes)
-- [x] 4. Tests: 296 core + 33 contrast + 6 storage unit tests, 120 Playwright e2e checks, all green
+- [x] 4. Tests: 299 core + 33 contrast + 6 storage unit tests, 120 Playwright e2e checks, all green
 - [x] 5. supabase/: migrations with RLS and three structural authorship guards, edge functions
 - [x] 6. Hardening: the eight-lens audit's findings, worst first (see below) — 95 of 95
 - [x] 7. Research pass: libraries/versions; the migration against a real Postgres; prebuild
@@ -33,7 +33,7 @@ only tested. What is left needs a machine or a key this one does not have; see
 "Next steps".
 
 - The tree is green and committed: `pnpm verify` runs the toolchain guard,
-  typecheck, lint, 296 core tests, 33 contrast measurements, 6 storage tests, the
+  typecheck, lint, 299 core tests, 33 contrast measurements, 6 storage tests, the
   edge-function guards, the SQL structural guards, 30 checks against a real
   Postgres, the serif authorship guard, the web build and 120 end-to-end
   checks.
@@ -60,8 +60,9 @@ build, then the end-to-end suite. Nothing ships without it passing.
 ```
 pnpm test:deps                  # one toolchain; the RN side left to Expo
 pnpm test:dates                 # no local date turned into a UTC day
+pnpm test:copy                  # no full stop on top of theirs, no raw day in prose
 pnpm lint                       # eslint; rules-of-hooks is an error
-pnpm test                       # 296 core + 33 contrast + 6 storage unit tests
+pnpm test                       # 299 core + 33 contrast + 6 storage unit tests
 pnpm test:sql                   # RLS on every table, the three authorship guards
 pnpm test:migration             # 30 checks against a real Postgres, via PGlite
 pnpm test:authorship            # nothing but the user's words in the serif
@@ -717,6 +718,15 @@ Without a key the coach can still do the two things it is ever allowed to —
 quote and ask — so it now quotes the line of theirs a message touches and asks
 one of four questions chosen by the text, never at random. Nothing invented,
 nothing flagged ever quoted.
+
+### Guards for what kept coming back (2026-09-11)
+
+Three defects recurred often enough this session to earn a rule rather than
+another fix: the app's full stop landing on top of the person's own
+(`endSentence`, now shared and checked), a stored day printed as prose
+(`formatDay`), and a hook declared below an early return (`rules-of-hooks`).
+Each guard was run against the tree from before its fixes to confirm it would
+have caught them, and `check-copy` found one more the sweep had missed.
 
 ## Blocked on the user
 - Supabase project URL/anon key, Anthropic API key, fal.ai key, RevenueCat keys: needed to test real providers. Everything runs on local fallbacks without them.
