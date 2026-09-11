@@ -95,7 +95,7 @@ export default function BookScreen() {
     <Studio dark wide={twoColumn} testID="screen-book">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 18 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10 }}>
-          <TextButton testID="book-back" label="← Today" onPress={() => router.replace('/today')} />
+          <TextButton testID="book-back" label="← Today" onPress={() => router.dismissTo('/today')} />
           <Label style={{ color: night.ink3 }}>
             {ordinal(book.version)} edition · {pageCount(book)} pages
           </Label>
@@ -304,13 +304,13 @@ export default function BookScreen() {
             label="Still true"
             onPress={() => {
               setToast({ text: 'Good. Nothing to change today.', kind: 'info' });
-              router.replace('/today');
+              router.dismissTo('/today');
             }}
           />
           <Chip
             testID="book-moved"
             label="Something moved"
-            onPress={() => router.replace('/today')}
+            onPress={() => router.dismissTo('/today')}
           />
         </View>
       </SafeAreaView>

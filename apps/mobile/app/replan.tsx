@@ -49,7 +49,7 @@ export default function Replan() {
   const plan = goal ? state.plans.find((p) => p.goalId === goal.id && p.status === 'active') : undefined;
   const today = dayOf(new Date(), state.profile.dayBoundaryHour);
 
-  const back = () => (router.canGoBack() ? router.back() : router.replace('/today'));
+  const back = () => (router.canGoBack() ? router.back() : router.dismissTo('/today'));
 
   const toggle = (i: number) =>
     setAccepted((prev) => {
@@ -78,7 +78,7 @@ export default function Replan() {
       <Studio testID="screen-replan">
         <SafeAreaView style={{ flex: 1, padding: 22, justifyContent: 'center', gap: 12 }}>
           <Statement>No plan to change.</Statement>
-          <InkButton label="Back to today" onPress={() => router.replace('/today')} />
+          <InkButton label="Back to today" onPress={() => router.dismissTo('/today')} />
         </SafeAreaView>
       </Studio>
     );

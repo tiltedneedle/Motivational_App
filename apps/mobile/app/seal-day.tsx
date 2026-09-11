@@ -86,7 +86,7 @@ export default function SealDay() {
             onComplete={() => {
               sealDay({ moodWord: word, proof, gladOf });
               setSealed(true);
-              setTimeout(() => router.replace('/today'), 900);
+              setTimeout(() => router.dismissTo('/today'), 900);
             }}
           />
         </View>

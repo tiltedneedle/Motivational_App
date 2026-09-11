@@ -87,7 +87,7 @@ export default function Letters() {
     <Studio testID="screen-letters">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12 }}>
-          <TextButton testID="letters-back" label="← Today" onPress={() => router.replace('/today')} />
+          <TextButton testID="letters-back" label="← Today" onPress={() => router.dismissTo('/today')} />
           <Label>Letters</Label>
         </View>
 

@@ -267,7 +267,7 @@ export default function Write() {
               <InkButton
                 testID="write-later"
                 label="Not now"
-                onPress={() => router.replace('/today')}
+                onPress={() => router.dismissTo('/today')}
                 style={{ backgroundColor: 'transparent', borderWidth: 1.5, borderColor: night.line }}
               />
             </View>

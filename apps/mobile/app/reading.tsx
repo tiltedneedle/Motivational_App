@@ -34,7 +34,7 @@ export default function Reading() {
         <SafeAreaView style={{ flex: 1, padding: 22, justifyContent: 'center', gap: 12 }}>
           <Statement style={{ color: night.ink }}>There is no Book to read yet.</Statement>
           <Body style={{ color: night.ink2 }}>Three evenings and there will be one.</Body>
-          <InkButton testID="reading-back" label="Today" onPress={() => router.replace('/today')} />
+          <InkButton testID="reading-back" label="Today" onPress={() => router.dismissTo('/today')} />
         </SafeAreaView>
       </Studio>
     );
@@ -58,7 +58,7 @@ export default function Reading() {
           keeping promises to themselves.
         */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10 }}>
-          <TextButton testID="reading-leave" label="← Today" onPress={() => router.replace('/today')} />
+          <TextButton testID="reading-leave" label="← Today" onPress={() => router.dismissTo('/today')} />
           <Label testID="reading-progress" style={{ color: night.ink3 }}>
             {index + 1} of {plural(pages.length, 'page')}
           </Label>
@@ -172,7 +172,7 @@ export default function Reading() {
                   label="Still true"
                   onPress={() => {
                     setToast({ text: 'Good. Nothing to change today.', kind: 'info' });
-                    router.replace('/today');
+                    router.dismissTo('/today');
                   }}
                 />
                 <TextButton testID="reading-moved" label="Something moved" onPress={() => setChoosing(true)} />

@@ -172,7 +172,7 @@ export default function Coach() {
             <Label>Your coach</Label>
             <Body style={{ fontSize: 13 }}>{thread.length ? 'Listening' : `Remembers ${plural(days.length, 'day')}`}</Body>
           </View>
-          <TextButton testID="coach-back" label="Today" onPress={() => router.replace('/today')} />
+          <TextButton testID="coach-back" label="Today" onPress={() => router.dismissTo('/today')} />
         </View>
 
         {/*

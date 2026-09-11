@@ -471,6 +471,52 @@ async function main() {
     await page.clock.runFor(1500);
     await page.waitForTimeout(900);
     check('sealing returns to today', await seen('screen-today'));
+    // Back to the Today that was there, not a second one on top of it. A
+    // replace from a pushed screen left two Todays mounted, the hidden one
+    // first in the DOM, so every later click on Today found the wrong one.
+    check(
+      'and there is one Today, not one stacked on another',
+      (await page.locator('[data-testid="screen-today"]').count()) === 1,
+      String(await page.locator('[data-testid="screen-today"]').count()),
+    );
+
+    // ---- sealing the same day again is an edit, never a loss
+    //
+    // The seal screen can be reached again after a seal. It used to open on
+    // an empty form and replace the day's proof line with whatever was in it
+    // — including nothing — so a second visit to change the mood word
+    // silently deleted the sentence they had written an hour before.
+    await page.goto(`${BASE}/seal-day`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(600);
+    if (await seen('screen-seal-day')) {
+      const kept = await page.locator('[data-testid="seal-proof"]').inputValue();
+      check('the seal screen opens on what was already written', kept === 'ten floors, twice, in the rain', kept);
+      await page.locator('[data-testid="seal-proof"]').fill('');
+      await page.waitForTimeout(200);
+      const bar3 = page.locator('[data-testid="seal-day-hold"]').first();
+      const box3 = await bar3.boundingBox();
+      await page.mouse.move(box3.x + box3.width / 2, box3.y + box3.height / 2);
+      await page.mouse.down();
+      await page.clock.runFor(2000);
+      await page.waitForTimeout(300);
+      await page.mouse.up();
+      await page.clock.runFor(1500);
+      await page.waitForTimeout(900);
+      const after = await page.evaluate(() => {
+        const key = Object.keys(localStorage).find((k) => k.includes('morrow'));
+        const st = JSON.parse(localStorage.getItem(key)).state;
+        const day = Object.values(st.days).find((d) => d.sealedAt);
+        return { proof: day?.proof ?? null, seals: st.evidence.filter((e) => e.kind === 'seal').length };
+      });
+      check('and a blank re-seal keeps the proof line', after.proof === 'ten floors, twice, in the rain', JSON.stringify(after));
+      check('with one ledger row for it, not two', after.seals === 1, String(after.seals));
+      // Back onto Today by the front door, so the stack the seal left behind
+      // is not what the next section clicks through.
+      await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
+      await page.clock.runFor(1500);
+      await page.waitForTimeout(600);
+    }
 
     // ---- a practice, built from their own line and then run
     // It lives below the fold on a screen that already has a plan on it, so

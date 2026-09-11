@@ -78,7 +78,7 @@ export default function Runner() {
   const finish = useCallback(
     (state: RunnerState) => {
       logRun(state);
-      router.replace('/today');
+      router.dismissTo('/today');
     },
     [logRun, router],
   );
@@ -88,7 +88,7 @@ export default function Runner() {
       <Studio dark testID="screen-run">
         <SafeAreaView style={{ flex: 1, padding: 22, justifyContent: 'center', gap: 12 }}>
           <Statement style={{ color: night.ink }}>That practice is no longer here.</Statement>
-          <InkButton label="Back to today" onPress={() => router.replace('/today')} />
+          <InkButton label="Back to today" onPress={() => router.dismissTo('/today')} />
         </SafeAreaView>
       </Studio>
     );

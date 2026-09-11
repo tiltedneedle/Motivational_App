@@ -132,7 +132,7 @@ export default function Settings() {
     <Studio testID="screen-settings">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12 }}>
-          <TextButton testID="settings-back" label="← Today" onPress={() => router.replace('/today')} />
+          <TextButton testID="settings-back" label="← Today" onPress={() => router.dismissTo('/today')} />
           <Label>You</Label>
         </View>
 

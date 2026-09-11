@@ -43,7 +43,7 @@ export default function PracticeBuilder() {
   const goals = useGoals();
   const analyses = useMorrow((s) => s.analyses);
   const addPractice = useMorrow((s) => s.addPractice);
-  const goBack = () => (router.canGoBack() ? router.back() : router.replace('/today'));
+  const goBack = () => (router.canGoBack() ? router.back() : router.dismissTo('/today'));
 
   const [goalId, setGoalId] = useState<string | null>(params.goal ?? goals[0]?.id ?? null);
   const goal = goals.find((g) => g.id === goalId) ?? goals[0];
@@ -80,7 +80,7 @@ export default function PracticeBuilder() {
       setError('That could not be saved yet. Every step needs words and a length.');
       return;
     }
-    router.replace('/today');
+    router.dismissTo('/today');
   };
 
   if (!goal) {

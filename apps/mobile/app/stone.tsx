@@ -103,7 +103,7 @@ export default function StoneScreen() {
       <Studio testID="screen-stone">
         <SafeAreaView style={{ flex: 1, padding: 22, justifyContent: 'center' }}>
           <Statement>That goal is gone.</Statement>
-          <InkButton label="Back to today" onPress={() => router.replace('/today')} style={{ marginTop: 18 }} />
+          <InkButton label="Back to today" onPress={() => router.dismissTo('/today')} style={{ marginTop: 18 }} />
         </SafeAreaView>
       </Studio>
     );

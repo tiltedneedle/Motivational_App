@@ -15,7 +15,7 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 1. packages/core: domain model, stores (zustand + persist), engines
 - [x] 2. packages/ui: Studio tokens, Stone/Socket/Ring, HoldBar, Chip, Field, Sheet, text primitives
 - [x] 3. apps/mobile screens (all 16 routes)
-- [x] 4. Tests: 348 core + 40 ui + 8 storage unit tests, 37 real-Postgres checks, 128 Playwright e2e checks, all green
+- [x] 4. Tests: 348 core + 40 ui + 8 storage unit tests, 37 real-Postgres checks, 132 Playwright e2e checks, all green
 - [x] 5. supabase/: migrations with RLS and three structural authorship guards, edge functions
 - [x] 6. Hardening: the eight-lens audit's findings, worst first (see below) — 95 of 95
 - [x] 7. Research pass: libraries/versions; the migration against a real Postgres; prebuild
@@ -43,7 +43,7 @@ see "Next steps".
   typecheck, lint, 348 core tests, 40 ui tests (contrast and the quoted-span
   split), 8 storage tests, the edge-function guards, the SQL structural
   guards, 37 checks against a real Postgres, the serif authorship guard, the
-  web build and 128 end-to-end checks.
+  web build and 132 end-to-end checks.
 - **The account's spend limit is the month's, not the run's.** The fourth
   audit was ten agents and 1.59M tokens and tripped the monthly limit with
   two verifiers still running; their lenses' findings were verified by hand.
@@ -902,6 +902,18 @@ ones that mattered:
   print frame's `afterprint` listener was erased by `document.open()`;
   chip labels rendered in the serif; `formatDay` decided "this year" from
   UTC; `ifThenOf` missed "then," and a lower-case "i".
+
+### One Today, not two (2026-09-11)
+
+Every "Back to today" was a `router.replace('/today')` from a screen that had
+been pushed on top of Today, which leaves two Todays on the stack — the
+hidden one first in the DOM. People never saw it; the e2e did, the moment
+it re-sealed a day and then tried to open a practice from the Today
+underneath. `router.dismissTo('/today')` pops back to the Today that is
+there and only replaces when there is none. Eleven screens, one call each,
+and a check that counts Todays after a seal. Also: sealing a day twice is
+covered end to end now (the second visit opens on the first's words, a blank
+re-seal keeps them, one ledger row).
 
 ## The stones, renamed (2026-09-11)
 
