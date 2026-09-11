@@ -15,7 +15,7 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 1. packages/core: domain model, stores (zustand + persist), engines
 - [x] 2. packages/ui: Studio tokens, Stone/Socket/Ring, HoldBar, Chip, Field, Sheet, text primitives
 - [x] 3. apps/mobile screens (all 16 routes)
-- [x] 4. Tests: 286 core + 33 contrast + 6 storage unit tests, 120 Playwright e2e checks, all green
+- [x] 4. Tests: 296 core + 33 contrast + 6 storage unit tests, 120 Playwright e2e checks, all green
 - [x] 5. supabase/: migrations with RLS and three structural authorship guards, edge functions
 - [x] 6. Hardening: the eight-lens audit's findings, worst first (see below) — 95 of 95
 - [x] 7. Research pass: libraries/versions; the migration against a real Postgres; prebuild
@@ -33,7 +33,7 @@ only tested. What is left needs a machine or a key this one does not have; see
 "Next steps".
 
 - The tree is green and committed: `pnpm verify` runs the toolchain guard,
-  typecheck, lint, 286 core tests, 33 contrast measurements, 6 storage tests, the
+  typecheck, lint, 296 core tests, 33 contrast measurements, 6 storage tests, the
   edge-function guards, the SQL structural guards, 30 checks against a real
   Postgres, the serif authorship guard, the web build and 120 end-to-end
   checks.
@@ -61,7 +61,7 @@ build, then the end-to-end suite. Nothing ships without it passing.
 pnpm test:deps                  # one toolchain; the RN side left to Expo
 pnpm test:dates                 # no local date turned into a UTC day
 pnpm lint                       # eslint; rules-of-hooks is an error
-pnpm test                       # 286 core + 33 contrast + 6 storage unit tests
+pnpm test                       # 296 core + 33 contrast + 6 storage unit tests
 pnpm test:sql                   # RLS on every table, the three authorship guards
 pnpm test:migration             # 30 checks against a real Postgres, via PGlite
 pnpm test:authorship            # nothing but the user's words in the serif
@@ -699,6 +699,24 @@ state-in-effects are **warnings, deliberately**: both are the standard
 react-native pattern in the gesture and timer code, both work, and silencing
 twenty of them to quiet a linter is not fixing them. They are worth one careful
 pass on a device, not a blanket rewrite here.
+
+### The coach, read off the screen (2026-09-11)
+
+Tapped every chip and typed three things at the coach on the built app. Four
+defects in its replies, in the one place the product is supposed to be most
+careful: **"then you put the phone in the hall"** — the coach rewriting the
+person's own if-then into the second person and quoting the edit back as
+theirs; a raw ISO date; today's own proof line quoted back as a day they had
+already got through, with the app's full stop on top of theirs; "1 sealed
+days". And "how many calories should I eat to lose 5kg fast" got the generic
+reply, because `contentGuard` knew the sentence that names a number and not the
+commoner one that asks for it.
+
+Then the free-text reply itself: every message got the same sentence back.
+Without a key the coach can still do the two things it is ever allowed to —
+quote and ask — so it now quotes the line of theirs a message touches and asks
+one of four questions chosen by the text, never at random. Nothing invented,
+nothing flagged ever quoted.
 
 ## Blocked on the user
 - Supabase project URL/anon key, Anthropic API key, fal.ai key, RevenueCat keys: needed to test real providers. Everything runs on local fallbacks without them.
