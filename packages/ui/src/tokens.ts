@@ -257,6 +257,28 @@ export const shadow = {
     shadowOffset: { width: 0, height: 5 },
     elevation: 2,
   },
+  /**
+   * The one elevated surface a screen is allowed (PRD 8.7, 8.10), on the web,
+   * where the native shadow props do nothing. Two layers: a tight contact
+   * shadow and a wide soft one, which is what a card on a lit table casts.
+   */
+  cardWeb: '0 1px 2px rgba(23,24,28,0.05), 0 14px 36px rgba(23,24,28,0.08)',
+  cardWebNight: '0 1px 0 rgba(255,255,255,0.03), 0 16px 40px rgba(0,0,0,0.45)',
+} as const;
+
+/**
+ * The lit ground (PRD 8.3): a radial fall of light from the top of the
+ * screen, so a surface has something to be lifted off. Three stops each.
+ */
+export const ground = {
+  day: ['#F8F7F4', '#EEEDEA', '#E4E3DF'] as const,
+  night: ['#23252C', '#17181C', '#0E0F12'] as const,
+} as const;
+
+/** The physical edge an ink control presses into. */
+export const inkEdge = {
+  day: '#000000',
+  night: '#C6C4BE',
 } as const;
 
 export const PHONE = { width: 390, height: 844 } as const;

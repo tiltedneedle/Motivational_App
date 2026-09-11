@@ -54,6 +54,22 @@ export function Stone({
         style,
       ]}
     >
+      {/*
+        The contact shadow (PRD 8.3: "a soft outer shadow tinted by the
+        stone"). Under the sphere, in its own deep colour, fading to nothing:
+        what makes it sit on the ground rather than float in front of it.
+      */}
+      <View pointerEvents="none" style={{ position: 'absolute', left: -size * 0.15, right: -size * 0.15, top: size * 0.62, height: size * 0.6 }}>
+        <Svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <Defs>
+            <RadialGradient id={`${id}cs`} cx="50%" cy="50%" r="50%">
+              <Stop offset="0%" stopColor={colors[3]} stopOpacity={parked ? 0.12 : 0.22 + 0.1 * polish} />
+              <Stop offset="100%" stopColor={colors[3]} stopOpacity={0} />
+            </RadialGradient>
+          </Defs>
+          <Ellipse cx="50" cy="50" rx="50" ry="50" fill={`url(#${id}cs)`} />
+        </Svg>
+      </View>
       <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         <Defs>
           <RadialGradient id={id} cx="32%" cy="26%" r="75%">

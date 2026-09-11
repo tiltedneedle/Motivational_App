@@ -101,7 +101,7 @@ export default function Heard() {
             <ActivityIndicator color={day.ink} />
           </View>
         ) : (
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 16, gap: 12 }}>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 0 }}>
             {error ? <Body testID="heard-error">{error}</Body> : null}
 
             {rows.map((row, i) => {
@@ -111,11 +111,14 @@ export default function Heard() {
                 <View
                   key={`${row.span.start}-${i}`}
                   testID={`span-${i}`}
+                  // A document, not a stack of cards: the read-back is the
+                  // coach's one page, and its lines sit on hairlines the way a
+                  // list of quotations does.
                   style={{
-                    backgroundColor: day.surface,
-                    borderRadius: 20,
-                    padding: 16,
+                    paddingVertical: 18,
                     gap: 12,
+                    borderTopWidth: i === 0 ? 0 : 1,
+                    borderTopColor: day.line,
                   }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
@@ -149,7 +152,7 @@ export default function Heard() {
             })}
 
             {leftOut && named.length < 3 ? (
-              <Body testID="left-out" style={{ fontStyle: 'italic' }}>
+              <Body testID="left-out" style={{ color: day.ink2 }}>
                 {leftOut}
               </Body>
             ) : null}

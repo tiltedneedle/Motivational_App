@@ -26,7 +26,7 @@ import {
   type WritingMode,
   type WritingSessionState,
 } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Ring, Statement, Stone, Studio, UserText, accent, focusRing, night, type as fonts, webOnlyStyle } from '@morrow/ui';
+import { Body, Chip, InkButton, Label, Question, Ring, Statement, Stone, Studio, UserText, accent, focusRing, night, type as fonts, webOnlyStyle } from '@morrow/ui';
 import { latestText, useMorrow } from '../src/store';
 import { dictation } from '../src/dictation';
 
@@ -48,8 +48,10 @@ export default function Write() {
   const hasEarlierWriting = useMorrow((s) => latestText(s.texts, 'ideal') !== null);
 
   const [phase, setPhase] = useState<'doorway' | 'writing' | 'closed'>('doorway');
-  const [mode, setMode] = useState<WritingMode>('type');
-  const [session, setSession] = useState<WritingSessionState>(() => startWriting(kind, track, 'type'));
+  // Saying it is the default (PRD §7.2) wherever there is a microphone to
+  // say it into; a browser tab starts on the keyboard.
+  const [mode, setMode] = useState<WritingMode>(Platform.OS === 'web' ? 'type' : 'say');
+  const [session, setSession] = useState<WritingSessionState>(() => startWriting(kind, track, Platform.OS === 'web' ? 'type' : 'say'));
   const [endedEarly, setEndedEarly] = useState(false);
   /** The safety screen stopped this sitting going on to the read-back. */
   const [paused, setPaused] = useState(false);
@@ -219,9 +221,10 @@ export default function Write() {
           </View>
           <View style={{ gap: 20 }}>
             <Stone size={120} domain="health" polish={0.4} style={{ alignSelf: 'center' }} />
-            <Statement style={{ color: night.ink, textAlign: 'center', fontSize: 26, lineHeight: 32 }}>
+            {/* The prompt is read once, calmly: a question's weight, not a headline's. */}
+            <Question style={{ color: night.ink, textAlign: 'center', fontSize: 22, lineHeight: 30 }}>
               {doorway.prompt}
-            </Statement>
+            </Question>
             <Body style={{ color: night.ink2, textAlign: 'center' }}>{doorway.note}</Body>
             <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'center' }}>
               {(['type', 'say', 'walk'] as const).map((m) => (

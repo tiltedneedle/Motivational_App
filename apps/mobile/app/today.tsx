@@ -4,7 +4,7 @@
  */
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   consistencyCaption,
@@ -21,12 +21,14 @@ import {
 } from '@morrow/core';
 import {
   Body,
+  Card,
   Chip,
   InkButton,
   Label,
   Quoted,
   Readout,
   Ring,
+  Rise,
   Statement,
   Stone,
   Studio,
@@ -36,8 +38,10 @@ import {
   accent,
   day,
   radius,
+  shadow,
   type as fonts,
   useReducedMotion,
+  webOnlyStyle,
 } from '@morrow/ui';
 import { MoveStone } from '../src/components/MoveStone';
 import { hasSupabase } from '../src/supabase';
@@ -160,7 +164,7 @@ export default function Today() {
           </View>
         ) : null}
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: 24 }}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: 168 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingTop: 12 }}>
             {/*
               The app's day, not the wall clock's. Somebody writing at half past
@@ -173,9 +177,9 @@ export default function Today() {
             <Label>{plural(days.filter((d) => d.sealedAt).length, 'sealed day')}</Label>
           </View>
 
-          <Statement style={{ marginTop: 12 }}>
-            {greeting(new Date(), state.profile.displayName)}
-          </Statement>
+          <Rise index={0} reducedMotion={reduced}>
+            <Statement style={{ marginTop: 12 }}>{greeting(new Date(), state.profile.displayName)}</Statement>
+          </Rise>
 
           {/*
             A letter that has arrived (PRD §7.8). Offered once, on the day it
@@ -188,7 +192,7 @@ export default function Today() {
               accessibilityRole="button"
               accessibilityLabel={`${plural(unreadLetters, 'letter')} waiting`}
               onPress={() => router.push('/letters')}
-              style={{ marginTop: 16, backgroundColor: day.surface, borderRadius: radius.card, padding: 18, gap: 6 }}
+              style={{ marginTop: 16, backgroundColor: day.surface2, borderRadius: radius.card, padding: 18, gap: 6 }}
             >
               <Label style={{ color: accent.coralText }}>
                 {unreadLetters === 1 ? 'A letter' : plural(unreadLetters, 'letter')}
@@ -208,7 +212,7 @@ export default function Today() {
               accessibilityRole="button"
               accessibilityLabel="Sunday reading: ten minutes with the Book"
               onPress={() => router.push('/reading')}
-              style={{ marginTop: 16, backgroundColor: day.surface, borderRadius: radius.card, padding: 18, gap: 6 }}
+              style={{ marginTop: 16, backgroundColor: day.surface2, borderRadius: radius.card, padding: 18, gap: 6 }}
             >
               <Label style={{ color: accent.coralText }}>Sunday</Label>
               <Body style={{ color: day.ink, fontSize: 16 }}>Ten minutes with what you wrote.</Body>
@@ -230,7 +234,7 @@ export default function Today() {
           ) : null}
 
           {returnCard ? (
-            <View testID="return-card" style={{ marginTop: 16, backgroundColor: day.surface, borderRadius: radius.card, padding: 18, gap: 10 }}>
+            <View testID="return-card" style={{ marginTop: 16, backgroundColor: day.surface2, borderRadius: radius.card, padding: 18, gap: 10 }}>
               <Label style={{ color: accent.coralText }}>Welcome back</Label>
               <Quoted text={returnCard.body} spans={returnCard.quotes} style={{ color: day.ink }} />
               <Chip label="Start small" onPress={() => setReturnCard(null)} />
@@ -239,7 +243,7 @@ export default function Today() {
 
           {/* the goal row */}
           {goals.length ? (
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 4, marginTop: 20 }}>
+            <Rise index={1} reducedMotion={reduced} style={{ flexDirection: 'row', justifyContent: 'flex-start', gap: 6, marginTop: 24 }}>
               {goals.slice(0, 4).map((g) => {
                 const plan = plansById.get(g.id);
                 const total = plan?.moves.length ?? 0;
@@ -255,18 +259,18 @@ export default function Today() {
                     // Four of these have to share a 320-point screen with
                     // 44 points of margin: a fixed 78 each did not, and the
                     // fourth stone was pushed off the right edge.
-                    style={{ alignItems: 'center', gap: 8, flex: 1, minWidth: 0, maxWidth: 88 }}
+                    style={{ alignItems: 'center', gap: 8, width: 80 }}
                   >
-                    <Ring size={60} progress={pct} color={domainMeta(g.domain).hex} width={3.5}>
+                    <Ring size={62} progress={pct} color={domainMeta(g.domain).hex} width={3} track={day.line2}>
                       <Stone size={42} domain={g.domain} polish={0.5 + pct * 0.5} />
                     </Ring>
-                    <Text numberOfLines={1} style={{ fontFamily: fonts.sansMedium, fontSize: 12, color: day.ink2 }}>
+                    <Text numberOfLines={1} style={{ fontFamily: fonts.sansMedium, fontSize: 12, lineHeight: 16, color: day.ink2, textAlign: 'center' }}>
                       {g.title}
                     </Text>
                   </Pressable>
                 );
               })}
-            </View>
+            </Rise>
           ) : null}
 
           {/*
@@ -275,13 +279,12 @@ export default function Today() {
             so is what makes the seal at the end of it mean anything.
           */}
           {!now && done.length > 0 ? (
-            <View
+            <Card
               testID="day-done-card"
               style={{
                 marginTop: 22,
-                backgroundColor: day.surface,
                 borderRadius: 28,
-                padding: 20,
+                padding: 22,
                 gap: 8,
               }}
             >
@@ -306,7 +309,7 @@ export default function Today() {
                   <UserText style={{ fontSize: 16, lineHeight: 23, color: day.ink2 }}>{intendedMove.title}</UserText>
                 </View>
               ) : null}
-            </View>
+            </Card>
           ) : null}
 
           {/*
@@ -327,13 +330,13 @@ export default function Today() {
 
           {/* Now */}
           {now ? (
-            <View
+            <Rise index={2} reducedMotion={reduced}>
+            <Card
               testID="now-card"
               style={{
                 marginTop: 22,
-                backgroundColor: day.surface,
                 borderRadius: 28,
-                padding: 20,
+                padding: 22,
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: 16,
@@ -376,7 +379,8 @@ export default function Today() {
                   setToast({ text: `${now.title} · not today`, kind: 'park', undoId: now.id });
                 }}
               />
-            </View>
+            </Card>
+            </Rise>
           ) : (
             <View testID="all-placed" style={{ marginTop: 22 }}>
               <Body style={{ color: day.ink }}>
@@ -521,37 +525,92 @@ export default function Today() {
             accessibilityRole="button"
             accessibilityLabel={`Consistency ${score.score}. Open the ledger and the almanac.`}
             onPress={() => router.push('/progress')}
-            style={{ marginTop: 26, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}
+            style={{ marginTop: 30, gap: 8 }}
           >
-            <View>
-              <Label>Consistency</Label>
-              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
-                <Readout testID="consistency">{score.score}</Readout>
-                {score.delta !== 0 ? (
-                  <Text style={{ fontFamily: fonts.sansSemi, fontSize: 14, color: accent.success }}>
-                    {score.delta > 0 ? `+${score.delta}` : score.delta}
-                  </Text>
-                ) : null}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+              <View>
+                <Label>Consistency</Label>
+                <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
+                  <Readout testID="consistency">{score.score}</Readout>
+                  {score.delta !== 0 ? (
+                    <Text style={{ fontFamily: fonts.sansSemi, fontSize: 14, color: score.delta > 0 ? accent.success : day.ink2 }}>
+                      {score.delta > 0 ? `+${score.delta}` : score.delta}
+                    </Text>
+                  ) : null}
+                </View>
               </View>
-              <Body style={{ fontSize: 13 }}>{consistencyCaption(score)}</Body>
+              <Label style={{ paddingBottom: 6 }}>Progress →</Label>
             </View>
-            <View style={{ width: 140, height: 10, borderRadius: 5, backgroundColor: day.surface2, overflow: 'hidden' }}>
-              <View style={{ width: `${score.score}%`, height: '100%', backgroundColor: accent.coral }} />
+            {/* The bar under the number, the width of the page, like a rule. */}
+            <View style={{ height: 8, borderRadius: 4, backgroundColor: day.surface2, overflow: 'hidden' }}>
+              <View style={{ width: `${score.score}%`, height: '100%', borderRadius: 4, backgroundColor: accent.coral }} />
             </View>
+            <Body style={{ fontSize: 13 }}>{consistencyCaption(score)}</Body>
           </Pressable>
         </ScrollView>
 
-        {/* tab bar */}
-        <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 18, paddingBottom: 10, alignItems: 'center' }}>
+        {/*
+          The tab bar (PRD 8.7), and the two controls that belong to Today
+          alone. Five words in one white pill, each given the same room; the
+          plus and the seal float above the bar's right end so that neither
+          the bar nor the fifth tab has to give way to them — with the plus
+          and the seal inside the bar, "You" was pushed off the edge of a
+          390-point phone.
+        */}
+        <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 18, paddingBottom: 10, gap: 12 }}>
+          <View pointerEvents="box-none" style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 10 }}>
+            <Pressable
+              testID="new-move-button"
+              accessibilityRole="button"
+              accessibilityLabel="A new move, or something to keep"
+              onPress={() => router.push('/new-move')}
+              style={({ pressed }) => ({
+                width: 50,
+                height: 50,
+                borderRadius: 25,
+                backgroundColor: day.surface,
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderWidth: 1,
+                borderColor: day.line2,
+                transform: [{ scale: pressed ? 0.95 : 1 }],
+                ...(Platform.OS === 'web' ? webOnlyStyle({ boxShadow: shadow.cardWeb }) : shadow.card),
+              })}
+            >
+              <Text style={{ color: day.ink, fontSize: 26, lineHeight: 30, fontFamily: fonts.sansMedium }}>+</Text>
+            </Pressable>
+            <Pressable
+              testID="seal-day-button"
+              accessibilityRole="button"
+              accessibilityLabel="Seal the day"
+              onPress={() => router.push('/seal-day')}
+              style={({ pressed }) => ({
+                width: 58,
+                height: 58,
+                borderRadius: 29,
+                backgroundColor: accent.coral,
+                alignItems: 'center',
+                justifyContent: 'center',
+                transform: [{ scale: pressed ? 0.95 : 1 }],
+                ...(Platform.OS === 'web'
+                  ? webOnlyStyle({ boxShadow: '0 10px 28px rgba(234,75,46,0.35)' })
+                  : { shadowColor: accent.coral, shadowOpacity: 0.35, shadowRadius: 18, shadowOffset: { width: 0, height: 10 } }),
+              })}
+            >
+              <Text style={{ color: '#FFFFFF', fontSize: 22, lineHeight: 26, fontFamily: fonts.sansBold }}>✓</Text>
+            </Pressable>
+          </View>
           <View
             style={{
-              flex: 1,
               flexDirection: 'row',
-              justifyContent: 'space-around',
               alignItems: 'center',
-              height: 60,
-              borderRadius: 30,
+              height: 58,
+              borderRadius: 29,
+              paddingHorizontal: 6,
               backgroundColor: day.surface,
+              borderWidth: 1,
+              borderColor: day.line2,
+              ...(Platform.OS === 'web' ? webOnlyStyle({ boxShadow: shadow.cardWeb }) : shadow.card),
             }}
           >
             <TabButton label="Today" active testID="tab-today" onPress={() => undefined} />
@@ -560,39 +619,6 @@ export default function Today() {
             <TabButton label="Coach" testID="tab-coach" onPress={() => router.push('/coach')} />
             <TabButton label="You" testID="tab-you" onPress={() => router.push('/settings')} />
           </View>
-          {/* The plus (PRD 7.6): the New move sheet, and capture behind it. */}
-          <Pressable
-            testID="new-move-button"
-            accessibilityRole="button"
-            accessibilityLabel="A new move, or something to keep"
-            onPress={() => router.push('/new-move')}
-            style={{
-              width: 48,
-              height: 48,
-              borderRadius: 24,
-              backgroundColor: day.surface,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Text style={{ color: day.ink, fontSize: 24, lineHeight: 28, fontFamily: fonts.sansMedium }}>+</Text>
-          </Pressable>
-          <Pressable
-            testID="seal-day-button"
-            accessibilityRole="button"
-            accessibilityLabel="Seal the day"
-            onPress={() => router.push('/seal-day')}
-            style={{
-              width: 60,
-              height: 60,
-              borderRadius: 30,
-              backgroundColor: accent.coral,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Text style={{ color: '#FFFFFF', fontSize: 24, fontFamily: fonts.sansBold }}>✓</Text>
-          </Pressable>
         </View>
       </SafeAreaView>
     </Studio>
@@ -601,8 +627,25 @@ export default function Today() {
 
 function TabButton({ label, active, onPress, testID }: { label: string; active?: boolean; onPress: () => void; testID?: string }) {
   return (
-    <Pressable testID={testID} accessibilityRole="tab" accessibilityState={{ selected: Boolean(active) }} onPress={onPress} style={{ padding: 10 }}>
-      <Text style={{ fontFamily: fonts.sansSemi, fontSize: 13, color: active ? day.ink : day.ink3 }}>{label}</Text>
+    <Pressable
+      testID={testID}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: Boolean(active) }}
+      onPress={onPress}
+      style={({ pressed }) => ({
+        flex: 1,
+        minWidth: 0,
+        height: 46,
+        borderRadius: 23,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: active ? day.surface2 : 'transparent',
+        opacity: pressed ? 0.7 : 1,
+      })}
+    >
+      <Text numberOfLines={1} style={{ fontFamily: active ? fonts.sansSemi : fonts.sansMedium, fontSize: 13, lineHeight: 16, color: active ? day.ink : day.ink2 }}>
+        {label}
+      </Text>
     </Pressable>
   );
 }

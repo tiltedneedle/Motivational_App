@@ -316,7 +316,7 @@ export default function Settings() {
                       <Chip testID="settings-account-signout" label="Sign out" ghost onPress={() => void signOutAccount()} />
                     </View>
                     {confirmingAccount ? (
-                      <View style={{ gap: 8, backgroundColor: day.surface, padding: 16, borderRadius: 18 }}>
+                      <View style={{ gap: 8, backgroundColor: day.surface2, padding: 16, borderRadius: 18 }}>
                         <Body style={{ color: day.ink }}>
                           This closes the account and deletes its copy of your writing within seven days. Nothing on
                           this phone is touched.
@@ -357,7 +357,7 @@ export default function Settings() {
               </Body>
             ) : null}
             {confirming ? (
-              <View style={{ gap: 8, backgroundColor: day.surface, padding: 16, borderRadius: 18 }}>
+              <View style={{ gap: 8, backgroundColor: day.surface2, padding: 16, borderRadius: 18 }}>
                 <Body style={{ color: day.ink }}>
                   This deletes your writing, your goals and every edition of the Book on this device. It cannot be undone.
                 </Body>

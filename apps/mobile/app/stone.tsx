@@ -183,7 +183,7 @@ export default function StoneScreen() {
 
           {/* the single follow-up, never a second */}
           {needsFollowUp ? (
-            <View testID="stone-followup" style={{ backgroundColor: day.surface, borderRadius: 18, padding: 16, gap: 8 }}>
+            <View testID="stone-followup" style={{ backgroundColor: day.surface2, borderRadius: 18, padding: 16, gap: 8 }}>
               <Question style={{ fontSize: 18 }}>{followUpPrompt(kind === 'monitoring' ? 'monitoring' : 'strategies')}</Question>
               <UserField
                 testID="stone-followup-input"

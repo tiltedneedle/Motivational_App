@@ -14,10 +14,10 @@
  */
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { domainMeta, splitFirstMoves } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Statement, Stone, Studio, TextButton, UserField, UserText, day, radius } from '@morrow/ui';
+import { splitFirstMoves } from '@morrow/core';
+import { Body, Chip, InkButton, Label, Statement, Stone, Studio, TextButton, UserField, UserText, accent, day, radius } from '@morrow/ui';
 import { analysesFor, useGoals, useMorrow } from '../src/store';
 
 const LENGTHS = ['2 min', '10 min', '25 min', '45 min'] as const;
@@ -108,30 +108,44 @@ export default function NewMove() {
 
           {mode === 'move' ? (
             <>
-              {goalId ? (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                  <Stone size={40} domain={goals.find((g) => g.id === goalId)?.domain ?? 'health'} polish={0.7} />
-                  <Body style={{ fontSize: 13, flex: 1 }}>{domainMeta(goals.find((g) => g.id === goalId)?.domain ?? 'health').label}</Body>
-                </View>
-              ) : null}
-
               <View style={{ gap: 8 }}>
                 <Label>What</Label>
                 {suggestions.length ? (
-                  <View style={{ gap: 8 }}>
-                    {/* Cut from their line: their words, in their face. */}
-                    {suggestions.map((s) => (
-                      <Chip
-                        key={s}
-                        testID={`new-move-pick-${suggestions.indexOf(s)}`}
-                        label={s}
-                        selected={picked === s}
-                        onPress={() => {
-                          setPicked(picked === s ? null : s);
-                          setProblem(null);
-                        }}
-                      />
-                    ))}
+                  <View style={{ borderTopWidth: 1, borderTopColor: day.line }}>
+                    {/*
+                      Cut from their line: their words, in their face. Rows on
+                      hairlines rather than chips, because a chip is the app's
+                      sans and these are sentences the person wrote.
+                    */}
+                    {suggestions.map((s, i) => {
+                      const on = picked === s;
+                      return (
+                        <Pressable
+                          key={s}
+                          testID={`new-move-pick-${i}`}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected: on }}
+                          onPress={() => {
+                            setPicked(on ? null : s);
+                            setProblem(null);
+                          }}
+                          style={({ pressed }) => ({
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 14,
+                            paddingVertical: 12,
+                            paddingHorizontal: 4,
+                            borderBottomWidth: 1,
+                            borderBottomColor: day.line,
+                            opacity: pressed ? 0.7 : 1,
+                          })}
+                        >
+                          <Stone size={22} domain={goals.find((g) => g.id === goalId)?.domain ?? 'health'} polish={on ? 1 : 0.35} seated={on} />
+                          <UserText style={{ flex: 1, fontSize: 17, lineHeight: 24, color: on ? day.ink : day.ink2 }}>{s}</UserText>
+                          {on ? <Label style={{ color: accent.coralText }}>Chosen</Label> : null}
+                        </Pressable>
+                      );
+                    })}
                   </View>
                 ) : (
                   <View style={{ gap: 8 }}>
@@ -173,7 +187,7 @@ export default function NewMove() {
               </View>
 
               {picked ? (
-                <View style={{ backgroundColor: day.surface, borderRadius: radius.card, padding: 14, gap: 4 }}>
+                <View style={{ backgroundColor: day.surface2, borderRadius: radius.card, padding: 14, gap: 4 }}>
                   <Label>Lands at the top of Later today</Label>
                   <UserText style={{ fontSize: 17, lineHeight: 24 }}>{picked}</UserText>
                 </View>

@@ -237,7 +237,7 @@ export default function Coach() {
                 text={brief.today}
                 spans={brief.quotedSpans}
                 italic={false}
-                style={{ fontFamily: fonts.sansBold, fontSize: 27, lineHeight: 33, letterSpacing: -1, color: day.ink }}
+                style={{ fontFamily: fonts.sansSemi, fontSize: 24, lineHeight: 31, letterSpacing: -0.4, color: day.ink }}
               />
               <Rule />
               {/*

@@ -21,7 +21,8 @@ import {
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
-import { accent, day, focusRing, isDark, motion, night, radius, size, subscribeDark, type as fonts, webOnlyStyle, type Palette } from './tokens';
+import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
+import { accent, day, focusRing, ground, inkEdge, isDark, motion, night, radius, shadow, size, subscribeDark, type as fonts, webOnlyStyle, type Palette } from './tokens';
 import { splitQuoted } from './quoted';
 
 export const PaletteContext = React.createContext<{ p: Palette; dark: boolean }>({ p: day, dark: false });
@@ -65,12 +66,111 @@ export function Studio({
         pasted onto a white sheet.
       */}
       <View testID={testID} style={[{ flex: 1, backgroundColor: p.ground }, style]}>
+        <Light dark={isNight} />
         <View style={{ flex: 1, width: '100%', maxWidth: wide ? TWO_COLUMN : COLUMN, alignSelf: 'center' }}>
           {children}
         </View>
       </View>
     </PaletteContext.Provider>
   );
+}
+
+/**
+ * The light in the studio (PRD 8.3): a radial fall from above the top edge,
+ * brightest where the heading sits, darkest at the bottom corners. One SVG
+ * behind everything; the studio's only gradient apart from the stones.
+ */
+function Light({ dark }: { dark: boolean }) {
+  const stops = dark ? ground.night : ground.day;
+  const id = dark ? 'studio-light-night' : 'studio-light-day';
+  return (
+    <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+      <Svg width="100%" height="100%" preserveAspectRatio="none" viewBox="0 0 100 100">
+        <Defs>
+          <RadialGradient id={id} cx="50%" cy="-12%" r="115%" gradientUnits="objectBoundingBox">
+            <Stop offset="0%" stopColor={stops[0]} />
+            <Stop offset="48%" stopColor={stops[1]} />
+            <Stop offset="100%" stopColor={stops[2]} />
+          </RadialGradient>
+        </Defs>
+        <Rect x="0" y="0" width="100" height="100" fill={`url(#${id})`} />
+      </Svg>
+    </View>
+  );
+}
+
+/**
+ * The one elevated surface a screen is allowed (PRD 8.7): white on the lit
+ * ground, with the two shadows a card on a table casts. Everything else on
+ * a screen is a hairline or a well, never another card.
+ */
+export function Card({
+  children,
+  style,
+  testID,
+  accessibilityLabel,
+}: {
+  children: React.ReactNode;
+  style?: StyleProp<ViewStyle>;
+  testID?: string;
+  accessibilityLabel?: string;
+}) {
+  const { p, dark } = usePalette();
+  return (
+    <View
+      testID={testID}
+      accessibilityLabel={accessibilityLabel}
+      style={[
+        {
+          backgroundColor: p.surface,
+          borderRadius: radius.card,
+          padding: 20,
+          borderWidth: dark ? 1 : 0,
+          borderColor: p.line2,
+          ...(Platform.OS === 'web'
+            ? webOnlyStyle({ boxShadow: dark ? shadow.cardWebNight : shadow.cardWeb })
+            : { ...shadow.card, shadowOpacity: dark ? 0.5 : 0.1, shadowRadius: 28, shadowOffset: { width: 0, height: 12 } }),
+        },
+        style,
+      ]}
+    >
+      {children}
+    </View>
+  );
+}
+
+/**
+ * A part of the screen arriving (PRD 8.5: "entry sequences stagger at
+ * 0.08–0.1 s"). A rise of twelve points and a fade, on the standard spring,
+ * one beat later per index. Reduce motion makes it a crossfade, as the spec
+ * says every move becomes.
+ */
+export function Rise({
+  index = 0,
+  children,
+  style,
+  reducedMotion = false,
+}: {
+  index?: number;
+  children: React.ReactNode;
+  style?: StyleProp<ViewStyle>;
+  reducedMotion?: boolean;
+}) {
+  const opacity = useRef(new Animated.Value(0)).current;
+  const y = useRef(new Animated.Value(reducedMotion ? 0 : 12)).current;
+  useEffect(() => {
+    const delay = index * motion.stagger;
+    const fade = Animated.timing(opacity, { toValue: 1, duration: motion.fade, delay, useNativeDriver: true });
+    if (reducedMotion) {
+      fade.start();
+      return;
+    }
+    Animated.parallel([
+      fade,
+      Animated.spring(y, { toValue: 0, delay, useNativeDriver: true, ...motion.standard }),
+    ]).start();
+  }, [index, opacity, reducedMotion, y]);
+  return <Animated.View style={[{ opacity, transform: [{ translateY: y }] }, style]}>{children}</Animated.View>;
 }
 
 /**
@@ -326,7 +426,7 @@ export function Chip({
 }) {
   const { p, dark } = usePalette();
   const bg = selected ? p.ink : ghost ? 'transparent' : p.surface;
-  const fg = selected ? (dark ? night.ground : '#FFFFFF') : p.ink;
+  const fg = selected ? p.onInk : p.ink;
   return (
     <Pressable
       testID={testID}
@@ -336,19 +436,23 @@ export function Chip({
       accessibilityLabel={label}
       style={({ pressed }) => [
         {
+          minHeight: 40,
           paddingVertical: 9,
-          paddingHorizontal: 14,
+          paddingHorizontal: 16,
           borderRadius: radius.chip,
           backgroundColor: bg,
-          borderWidth: ghost ? 1.5 : 0,
-          borderColor: p.line,
+          // A hairline on the unselected chip lifts it off the lit ground
+          // without a shadow, which the studio saves for its one card.
+          borderWidth: 1,
+          borderColor: selected ? p.ink : ghost ? p.line : dark ? p.line2 : 'rgba(23,24,28,0.06)',
           opacity: pressed ? 0.85 : 1,
           transform: [{ scale: pressed ? 0.97 : 1 }],
+          justifyContent: 'center',
         },
         style,
       ]}
     >
-      <Text style={{ fontFamily: fonts.sansSemi, fontSize: 14, color: ghost ? p.ink2 : fg }}>{label}</Text>
+      <Text style={{ fontFamily: fonts.sansSemi, fontSize: 14, lineHeight: 20, color: ghost ? p.ink2 : fg }}>{label}</Text>
     </Pressable>
   );
 }
@@ -369,6 +473,7 @@ export function InkButton({
   style?: StyleProp<ViewStyle>;
 }) {
   const { p, dark } = usePalette();
+  const EDGE = 3;
   return (
     <Pressable
       testID={testID}
@@ -376,32 +481,35 @@ export function InkButton({
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled: disabled || busy, busy }}
-      style={({ pressed }) => [
-        {
-          // A floor, not a ceiling. At 200% type a fixed 58 clipped the label
-          // inside the button that was supposed to carry it.
-          minHeight: 58,
-          paddingVertical: 14,
-          paddingHorizontal: 20,
-          borderRadius: radius.chip,
-          backgroundColor: p.ink,
-          alignItems: 'center',
-          justifyContent: 'center',
-          opacity: disabled ? 0.35 : 1,
-          transform: [{ translateY: pressed ? 2 : 0 }],
-          ...(Platform.OS === 'web'
-            ? { boxShadow: pressed ? '0 3px 0 #000' : '0 5px 0 #000' }
-            : { shadowColor: '#000', shadowOpacity: 1, shadowRadius: 0, shadowOffset: { width: 0, height: pressed ? 3 : 5 } }),
-        },
-        style,
-      ]}
+      style={[{ opacity: disabled ? 0.35 : 1 }, style]}
     >
-      {busy ? (
-        <ActivityIndicator color={dark ? night.ground : '#FFFFFF'} />
-      ) : (
-        <Text style={{ fontFamily: fonts.sansSemi, fontSize: 17, textAlign: 'center', color: dark ? night.ground : '#FFFFFF' }}>
-          {label}
-        </Text>
+      {({ pressed }) => (
+        // The edge is a real thing under the button (PRD 8.1: "controls are
+        // ink with a physical bottom edge they press into"): a darker slab
+        // the face sits on and drops onto when pressed, rather than a hard
+        // black shadow painted beside it.
+        <View style={{ borderRadius: radius.chip, backgroundColor: dark ? inkEdge.night : inkEdge.day, paddingBottom: pressed ? 0 : EDGE }}>
+          <View
+            style={{
+              // A floor, not a ceiling. At 200% type a fixed 58 clipped the
+              // label inside the button that was supposed to carry it.
+              minHeight: 56,
+              paddingVertical: 14,
+              paddingHorizontal: 22,
+              borderRadius: radius.chip,
+              backgroundColor: p.ink,
+              alignItems: 'center',
+              justifyContent: 'center',
+              transform: [{ translateY: pressed ? EDGE : 0 }],
+            }}
+          >
+            {busy ? (
+              <ActivityIndicator color={p.onInk} />
+            ) : (
+              <Text style={{ fontFamily: fonts.sansSemi, fontSize: 17, lineHeight: 22, textAlign: 'center', color: p.onInk }}>{label}</Text>
+            )}
+          </View>
+        </View>
       )}
     </Pressable>
   );
@@ -410,8 +518,14 @@ export function InkButton({
 export function TextButton({ label, onPress, testID }: { label: string; onPress?: () => void; testID?: string }) {
   const { p } = usePalette();
   return (
-    <Pressable testID={testID} onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={{ height: 44, alignItems: 'center', justifyContent: 'center' }}>
-      <Text style={{ fontFamily: fonts.sansMedium, fontSize: 15, color: p.ink3 }}>{label}</Text>
+    <Pressable
+      testID={testID}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={({ pressed }) => ({ minHeight: 44, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}
+    >
+      <Text style={{ fontFamily: fonts.sansMedium, fontSize: 15, lineHeight: 20, color: p.ink2 }}>{label}</Text>
     </Pressable>
   );
 }

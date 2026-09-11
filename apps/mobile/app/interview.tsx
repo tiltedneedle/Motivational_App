@@ -115,7 +115,7 @@ export default function Interview() {
               app's running commentary in it is exactly the confusion the whole
               rule exists to prevent.
             */}
-            <Body style={{ fontSize: 15, lineHeight: 20, fontStyle: 'italic', color: day.ink2 }} testID="guess-line">
+            <Body style={{ fontSize: 15, lineHeight: 20, color: day.ink2 }} testID="guess-line">
               {guessLine(s)}
             </Body>
           </View>
@@ -153,6 +153,8 @@ export default function Interview() {
                     paddingHorizontal: 16,
                     borderRadius: 18,
                     backgroundColor: isSelected(label) ? day.ink : day.surface,
+                    borderWidth: 1,
+                    borderColor: isSelected(label) ? day.ink : day.line2,
                     transform: [{ scale: pressed ? 0.985 : 1 }],
                   })}
                 >
@@ -167,7 +169,7 @@ export default function Interview() {
                       backgroundColor: isSelected(label) ? 'rgba(255,255,255,0.18)' : 'rgba(23,24,28,0.06)',
                     }}
                   >
-                    <Text style={{ fontFamily: fonts.sansSemi, fontSize: 12, color: isSelected(label) ? '#FFF' : day.ink2 }}>
+                    <Text style={{ fontFamily: fonts.sansSemi, fontSize: 12, color: isSelected(label) ? day.onInk : day.ink2 }}>
                       {LETTERS[i] ?? '+'}
                     </Text>
                   </View>

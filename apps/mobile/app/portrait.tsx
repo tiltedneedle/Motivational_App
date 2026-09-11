@@ -18,7 +18,7 @@ import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { domainMeta } from '@morrow/core';
-import { Body, InkButton, Label, Quoted, Rule, Statement, Stone, Studio, TextButton, UserField, UserText, accent, day, radius } from '@morrow/ui';
+import { Body, Card, InkButton, Label, Quoted, Rule, Statement, Stone, Studio, TextButton, UserField, UserText, accent, day } from '@morrow/ui';
 import { useGoals, useMorrow } from '../src/store';
 import { hasSupabase } from '../src/supabase';
 
@@ -161,10 +161,7 @@ export default function PortraitScreen() {
           </View>
 
           {portrait.ifThen ? (
-            <View
-              testID="portrait-if-then"
-              style={{ backgroundColor: day.surface, borderRadius: radius.field, padding: 16, gap: 4 }}
-            >
+            <Card testID="portrait-if-then" style={{ padding: 18, gap: 4 }}>
               <Label style={{ color: accent.coralText }}>When it gets in the way</Label>
               {/* "If … then I" is the app's; the two halves inside it are theirs. */}
               <Quoted
@@ -173,7 +170,7 @@ export default function PortraitScreen() {
                 italic={false}
                 style={{ fontSize: 17, lineHeight: 25, color: day.ink }}
               />
-            </View>
+            </Card>
           ) : null}
 
           {portrait.firstMoves.length ? (

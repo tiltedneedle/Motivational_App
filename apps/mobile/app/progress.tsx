@@ -14,7 +14,7 @@
  */
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   almanac,
@@ -39,6 +39,7 @@ import {
   accent,
   day,
   type as fonts,
+  COLUMN,
 } from '@morrow/ui';
 import { useConsistency, useMorrow } from '../src/store';
 
@@ -253,12 +254,21 @@ function Almanac({ marks, today }: { marks: AlmanacMark[]; today: string }) {
     return out;
   }, [marks]);
 
+  // A shelf: one month to a row, every day on it, however wide the phone.
+  // Wrapping 31 stones at a fixed size put five of them on a second line
+  // under every month and called it a year.
+  const { width } = useWindowDimensions();
+  const LABEL = 38;
+  const GAP = 2;
+  const room = Math.min(width, COLUMN) - 44 - LABEL - GAP * 30;
+  const stone = Math.max(6, Math.min(10, Math.floor(room / 31)));
+
   return (
-    <View testID="progress-almanac" style={{ gap: 12 }}>
+    <View testID="progress-almanac" style={{ gap: 8 }}>
       {months.map((month) => (
-        <View key={month.name} style={{ gap: 5 }}>
-          <Label style={{ fontSize: 10 }}>{month.name}</Label>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
+        <View key={month.name} style={{ flexDirection: 'row', alignItems: 'center', gap: 0 }}>
+          <Label style={{ fontSize: 10, width: LABEL }}>{month.name}</Label>
+          <View style={{ flexDirection: 'row', gap: GAP, alignItems: 'center' }}>
             {month.marks.map((m) => (
               <View
                 key={m.day}
@@ -282,7 +292,7 @@ function Almanac({ marks, today }: { marks: AlmanacMark[]; today: string }) {
                 }}
               >
                 <Stone
-                  size={9}
+                  size={stone}
                   domain="custom"
                   // Polish is what the day held; seating is the person closing it.
                   polish={m.quiet ? 0.25 : Math.min(1, 0.45 + m.evidence * 0.18)}

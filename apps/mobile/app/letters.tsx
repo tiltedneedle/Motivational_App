@@ -15,7 +15,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WRITE_TO_FUTURE_MAX_DAYS, dayOf, formatDay, plural, type Letter } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Quoted, Rule, Statement, Studio, TextButton, UserField, UserText, accent, day, radius } from '@morrow/ui';
+import { Body, Card, Chip, InkButton, Label, Quoted, Rule, Statement, Studio, TextButton, UserField, UserText, accent, day } from '@morrow/ui';
 import { useMorrow } from '../src/store';
 
 /** The delivery distances offered, in days. A year is the ceiling. */
@@ -99,11 +99,7 @@ export default function Letters() {
           ) : null}
 
           {arrived.map((l) => (
-            <View
-              key={l.id}
-              testID={`letter-${l.id}`}
-              style={{ backgroundColor: day.surface, borderRadius: radius.card, padding: 18, gap: 10 }}
-            >
+            <Card key={l.id} testID={`letter-${l.id}`} style={{ padding: 20, gap: 10 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
                 <Label style={{ color: accent.coralText }}>
                   {l.direction === 'to_future' ? 'From you' : 'From later'}
@@ -114,7 +110,7 @@ export default function Letters() {
               {!l.readAt ? (
                 <TextButton testID={`letter-read-${l.id}`} label="Keep it" onPress={() => markLetterRead(l.id)} />
               ) : null}
-            </View>
+            </Card>
           ))}
 
           {waiting.length ? (
