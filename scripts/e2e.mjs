@@ -456,6 +456,50 @@ async function main() {
       check('seating a stone moves consistency', before !== after, `${before} → ${after}`);
     }
 
+    // ---- the New move sheet, and capture (PRD 7.6)
+    //
+    // The plus raises a sheet whose every suggestion is cut from the person's
+    // own line for the goal; what they pick lands on Today. Capture files one
+    // line in the ledger, with undo.
+    const rowsBefore = await page.locator('[data-testid^="row-mv"]').count();
+    await tap('new-move-button');
+    check('the plus raises the New move sheet', await seen('screen-new-move'));
+    if (await seen('screen-new-move')) {
+      const offered = await seen('new-move-pick-0');
+      check('the sheet offers moves cut from their own line', offered);
+      if (offered) {
+        const offer = await text('new-move-pick-0');
+        check('and the offer is their sentence', IDEALISH.some((w) => offer.toLowerCase().includes(w)), offer);
+        await tap('new-move-pick-0');
+        await tap('new-move-length-2');
+        await tap('new-move-keep');
+        await page.waitForTimeout(500);
+        check('the move lands on Today', await seen('screen-today'));
+        const rowsAfter = await page.locator('[data-testid^="row-mv"], [data-testid="now-card"]').count();
+        check('as one more stone', rowsAfter > rowsBefore, `${rowsBefore} → ${rowsAfter}`);
+      }
+      await tap('new-move-button');
+      await tap('new-move-mode-capture');
+      await page.locator('[data-testid="capture-text"]').fill('Saw the heron again on the towpath');
+      await tap('capture-keep');
+      await page.waitForTimeout(500);
+      const kept = await page.evaluate(() => {
+        const key = Object.keys(localStorage).find((k) => k.includes('morrow'));
+        return JSON.parse(localStorage.getItem(key)).state.evidence.filter((e) => e.kind === 'capture').length;
+      });
+      check('a capture is filed in the ledger', kept === 1, String(kept));
+      check('with undo', await seen('toast-action'));
+      if (await seen('toast-action')) {
+        await tap('toast-action');
+        await page.waitForTimeout(300);
+        const after = await page.evaluate(() => {
+          const key = Object.keys(localStorage).find((k) => k.includes('morrow'));
+          return JSON.parse(localStorage.getItem(key)).state.evidence.filter((e) => e.kind === 'capture').length;
+        });
+        check('and undo takes it back out', after === 0, String(after));
+      }
+    }
+
     // ---- seal the day
     await tap('seal-day-button');
     check('seal-the-day screen', await seen('screen-seal-day'));
@@ -1085,11 +1129,13 @@ async function main() {
     // day-done card once the day is finished. Forgetting it the moment the day
     // closed would make the ritual look like a to-do item rather than the thing
     // they chose this morning and then did.
-    const card = (await seen('now-card'))
-      ? await text('now-card')
-      : (await seen('day-done-card'))
-        ? await text('day-done-card')
-        : '';
+    const card = (await seen('said-and-done'))
+      ? await text('said-and-done')
+      : (await seen('now-card'))
+        ? await text('now-card')
+        : (await seen('day-done-card'))
+          ? await text('day-done-card')
+          : '';
     check(
       'Today says back the move they pointed at this morning',
       card.toLowerCase().includes('you said this one'),

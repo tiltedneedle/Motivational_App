@@ -64,6 +64,7 @@ export default function Today() {
   const toast = useMorrow((s) => s.toast);
   const setToast = useMorrow((s) => s.setToast);
   const setStatus = useMorrow((s) => s.setMoveStatus);
+  const removeEvidence = useMorrow((s) => s.removeEvidence);
   const makeBrief = useMorrow((s) => s.makeBrief);
 
   const [returnCard, setReturnCard] = useState<{ body: string; quotes: string[] } | null>(null);
@@ -149,9 +150,10 @@ export default function Today() {
             <Toast
               testID="toast"
               text={toast.text}
-              actionLabel={toast.kind === 'park' ? 'Undo' : undefined}
+              actionLabel={toast.kind === 'park' || toast.kind === 'capture' ? 'Undo' : undefined}
               onAction={() => {
-                if (toast.undoId) setStatus(toast.undoId, 'todo');
+                if (toast.undoId && toast.kind === 'capture') removeEvidence(toast.undoId);
+                else if (toast.undoId) setStatus(toast.undoId, 'todo');
                 setToast(null);
               }}
             />
@@ -304,6 +306,22 @@ export default function Today() {
                   <UserText style={{ fontSize: 16, lineHeight: 23, color: day.ink2 }}>{intendedMove.title}</UserText>
                 </View>
               ) : null}
+            </View>
+          ) : null}
+
+          {/*
+            The morning's intention, once it is done and something else is
+            open. The Now card says it while the move is open and the day-done
+            card says it when the day is finished; between the two — the said
+            move kept, another one added — it was said nowhere.
+          */}
+          {now && intendedMove && intendedMove.id !== now.id && intendedMove.status === 'done' ? (
+            <View testID="said-and-done" style={{ marginTop: 18, gap: 3 }}>
+              <Label style={{ color: accent.coralText }}>You said this one</Label>
+              <UserText style={{ fontSize: 16, lineHeight: 23, color: day.ink2, textDecorationLine: 'line-through' }}>
+                {intendedMove.title}
+              </UserText>
+              <Body style={{ fontSize: 13 }}>Said this morning, and done.</Body>
             </View>
           ) : null}
 
@@ -542,6 +560,23 @@ export default function Today() {
             <TabButton label="Coach" testID="tab-coach" onPress={() => router.push('/coach')} />
             <TabButton label="You" testID="tab-you" onPress={() => router.push('/settings')} />
           </View>
+          {/* The plus (PRD 7.6): the New move sheet, and capture behind it. */}
+          <Pressable
+            testID="new-move-button"
+            accessibilityRole="button"
+            accessibilityLabel="A new move, or something to keep"
+            onPress={() => router.push('/new-move')}
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: 24,
+              backgroundColor: day.surface,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Text style={{ color: day.ink, fontSize: 24, lineHeight: 28, fontFamily: fonts.sansMedium }}>+</Text>
+          </Pressable>
           <Pressable
             testID="seal-day-button"
             accessibilityRole="button"

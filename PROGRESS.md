@@ -15,7 +15,7 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 1. packages/core: domain model, stores (zustand + persist), engines
 - [x] 2. packages/ui: Studio tokens, Stone/Socket/Ring, HoldBar, Chip, Field, Sheet, text primitives
 - [x] 3. apps/mobile screens (all 16 routes)
-- [x] 4. Tests: 351 core + 40 ui + 8 storage unit tests, 37 real-Postgres checks, 136 Playwright e2e checks, all green
+- [x] 4. Tests: 352 core + 40 ui + 8 storage unit tests, 37 real-Postgres checks, 140 Playwright e2e checks, all green
 - [x] 5. supabase/: migrations with RLS and three structural authorship guards, edge functions
 - [x] 6. Hardening: the eight-lens audit's findings, worst first (see below) — 95 of 95
 - [x] 7. Research pass: libraries/versions; the migration against a real Postgres; prebuild
@@ -37,6 +37,9 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
       the consistency trend as a number, the next milestone per goal with its
       distance, one sentence they wrote this week quoted, and what a replan
       would change, with the door to it
+- [x] 18. The plus (§7.6): the New move sheet — which goal, what (cut from their
+      own line, or their words), how long — and quick capture into the ledger
+      with undo
 - [x] 16. The feel of the controls (§8): haptics on seat, park and seal, with the
       off switch in Settings; analytics as a seam with a fixed vocabulary and no
       free text (PostHog HTTP, nothing without a key); the Google sign-in half
@@ -50,10 +53,10 @@ only tested. What is left needs a machine or a key this one does not have;
 see "Next steps".
 
 - The tree is green and committed: `pnpm verify` runs the toolchain guard,
-  typecheck, lint, 351 core tests, 40 ui tests (contrast and the quoted-span
+  typecheck, lint, 352 core tests, 40 ui tests (contrast and the quoted-span
   split), 8 storage tests, the edge-function guards, the SQL structural
   guards, 37 checks against a real Postgres, the serif authorship guard, the
-  web build and 136 end-to-end checks.
+  web build and 140 end-to-end checks.
 - **The account's spend limit is the month's, not the run's.** The fourth
   audit was ten agents and 1.59M tokens and tripped the monthly limit with
   two verifiers still running; their lenses' findings were verified by hand.
@@ -939,6 +942,17 @@ recogniser is the phone's own. Walked on the web build (the pane has no
 microphone, so the fallback is what was seen); the recogniser itself needs a
 phone. Expo's patch releases of the day were taken with `expo install --fix`;
 expo-doctor is 18/18 again.
+
+### The plus (2026-09-12)
+
+§7.6's New move sheet and quick capture existed as one store action each and
+no screen. `/new-move` is the sheet: which goal, what — three moves cut from
+the person's own How line by `splitFirstMoves`, or their own words in the
+serif field — and how long; the move lands on Today. Its other half files a
+line in the ledger with an Undo on the toast. Today gained the plus beside
+the seal, and a line for the morning's intention once it is done while
+another move is open, which was the one state in which it was said nowhere.
+Six end-to-end checks.
 
 ### The Horizon Review (2026-09-11)
 

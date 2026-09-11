@@ -819,6 +819,7 @@ export function Toast({
       </Text>
       {actionLabel ? (
         <Pressable
+          testID={testID ? `${testID}-action` : undefined}
           onPress={onAction}
           accessibilityRole="button"
           accessibilityLabel={actionLabel}

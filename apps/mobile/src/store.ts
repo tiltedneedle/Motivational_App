@@ -118,7 +118,7 @@ export interface ToastState {
   actionLabel?: string;
   /** Undo handle: the id of whatever changed. */
   undoId?: string;
-  kind?: 'park' | 'add' | 'info';
+  kind?: 'park' | 'add' | 'info' | 'capture';
 }
 
 /**
@@ -315,6 +315,8 @@ export interface MorrowState {
    */
   shrinkMove: (moveId: string) => boolean;
   addEvidence: (text: string, goalId?: string) => void;
+  /** Take a captured line back out of the ledger — the toast's Undo. */
+  removeEvidence: (id: string) => void;
   sealDay: (input: { moodWord: string; proof: string; gladOf: string }) => void;
   /** PRD §7.10: the move they pointed at in the dawn brief this morning. */
   setIntention: (moveId: string) => void;
@@ -1130,7 +1132,18 @@ export const useMorrow = create<MorrowState>()(
             evidence,
             days: recomputeDay(s, s.plans, evidence, day),
             safetyPause: risk.risk === 'crisis' ? pauseOn(risk.risk, 'evidence', row.id) : s.safetyPause,
+            // Filed with undo (PRD 7.6). A flagged line raises the card
+            // instead and is not announced.
+            toast: risk.risk === 'crisis' ? s.toast : { text: 'Kept in the ledger.', kind: 'capture', undoId: row.id },
           };
+        }),
+
+      removeEvidence: (id) =>
+        set((s) => {
+          const row = s.evidence.find((e) => e.id === id);
+          if (!row || row.kind !== 'capture') return {};
+          const evidence = s.evidence.filter((e) => e.id !== id);
+          return { evidence, days: recomputeDay(s, s.plans, evidence, row.day), toast: null };
         }),
 
       sealDay: ({ moodWord, proof, gladOf }) =>
