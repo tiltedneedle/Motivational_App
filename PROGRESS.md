@@ -34,7 +34,7 @@ only tested. What is left needs a machine or a key this one does not have; see
 
 - The tree is green and committed: `pnpm verify` runs the toolchain guard,
   typecheck, 278 core tests, 33 contrast measurements, 6 storage tests, the
-  edge-function guards, the SQL structural guards, 23 checks against a real
+  edge-function guards, the SQL structural guards, 30 checks against a real
   Postgres, the serif authorship guard, the web build and 120 end-to-end
   checks.
 - Three findings were **withdrawn, not fixed**: buildPlan does not construct
@@ -62,7 +62,7 @@ pnpm test:deps                  # one toolchain; the RN side left to Expo
 pnpm test:dates                 # no local date turned into a UTC day
 pnpm test                       # 278 core + 33 contrast + 6 storage unit tests
 pnpm test:sql                   # RLS on every table, the three authorship guards
-pnpm test:migration             # 23 checks against a real Postgres, via PGlite
+pnpm test:migration             # 30 checks against a real Postgres, via PGlite
 pnpm test:authorship            # nothing but the user's words in the serif
 pnpm build:web && pnpm test:e2e # 120 end-to-end checks, serves dist itself
 node scripts/serve.mjs          # the built app on :8790, to walk it by hand
@@ -664,6 +664,21 @@ own label said "first edition" on every seal there was.
 
 The route table was walked against the code that refers to it. Every screen has
 a door.
+
+### The migration, run for real one more time (2026-09-11)
+
+Three tables the app had been writing locally with nowhere to sync to —
+`practices`, `practice_logs`, `scenes` — and the three per-person facts that
+have to be the same on every device (paywall moments shown, what "Fewer" turned
+off) are in the migration now. Running it against a real Postgres found the
+real thing: **Bob could insert a `practice_logs` row pointing at Alice's
+practice.** Row level security says whether Bob may write a row; it says
+nothing about what the row points at, and a foreign key only checks the parent
+exists. One parameterised trigger now sits on every column that references
+something a person owns — twenty of them — and `check-sql` derives that list
+from the migration rather than from anything written down, so a new foreign key
+cannot be added without a trigger or a deliberate exemption. Its first run found
+two the hand-written list had missed.
 
 ## Blocked on the user
 - Supabase project URL/anon key, Anthropic API key, fal.ai key, RevenueCat keys: needed to test real providers. Everything runs on local fallbacks without them.
