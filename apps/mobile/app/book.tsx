@@ -285,35 +285,37 @@ export default function BookScreen() {
           320 pt screen, which put "Something moved" — the one that says the
           Book no longer describes them — half off the page.
         */}
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingVertical: 14 }}>
-          <Chip testID="book-export" label="Export" onPress={onExport} />
-          {/*
-            The Book as a PDF (PRD §7.3). The same page, typeset the same way,
-            handed to the platform's own renderer; on the web it is the print
-            dialogue, which has Save as PDF in it everywhere.
-          */}
-          <Chip testID="book-pdf" label={printing ? 'Making it…' : 'PDF'} onPress={() => void onPdf()} />
-          {/* The I will line as a lock screen (PRD §7.8). */}
-          <Chip testID="book-wallpaper" label="Lock screen" onPress={() => router.push('/wallpaper')} />
-          {/*
-            The Sunday reading (PRD §7.3) has a door. The notification points at
-            it and so does Today on a Sunday, but somebody who simply opened
-            their Book and wanted to read it properly had no way through.
-          */}
-          <Chip testID="book-read" label="Read it" onPress={() => router.push('/reading')} />
-          <Chip
-            testID="book-still-true"
-            label="Still true"
-            onPress={() => {
-              setToast({ text: 'Good. Nothing to change today.', kind: 'info' });
-              router.dismissTo('/today');
-            }}
-          />
-          <Chip
-            testID="book-moved"
-            label="Something moved"
-            onPress={() => router.dismissTo('/today')}
-          />
+        <View style={{ gap: 10, paddingVertical: 14 }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+            {/*
+              The Sunday reading (PRD §7.3) has a door. The notification
+              points at it and so does Today on a Sunday, but somebody who
+              simply opened their Book and wanted to read it properly had no
+              way through.
+            */}
+            <Chip testID="book-read" label="Read it" onPress={() => router.push('/reading')} />
+            <Chip
+              testID="book-still-true"
+              label="Still true"
+              onPress={() => {
+                setToast({ text: 'Good. Nothing to change today.', kind: 'info' });
+                router.dismissTo('/today');
+              }}
+            />
+            <Chip testID="book-moved" label="Something moved" onPress={() => router.dismissTo('/today')} />
+          </View>
+          {/* The ways out of the app: quieter than the ways through it. */}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 18, alignItems: 'center' }}>
+            <TextButton testID="book-export" label="Export" onPress={onExport} />
+            {/*
+              The Book as a PDF (PRD §7.3). The same page, typeset the same
+              way, handed to the platform's own renderer; on the web it is the
+              print dialogue, which has Save as PDF in it everywhere.
+            */}
+            <TextButton testID="book-pdf" label={printing ? 'Making it…' : 'PDF'} onPress={() => void onPdf()} />
+            {/* The I will line as a lock screen (PRD §7.8). */}
+            <TextButton testID="book-wallpaper" label="Lock screen" onPress={() => router.push('/wallpaper')} />
+          </View>
         </View>
       </SafeAreaView>
     </Studio>

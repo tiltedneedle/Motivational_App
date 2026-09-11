@@ -125,18 +125,19 @@ export default function GoalScreen() {
             </Ring>
           </View>
 
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             {portrait ? (
-              <TextButton
+              <Chip
                 testID="goal-portrait"
                 label="See the portrait"
                 onPress={() => router.push(`/portrait?goal=${goal.id}`)}
               />
             ) : null}
             {plan ? (
-              <TextButton
+              <Chip
                 testID="goal-replan"
                 label="Replan"
+                ghost
                 onPress={() => router.push(`/replan?goal=${goal.id}`)}
               />
             ) : null}

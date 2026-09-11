@@ -5,7 +5,7 @@
 import { useRouter } from 'expo-router';
 import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Body, Chip, InkButton, Label, Statement, Stone, Studio, TextButton, day } from '@morrow/ui';
+import { Body, Chip, InkButton, Label, Rise, Statement, Stone, Studio, TextButton, day, useReducedMotion } from '@morrow/ui';
 import { useLatestBook, useMorrow } from '../src/store';
 import { hasSupabase } from '../src/supabase';
 
@@ -21,20 +21,21 @@ export default function Welcome() {
   const profile = useMorrow((s) => s.profile);
   const account = useMorrow((s) => s.account);
   const setProfile = useMorrow((s) => s.setProfile);
+  const reduced = useReducedMotion();
 
   return (
     <Studio testID="screen-welcome">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
         <View style={{ flex: 1, justifyContent: 'center', gap: 22 }}>
-          <View style={{ alignItems: 'center', gap: 20 }}>
-            <Stone size={104} domain="health" polish={1} testID="welcome-stone" />
-            <Statement style={{ fontSize: 44, lineHeight: 46, textAlign: 'center' }}>Morrow</Statement>
+          <Rise index={0} reducedMotion={reduced} style={{ alignItems: 'center', gap: 20 }}>
+            <Stone size={112} domain="health" polish={1} testID="welcome-stone" />
+            <Statement style={{ fontSize: 48, lineHeight: 52, textAlign: 'center' }}>Morrow</Statement>
             <Body style={{ textAlign: 'center', fontSize: 19, lineHeight: 26, maxWidth: 300 }}>
               Write your future in your own words. Then live by it.
             </Body>
-          </View>
+          </Rise>
 
-          <View style={{ marginTop: 8 }}>
+          <Rise index={1} reducedMotion={reduced} style={{ marginTop: 8 }}>
             <Label>Three evenings, honestly timed</Label>
             {SITTINGS.map((s) => (
               <View
@@ -53,7 +54,7 @@ export default function Welcome() {
                 <Label>{s.long}</Label>
               </View>
             ))}
-          </View>
+          </Rise>
 
           <View style={{ gap: 8 }}>
             <Label>How do you want to be spoken to?</Label>

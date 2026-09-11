@@ -18,7 +18,7 @@ import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { domainMeta } from '@morrow/core';
-import { Body, Card, InkButton, Label, Quoted, Rule, Statement, Stone, Studio, TextButton, UserField, UserText, accent, day } from '@morrow/ui';
+import { Body, Card, InkButton, Label, Quoted, Rise, Rule, Statement, Stone, Studio, TextButton, UserField, UserText, accent, day, useReducedMotion } from '@morrow/ui';
 import { useGoals, useMorrow } from '../src/store';
 import { hasSupabase } from '../src/supabase';
 
@@ -30,6 +30,7 @@ export default function PortraitScreen() {
   const editIdentityLine = useMorrow((s) => s.editIdentityLine);
   const account = useMorrow((s) => s.account);
   const accountAsked = useMorrow((s) => s.accountAsked);
+  const reduced = useReducedMotion();
 
   const goal = goalId ? goals.find((g) => g.id === goalId) : goals[0];
   const portrait = goal ? portraits.find((p) => p.goalId === goal.id) : undefined;
@@ -89,7 +90,7 @@ export default function PortraitScreen() {
     <Studio testID="screen-portrait">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18, gap: 20 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+          <Rise index={0} reducedMotion={reduced} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
             <Stone size={44} domain={goal.domain} polish={1} />
             <View style={{ flex: 1 }}>
               <Label style={{ color: meta.ink }}>Your portrait</Label>
@@ -104,18 +105,18 @@ export default function PortraitScreen() {
                 </UserText>
               )}
             </View>
-          </View>
+          </Rise>
 
           {portrait.why ? (
-            <View style={{ gap: 4 }}>
+            <Rise index={1} reducedMotion={reduced} style={{ gap: 4 }}>
               <Label>Why</Label>
               <UserText testID="portrait-why" style={{ fontSize: 18, lineHeight: 26, color: day.ink }}>
                 {portrait.why}
               </UserText>
-            </View>
+            </Rise>
           ) : null}
 
-          <View style={{ gap: 6 }}>
+          <Rise index={2} reducedMotion={reduced} style={{ gap: 6 }}>
             <Label>Who you are becoming</Label>
             {editing ? (
               <View style={{ gap: 8 }}>
@@ -158,9 +159,10 @@ export default function PortraitScreen() {
                 )}
               </>
             )}
-          </View>
+          </Rise>
 
           {portrait.ifThen ? (
+            <Rise index={3} reducedMotion={reduced}>
             <Card testID="portrait-if-then" style={{ padding: 18, gap: 4 }}>
               <Label style={{ color: accent.coralText }}>When it gets in the way</Label>
               {/* "If … then I" is the app's; the two halves inside it are theirs. */}
@@ -171,17 +173,18 @@ export default function PortraitScreen() {
                 style={{ fontSize: 17, lineHeight: 25, color: day.ink }}
               />
             </Card>
+            </Rise>
           ) : null}
 
           {portrait.firstMoves.length ? (
-            <View style={{ gap: 6 }}>
+            <Rise index={4} reducedMotion={reduced} style={{ gap: 6 }}>
               <Label>The first three, out of your own line</Label>
               {portrait.firstMoves.map((m, i) => (
                 <UserText key={`${m}-${i}`} style={{ fontSize: 16, lineHeight: 24, color: day.ink2 }}>
                   {m}
                 </UserText>
               ))}
-            </View>
+            </Rise>
           ) : null}
 
           <Rule />
