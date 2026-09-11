@@ -42,6 +42,8 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
       with undo
 - [x] 19. Dark mode (§7.14): the night studio as the whole app when the system
       is dark or the person pins it; System / Day / Night in Settings
+- [x] 20. Voice into the coach (§7.9): the same recogniser as the room, into the
+      field where it can be read before it is sent
 - [x] 16. The feel of the controls (§8): haptics on seat, park and seal, with the
       off switch in Settings; analytics as a seam with a fixed vocabulary and no
       free text (PostHog HTTP, nothing without a key); the Google sign-in half

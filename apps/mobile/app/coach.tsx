@@ -4,7 +4,7 @@
  * question instead of inventing encouragement.
  */
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -24,6 +24,7 @@ import {
 } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Quoted, Rule, Stone, Studio, TextButton, Toast, UserField, UserText, accent, day, type as fonts } from '@morrow/ui';
 import { useConsistency, useLatestBook, useMorrow, useTodaysMoves } from '../src/store';
+import { dictation } from '../src/dictation';
 
 export default function Coach() {
   const router = useRouter();
@@ -47,6 +48,38 @@ export default function Coach() {
   const [thread, setThread] = useState<{ who: 'me' | 'coach'; text: string; spans?: string[]; typed?: boolean }[]>([]);
   const [draft, setDraft] = useState('');
   const [capped, setCapped] = useState<PaywallMoment | null>(null);
+  /**
+   * Voice input (PRD §7.9). The same recogniser as the writing room: what is
+   * heard lands in the field, where it can be read and changed before it is
+   * sent, because a coach that acts on a mis-hearing is worse than one that
+   * makes you look at the words first.
+   */
+  const [listening, setListening] = useState(false);
+  const [micNote, setMicNote] = useState<string | null>(null);
+  const anchorRef = useRef('');
+  const dictationRef = useRef(dictation());
+  const listen = async () => {
+    if (listening) {
+      dictationRef.current.stop();
+      setListening(false);
+      return;
+    }
+    setMicNote(null);
+    anchorRef.current = draft;
+    const ok = await dictationRef.current.start({
+      onText: (text, final) => {
+        const joined = [anchorRef.current.trim(), text.trim()].filter(Boolean).join(' ');
+        setDraft(joined);
+        if (final) anchorRef.current = joined;
+      },
+      onProblem: (message) => {
+        setMicNote(message);
+        setListening(false);
+      },
+    });
+    setListening(ok);
+  };
+  useEffect(() => () => dictationRef.current.stop(), []);
 
   // Today used to be the only screen that built the brief, so arriving here
   // first — from a notification, a deep link, or just the tab bar — showed a
@@ -124,6 +157,10 @@ export default function Coach() {
   const send = () => {
     const text = draft.trim();
     if (!text) return;
+    if (listening) {
+      dictationRef.current.stop();
+      setListening(false);
+    }
     // The free plan's daily turns (PRD §13.3). Taken before anything else, so
     // the cap cannot be walked past by writing something the guards refuse —
     // and refused with a sentence rather than a dead Send button, because a
@@ -362,8 +399,14 @@ export default function Coach() {
                 onSubmitEditing={send}
               />
             </View>
+            <Chip testID="coach-mic" label={listening ? 'Listening' : 'Say it'} selected={listening} onPress={() => void listen()} />
             <InkButton testID="coach-send" label="Send" onPress={send} style={{ height: 46, paddingHorizontal: 20 }} />
           </View>
+          {micNote ? (
+            <Label testID="coach-mic-note" style={{ color: day.ink3 }}>
+              {micNote}
+            </Label>
+          ) : null}
         </View>
       </SafeAreaView>
     </Studio>
