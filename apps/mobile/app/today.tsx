@@ -135,6 +135,7 @@ export default function Today() {
     return (
       <Studio testID="screen-today">
         <SafeAreaView style={{ flex: 1, padding: 22, justifyContent: 'center', gap: 14 }}>
+          <Stone size={96} domain="health" polish={0.4} sweep={!reduced} style={{ alignSelf: 'center', marginBottom: 10 }} />
           <Statement>Nothing here yet, and that is the right starting point.</Statement>
           <Body>Three evenings from now there will be a Book, a plan, and a first move for the morning.</Body>
           <InkButton testID="today-begin" label="Begin the Interview" onPress={() => router.push('/consent')} />
@@ -264,7 +265,7 @@ export default function Today() {
                     <Ring size={62} progress={pct} color={domainMeta(g.domain).hex} width={3} track={day.line2}>
                       <Stone size={42} domain={g.domain} polish={0.5 + pct * 0.5} />
                     </Ring>
-                    <Text numberOfLines={1} style={{ fontFamily: fonts.sansMedium, fontSize: 12, lineHeight: 16, color: day.ink2, textAlign: 'center' }}>
+                    <Text numberOfLines={2} style={{ fontFamily: fonts.sansMedium, fontSize: 12, lineHeight: 15, color: day.ink2, textAlign: 'center' }}>
                       {g.title}
                     </Text>
                   </Pressable>

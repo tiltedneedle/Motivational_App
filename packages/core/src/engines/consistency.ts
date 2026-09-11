@@ -140,6 +140,8 @@ export function consistencyCaption(r: ConsistencyReading): string {
     if (r.logged > 0) return 'Nothing finished yet. The first one is the whole thing.';
     return 'Nothing logged yet. The first day is the whole thing.';
   }
+  // "Up from 0" is not a trend when there was nothing a week ago to be up from.
+  if (r.delta > 0 && r.previous === 0) return `${r.score}. The first week in the ledger.`;
   if (r.delta > 0) return `${r.score}, up from ${r.previous}.`;
   if (r.delta < 0) return `${r.score}. Quieter week than usual, and that is information.`;
   return `${r.score}, holding.`;

@@ -22,7 +22,7 @@ import {
   type PaywallMoment,
   type PricePlan,
 } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, UserText, accent, day, radius } from '@morrow/ui';
+import { Body, Card, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, UserText, accent, day } from '@morrow/ui';
 import { useLatestBook, useMorrow } from '../src/store';
 
 function isMoment(s: string | undefined): s is PaywallMoment {
@@ -169,10 +169,7 @@ export default function Paywall() {
                 />
               ))}
             </View>
-            <View
-              testID="plan-note"
-              style={{ backgroundColor: day.surface, borderRadius: radius.field, padding: 14, gap: 4 }}
-            >
+            <Card testID="plan-note" style={{ padding: 18, gap: 4 }}>
               <Body style={{ color: day.ink, fontSize: 17 }}>{selected.note}</Body>
               {/* The trial line, in a caption. Never a countdown. */}
               {selected.trialDays ? (
@@ -184,7 +181,7 @@ export default function Paywall() {
               {selected.id === HIGHLIGHTED ? (
                 <Body style={{ fontSize: 13, color: accent.coralText }}>Most people choose this one.</Body>
               ) : null}
-            </View>
+            </Card>
           </View>
 
           {problem ? (

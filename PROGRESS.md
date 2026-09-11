@@ -47,6 +47,10 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 22. The studio, lit (§8): the ground's light, one elevated card a screen,
+      a physical ink edge, chips on hairlines, stones that cast a shadow and
+      sweep, entry sequences, the tab bar with all five tabs, the Almanac as a
+      year of shelves, documents on hairlines instead of stacks of cards
 - [x] 16. The feel of the controls (§8): haptics on seat, park and seal, with the
       off switch in Settings; analytics as a seam with a fixed vocabulary and no
       free text (PostHog HTTP, nothing without a key); the Google sign-in half
@@ -949,6 +953,21 @@ recogniser is the phone's own. Walked on the web build (the pane has no
 microphone, so the fallback is what was seen); the recogniser itself needs a
 phone. Expo's patch releases of the day were taken with `expo install --fix`;
 expo-doctor is 18/18 again.
+
+### The studio, lit (2026-09-12)
+
+The user asked for the UI improved completely. First a way to look at it: `scripts/shots.mjs` renders every screen from a seeded store at phone size (`scripts/fixtures/seeded-state.json`, `DARK=1` for the night studio), so the review was of pictures, not of code. What the pictures showed against PRD §8:
+
+- **No light.** The ground was flat; §8.3 asks for a radial fall of light. `Studio` now paints it behind every screen, day and night, as the studio's only gradient apart from the stones.
+- **No elevation.** Nothing cast a shadow, so nothing was on anything. `Card` is the one elevated surface a screen is allowed (§8.7): the Now card, the day-done card, the Portrait's if-then, a letter, the paywall's plan. Everything else that was a white box became a well or a hairline — the read-back and the New move sheet are documents now, not stacks of rounded cards (§8.10).
+- **The ink button's edge** was a hard black shadow painted beside it. It is a real slab the face presses into now (§8.1), on both studios.
+- **Chips** carry a hairline so they lift off the lit ground without a shadow; the selected one is ink; text is one line height.
+- **Stones** cast a contact shadow tinted by their own colour (§8.3) and the hero stones — Today's Now stone, Welcome's, the empty Today's — carry the slow light sweep (§8.1). The writing room's stone bobs until the writing starts (§8.5).
+- **Entry sequences** (§8.5): `Rise` staggers a screen's parts in — Today, the Portrait reveal, Welcome. A crossfade under reduce motion.
+- **Broken layouts the pictures caught:** the tab bar lost its fifth tab on a 390-point phone (the plus and the seal float above the bar now, and each tab gets the same room); the goal row spread two stones to opposite edges; the consistency bar floated at the right of its number; the Almanac wrapped thirty-one stones onto two lines and called it a month (one month a row, sized to the phone); the interview's coach hint and the read-back's aside were synthesised italics of a face with no italic; the practice builder had six chips per step (one dial); the New move sheet set the person's own lines in the app's face (serif rows on hairlines, with stones).
+- **Smaller:** the doorway's prompt at a question's weight rather than a nine-line headline; saying it is the default where there is a microphone; the coach's brief headline balanced between its two faces; the Book's exports as a quiet row under the three chips that matter; the Goal's doors as chips; "up from 0" is "the first week in the ledger".
+
+Every change went through the same gates (144 e2e), and the pictures were taken again after.
 
 ### The lock screen (2026-09-12)
 
