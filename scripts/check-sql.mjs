@@ -17,7 +17,9 @@
 import { readFile } from 'node:fs/promises';
 
 const FILE = 'supabase/migrations/0001_init.sql';
-const sql = await readFile(FILE, 'utf8');
+// Normalised to LF. This tree is checked out with CRLF, and a check that
+// matches across a line break is a check that quietly never matches on it.
+const sql = (await readFile(FILE, 'utf8')).replace(/\r\n/g, '\n');
 const lower = sql.toLowerCase();
 
 /**
@@ -104,6 +106,41 @@ check(
   // to be protected. Exactly backwards, and easy to reintroduce.
   !/old\.sealed_until/.test(lower),
   'the body check must not consult sealed_until at all: writing is never rewritten, not merely rewritten later',
+);
+
+// ---- nothing points at another person's rows
+//
+// Row level security says whether Bob may write a row; it says nothing about
+// what the row points at. Every column that references something a person
+// owns has to carry the ownership trigger, and the list here is derived from
+// the migration rather than written down, so a new foreign key cannot be added
+// without either a trigger or a deliberate exemption.
+const OWNED = new Set(['goals', 'plans', 'moves', 'books', 'practices', 'authoring_sessions', 'goal_analyses', 'milestones']);
+const EXEMPT = new Set([
+  // Covered by its own, stricter guard (check_move_source), which also checks
+  // that the line and the plan are for the same goal.
+  'moves.plan_id',
+  'moves.source_line_id',
+  // Transitively: check_move_source requires the source line to belong to the
+  // same person *and* the same goal, so the goal is theirs by construction.
+  'moves.goal_id',
+]);
+const pointers = [];
+for (const [, table, body] of sql.matchAll(/create table public\.(\w+) \(([\s\S]*?)\n\);/g)) {
+  for (const [, col, parent] of body.matchAll(/^\s*(\w+)\s+uuid[^\n]*references public\.(\w+)/gm)) {
+    if (OWNED.has(parent) && !EXEMPT.has(`${table}.${col}`)) pointers.push({ table, col, parent });
+  }
+}
+const unguarded = pointers.filter(
+  ({ table, col, parent }) =>
+    !sql.includes(`on public.${table}\n  for each row execute function public.check_parent_owner('${col}', '${parent}');`),
+);
+check(
+  'every pointer at something a person owns checks whose it is',
+  pointers.length > 0 && unguarded.length === 0,
+  unguarded.length
+    ? `no ownership trigger on ${unguarded.map((u) => `${u.table}.${u.col}`).join(', ')}`
+    : `${pointers.length} pointers found`,
 );
 
 // ---- nothing is readable across accounts

@@ -449,6 +449,69 @@ try {
     JSON.stringify(empty),
   ]);
   check('an empty Book does not divide by zero', Number(emptyRatio[0].r) === 1, `ratio ${emptyRatio[0].r}`);
+
+  // ---- practices (PRD 7.5): every routine has a two-minute version. Validated
+  // in code by buildPractice, and here as well, because a row that arrives by
+  // sync from an older build never went through buildPractice.
+  await asRejects(
+    'a practice with no two-minute version is refused by the database',
+    ALICE,
+    `insert into public.practices (user_id, goal_id, kind, title, min_version, schedule, energy_slot)
+       values ($1, $2, 'routine', 'Ten minutes of scales', '   ', '{"type":"days","days":[1,3]}', 'evening')`,
+    [ALICE, goalId],
+    'check',
+  );
+  const practiceId = (
+    await as(
+      ALICE,
+      `insert into public.practices (user_id, goal_id, kind, title, min_version, schedule, energy_slot)
+         values ($1, $2, 'routine', 'Ten minutes of scales', 'Two minutes of scales', '{"type":"days","days":[1,3]}', 'evening')
+       returning id`,
+      [ALICE, goalId],
+    )
+  ).rows[0].id;
+  check('a practice with one is kept', Boolean(practiceId));
+
+  // Bob cannot see it, and cannot log against it.
+  const { rows: bobsPractices } = await as(BOB, 'select id from public.practices', []);
+  check("one person cannot see another's practices", bobsPractices.length === 0, `${bobsPractices.length} rows`);
+  await asRejects(
+    "and cannot log a run against another's practice",
+    BOB,
+    `insert into public.practice_logs (user_id, practice_id, day, steps_done, steps_total)
+       values ($1, $2, '2026-09-11', 1, 3)`,
+    [BOB, practiceId],
+  );
+
+  // ---- the same guard on a different table, through the same function. One
+  // parameterised trigger covers every parent pointer; if it only worked on the
+  // first table it was tried on, this is where that would show.
+  await asRejects(
+    "one person cannot file evidence against another's move",
+    BOB,
+    `insert into public.evidence (user_id, goal_id, move_id, kind, text, day)
+       values ($1, null, $2, 'move', 'Did it', '2026-09-11')`,
+    [BOB, okMove.rows[0].id],
+    'another person',
+  );
+  await asRejects(
+    "nor point a letter at another's goal",
+    BOB,
+    `insert into public.letters (user_id, goal_id, direction, body, trigger, deliver_at)
+       values ($1, $2, 'to_future', 'To me', 'self:2026-12-01', '2026-12-01')`,
+    [BOB, goalId],
+    'another person',
+  );
+
+  // ---- scenes (PRD 7.8): no sourced detail, no scene.
+  await asRejects(
+    'a scene with no detail of theirs in it is refused',
+    ALICE,
+    `insert into public.scenes (user_id, goal_id, type, narrative, sourced_detail)
+       values ($1, $2, 'practice', 'An ordinary morning.', '')`,
+    [ALICE, goalId],
+    'check',
+  );
 } catch (err) {
   fatal = reason(err);
 } finally {

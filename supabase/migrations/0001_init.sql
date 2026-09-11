@@ -27,6 +27,13 @@ create table public.profiles (
   -- PRD 11.6: the concern band suggests professional support *once*. This is
   -- what makes it once across devices rather than once per install.
   support_offered_at timestamptz,
+  -- PRD 7.13: the paywall moments already shown. "Once" has to mean once
+  -- across devices, not once per install.
+  paywall_seen jsonb not null default '[]'::jsonb,
+  -- PRD 7.11: what "Fewer" has turned off, and the honest all-off state, kept
+  -- apart so turning them back on restores what they had rather than defaults.
+  muted_moments jsonb not null default '[]'::jsonb,
+  notifications_off boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -249,6 +256,62 @@ create table public.day_summaries (
   safety_risk text not null default 'none' check (safety_risk in ('none','concern','crisis'))
 );
 
+-- ---------------------------------------------------------------- practices
+
+-- PRD 7.5. A practice is built out of the person's own Strategies line, and
+-- `source_line_id` says which one; a practice with nothing of theirs behind it
+-- is the one thing the builder refuses to store.
+create table public.practices (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users on delete cascade,
+  goal_id uuid references public.goals on delete set null,
+  kind text not null check (kind in ('routine','habit')),
+  title text not null check (length(btrim(title)) > 0),
+  steps jsonb not null default '[]'::jsonb,
+  -- Required: every practice has a two-minute version (PRD 7.4's rule).
+  min_version text not null check (length(btrim(min_version)) > 0),
+  schedule jsonb not null,
+  energy_slot text not null check (energy_slot in ('morning','midday','evening')),
+  source_line_id uuid references public.goal_analyses on delete set null,
+  archived_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create index practices_user on public.practices (user_id);
+
+-- What actually happened in a run, finished or abandoned. One row per practice
+-- per day; the two-minute version is worth the whole thing (PRD 7.7).
+create table public.practice_logs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users on delete cascade,
+  practice_id uuid not null references public.practices on delete cascade,
+  day date not null,
+  steps_done int not null default 0 check (steps_done >= 0),
+  steps_total int not null default 0 check (steps_total >= steps_done),
+  minimal boolean not null default false,
+  completed_at timestamptz,
+  unique (practice_id, day)
+);
+create index practice_logs_user_day on public.practice_logs (user_id, day);
+
+-- ---------------------------------------------------------------- scenes
+
+-- PRD 7.8. `sourced_detail` is a detail lifted from the person's own writing
+-- and is required: a scene with no detail of their life in it is stock
+-- footage, and the app shows its typographic card instead of storing one.
+create table public.scenes (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users on delete cascade,
+  goal_id uuid not null references public.goals on delete cascade,
+  type text not null check (type in ('practice','moment','tuesday','other_road')),
+  image_prompt text not null default '',
+  image_uri text,
+  narrative text not null check (length(btrim(narrative)) > 0),
+  sourced_detail text not null check (length(btrim(sourced_detail)) > 0),
+  tone text check (tone in ('warmer','simpler','closer')),
+  created_at timestamptz not null default now(),
+  unique (goal_id, type)
+);
+
 -- ---------------------------------------------------------------- letters
 
 -- PRD 7.8. `trigger` is the occasion key, unique per user, which is what stops
@@ -307,6 +370,9 @@ alter table public.moves              enable row level security;
 alter table public.obstacle_plans     enable row level security;
 alter table public.evidence           enable row level security;
 alter table public.day_summaries      enable row level security;
+alter table public.practices          enable row level security;
+alter table public.practice_logs      enable row level security;
+alter table public.scenes             enable row level security;
 alter table public.letters            enable row level security;
 alter table public.briefs             enable row level security;
 
@@ -357,6 +423,15 @@ create policy "own evidence" on public.evidence
 create policy "own day_summaries" on public.day_summaries
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+create policy "own practices" on public.practices
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "own practice_logs" on public.practice_logs
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "own scenes" on public.scenes
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
 create policy "own letters" on public.letters
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
@@ -399,6 +474,79 @@ end $$;
 create trigger moves_source_guard
   before insert or update on public.moves
   for each row execute function public.check_move_source();
+
+-- A row may only point at a parent that belongs to the same person.
+--
+-- Row level security answers "may Bob read or write this row"; it says nothing
+-- about what the row points at. Bob's own practice_logs row is his to insert,
+-- and nothing in the policy stopped it referencing Alice's practice — found by
+-- running the migration against a real Postgres and trying exactly that. A
+-- foreign key only checks the parent exists. This checks whose it is.
+--
+-- One function, parameterised by trigger arguments, rather than one per table:
+-- the rule is the same everywhere and a copy per table is a copy that drifts.
+create or replace function public.check_parent_owner() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare
+  col text := tg_argv[0];
+  parent text := tg_argv[1];
+  pid uuid;
+  owner uuid;
+begin
+  pid := (to_jsonb(new) ->> col)::uuid;
+  if pid is null then
+    return new;
+  end if;
+  execute format('select user_id from public.%I where id = $1', parent) into owner using pid;
+  if owner is null then
+    raise exception '%.%: % does not exist', tg_table_name, col, pid;
+  end if;
+  if owner <> new.user_id then
+    raise exception '%.%: belongs to another person', tg_table_name, col;
+  end if;
+  return new;
+end $$;
+
+-- Every column that points at something a person owns. `moves` is covered by
+-- its own guard above, which also checks the goal matches.
+create trigger authoring_texts_owner before insert or update on public.authoring_texts
+  for each row execute function public.check_parent_owner('session_id', 'authoring_sessions');
+create trigger goal_analyses_owner before insert or update on public.goal_analyses
+  for each row execute function public.check_parent_owner('goal_id', 'goals');
+create trigger book_versions_owner before insert or update on public.book_versions
+  for each row execute function public.check_parent_owner('book_id', 'books');
+create trigger plans_owner before insert or update on public.plans
+  for each row execute function public.check_parent_owner('goal_id', 'goals');
+create trigger milestones_plan_owner before insert or update on public.milestones
+  for each row execute function public.check_parent_owner('plan_id', 'plans');
+create trigger milestones_goal_owner before insert or update on public.milestones
+  for each row execute function public.check_parent_owner('goal_id', 'goals');
+create trigger milestones_proof_owner before insert or update on public.milestones
+  for each row execute function public.check_parent_owner('proof_source_line_id', 'goal_analyses');
+create trigger moves_milestone_owner before insert or update on public.moves
+  for each row execute function public.check_parent_owner('milestone_id', 'milestones');
+create trigger obstacle_plans_goal_owner before insert or update on public.obstacle_plans
+  for each row execute function public.check_parent_owner('goal_id', 'goals');
+create trigger obstacle_plans_line_owner before insert or update on public.obstacle_plans
+  for each row execute function public.check_parent_owner('source_line_id', 'goal_analyses');
+create trigger evidence_goal_owner before insert or update on public.evidence
+  for each row execute function public.check_parent_owner('goal_id', 'goals');
+create trigger evidence_move_owner before insert or update on public.evidence
+  for each row execute function public.check_parent_owner('move_id', 'moves');
+create trigger day_summaries_owner before insert or update on public.day_summaries
+  for each row execute function public.check_parent_owner('intention_move_id', 'moves');
+create trigger practices_goal_owner before insert or update on public.practices
+  for each row execute function public.check_parent_owner('goal_id', 'goals');
+create trigger practices_line_owner before insert or update on public.practices
+  for each row execute function public.check_parent_owner('source_line_id', 'goal_analyses');
+create trigger practice_logs_owner before insert or update on public.practice_logs
+  for each row execute function public.check_parent_owner('practice_id', 'practices');
+create trigger scenes_owner before insert or update on public.scenes
+  for each row execute function public.check_parent_owner('goal_id', 'goals');
+create trigger letters_owner before insert or update on public.letters
+  for each row execute function public.check_parent_owner('goal_id', 'goals');
+create trigger briefs_owner before insert or update on public.briefs
+  for each row execute function public.check_parent_owner('first_move_id', 'moves');
 
 -- Writing is never rewritten. A sitting can be added to — that is a new row,
 -- kind 'addition' — but the words themselves are fixed the moment they are
