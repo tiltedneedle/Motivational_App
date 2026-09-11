@@ -57,6 +57,7 @@ export default function NewMove() {
     }
     const ok = addMove(goalId, title, minutes, source ? { sourceLineId: source.id } : undefined);
     if (ok) back();
+    else setProblem('This goal has no How line yet, and a move needs one of your lines behind it.');
   };
 
   const file = () => {
@@ -133,7 +134,21 @@ export default function NewMove() {
                     ))}
                   </View>
                 ) : (
-                  <Body style={{ fontSize: 13 }}>Nothing to cut from yet for this one — write the move in your own words.</Body>
+                  <View style={{ gap: 8 }}>
+                    {/*
+                      A move needs a line of theirs behind it, and this goal
+                      has none yet — so the door is to the stone, not to a
+                      field that would refuse what they typed into it.
+                    */}
+                    <Body style={{ fontSize: 13 }}>Nothing to cut from yet: this goal has no How line. Write it and the moves come from it.</Body>
+                    {goalId ? (
+                      <Chip
+                        testID="new-move-write-how"
+                        label="Write how"
+                        onPress={() => router.push(`/stone?goal=${goalId}&kind=strategies`)}
+                      />
+                    ) : null}
+                  </View>
                 )}
                 <UserField
                   testID="new-move-own"
