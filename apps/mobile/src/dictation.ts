@@ -57,6 +57,13 @@ export function dictation(): Dictation {
   let listening = false;
   let subs: { remove(): void }[] = [];
   let current: DictationHandlers | null = null;
+  // On-device first. A phone that says it can and then cannot for this
+  // language answers with an error, and the next start goes through the OS
+  // recogniser instead rather than telling the person the microphone failed.
+  let onDevice: boolean | null = null;
+  // Errors in a row with no words between them. Three and it stops, rather
+  // than a recogniser that fails, restarts and fails again forever.
+  let strikes = 0;
 
   const clear = () => {
     for (const s of subs) s.remove();
@@ -69,9 +76,9 @@ export function dictation(): Dictation {
         lang: 'en-US',
         interimResults: true,
         continuous: true,
-        // On-device when the phone can; the module falls back to the OS
-        // recogniser where it cannot, and the app never sees audio either way.
-        requiresOnDeviceRecognition: m.ExpoSpeechRecognitionModule.supportsOnDeviceRecognition?.() === true,
+        // On-device when the phone can; the OS recogniser where it cannot,
+        // and the app never sees audio either way.
+        requiresOnDeviceRecognition: (onDevice ??= m.ExpoSpeechRecognitionModule.supportsOnDeviceRecognition?.() === true),
         addsPunctuation: true,
       });
     } catch {
@@ -114,6 +121,7 @@ export function dictation(): Dictation {
       subs.push(
         mod.addListener('result', (e) => {
           const text = e.results?.[0]?.transcript ?? '';
+          strikes = 0;
           current?.onText(text, e.isFinal);
           // A final stretch is committed by the caller; the next one starts
           // clean rather than growing on top of it.
@@ -131,6 +139,13 @@ export function dictation(): Dictation {
             if (listening) begin(m);
             return;
           }
+          if ((code === 'language-not-supported' || code === 'service-not-allowed') && onDevice) {
+            // The on-device model is not there for this language. Once
+            // more, through the OS recogniser.
+            onDevice = false;
+            if (listening) begin(m);
+            return;
+          }
           if (code === 'not-allowed' || code === 'service-not-allowed') {
             listening = false;
             current?.onProblem(REFUSED);
@@ -141,7 +156,13 @@ export function dictation(): Dictation {
             if (listening) setTimeout(() => listening && begin(m), 3000);
             return;
           }
-          if (listening) begin(m);
+          strikes += 1;
+          if (strikes >= 3) {
+            listening = false;
+            current?.onProblem(NO_MIC);
+            return;
+          }
+          if (listening) setTimeout(() => listening && begin(m), 600);
         }),
       );
       begin(m);

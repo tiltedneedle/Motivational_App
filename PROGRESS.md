@@ -1026,6 +1026,7 @@ program's actual prompt text by someone with a licensed copy.
 - 2026-09-10: the timed rituals are tested with Playwright's `page.clock` rather than a test-only fast-forward hook, so the fifteen minutes in the test is the same fifteen minutes the product ships.
 - 2026-09-11: the concern band softens the register whatever persona is set. Somebody who chose "fierce" on a good week did not choose to be pushed on this one, and the alternative — honouring the setting — means printing "No negotiation with yourself this morning" at the person the band exists for.
 - 2026-09-11: `Studio` holds one 560 pt column rather than each screen carrying its own max-width. Forty screens each remembering a number is forty chances to forget it, and the ground stays full-bleed so the constraint is on the writing, not on the room.
+- 2026-09-12: the account is a copy of one device, not a merge. A push upserts and then prunes what the device no longer has, so two phones each writing their own Book take turns being the copy; nothing is lost on either phone. The day a merge is built, `pushAll`'s prune is what it replaces.
 - 2026-09-11: the app's day, not the wall clock's, is what any screen prints. `dayOf(new Date(), boundary)` is the only definition of "today" in the product; a screen that reaches for `new Date()` to display a date is a bug even when it happens to agree.
 
 ## Next steps

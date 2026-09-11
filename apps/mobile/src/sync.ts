@@ -7,10 +7,17 @@
  * device can be handed the same shape back.
  *
  * Push writes every table in foreign-key order, upserting on the row's own id,
- * so running it twice is the same as running it once. Pull is only ever used
- * on a device with nothing of its own — merging two devices' writing is a
+ * so running it twice is the same as running it once, and then removes from
+ * the account what the device no longer has. Pull is only ever used on a
+ * device with nothing of its own — merging two devices' writing is a
  * different and harder problem than this product has yet, and pretending
  * otherwise would risk the one thing the account exists to protect.
+ *
+ * The consequence, stated plainly: two phones each writing their own Book
+ * against one account take turns being the copy. Neither loses anything on
+ * the phone itself; the account holds whichever pushed last. That is the
+ * model — the device is the truth — and the day a merge is built this is
+ * the function it replaces.
  */
 import { TABLE_ORDER, fromRows, toRows, type Row, type SyncBundle } from '@morrow/core';
 import { DEFAULT_PROFILE } from '@morrow/core';
