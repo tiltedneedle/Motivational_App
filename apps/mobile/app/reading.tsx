@@ -173,7 +173,9 @@ export default function Reading() {
                   </Body>
                   {review.next.slice(0, 3).map((n) => (
                     <Body key={n.goalId} testID={`review-next-${n.goalId}`} style={{ color: paper.ink2, fontSize: 14 }}>
-                      {n.goalTitle}: {n.title} · {distanceLabel(n.daysAway).toLowerCase()}
+                      {/* The first milestone's title already names the goal. */}
+                      {n.title.toLowerCase().includes(n.goalTitle.toLowerCase()) ? n.title : `${n.goalTitle}: ${n.title}`} ·{' '}
+                      {distanceLabel(n.daysAway).toLowerCase()}
                     </Body>
                   ))}
                   {review.insight ? (

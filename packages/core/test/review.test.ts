@@ -41,7 +41,18 @@ describe('the Horizon Review', () => {
     expect(out.insight?.quotes).toEqual(['Went anyway. Rained the whole way.']);
     expect(out.next[0]).toMatchObject({ goalTitle: '5 km race', title: 'First two weeks', daysAway: 4 });
     expect(out.replans).toEqual([{ goalId: 'g1', goalTitle: '5 km race', changes: 1 }]);
-    expect(out.consistency.line).toMatch(/^Consistency \d+/);
+    expect(out.consistency.line).toBe(`Consistency ${out.consistency.score}. The first week in the ledger.`);
+  });
+
+  it('calls a change a change only when there was a week before it', () => {
+    const out = horizonReview({
+      today: TODAY,
+      days: [day('2026-09-05', { planned: 2, done: 1 }), day('2026-09-18')],
+      goals: [],
+      plans: [],
+      proposals: [],
+    });
+    expect(out.consistency.line).toMatch(/^Consistency \d+, (up from|down from|the same as)/);
   });
 
   it('never quotes a flagged proof line, and falls back to a count', () => {

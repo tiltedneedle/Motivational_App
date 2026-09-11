@@ -43,10 +43,16 @@ function shiftDay(day: string, by: number): string {
 export function horizonReview(input: ReviewInput): HorizonReview {
   const days = [...input.days];
   const r = reading(days, input.today);
+  // "Up from 0" is not a trend when there was nothing a week ago to be up
+  // from; the first Sunday says so instead.
+  const weekAgo = shiftDay(input.today, -7);
+  const firstWeek = !days.some((d) => d.day <= weekAgo);
   const line =
     r.logged === 0
       ? 'No days in the ledger yet.'
-      : r.delta > 0
+      : firstWeek
+        ? `Consistency ${r.score}. The first week in the ledger.`
+        : r.delta > 0
         ? `Consistency ${r.score}, up from ${r.previous} last Sunday.`
         : r.delta < 0
           ? `Consistency ${r.score}, down from ${r.previous} last Sunday.`
