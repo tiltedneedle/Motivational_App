@@ -15,7 +15,7 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 1. packages/core: domain model, stores (zustand + persist), engines
 - [x] 2. packages/ui: Studio tokens, Stone/Socket/Ring, HoldBar, Chip, Field, Sheet, text primitives
 - [x] 3. apps/mobile screens (all 16 routes)
-- [x] 4. Tests: 278 core + 33 contrast + 6 storage unit tests, 120 Playwright e2e checks, all green
+- [x] 4. Tests: 286 core + 33 contrast + 6 storage unit tests, 120 Playwright e2e checks, all green
 - [x] 5. supabase/: migrations with RLS and three structural authorship guards, edge functions
 - [x] 6. Hardening: the eight-lens audit's findings, worst first (see below) — 95 of 95
 - [x] 7. Research pass: libraries/versions; the migration against a real Postgres; prebuild
@@ -33,7 +33,7 @@ only tested. What is left needs a machine or a key this one does not have; see
 "Next steps".
 
 - The tree is green and committed: `pnpm verify` runs the toolchain guard,
-  typecheck, 278 core tests, 33 contrast measurements, 6 storage tests, the
+  typecheck, lint, 286 core tests, 33 contrast measurements, 6 storage tests, the
   edge-function guards, the SQL structural guards, 30 checks against a real
   Postgres, the serif authorship guard, the web build and 120 end-to-end
   checks.
@@ -60,7 +60,8 @@ build, then the end-to-end suite. Nothing ships without it passing.
 ```
 pnpm test:deps                  # one toolchain; the RN side left to Expo
 pnpm test:dates                 # no local date turned into a UTC day
-pnpm test                       # 278 core + 33 contrast + 6 storage unit tests
+pnpm lint                       # eslint; rules-of-hooks is an error
+pnpm test                       # 286 core + 33 contrast + 6 storage unit tests
 pnpm test:sql                   # RLS on every table, the three authorship guards
 pnpm test:migration             # 30 checks against a real Postgres, via PGlite
 pnpm test:authorship            # nothing but the user's words in the serif
@@ -679,6 +680,25 @@ something a person owns — twenty of them — and `check-sql` derives that list
 from the migration rather than from anything written down, so a new foreign key
 cannot be added without a trigger or a deliberate exemption. Its first run found
 two the hand-written list had missed.
+
+### The PDF, and a linter (2026-09-11)
+
+**§7.3's PDF export.** `bookToHtml` sets the same page as the screen with the
+same rule — the serif on exactly the words the person wrote — as a
+self-contained document, and the platform renders it. On the web it is the
+print dialogue, which has Save as PDF everywhere. Nothing they wrote is trusted
+as markup; there is a test that hands it a script tag.
+
+**A linter, for one rule above all.** Writing the PDF button put a `useState`
+below a screen's early return — a rules-of-hooks violation that would have
+thrown the moment a Book appeared or was deleted — and it was found by reading.
+TypeScript cannot see that class of bug. The Expo ESLint config is in `verify`
+now with `react-hooks/rules-of-hooks` as an error, confirmed by putting the bug
+back. The React Compiler's newer opinions about refs-during-render and
+state-in-effects are **warnings, deliberately**: both are the standard
+react-native pattern in the gesture and timer code, both work, and silencing
+twenty of them to quiet a linter is not fixing them. They are worth one careful
+pass on a device, not a blanket rewrite here.
 
 ## Blocked on the user
 - Supabase project URL/anon key, Anthropic API key, fal.ai key, RevenueCat keys: needed to test real providers. Everything runs on local fallbacks without them.
