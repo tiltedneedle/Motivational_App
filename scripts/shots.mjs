@@ -58,6 +58,7 @@ const ROUTES = {
   envision: '/envision',
   letters: '/letters',
   practice: '/practice',
+  run: '/run?id=pr_seed1',
   settings: '/settings',
   paywall: '/paywall?moment=second-blueprint',
   account: '/account',

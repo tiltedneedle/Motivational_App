@@ -181,16 +181,56 @@ export default function PracticeBuilder() {
                     <Text style={{ fontSize: 18, color: day.ink2 }}>×</Text>
                   </Pressable>
                 </View>
-                <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', paddingLeft: 28 }}>
-                  {DURATION_CHIPS.map((sec) => (
-                    <Chip
-                      key={sec}
-                      testID={`practice-step-${i}-dur-${sec}`}
-                      label={durationLabel(sec)}
-                      selected={s.seconds === sec}
-                      onPress={() => setStep(i, { seconds: sec })}
-                    />
-                  ))}
+                {/*
+                  How long, as a dial rather than six chips a step: the step
+                  is the thing on this row, and its length is one small
+                  readout with a way down and a way up.
+                */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingLeft: 28 }}>
+                  <Label>How long</Label>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      borderRadius: 999,
+                      backgroundColor: day.surface,
+                      borderWidth: 1,
+                      borderColor: day.line2,
+                    }}
+                  >
+                    <Pressable
+                      testID={`practice-step-${i}-shorter`}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Shorter step ${i + 1}`}
+                      onPress={() => {
+                        const at = DURATION_CHIPS.indexOf(s.seconds as (typeof DURATION_CHIPS)[number]);
+                        const next = DURATION_CHIPS[Math.max(0, (at < 0 ? 2 : at) - 1)]!;
+                        setStep(i, { seconds: next });
+                      }}
+                      style={({ pressed }) => ({ width: 40, height: 36, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}
+                    >
+                      <Text style={{ fontFamily: fonts.sansMedium, fontSize: 18, lineHeight: 22, color: day.ink2 }}>−</Text>
+                    </Pressable>
+                    <Text
+                      testID={`practice-step-${i}-length`}
+                      style={{ fontFamily: fonts.sansSemi, fontSize: 14, lineHeight: 18, color: day.ink, minWidth: 52, textAlign: 'center', fontVariant: ['tabular-nums'] }}
+                    >
+                      {durationLabel(s.seconds)}
+                    </Text>
+                    <Pressable
+                      testID={`practice-step-${i}-longer`}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Longer step ${i + 1}`}
+                      onPress={() => {
+                        const at = DURATION_CHIPS.indexOf(s.seconds as (typeof DURATION_CHIPS)[number]);
+                        const next = DURATION_CHIPS[Math.min(DURATION_CHIPS.length - 1, (at < 0 ? 2 : at) + 1)]!;
+                        setStep(i, { seconds: next });
+                      }}
+                      style={({ pressed }) => ({ width: 40, height: 36, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}
+                    >
+                      <Text style={{ fontFamily: fonts.sansMedium, fontSize: 18, lineHeight: 22, color: day.ink2 }}>+</Text>
+                    </Pressable>
+                  </View>
                 </View>
               </View>
             ))}
