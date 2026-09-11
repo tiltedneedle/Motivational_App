@@ -3,7 +3,7 @@
  * button, no spell-check. The only help is the user's own earlier words in the
  * margin, and a nudge that is always a question.
  */
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useIsFocused, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, AppState, Easing, Platform, ScrollView, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -74,10 +74,11 @@ export default function Write() {
    * A room waiting is a room breathing; a room being written in is still.
    */
   const reduced = useReducedMotion();
+  const focused = useIsFocused();
   const bob = useRef(new Animated.Value(0)).current;
   const writing = phase === 'writing' && session.body.trim().length > 0;
   useEffect(() => {
-    if (reduced || phase !== 'writing' || writing) {
+    if (reduced || !focused || phase !== 'writing' || writing) {
       Animated.timing(bob, { toValue: 0, duration: 400, useNativeDriver: true }).start();
       return;
     }
@@ -89,7 +90,7 @@ export default function Write() {
     );
     loop.start();
     return () => loop.stop();
-  }, [bob, phase, reduced, writing]);
+  }, [bob, focused, phase, reduced, writing]);
   // The autosave reads the newest session without re-arming its timer on
   // every keystroke, which would make the timer useless.
   const sessionRef = useRef(session);

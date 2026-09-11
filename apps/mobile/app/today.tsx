@@ -2,7 +2,7 @@
  * Today (PRD §7.6). One honest read: what now?
  * Every goal is a stone; the stone is the check control.
  */
-import { useRouter } from 'expo-router';
+import { useIsFocused, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -58,6 +58,9 @@ import {
 export default function Today() {
   const router = useRouter();
   const reduced = useReducedMotion();
+  // The sweep runs only while Today is the screen in front: a loop under a
+  // screen that is not showing is battery spent on nothing.
+  const focused = useIsFocused();
   const state = useMorrow((s) => s);
   const goals = useGoals();
   const moves = useTodaysMoves();
@@ -135,7 +138,7 @@ export default function Today() {
     return (
       <Studio testID="screen-today">
         <SafeAreaView style={{ flex: 1, padding: 22, justifyContent: 'center', gap: 14 }}>
-          <Stone size={96} domain="health" polish={0.4} sweep={!reduced} style={{ alignSelf: 'center', marginBottom: 10 }} />
+          <Stone size={96} domain="health" polish={0.4} sweep={!reduced && focused} style={{ alignSelf: 'center', marginBottom: 10 }} />
           <Statement>Nothing here yet, and that is the right starting point.</Statement>
           <Body>Three evenings from now there will be a Book, a plan, and a first move for the morning.</Body>
           <InkButton testID="today-begin" label="Begin the Interview" onPress={() => router.push('/consent')} />
@@ -370,7 +373,7 @@ export default function Today() {
               <MoveStone
                 testID={`stone-${now.id}`}
                 size={62}
-                hero
+                hero={focused}
                 domain={goals.find((g) => g.id === now.goalId)?.domain ?? 'health'}
                 status={now.status}
                 label={now.title}

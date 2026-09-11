@@ -59,10 +59,17 @@ function serve() {
 const results = [];
 let failures = 0;
 
+let lastCheckAt = Date.now();
 function check(name, condition, detail = '') {
   const ok = Boolean(condition);
   if (!ok) failures += 1;
   results.push(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail && !ok ? ` — ${detail}` : ''}`);
+  // E2E_TRACE=1 prints how long each check took to reach, for finding the slow step.
+  if (process.env.E2E_TRACE) {
+    const now = Date.now();
+    console.log(`${String(now - lastCheckAt).padStart(6)} ms  ${name}`);
+    lastCheckAt = now;
+  }
   return ok;
 }
 
