@@ -219,6 +219,18 @@ export default function Envision() {
             );
           })}
 
+          <Rule style={{ backgroundColor: night.line }} />
+
+          {/*
+            The way to the letters when none is waiting.
+
+            Today offers them only while one is unread, so once they had all
+            been read the screen was unreachable — and the half of it where a
+            person writes to their own future self went with it. §7.8 puts
+            scenes and letters in the same room, so this is that room.
+          */}
+          <TextButton testID="envision-letters" label="Letters →" onPress={() => router.push('/letters')} />
+
           <Body style={{ color: night.ink3, fontSize: 12, lineHeight: 18 }}>
             Every one of these is built from something you wrote. If there is nothing of yours to build it from, nothing
             gets made up to fill the space.
