@@ -15,15 +15,15 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 1. packages/core: domain model, stores (zustand + persist), engines
 - [x] 2. packages/ui: Studio tokens, Stone/Socket/Ring, HoldBar, Chip, Field, Sheet, text primitives
 - [x] 3. apps/mobile screens (all 16 routes)
-- [x] 4. Tests: 299 core + 33 contrast + 6 storage unit tests, 120 Playwright e2e checks, all green
+- [x] 4. Tests: 299 core + 33 contrast + 6 storage unit tests, 128 Playwright e2e checks, all green
 - [x] 5. supabase/: migrations with RLS and three structural authorship guards, edge functions
 - [x] 6. Hardening: the eight-lens audit's findings, worst first (see below) — 95 of 95
 - [x] 7. Research pass: libraries/versions; the migration against a real Postgres; prebuild
 - [x] 8. Second audit, six lenses over the repairs — 37 of 37
 - [x] 9. Walking the built app in a browser, at three widths (see below)
 - [x] 10. PRD §7 read against the app: notifications, the paywall, the tablet layout,
-      Sunday reading, the Goal Path, letters, the Portrait reveal and Replan —
-      all eight were unbuilt, all eight are built
+      Sunday reading, the Goal Path, letters, the Portrait reveal, Replan, the PDF
+      and the other road — all ten were unbuilt, all ten are built
 
 ## In flight
 
@@ -35,7 +35,7 @@ only tested. What is left needs a machine or a key this one does not have; see
 - The tree is green and committed: `pnpm verify` runs the toolchain guard,
   typecheck, lint, 299 core tests, 33 contrast measurements, 6 storage tests, the
   edge-function guards, the SQL structural guards, 30 checks against a real
-  Postgres, the serif authorship guard, the web build and 120 end-to-end
+  Postgres, the serif authorship guard, the web build and 128 end-to-end
   checks.
 - Three findings were **withdrawn, not fixed**: buildPlan does not construct
   plans its own validator rejects (verified across 560 combinations of strategy
@@ -66,7 +66,7 @@ pnpm test                       # 299 core + 33 contrast + 6 storage unit tests
 pnpm test:sql                   # RLS on every table, the three authorship guards
 pnpm test:migration             # 30 checks against a real Postgres, via PGlite
 pnpm test:authorship            # nothing but the user's words in the serif
-pnpm build:web && pnpm test:e2e # 120 end-to-end checks, serves dist itself
+pnpm build:web && pnpm test:e2e # 128 end-to-end checks, serves dist itself
 node scripts/serve.mjs          # the built app on :8790, to walk it by hand
 cd apps/mobile && npx expo start
 ```
@@ -727,6 +727,18 @@ another fix: the app's full stop landing on top of the person's own
 (`formatDay`), and a hook declared below an early return (`rules-of-hooks`).
 Each guard was run against the tree from before its fixes to confirm it would
 have caught them, and `check-copy` found one more the sweep had missed.
+
+### The other road (2026-09-11)
+
+The writing room accepted `kind=shadow` and nothing in the app had ever sent
+anyone there — on either track. §7.2: optional on Starter at eight minutes,
+required on Full at fifteen and *before* What I heard; §7.8: if it was never
+written, Envision offers the write once rather than drawing a scene in its
+place. The room now knows where it goes when it closes; the Starter closed
+screen offers the other road as the second of two buttons; Envision's
+unwritten other road offers the write and does not offer to draw what does not
+exist. Walked live and covered by eight e2e checks on the product's own clock.
+The Full track's 600-character soft floor is shown as polish, never an error.
 
 ## Blocked on the user
 - Supabase project URL/anon key, Anthropic API key, fal.ai key, RevenueCat keys: needed to test real providers. Everything runs on local fallbacks without them.
