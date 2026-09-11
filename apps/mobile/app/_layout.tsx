@@ -8,6 +8,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { day } from '@morrow/ui';
 import { useMorrow } from '../src/store';
 import { onNotificationOpened } from '../src/notify';
+import { armAnalytics, track } from '../src/analytics';
 import { SafetyGate } from '../src/components/SafetyGate';
 import { StorageWarning } from '../src/components/StorageWarning';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
@@ -81,7 +82,11 @@ export default function RootLayout() {
     if (!hydrated) return;
     let off: (() => void) | null = null;
     let gone = false;
-    void onNotificationOpened((route) => router.push(route as never)).then((unsubscribe) => {
+    armAnalytics();
+    void onNotificationOpened((route) => {
+      track({ name: 'notification_opened', route });
+      router.push(route as never);
+    }).then((unsubscribe) => {
       if (gone) unsubscribe();
       else off = unsubscribe;
     });

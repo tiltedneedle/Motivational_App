@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, UserField, day } from '@morrow/ui';
 import { confirmCode, hasSupabase, sendCode, signInWithApple } from '../src/supabase';
 import { useMorrow } from '../src/store';
+import { track } from '../src/analytics';
 
 type Stage = 'email' | 'code' | 'done';
 
@@ -72,9 +73,10 @@ export default function Account() {
   const [pulled, setPulled] = useState(false);
 
   /** Signed in: the copy, one way or the other, with the button held busy throughout. */
-  const settle = async () => {
+  const settle = async (method: 'email' | 'apple') => {
     await setAccount();
     const synced = await afterSignIn();
+    track({ name: 'account_signed_in', method, pulled: synced.ok && synced.pulled });
     if (!synced.ok) {
       // Signed in, but the copy did not land. Said plainly: the sign-in is real,
       // the writing is still here, and the next launch will try again.
@@ -96,7 +98,7 @@ export default function Account() {
         setProblem(out.error);
         return;
       }
-      await settle();
+      await settle('email');
     } finally {
       setBusy(false);
     }
@@ -118,7 +120,7 @@ export default function Account() {
         setProblem(out.error);
         return;
       }
-      await settle();
+      await settle('apple');
     } catch (err) {
       const m = err instanceof Error ? err.message : '';
       // The person closed the sheet. Not an error, and not worth a sentence.

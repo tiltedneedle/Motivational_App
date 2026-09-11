@@ -79,6 +79,7 @@ Everything runs on local fallbacks without one. To go beyond them:
 | Anthropic | the edge functions' `ANTHROPIC_API_KEY` (`EXPO_PUBLIC_MORROW_API` only if the functions live somewhere other than Supabase) | the read-back, the second safety opinion, scenes |
 | fal.ai | the scene function's `FAL_KEY` | scene images |
 | RevenueCat | `EXPO_PUBLIC_RC_IOS`, `EXPO_PUBLIC_RC_ANDROID` | purchases |
+| PostHog | `EXPO_PUBLIC_POSTHOG_KEY` (and `_HOST` if not US) | product analytics: fixed event names and numbers, never text |
 
 ### Setting the Supabase project up, once
 

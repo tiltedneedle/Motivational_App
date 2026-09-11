@@ -11,6 +11,7 @@ import { syncNotices } from './notify';
 import { billing, type BillingResult, type PlanId } from './billing';
 import { FUNCTIONS_URL, deleteAccount, functionHeaders, hasSupabase, sessionState, signOut } from './supabase';
 import { pullAll, pushAll } from './sync';
+import { track } from './analytics';
 import {
   DEFAULT_PROFILE,
   AnthropicProvider,
@@ -597,6 +598,9 @@ export const useMorrow = create<MorrowState>()(
         }
 
         // A crisis result never returns the text onward for read-back.
+        if (risk.risk !== 'crisis') {
+          track({ name: 'sitting_completed', kind, mode, words: text.wordCount, seconds: text.secondsWriting, track: get().profile.track });
+        }
         return risk.risk === 'crisis' ? null : text;
       },
 
@@ -685,6 +689,7 @@ export const useMorrow = create<MorrowState>()(
             books: [...st.books, book],
             goals: st.goals.map((g) => (g.status === 'authored' ? { ...g, status: 'active' as const } : g)),
           }));
+          track({ name: 'book_sealed', edition: book.version, goals: book.chapters.length, track: book.track, authorship: book.authorshipRatio });
           return { ok: true, book };
         } catch (err) {
           return { ok: false, error: err instanceof Error ? err.message : 'The Book could not be sealed.' };
@@ -864,6 +869,7 @@ export const useMorrow = create<MorrowState>()(
               ? st.plans.map((p) => (p.goalId === goalId ? refreshed : p))
               : [...st.plans, plan],
           }));
+          if (!refreshed) track({ name: 'blueprint_built', moves: plan.moves.length, milestones: plan.milestones.length });
           return { ok: true };
         } catch (err) {
           return { ok: false, error: err instanceof Error ? err.message : 'The plan could not be built.' };
@@ -1267,14 +1273,15 @@ export const useMorrow = create<MorrowState>()(
       markPaywallSeen: (moment) =>
         set((s) => {
           const seen = s.profile.paywallSeen ?? [];
-          return seen.includes(moment)
-            ? {}
-            : { profile: { ...s.profile, paywallSeen: [...seen, moment] } };
+          if (seen.includes(moment)) return {};
+          track({ name: 'paywall_shown', moment });
+          return { profile: { ...s.profile, paywallSeen: [...seen, moment] } };
         }),
 
       purchase: async (plan) => {
         const out = await billing().purchase(plan);
         if (out.ok) set((s) => ({ profile: { ...s.profile, entitled: true } }));
+        track({ name: 'purchase', plan, ok: out.ok });
         return out;
       },
 

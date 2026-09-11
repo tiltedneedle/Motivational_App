@@ -175,6 +175,25 @@ export default function Settings() {
             </View>
           </View>
 
+          <View style={{ gap: 10 }}>
+            <Label>The feel of it</Label>
+            {/* A stone seating and a seal completing are felt as well as seen; this is the off switch. */}
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Chip
+                testID="settings-haptics-on"
+                label="Haptics on"
+                selected={state.profile.hapticsOn !== false}
+                onPress={() => setProfile({ hapticsOn: true })}
+              />
+              <Chip
+                testID="settings-haptics-off"
+                label="Off"
+                selected={state.profile.hapticsOn === false}
+                onPress={() => setProfile({ hapticsOn: false })}
+              />
+            </View>
+          </View>
+
           <Rule />
           {/*
             PRD §7.11. One control rather than five switches: the steps are

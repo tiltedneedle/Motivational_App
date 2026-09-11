@@ -8,6 +8,8 @@ import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Body, Chip, HoldBar, Label, Statement, Stone, Studio, UserField, night, useReducedMotion } from '@morrow/ui';
 import { dayOf } from '@morrow/core';
+import { feelSealed } from '../src/feel';
+import { track } from '../src/analytics';
 import { useMorrow } from '../src/store';
 
 const WORDS = ['Calm', 'Tired', 'Proud', 'Steady'];
@@ -85,6 +87,11 @@ export default function SealDay() {
             reducedMotion={reduced}
             onComplete={() => {
               sealDay({ moodWord: word, proof, gladOf });
+              feelSealed();
+              {
+                const d = useMorrow.getState().days[dayOf(new Date(), useMorrow.getState().profile.dayBoundaryHour)];
+                track({ name: 'day_sealed', planned: d?.planned ?? 0, done: d?.done ?? 0, wrote_proof: proof.trim().length > 0 });
+              }
               setSealed(true);
               setTimeout(() => router.dismissTo('/today'), 900);
             }}

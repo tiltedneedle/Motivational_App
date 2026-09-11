@@ -10,6 +10,7 @@ import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ordinal, type PaywallMoment } from '@morrow/core';
 import { Body, HoldBar, InkButton, Label, Statement, Stone, Studio, UserField, useReducedMotion, night } from '@morrow/ui';
+import { feelDrained, feelSealed } from '../src/feel';
 import { useGoals, useMorrow } from '../src/store';
 
 export default function SealBook() {
@@ -35,9 +36,11 @@ export default function SealBook() {
     const res = sealBook();
     if (!res.ok) {
       setError(res.error);
+      feelDrained();
       // Tell the bar the seal was refused so it drains and can be held again.
       return false;
     }
+    feelSealed();
     setSealed(true);
 
     // The Book is sealed either way — it is their writing and it is valid. But

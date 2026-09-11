@@ -10,6 +10,7 @@ import { Animated, Pressable, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Ring, Socket, Stone, accent, day } from '@morrow/ui';
 import { plural, type DomainId } from '@morrow/core';
+import { feelPark, feelSeat } from '../feel';
 
 const PARK_THRESHOLD = 40;
 
@@ -55,6 +56,7 @@ export function MoveStone({
     })
     .onEnd((e) => {
       if (e.translationY < -PARK_THRESHOLD) {
+        feelPark();
         onPark();
       }
       settle();
@@ -115,10 +117,19 @@ export function MoveStone({
           accessibilityHint="Double tap to seat. Long press for not today."
           accessibilityActions={[{ name: 'longpress', label: 'Not today' }]}
           onAccessibilityAction={(e) => {
-            if (e.nativeEvent.actionName === 'longpress') onPark();
+            if (e.nativeEvent.actionName === 'longpress') {
+              feelPark();
+              onPark();
+            }
           }}
-          onPress={onSeat}
-          onLongPress={onPark}
+          onPress={() => {
+            feelSeat();
+            onSeat();
+          }}
+          onLongPress={() => {
+            feelPark();
+            onPark();
+          }}
           delayLongPress={420}
           style={{ padding: 2 }}
         >

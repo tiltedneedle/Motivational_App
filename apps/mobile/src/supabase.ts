@@ -148,6 +148,25 @@ export async function signInWithApple(identityToken: string, nonce?: string): Pr
   }
 }
 
+/**
+ * Sign in with Google (PRD §7.12), from the id token the Google sign-in
+ * module hands back. The same half as Apple's: this part is the same
+ * everywhere; the native part (`@react-native-google-signin/google-signin`)
+ * needs the client's OAuth client ids and is wired the day they exist —
+ * see PROGRESS.md, "Blocked on the user".
+ */
+export async function signInWithGoogle(idToken: string, nonce?: string): Promise<AuthResult> {
+  const c = supabase();
+  if (!c) return { ok: false, error: NO_SERVICE };
+  try {
+    const { error } = await c.auth.signInWithIdToken({ provider: 'google', token: idToken, ...(nonce ? { nonce } : {}) });
+    if (error) return { ok: false, error: plain(error.message) };
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: plain(err instanceof Error ? err.message : 'no network') };
+  }
+}
+
 export async function signOut(): Promise<void> {
   const c = supabase();
   if (!c) return;

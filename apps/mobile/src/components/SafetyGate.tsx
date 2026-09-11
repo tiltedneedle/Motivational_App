@@ -21,6 +21,7 @@ import { Linking, Platform, Pressable, ScrollView, Text, View, useWindowDimensio
 import { HELPLINES, RESOURCES_COPY } from '@morrow/core';
 import { day, night, radius, type as fonts } from '@morrow/ui';
 import { hasRemoteProvider, useMorrow } from '../store';
+import { track } from '../analytics';
 
 /**
  * How long the way out is inert. Long enough that the second half of a double
@@ -42,6 +43,8 @@ export function SafetyGate() {
       setDialFailed(null);
       return;
     }
+    // A count, and which kind of row raised it. Never the words.
+    track({ name: 'safety_card_shown', source: pause.source?.kind ?? 'none' });
     const t = setTimeout(() => setArmed(true), SETTLE_MS);
     return () => clearTimeout(t);
   }, [pause]);

@@ -33,6 +33,10 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
       rewritten; no "Self Authoring" anywhere a person or a store could see it
 - [x] 15. Saying the Fifteen (§7.2): dictation through expo-speech-recognition,
       on-device where the phone can, with a typed room as the fallback
+- [x] 16. The feel of the controls (§8): haptics on seat, park and seal, with the
+      off switch in Settings; analytics as a seam with a fixed vocabulary and no
+      free text (PostHog HTTP, nothing without a key); the Google sign-in half
+      that needs no client id
 
 ## In flight
 
@@ -949,6 +953,9 @@ program's actual prompt text by someone with a licensed copy.
 
 ## Blocked on the user
 - Supabase project URL/anon key, Anthropic API key, fal.ai key, RevenueCat keys: needed to test real providers. Everything runs on local fallbacks without them.
+- Google sign-in: `signInWithGoogle(idToken)` is in `src/supabase.ts`; the native half (`@react-native-google-signin/google-signin`) needs the client's iOS and web OAuth client ids before it can be added and built.
+- Crash reporting: Sentry's React Native SDK is a native dependency and a DSN; not added until there is a project to send to. Analytics is a seam already (PostHog key).
+- Sound on the seal: an asset decision. Haptics are in; a placeholder click is worse than silence.
 
 ## Decisions log
 - 2026-09-09: start. Stones via react-native-svg (works on web for Playwright tests) rather than Skia; Skia can replace later for grain.
