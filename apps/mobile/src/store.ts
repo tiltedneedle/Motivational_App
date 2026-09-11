@@ -190,6 +190,15 @@ export interface MorrowState {
    * `moment` is set when a paywall refused it, so the caller can raise exactly
    * that moment rather than guessing which limit was hit.
    */
+  /**
+   * The person's own identity line, typed by them (PRD §7.4's "Not quite").
+   *
+   * `identityLineEdited` is what stops the next rebuild proposing over the top
+   * of it: the proposal is the app's guess at a clause they wrote, and the
+   * moment they write one themselves the guess is retired rather than allowed
+   * to come back. Clearing it hands the proposal back.
+   */
+  editIdentityLine: (goalId: string, line: string) => void;
   makePortraitAndPlan: (
     goalId: string,
   ) => { ok: true } | { ok: false; error: string; moment?: PaywallMoment };
@@ -613,6 +622,24 @@ export const useMorrow = create<MorrowState>()(
        * The Portrait is derived and safe to rebuild, except for an identity
        * line the person has written themselves. That is theirs and survives.
        */
+      editIdentityLine: (goalId, line) =>
+        set((s) => ({
+          portraits: s.portraits.map((p) =>
+            p.goalId === goalId
+              ? {
+                  ...p,
+                  identityLine: line.trim(),
+                  // Their sentence needs no framing in front of it. The framing
+                  // exists to make the app's fragment grammatical, and printing
+                  // it over somebody's own line would put the app's words at the
+                  // head of the one sentence on the screen that is theirs.
+                  identityFraming: line.trim() ? null : p.identityFraming,
+                  identityLineEdited: line.trim().length > 0,
+                }
+              : p,
+          ),
+        })),
+
       makePortraitAndPlan: (goalId) => {
         const s = get();
         const goal = s.goals.find((g) => g.id === goalId);

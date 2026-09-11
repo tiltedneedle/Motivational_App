@@ -89,7 +89,10 @@ export default function StoneScreen() {
       router.replace(`/stone?goal=${nextGoal.id}&kind=${nextPlan[0]}`);
       return;
     }
-    router.replace('/seal-book');
+    // The Portrait reveal (PRD §7.4), which is what all five stones were for
+    // and which nothing in the app had ever shown. It is built here, from the
+    // lines they have just written, and the sitting carries on from it.
+    router.replace(`/portrait?goal=${goals[0]?.id ?? goalId}&next=/seal-book`);
   };
 
   if (!goal) {

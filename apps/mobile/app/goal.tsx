@@ -111,6 +111,14 @@ export default function GoalScreen() {
             </Ring>
           </View>
 
+          {portrait ? (
+            <TextButton
+              testID="goal-portrait"
+              label="See the portrait"
+              onPress={() => router.push(`/portrait?goal=${goal.id}`)}
+            />
+          ) : null}
+
           {portrait?.identityLine ? (
             <View style={{ gap: 4 }}>
               <Label>Who you are becoming</Label>

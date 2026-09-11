@@ -249,6 +249,46 @@ async function main() {
     }
     check('all five stones were asked', seenKinds.length >= 5, seenKinds.join(','));
 
+    // ---- the Portrait reveal (PRD 7.4)
+    //
+    // This is what the five stones were for, and for a long time nothing in
+    // the app ever showed it: the Portrait was built at the last stone and the
+    // sitting went straight to sealing the Book. Two actions and one editable
+    // line, and everything else on it is a sentence they wrote.
+    check('the portrait is revealed after the last stone', await seen('screen-portrait'));
+
+    if (await seen('screen-portrait')) {
+      check(
+        'it quotes their Motives line back as the why',
+        (await text('portrait-why')).length > 10,
+        await text('portrait-why'),
+      );
+      check('and carries the letter from the future self', (await text('portrait-letter')).length > 60);
+      check(
+        'which names no goal and no plan line',
+        !/half marathon/i.test(await text('portrait-letter')),
+        (await text('portrait-letter')).slice(0, 80),
+      );
+
+      // "Not quite" is the only edit on the screen, because the identity clause
+      // is the only line the app proposed rather than quoted.
+      await tap('portrait-not-quite');
+      await page.waitForTimeout(300);
+      check('Not quite opens the one line they can rewrite', await seen('portrait-identity-field'));
+      await page.locator('[data-testid="portrait-identity-field"]').fill('somebody who starts before deciding');
+      await page.waitForTimeout(200);
+      await tap('portrait-identity-save');
+      await page.waitForTimeout(400);
+      check(
+        'and it keeps what they typed',
+        (await text('portrait-identity')).includes('starts before deciding'),
+        await text('portrait-identity'),
+      );
+
+      await tap('portrait-accept');
+      await page.waitForTimeout(700);
+    }
+
     // ---- seal the Book
     check('seal screen', await seen('screen-seal-book'));
     await page.locator('[data-testid="i-will"]').fill('I will be out the back door before the kettle boils');
