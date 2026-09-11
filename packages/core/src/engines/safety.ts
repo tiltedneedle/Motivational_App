@@ -221,7 +221,13 @@ export const RESOURCES_COPY = {
 
 /** Content rules the coach obeys regardless of what was asked (PRD §11.6). */
 export function contentGuard(text: string): { allowed: boolean; redirect?: string } {
-  if (/\b(\d{3,4})\s?(kcal|calories)\b/i.test(text) && /\b(under|below|max|limit)\b/i.test(text)) {
+  // Two shapes. "Keep me under 1200 kcal" names a number; "how many calories
+  // should I eat to lose 5 kg" asks for one. The guard only knew the first,
+  // so the second — the commoner way to ask — got the generic reply.
+  const namesTarget = /\b(\d{3,4})\s?(kcal|calories)\b/i.test(text) && /\b(under|below|max|limit)\b/i.test(text);
+  const asksForTarget =
+    /\b(calories?|kcal|deficit|macros?)\b/i.test(text) && /\b(how many|how much|should i|what should|target|to lose|lose\s+\d)\b/i.test(text);
+  if (namesTarget || asksForTarget) {
     return {
       allowed: false,
       redirect: 'Morrow does not set calorie targets. It can coach the behaviour: book the appointment, track for a week, ask a professional what number is right for you.',

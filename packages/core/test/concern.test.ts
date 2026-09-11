@@ -9,9 +9,9 @@
  * morning". These tests hold the three promises still.
  */
 import { describe, expect, it } from 'vitest';
-import { buildDawnBrief, fullTrackInvitation } from '../src/engines/coach';
-import { SUPPORT_LINE, screen, shouldOfferSupport, softenFrom, withinSoftenWindow } from '../src/engines/safety';
-import type { BookVersion, DaySummary, Move } from '../src/types';
+import { buildDawnBrief, fullTrackInvitation, replyToChip } from '../src/engines/coach';
+import { SUPPORT_LINE, contentGuard, screen, shouldOfferSupport, softenFrom, withinSoftenWindow } from '../src/engines/safety';
+import type { BookVersion, DaySummary, GoalAnalysis, Move } from '../src/types';
 
 const DAY = '2026-09-11';
 
@@ -208,5 +208,71 @@ describe('the invitation to go deeper', () => {
     const inv = fullTrackInvitation('');
     expect(inv.quoted).toBe('');
     expect(inv.quotes).toEqual(['']);
+  });
+});
+
+/**
+ * What the coach says when a chip is tapped, checked against what was actually
+ * on screen. All four of these were read off the built app: a raw ISO date,
+ * "1 sealed days", a full stop landing on top of the person's own, and the
+ * person's if-then rewritten into the second person and quoted back as theirs.
+ */
+describe('the coach quotes their words as written', () => {
+  const analyses = [
+    {
+      id: 'an_obs',
+      goalId: 'g_1',
+      kind: 'obstacles',
+      line: 'I stay up too late',
+      line2: 'put the phone in the hall at ten',
+    },
+  ] as unknown as GoalAnalysis[];
+  const moves = [move];
+  const days = [
+    {
+      day: '2026-09-09',
+      planned: 1,
+      done: 1,
+      proof: 'Went anyway. Rained the whole way.',
+      sealedAt: '2026-09-09T21:00:00.000Z',
+      safetyRisk: 'none',
+    },
+    { day: DAY, planned: 1, done: 1, proof: 'Out before the kettle.', sealedAt: null, safetyRisk: 'none' },
+  ] as unknown as DaySummary[];
+  const ctx = { book, analyses, moves, days, today: DAY, returns: 0, persona: 'straight' as const };
+
+  it('keeps the if-then in the first person', () => {
+    const r = replyToChip('stuck', ctx);
+    expect(r.text).toContain('then I put the phone in the hall at ten');
+    expect(r.text).not.toContain('then you');
+  });
+
+  it('quotes a past day, with a real date and one full stop', () => {
+    const r = replyToChip('dont-feel', ctx);
+    expect(r.text).toContain('Wed 9 Sep');
+    expect(r.text).not.toContain('2026-09-09');
+    // Not today's own line: they have not had today yet.
+    expect(r.text).not.toContain('Out before the kettle');
+    expect(r.text).not.toContain('.”.');
+    expect(r.text).toContain('Rained the whole way.” Same size today.');
+  });
+
+  it('counts sealed days in the right number', () => {
+    const r = replyToChip('celebrate', { ...ctx, days: [days[0]!] });
+    expect(r.text).toContain('1 sealed day.');
+    expect(r.text).not.toContain('1 sealed days');
+  });
+});
+
+describe('the coach refuses a calorie target however it is asked for', () => {
+  it('knows the question as well as the number', () => {
+    expect(contentGuard('keep me under 1200 kcal a day').allowed).toBe(false);
+    expect(contentGuard('how many calories should I eat to lose 5kg fast').allowed).toBe(false);
+    expect(contentGuard('what should my macros be to lose weight').allowed).toBe(false);
+  });
+
+  it('does not refuse ordinary talk about food', () => {
+    expect(contentGuard('I ate well today and the run felt easy').allowed).toBe(true);
+    expect(contentGuard('cooking dinner at home three nights this week').allowed).toBe(true);
   });
 });

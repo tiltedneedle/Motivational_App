@@ -7,7 +7,7 @@
  */
 import type { Brief, BookVersion, DaySummary, GoalAnalysis, Move, Persona } from '../types';
 import { isReturning } from './consistency';
-import { plural } from '../ids';
+import { formatDay, plural } from '../ids';
 import { firstSentence } from './portrait';
 import { SUPPORT_LINE, isQuotable, screen } from './safety';
 
@@ -250,8 +250,16 @@ export function replyToChip(chip: ChipId, ctx: ChipContext): CoachReply {
   switch (chip) {
     case 'stuck': {
       if (obstacle?.line2?.trim()) {
+        // Their if-then, as written. This used to print "then you put the
+        // phone in the hall" — the coach rewriting the person's own sentence
+        // into the second person, which is the app editing their words and
+        // then quoting the edit back as theirs. The Book and the brief both
+        // print "then I …", and so does this.
+        const written = `if ${obstacle.line.trim().replace(/^if\s+/i, '')}, then I ${obstacle.line2
+          .trim()
+          .replace(/^then i\s+/i, '')}`;
         return {
-          text: `You already wrote the answer: if ${obstacle.line.trim().replace(/^if\s+/i, '')}, then you ${obstacle.line2.trim().replace(/^then i\s+/i, '')}. Do that version, not the big one.`,
+          text: `You already wrote the answer: ${endSentence(written)} Do that version, not the big one.`,
           quotedSpans: [obstacle.line.trim(), obstacle.line2.trim()],
           action: next
             ? {
@@ -271,12 +279,18 @@ export function replyToChip(chip: ChipId, ctx: ChipContext): CoachReply {
       };
     }
     case 'dont-feel': {
+      // A *past* day. Quoting today's own proof line back as "you did not feel
+      // like it either" made no sense — they have not had today yet — and the
+      // date was printed in its stored form.
       const wentAnyway = ctx.days
-        .filter((d) => d.done > 0 && d.proof?.trim() && isQuotable(d))
+        .filter((d) => d.day < ctx.today && d.done > 0 && d.proof?.trim() && isQuotable(d))
         .sort((a, b) => (a.day < b.day ? 1 : -1))[0];
       if (wentAnyway?.proof) {
+        const when = formatDay(wentAnyway.day, { weekday: true, today: ctx.today });
         return {
-          text: `On ${wentAnyway.day} you did not feel like it either, and you wrote “${wentAnyway.proof.trim()}”. Same size today.`,
+          text: `On ${when} you did not feel like it either, and you wrote ${endSentence(
+            `“${wentAnyway.proof.trim()}”`,
+          )} Same size today.`,
           quotedSpans: [wentAnyway.proof.trim()],
           action: next
             ? {
@@ -311,12 +325,16 @@ export function replyToChip(chip: ChipId, ctx: ChipContext): CoachReply {
       const returns = ctx.returns > 0 ? ` and ${ctx.returns} ${ctx.returns === 1 ? 'return' : 'returns'}` : '';
       if (line) {
         return {
-          text: `${days} sealed days${returns}. You wrote “${line}”. Say it out loud; that is the whole exercise.`,
+          text: `${plural(days, 'sealed day')}${returns}. You wrote ${endSentence(`“${line}”`)} Say it out loud; that is the whole exercise.`,
           quotedSpans: [line],
           action: null,
         };
       }
-      return { text: `${days} sealed days. Name one thing that is true now that was not in January.`, quotedSpans: [], action: null };
+      return {
+        text: `${plural(days, 'sealed day')}. Name one thing that is true now that was not in January.`,
+        quotedSpans: [],
+        action: null,
+      };
     }
   }
 }
