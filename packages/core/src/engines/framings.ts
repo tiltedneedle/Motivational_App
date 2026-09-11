@@ -87,12 +87,11 @@ export function framingSet(kind: AnalysisKind, domain: DomainId): FramingSet {
         question: MOTIVE_QUESTION[domain],
         framings: MOTIVE_FRAMINGS,
         fullPrompts: [
-          'Do you truly believe it matters?',
-          'Would you feel it if you dropped it?',
-          'Is it yours, or to please someone?',
-          'Is it demanded by where you are?',
-          'Would the doing itself satisfy you?',
-          'Is it part of something you have wanted for a long time?',
+          'If nobody ever knew you did this, would you still want it?',
+          'What would a year without it cost you — not in money, in mornings?',
+          'Whose voice is asking for it: yours, or someone you are still answering?',
+          'What about the doing of it, on a dull day, is worth having?',
+          'How far back does this one go?',
         ],
         hint: 'Why this, why now',
       };
@@ -102,10 +101,10 @@ export function framingSet(kind: AnalysisKind, domain: DomainId): FramingSet {
         question: IMPACT_QUESTION[domain],
         framings: IMPACT_FRAMINGS,
         fullPrompts: [
-          'How would success change how you see yourself?',
-          'What else in your life changes?',
-          'How would the people around you see it?',
-          'Who benefits that you have not thought about?',
+          'What do you say about yourself, quietly, once this is true?',
+          'Name one ordinary evening that goes differently.',
+          'Who notices first, and what do they notice?',
+          'Who is helped by it that you have not been counting?',
         ],
         hint: "The first thing that would be different in someone else's week",
       };
@@ -115,10 +114,10 @@ export function framingSet(kind: AnalysisKind, domain: DomainId): FramingSet {
         question: 'What happens on an ordinary Tuesday because of this?',
         framings: STRATEGY_FRAMINGS,
         fullPrompts: [
-          'What daily and weekly behaviours does this need?',
-          'When will you do them, and where?',
-          'How often, and for how long?',
-          'What has to be true the night before?',
+          'Walk me through the week: which days, which hour, which door?',
+          'What is the smallest version you would still count?',
+          'What has to be true the night before for the morning to work?',
+          'What do you stop doing to make room for it?',
         ],
         hint: 'One line with a time and a place in it',
       };
@@ -128,10 +127,10 @@ export function framingSet(kind: AnalysisKind, domain: DomainId): FramingSet {
         question: 'What stops this? You already know.',
         framings: OBSTACLE_FRAMINGS,
         fullPrompts: [
-          'What natural, social and personal barriers are real here?',
-          'How might you sabotage yourself?',
-          'Who will help, and who will get in the way?',
-          'What is the realistic worst case, and the plan for it?',
+          'What has stopped it before, in real weeks, not in theory?',
+          'What is the excuse you already know you will reach for?',
+          'Who makes it easier, and who — kindly or not — makes it harder?',
+          'On the week it all goes wrong, what is the one thing you still do?',
         ],
         hint: 'If ___ happens, then I ___',
       };
@@ -141,10 +140,10 @@ export function framingSet(kind: AnalysisKind, domain: DomainId): FramingSet {
         question: "How will you know it's working before it's done?",
         framings: MONITOR_FRAMINGS,
         fullPrompts: [
-          'What counts as evidence of progress?',
-          'How often will you look?',
-          'What measurable change would satisfy you?',
-          'How will you tell pushing hard from being unkind to yourself?',
+          'What would you point at, in a month, to show it is working?',
+          'How often do you want to look, honestly?',
+          'What number, if any, would you trust?',
+          'How will you tell a hard week from a bad sign?',
         ],
         hint: "What counts as proof, and how often you'll look",
       };
@@ -156,10 +155,18 @@ export function framingLabel(kind: AnalysisKind, domain: DomainId, id: string | 
   return framingSet(kind, domain).framings.find((f) => f.id === id)?.label ?? null;
 }
 
+/**
+ * The five stones, as the person sees them named.
+ *
+ * Morrow's own words for the five questions every goal is asked — the internal
+ * keys stay the plain nouns because the code reads them, but nothing the
+ * person sees does. The published research these come from describes the
+ * questions, not their headings; the headings here are the app's.
+ */
 export const ANALYSIS_TITLES: Record<AnalysisKind, string> = {
-  motives: 'Motives',
-  impact: 'Impact',
-  strategies: 'Strategies',
-  obstacles: 'Obstacles',
-  monitoring: 'Monitoring',
+  motives: 'Why',
+  impact: 'Who it reaches',
+  strategies: 'How',
+  obstacles: 'What gets in the way',
+  monitoring: 'How I’ll know',
 };

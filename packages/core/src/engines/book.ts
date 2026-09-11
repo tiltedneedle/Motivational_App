@@ -17,7 +17,7 @@ import type {
 import { ANALYSIS_ORDER } from '../types';
 import { framingLabel } from './framings';
 import { isQuotable } from './safety';
-import { formatDay, plural, sealedOn } from '../ids';
+import { formatDay, plural, sealedOn, thenHalf } from '../ids';
 import { firstSentence, restOfIdeal } from './portrait';
 
 export const MIN_AUTHORSHIP_RATIO = 0.95;
@@ -258,7 +258,10 @@ export function bookToText(book: BookVersion, boundaryHour = 3): string {
     for (const l of c.lines) {
       out.push(`  ${l.kind}${l.framingLabel ? ` (${l.framingLabel})` : ''}`);
       out.push(`  ${l.text}`);
-      if (l.text2) out.push(`  …then I ${l.text2}`);
+      if (l.text2) {
+        const half = thenHalf(l.text2);
+        out.push(`  ${half.framing} ${half.act}`);
+      }
     }
     for (const m of c.memories) out.push(`  from before: ${m}`);
     out.push('');

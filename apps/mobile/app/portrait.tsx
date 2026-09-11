@@ -166,7 +166,13 @@ export default function PortraitScreen() {
               style={{ backgroundColor: day.surface, borderRadius: radius.field, padding: 16, gap: 4 }}
             >
               <Label style={{ color: accent.coralText }}>When it gets in the way</Label>
-              <UserText style={{ fontSize: 17, lineHeight: 25, color: day.ink }}>{portrait.ifThen}</UserText>
+              {/* "If … then I" is the app's; the two halves inside it are theirs. */}
+              <Quoted
+                text={portrait.ifThen}
+                spans={portrait.quotedSpans}
+                italic={false}
+                style={{ fontSize: 17, lineHeight: 25, color: day.ink }}
+              />
             </View>
           ) : null}
 

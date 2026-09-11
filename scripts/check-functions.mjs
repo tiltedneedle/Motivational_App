@@ -43,7 +43,8 @@ for (const name of names) {
     ],
     'delete-account': [
       // The person is read out of their own token, never out of the body.
-      /auth\.getUser\(\)/,
+      /auth\.getUser\(token\)/,
+      /headers\.get\('authorization'\)/,
       // A soft delete now, the hard one after the grace period.
       /deleted_at/,
       /GRACE_DAYS/,

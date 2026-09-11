@@ -226,7 +226,9 @@ async function main() {
       if (!(await seen('screen-stone'))) break;
       const step = await text('stone-step');
       seenKinds.push(step.split('·')[0].trim());
-      const kind = step.toLowerCase();
+      // The stone's kind is in the route, not in its heading: the headings
+      // are the app's own words for the five questions and may change.
+      const kind = (new URL(page.url()).searchParams.get('kind') ?? '').toLowerCase();
       await page.locator('[data-testid="stone-line"]').fill(
         kind.includes('strategies')
           ? 'Tuesday, Thursday, Saturday at 6:40, out the back door before the kettle boils'

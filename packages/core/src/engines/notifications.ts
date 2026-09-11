@@ -187,7 +187,7 @@ export function planNotices(input: NoticeInput): Notice[] {
       at: at(input.day, wakeAt),
       title: 'This morning',
       route: '/today',
-      body: wakeLine(`Start with ${lower(first.title)}.`),
+      body: wakeLine(endSentence(`Start with ${lower(first.title)}`)),
       quotes: [first.title],
     });
   }

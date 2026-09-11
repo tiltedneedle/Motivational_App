@@ -10,6 +10,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "app.morrow.client",
+      "usesAppleSignIn": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -44,6 +45,7 @@
         }
       ],
       "expo-sharing",
+      "expo-apple-authentication",
       [
         "expo-notifications",
         {

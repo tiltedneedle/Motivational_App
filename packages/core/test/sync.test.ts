@@ -141,6 +141,30 @@ const bundle: SyncBundle = {
   ],
   analyses: [
     {
+      id: 'an_mon',
+      goalId: 'g_1',
+      kind: 'monitoring',
+      track: 'full',
+      framingId: null,
+      line: 'one run in the ledger',
+      specificity: 0.5,
+      followupShown: false,
+      writtenAt: '2026-09-10T20:25:00.000Z',
+      safetyRisk: 'none',
+    },
+    {
+      id: 'an_str',
+      goalId: 'g_1',
+      kind: 'strategies',
+      track: 'full',
+      framingId: null,
+      line: 'Tuesday, Thursday, Saturday at 6:40, out the back door',
+      specificity: 0.7,
+      followupShown: false,
+      writtenAt: '2026-09-10T20:28:00.000Z',
+      safetyRisk: 'none',
+    },
+    {
       id: 'an_obs',
       goalId: 'g_1',
       kind: 'obstacles',
@@ -159,6 +183,7 @@ const bundle: SyncBundle = {
   plans: [plan],
   evidence: [
     { id: 'ev_1', goalId: 'g_1', moveId: 'mv_1', kind: 'move', text: 'Went anyway.', day: '2026-09-15', safetyRisk: 'none', createdAt: '2026-09-15T06:50:00.000Z' },
+    { id: 'ev_2', goalId: 'g_1', practiceId: 'pr_1', kind: 'practice', text: 'Out the door', day: '2026-09-15', safetyRisk: 'none', createdAt: '2026-09-15T06:46:00.000Z' },
   ],
   days: {
     '2026-09-15': {
@@ -263,6 +288,40 @@ describe('the store as rows', () => {
     const versions = tables.find((t) => t.table === 'book_versions')!.rows;
     expect(versions[0]!.contents).toBe(book);
     expect(versions[0]!.book_id).toBe(BOOK_ID);
+  });
+
+  it('sends a pointer at something the device no longer has as null', () => {
+    // A dropped goal leaves its practice archived and its letters pointing
+    // at it. Sent as an id the server refuses the row; sent as null it is
+    // what the server would have done itself.
+    const orphaned = toRows({ ...bundle, goals: [], analyses: [] }, USER, 'UTC');
+    const practice = orphaned.find((t) => t.table === 'practices')!.rows[0]!;
+    expect(practice.goal_id).toBeNull();
+    expect(practice.source_line_id).toBeNull();
+    const milestone = orphaned.find((t) => t.table === 'milestones')!.rows[0]!;
+    expect(milestone.proof_source_line_id).toBeNull();
+  });
+
+  it('names a practice run by its practice, never in the move column', () => {
+    const rows = tables.find((t) => t.table === 'evidence')!.rows;
+    const run = rows.find((r) => r.kind === 'practice')!;
+    expect(run.practice_id).toBe('pr_1');
+    expect(run.move_id).toBeNull();
+    // An older row that carried the practice id in moveId is read by kind.
+    const old = toRows({ ...bundle, evidence: [{ ...bundle.evidence[1]!, practiceId: undefined, moveId: 'pr_1' }] }, USER, 'UTC');
+    const row = old.find((t) => t.table === 'evidence')!.rows[0]!;
+    expect(row.practice_id).toBe('pr_1');
+    expect(row.move_id).toBeNull();
+  });
+
+  it('sends an unwritten proof as null, not an empty string the server refuses', () => {
+    const unwritten = { ...plan, milestones: [{ ...plan.milestones[0]!, proof: '', proofSourceLineId: null }] };
+    const rows = toRows({ ...bundle, plans: [unwritten] }, USER, 'UTC').find((t) => t.table === 'milestones')!.rows;
+    expect(rows[0]!.proof).toBeNull();
+  });
+
+  it('writes practices before the ledger rows that point at them', () => {
+    expect(TABLE_ORDER.indexOf('practices')).toBeLessThan(TABLE_ORDER.indexOf('evidence'));
   });
 
   it('invents nothing: a value the app does not have is null', () => {

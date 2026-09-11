@@ -62,7 +62,19 @@ function normalise(s: string): string {
  * short step from quoting the plan.
  */
 export function quotableSources(sources: LetterSources): string[] {
-  return [sources.ideal, ...sources.evidence.map((e) => e.text)].filter((s) => s.trim().length > 0);
+  return [sources.ideal, ...freeText(sources.evidence).map((e) => e.text)].filter((s) => s.trim().length > 0);
+}
+
+/**
+ * The ledger rows that are sentences the person typed: what they wrote at the
+ * seal, and what they captured. A kept move's row carries the move's title —
+ * a plan line, which no letter may say back — and a practice run's row
+ * carries the app's own "Two minutes of it", which is not theirs at all.
+ * Quoting either made every letter after the first kept move fail its own
+ * check, so no letter was ever written once the plan was in use.
+ */
+export function freeText<T extends { kind: Evidence['kind'] }>(evidence: readonly T[]): T[] {
+  return evidence.filter((e) => e.kind === 'seal' || e.kind === 'capture');
 }
 
 /**
@@ -227,15 +239,17 @@ interface Piece {
   optional: number;
 }
 
-function middlePieces(first: string, kept: string[], total: number): Piece[] {
+function middlePieces(first: string, cut: boolean, kept: string[], total: number): Piece[] {
   const pieces: Piece[] = [];
   if (first) {
     pieces.push({
-      text: `You wrote “${first}” and I have thought about that line more than you did.`,
+      // "began" when the sentence was cut: the quotation is the verbatim
+      // start of it, and saying "wrote" of half a sentence is a small lie.
+      text: `You ${cut ? 'began' : 'wrote'} “${first}” and I have thought about that line more than you did.`,
       quotes: [first],
-      // Only ever dropped when there is a ledger line to quote instead: a
-      // letter that quotes nothing of theirs is not a letter.
-      optional: kept.length > 0 ? 3 : 0,
+      // The last thing to go, and only ever when there is a ledger line to
+      // quote instead: a letter that quotes nothing of theirs is not a letter.
+      optional: kept.length > 0 ? 1 : 0,
     });
   }
   if (kept.length >= 2) {
@@ -265,23 +279,23 @@ function middlePieces(first: string, kept: string[], total: number): Piece[] {
     pieces.push({
       text: 'None of it was the day you felt like it. That is the part nobody tells you: the feeling arrives afterwards, if it arrives at all, and the work goes first either way.',
       quotes: [],
-      optional: 2,
+      optional: 3,
     });
     pieces.push({
       text: 'I am not writing to tell you it gets easier. I am writing because somebody should have a record of the mornings you did it anyway, and it turns out that somebody is you, later.',
       quotes: [],
-      optional: 1,
+      optional: 2,
     });
   } else {
     pieces.push({
       text: 'An empty page is not a verdict. The first line goes in the same way the last one will, on a morning that does not feel like it, and nobody is counting how long the page stayed blank.',
       quotes: [],
-      optional: 2,
+      optional: 3,
     });
     pieces.push({
       text: 'I am not writing to tell you it gets easier. I am writing because somebody should keep a record of what you decided tonight, and it turns out that somebody is you, later.',
       quotes: [],
-      optional: 1,
+      optional: 2,
     });
   }
   return pieces;
@@ -315,13 +329,18 @@ export interface ComposedLetter {
  */
 export function composeLetter(trigger: LetterTrigger, sources: LetterSources, name?: string): ComposedLetter {
   const who = name?.trim() ? `${name.trim()}, ` : '';
-  const first = firstSentenceOf(sources.ideal);
-  const entries = sources.evidence.map((e) => e.text.trim()).filter((t) => t.length > 0);
-  const kept = entries.filter((t) => t.length <= 90).slice(0, 2);
+  const { first, cut } = firstSentenceOf(sources.ideal);
+  // The count is the whole ledger; the quotations come only from the rows
+  // that are sentences they typed.
+  const total = sources.evidence.filter((e) => e.text.trim().length > 0).length;
+  const kept = freeText(sources.evidence)
+    .map((e) => e.text.trim())
+    .filter((t) => t.length > 0 && t.length <= 90)
+    .slice(0, 2);
 
   const opener = `${who}${OPENERS[trigger]}`;
   const closer = CLOSERS[trigger];
-  let pieces = middlePieces(first, kept, entries.length);
+  let pieces = middlePieces(first, cut, kept, total);
 
   const assemble = (ps: Piece[]) => [opener, ...ps.map((p) => p.text), closer].join(' ');
 
@@ -339,7 +358,7 @@ export function composeLetter(trigger: LetterTrigger, sources: LetterSources, na
     pieces = pieces.map((p) =>
       p.quotes.length === 2
         ? {
-            text: `The ledger has ${entries.length} entries in your own handwriting so far, and one of them is ${endSentence(`“${kept[0]}”`)}`,
+            text: `The ledger has ${total} entries in your own handwriting so far, and one of them is ${endSentence(`“${kept[0]}”`)}`,
             quotes: [kept[0]!],
             optional: 0,
           }
@@ -360,11 +379,20 @@ export function composeLetter(trigger: LetterTrigger, sources: LetterSources, na
   return { body, quotes, check: checkLetter(body, quotes, sources) };
 }
 
-/** The first sentence of the Fifteen, uncut. Quoting half a sentence is worse than quoting none. */
-function firstSentenceOf(text: string): string {
+/**
+ * The first sentence of the Fifteen, whole when it fits and its verbatim
+ * start when it does not. A Fifteen that opens with a 220-character sentence
+ * used to yield no quotation at all, so the Portrait letter was refused on
+ * every launch for exactly the people who wrote the most.
+ */
+function firstSentenceOf(text: string): { first: string; cut: boolean } {
   const t = (text ?? '').replace(/\s+/g, ' ').trim();
-  if (!t) return '';
-  const m = t.match(/^[^.!?]{1,160}[.!?]/);
+  if (!t) return { first: '', cut: false };
+  const m = t.match(/^.*?[.!?]+["'”’)\]]*(?=\s|$)/);
   const s = (m?.[0] ?? t).trim();
-  return s.length <= 160 ? s : '';
+  if (s.length <= 160) return { first: s, cut: false };
+  const window = s.slice(0, 161);
+  const lastSpace = window.lastIndexOf(' ');
+  const prefix = (lastSpace > 80 ? window.slice(0, lastSpace) : window.slice(0, 160)).replace(/[\s,;:]+$/, '');
+  return { first: prefix, cut: true };
 }

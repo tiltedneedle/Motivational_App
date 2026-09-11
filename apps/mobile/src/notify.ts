@@ -129,7 +129,6 @@ export async function onNotificationOpened(handler: (route: string) => void): Pr
     // not a reason to swallow it.
     mod.setNotificationHandler?.({
       handleNotification: async () => ({
-        shouldShowAlert: true,
         shouldShowBanner: true,
         shouldShowList: true,
         shouldPlaySound: false,

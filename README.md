@@ -2,9 +2,12 @@
 
 Write your future in your own words. Then live by it.
 
-The Self Authoring method rebuilt for a phone: an Interview, fifteen minutes of
-continuous writing, five stones per goal, a Book the person seals with a hold,
-and a Today built out of their own lines. The one rule shaping everything: the
+A writing program with published evidence behind it, built for a phone: an
+Interview, fifteen minutes of continuous writing about the future, five stones
+per goal, a Book the person seals with a hold, and a Today built out of their
+own lines. The method comes from the goal-setting and expressive-writing
+research (Morisano et al. 2010; Schippers et al. 2015, 2020; King 2001); every
+prompt, name and line of copy is Morrow's own. The one rule shaping everything: the
 person writes every goal, plan line and Book sentence. The app asks, quotes,
 sorts and typesets, and never writes a word about their life.
 
@@ -76,6 +79,14 @@ Everything runs on local fallbacks without one. To go beyond them:
 | Anthropic | the edge functions' `ANTHROPIC_API_KEY` (`EXPO_PUBLIC_MORROW_API` only if the functions live somewhere other than Supabase) | the read-back, the second safety opinion, scenes |
 | fal.ai | the scene function's `FAL_KEY` | scene images |
 | RevenueCat | `EXPO_PUBLIC_RC_IOS`, `EXPO_PUBLIC_RC_ANDROID` | purchases |
+
+### Setting the Supabase project up, once
+
+1. `supabase link --project-ref <ref>`, then `supabase db push` (the one migration) and `supabase functions deploy`.
+2. Secrets for the functions: `supabase secrets set ANTHROPIC_API_KEY=… FAL_KEY=…`. The service-role key and the anon key are already in the functions' environment.
+3. Authentication → Email: the app asks for a **six-digit code**, so the *Magic Link* email template must carry `{{ .Token }}` rather than only the link. Authentication → Providers → Apple: enable it with the bundle id `app.morrow.client` as the client id (native sign-in needs no secret).
+4. Put the project URL and anon key in the app's environment (`EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`) — `apps/mobile/.env` works for `expo start` and `expo run:*`.
+5. The hard delete: schedule a call to the `delete-account` sweep daily if you want it on the clock (it also runs on every call), e.g. a pg_cron job hitting the function, or leave it: every close of an account runs the sweep for the ones whose week is up.
 
 ## Layout
 

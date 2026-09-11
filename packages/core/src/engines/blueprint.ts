@@ -104,7 +104,7 @@ export function buildPlan(input: BuildInput, opts: BlueprintOptions): Plan {
   const obstacles = analyses.find((a) => a.kind === 'obstacles' && a.line.trim());
   const monitoring = analyses.find((a) => a.kind === 'monitoring' && a.line.trim());
 
-  if (!strategies) throw new BlueprintInvalid(['no Strategies line: nothing to plan from']);
+  if (!strategies) throw new BlueprintInvalid(['nothing to plan from: the How stone is not written yet']);
 
   const seasonWeeks = opts.seasonWeeks ?? 12;
   const planId = opts.newId('plan');
@@ -331,7 +331,10 @@ export function proposeReplan(plan: Plan, opts: { done: number; planned: number;
   const rate = opts.planned > 0 ? opts.done / opts.planned : 0;
   const active = plan.moves.filter((m) => m.status === 'todo');
 
-  if (rate < 0.5 && active.length > 1) {
+  // Nothing asked for yet is not a bad week. On the evening the Book is
+  // sealed every move is dated tomorrow or later, and "You kept 0 of 3" was
+  // proposed against work that had not been asked for.
+  if (opts.planned > 0 && rate < 0.5 && active.length > 1) {
     const drop = active[active.length - 1];
     if (drop) {
       changes.push({
@@ -464,13 +467,18 @@ export function reachMilestones(
   ledger: readonly { goalId: string | null; day: string }[],
   today: string,
   now: string,
+  // The day the plan was built, as the person counts days. Core cannot
+  // derive it from `createdAt`, which is an instant: its UTC date is a day
+  // ahead for everyone west of Greenwich in the evening, and a first move
+  // kept on its own day then fell outside the first window for good.
+  createdOn: string,
 ): Plan {
   const days = ledger.filter((e) => e.goalId === plan.goalId).map((e) => e.day);
   if (days.length === 0) return plan;
   const ordered = [...plan.milestones].sort((a, b) => a.order - b.order);
   let changed = false;
   const stamped = new Map<string, string>();
-  let since = plan.createdAt.slice(0, 10);
+  let since = createdOn;
   for (const ms of ordered) {
     if (!ms.reachedAt && ms.targetDate <= today && days.some((d) => d > since && d <= ms.targetDate)) {
       stamped.set(ms.id, now);

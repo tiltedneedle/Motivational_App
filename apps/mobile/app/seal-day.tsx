@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Body, Chip, HoldBar, Label, Statement, Stone, Studio, UserField, night, useReducedMotion } from '@morrow/ui';
+import { dayOf } from '@morrow/core';
 import { useMorrow } from '../src/store';
 
 const WORDS = ['Calm', 'Tired', 'Proud', 'Steady'];
@@ -16,9 +17,12 @@ export default function SealDay() {
   const reduced = useReducedMotion();
   const sealDay = useMorrow((s) => s.sealDay);
   const analyses = useMorrow((s) => s.analyses);
-  const [word, setWord] = useState('Steady');
-  const [proof, setProof] = useState('');
-  const [gladOf, setGladOf] = useState('');
+  // A day already sealed opens on what was written, so sealing it again is
+  // visibly an edit of that and not an empty form that would replace it.
+  const today = useMorrow((s) => s.days[dayOf(new Date(), s.profile.dayBoundaryHour)]);
+  const [word, setWord] = useState(today?.moodWord ?? 'Steady');
+  const [proof, setProof] = useState(today?.proof ?? '');
+  const [gladOf, setGladOf] = useState(today?.gladOf ?? '');
   const [sealed, setSealed] = useState(false);
 
   // The evidence rule is the user's own Monitoring line.

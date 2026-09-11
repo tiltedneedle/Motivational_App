@@ -52,13 +52,25 @@ export function supabase(): SupabaseClient | null {
 
 /** The current session, or null when there is no account service or nobody is signed in. */
 export async function currentSession(): Promise<Session | null> {
+  return (await sessionState()).session;
+}
+
+/**
+ * The session, and whether the answer can be trusted.
+ *
+ * "No session" means two different things: nobody is signed in, or the auth
+ * layer could not say — a refresh that failed for want of a network. The
+ * store clears the account on the first and leaves it alone on the second.
+ */
+export async function sessionState(): Promise<{ session: Session | null; reachable: boolean }> {
   const c = supabase();
-  if (!c) return null;
+  if (!c) return { session: null, reachable: true };
   try {
-    const { data } = await c.auth.getSession();
-    return data.session ?? null;
+    const { data, error } = await c.auth.getSession();
+    if (error) return { session: data.session ?? null, reachable: false };
+    return { session: data.session ?? null, reachable: true };
   } catch {
-    return null;
+    return { session: null, reachable: false };
   }
 }
 

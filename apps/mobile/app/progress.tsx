@@ -23,6 +23,7 @@ import {
   formatDay,
   plural,
   dayOf,
+  quotable,
   type AlmanacMark,
 } from '@morrow/core';
 import {
@@ -68,8 +69,10 @@ export default function Progress() {
   const marks = useMemo(() => almanac(days, year), [days, year]);
 
   // Newest first: the ledger is read from the top, like a diary opened at today.
+  // Only what the screen let through: a flagged line is kept on the device
+  // and shown nowhere, and this was the one place it was still printed.
   const ledger = useMemo(
-    () => [...state.evidence].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)),
+    () => quotable(state.evidence).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)),
     [state.evidence],
   );
 

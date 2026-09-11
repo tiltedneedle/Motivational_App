@@ -199,13 +199,13 @@ describe('reaching a milestone', () => {
   it('stamps the first milestone once its date has passed with a ledger row behind it', () => {
     const p = { ...plan(), createdAt: `${TODAY}T09:00:00.000Z` };
     const first = [...p.milestones].sort((a, b) => a.order - b.order)[0]!;
-    const before = reachMilestones(p, ledger(['2026-09-12']), first.targetDate, '2026-10-01T09:00:00.000Z');
+    const before = reachMilestones(p, ledger(['2026-09-12']), first.targetDate, '2026-10-01T09:00:00.000Z', TODAY);
     expect(before.milestones.find((m) => m.id === first.id)?.reachedAt).toBe('2026-10-01T09:00:00.000Z');
   });
 
   it('does not stamp a milestone whose date has not come', () => {
     const p = { ...plan(), createdAt: `${TODAY}T09:00:00.000Z` };
-    const out = reachMilestones(p, ledger(['2026-09-12']), '2026-09-13', '2026-09-13T09:00:00.000Z');
+    const out = reachMilestones(p, ledger(['2026-09-12']), '2026-09-13', '2026-09-13T09:00:00.000Z', TODAY);
     expect(out.milestones.every((m) => m.reachedAt === null)).toBe(true);
     expect(out).toBe(p);
   });
@@ -213,17 +213,17 @@ describe('reaching a milestone', () => {
   it('does not stamp on an empty stretch, or on another goal’s rows', () => {
     const p = { ...plan(), createdAt: `${TODAY}T09:00:00.000Z` };
     const first = [...p.milestones].sort((a, b) => a.order - b.order)[0]!;
-    const empty = reachMilestones(p, [], first.targetDate, 'now');
+    const empty = reachMilestones(p, [], first.targetDate, 'now', TODAY);
     expect(empty).toBe(p);
-    const other = reachMilestones(p, [{ goalId: 'g2', day: '2026-09-12' }], first.targetDate, 'now');
+    const other = reachMilestones(p, [{ goalId: 'g2', day: '2026-09-12' }], first.targetDate, 'now', TODAY);
     expect(other.milestones.every((m) => m.reachedAt === null)).toBe(true);
   });
 
   it('never unstamps', () => {
     const p = { ...plan(), createdAt: `${TODAY}T09:00:00.000Z` };
     const first = [...p.milestones].sort((a, b) => a.order - b.order)[0]!;
-    const stamped = reachMilestones(p, ledger(['2026-09-12']), first.targetDate, 'then');
-    const again = reachMilestones(stamped, [], first.targetDate, 'later');
+    const stamped = reachMilestones(p, ledger(['2026-09-12']), first.targetDate, 'then', TODAY);
+    const again = reachMilestones(stamped, [], first.targetDate, 'later', TODAY);
     expect(again.milestones.find((m) => m.id === first.id)?.reachedAt).toBe('then');
   });
 });
@@ -238,5 +238,23 @@ describe('the monthly replan cap', () => {
   });
   it('does not cap Pro', () => {
     expect(canReplan({ ...ctx, entitled: true, replansThisMonth: 12 }).allowed).toBe(true);
+  });
+});
+
+describe('a milestone west of Greenwich', () => {
+  it('counts a first move kept on its own local day, whatever the UTC date of the seal', () => {
+    // Sealed at 22:00 local in UTC-5: createdAt is already the next UTC day.
+    const p = { ...plan(), createdAt: `${TODAY}T03:00:00.000Z` };
+    const first = [...p.milestones].sort((a, b) => a.order - b.order)[0]!;
+    const kept = [{ goalId: 'g1', day: '2026-09-11' }];
+    const out = reachMilestones(p, kept, first.targetDate, 'now', TODAY);
+    expect(out.milestones.find((m) => m.id === first.id)?.reachedAt).toBe('now');
+  });
+});
+
+describe('a plan that has not started', () => {
+  it('is not told it kept nothing', () => {
+    const changes = proposeReplan(plan(), { done: 0, planned: 0, newId: sequentialIds(), today: TODAY });
+    expect(changes.some((c) => c.op === 'remove' || c.op === 'add')).toBe(false);
   });
 });

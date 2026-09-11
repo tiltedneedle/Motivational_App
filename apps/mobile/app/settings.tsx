@@ -333,9 +333,14 @@ export default function Settings() {
                     label="Delete everything"
                     selected
                     onPress={() => {
-                      reset();
-                      setConfirming(false);
-                      router.replace('/');
+                      // The session goes with it, or the next launch would
+                      // adopt it again and copy an empty device's defaults
+                      // over the account.
+                      void signOutAccount().finally(() => {
+                        reset();
+                        setConfirming(false);
+                        router.replace('/');
+                      });
                     }}
                   />
                 </View>

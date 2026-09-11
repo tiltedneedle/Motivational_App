@@ -15,7 +15,7 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 1. packages/core: domain model, stores (zustand + persist), engines
 - [x] 2. packages/ui: Studio tokens, Stone/Socket/Ring, HoldBar, Chip, Field, Sheet, text primitives
 - [x] 3. apps/mobile screens (all 16 routes)
-- [x] 4. Tests: 333 core + 40 ui + 8 storage unit tests, 33 real-Postgres checks, 128 Playwright e2e checks, all green
+- [x] 4. Tests: 348 core + 40 ui + 8 storage unit tests, 37 real-Postgres checks, 128 Playwright e2e checks, all green
 - [x] 5. supabase/: migrations with RLS and three structural authorship guards, edge functions
 - [x] 6. Hardening: the eight-lens audit's findings, worst first (see below) — 95 of 95
 - [x] 7. Research pass: libraries/versions; the migration against a real Postgres; prebuild
@@ -28,19 +28,26 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 12. The account (§7.12): email code and Sign in with Apple behind a seam,
       push/pull sync of the whole store, the delete-account function, the
       migration brought level with the app — everything but the key
+- [x] 13. Fourth audit, five lenses over the day's new code — 43 of 43 (see below)
+- [x] 14. The five stones renamed in Morrow's own words; the Full-track prompts
+      rewritten; no "Self Authoring" anywhere a person or a store could see it
 
 ## In flight
 
-Nothing is half-done. Three audits are closed — 95 of 95, 37 of 37, then 47 of
-47 — and the app has been walked end to end in a browser on the built bundle
-rather than only tested. What is left needs a machine or a key this one does
-not have; see "Next steps".
+Nothing is half-done. Four audits are closed — 95, 37, 47, then 43 — and the
+app has been walked end to end in a browser on the built bundle rather than
+only tested. What is left needs a machine or a key this one does not have;
+see "Next steps".
 
 - The tree is green and committed: `pnpm verify` runs the toolchain guard,
-  typecheck, lint, 333 core tests, 40 ui tests (contrast and the quoted-span
+  typecheck, lint, 348 core tests, 40 ui tests (contrast and the quoted-span
   split), 8 storage tests, the edge-function guards, the SQL structural
-  guards, 33 checks against a real Postgres, the serif authorship guard, the
+  guards, 37 checks against a real Postgres, the serif authorship guard, the
   web build and 128 end-to-end checks.
+- **The account's spend limit is the month's, not the run's.** The fourth
+  audit was ten agents and 1.59M tokens and tripped the monthly limit with
+  two verifiers still running; their lenses' findings were verified by hand.
+  No more fan-outs this month — the remaining loop is solo.
 - The account is wired end to end but has never talked to a real Supabase:
   `hasSupabase` is false in every build so far, so the account screen, the
   Settings row and the launch-time push are all present and all dormant. The
@@ -838,6 +845,78 @@ for whenever, with the last time the copy landed, a sign-out and a close. The
 app pushes on launch and on backgrounding when signed in. `delete-account` is
 the fourth function: soft delete now, the sweep after seven days, the person
 read out of their own token and never out of the body.
+
+## Fourth audit (2026-09-11)
+
+Five lenses over the code written since the third — the account and sync
+layer, the store repairs, the typesetting, the platform edges, the engines —
+each with one adversarial verifier. 44 findings; 17 confirmed by a verifier,
+one refuted, 26 left unverified when the spend limit took the last two
+verifiers, and those were read against the code by hand. 43 closed. The
+ones that mattered:
+
+- **A crisis-paused sitting came back as a draft.** The autosave stayed
+  subscribed while the screen was up, so a helpline tap — which backgrounds
+  the app — flushed the crisis text straight back into `drafts`, and "Write
+  it again" handed it to the person as "N words are still here". The flush
+  now stops the moment the screen fires.
+- **The dawn brief and the coach chips quoted a crisis-flagged stone.**
+  `replyToText` checked; the brief and the chips did not. Every engine read
+  of an analysis now goes through `isQuotable`, the store passes
+  `quotable()` rows, and the Progress and Goal ledgers no longer print a
+  flagged line in the serif.
+- **Every letter after the first kept move was refused.** A kept move's
+  ledger row *is* the move's title, which `checkLetter` rightly forbids, so
+  the composer quoted it and the check threw the letter away — silently, on
+  every launch, for anyone whose plan was in use. Letters now quote only the
+  rows the person typed (seal and capture); the count is still the whole
+  ledger. A first sentence too long to quote whole is quoted from its start
+  ("You began …"), and the composer sheds its own prose before theirs.
+- **A second seal of a day destroyed the first.** Proof A at 21:00, proof B
+  at 23:00: A was gone from the ledger and the day. A re-seal is now an
+  edit — a different sentence is a second entry, a blank field keeps what
+  was written, and the seal screen opens on the day's words.
+- **Sync would have failed on the first real push.** A practice run carried
+  its practice's id in `move_id` (a different table); a milestone with no
+  proof yet sent `''` into a column that refuses it; a second practice log
+  on one day collided with the (practice, day) key; two letters to the future
+  on one day shared a trigger; a dropped goal left pointers at rows no longer
+  in the bundle; the pull read at most a thousand rows a table and the next
+  push wrote the cut as the truth; nothing ever deleted, so a dropped goal
+  came straight back on a new device; the launch-time push raced the
+  sign-in's pull and could land an empty device's defaults over the account's
+  profile; "Delete everything" left the session behind. All eight are fixed
+  and the migration test grew four checks (37).
+- **A new phone had no way to its Book.** The account screen was reachable
+  only after the Portrait or from Settings, and both need writing first —
+  after which the sync refuses to pull. Welcome and the empty Today now offer
+  "Bring my Book back from my account".
+- The Book printed "…then I then I …" and "…then I I'll …": the second half of
+  an if-then is printed through `thenHalf` everywhere it stands alone.
+  `firstSentence` stopped at a decimal point ("1." / "5x fitter") and at the
+  first dot of an ellipsis; `restOfIdeal` ate an ellipsis that was theirs;
+  `splitFirstMoves` lifted day names out of the middle of a sentence and
+  printed the wreckage as their move; `reachMilestones` anchored on the UTC
+  creation date; the replan proposed "You kept 0 of 3" against a plan that
+  had not started, and accepting it burned the month's one replan; the web
+  print frame's `afterprint` listener was erased by `document.open()`;
+  chip labels rendered in the serif; `formatDay` decided "this year" from
+  UTC; `ifThenOf` missed "then," and a lower-case "i".
+
+## The stones, renamed (2026-09-11)
+
+The five analysis headings were the published program's own section names,
+word for word. Headings are not what copyright protects, but they were the
+one fingerprint the product carried, and the client asked. They are now
+Morrow's: *Why · Who it reaches · How · What gets in the way · How I'll
+know*. The Full-track prompts under them were rewritten in the same voice,
+the two sentences that named a stone by its old heading were reworded, and
+the README no longer says "the Self Authoring method" — it cites the
+research the method comes from. The internal keys (`motives`, `strategies`…)
+are unchanged and never shown. The e2e reads a stone's kind from its route
+rather than its heading now, for the same reason. What remains for counsel:
+a comparison of `framings.ts` and the interview scripts against the
+program's actual prompt text by someone with a licensed copy.
 
 ## Blocked on the user
 - Supabase project URL/anon key, Anthropic API key, fal.ai key, RevenueCat keys: needed to test real providers. Everything runs on local fallbacks without them.

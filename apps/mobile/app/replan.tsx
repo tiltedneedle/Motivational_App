@@ -176,7 +176,7 @@ export default function Replan() {
                     {from ? (
                       <Body style={{ fontSize: 13, color: day.ink2 }}>
                         from{' '}
-                        <UserText italic style={{ fontSize: 13, color: day.ink2 }}>
+                        <UserText italic style={{ fontSize: 13, lineHeight: 20, color: day.ink2 }}>
                           “{from}”
                         </UserText>
                       </Body>

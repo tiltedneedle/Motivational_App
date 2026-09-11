@@ -13,6 +13,7 @@ import {
   dayOf,
   detectReturns,
   plural,
+  quotable,
   replyToChip,
   replyToText,
   screen,
@@ -43,7 +44,7 @@ export default function Coach() {
    * words, so they can be set in their face rather than the app's — a reply
    * that quotes their if-then is half theirs and the type has to say so.
    */
-  const [thread, setThread] = useState<{ who: 'me' | 'coach'; text: string; spans?: string[] }[]>([]);
+  const [thread, setThread] = useState<{ who: 'me' | 'coach'; text: string; spans?: string[]; typed?: boolean }[]>([]);
   const [draft, setDraft] = useState('');
   const [capped, setCapped] = useState<PaywallMoment | null>(null);
 
@@ -79,7 +80,9 @@ export default function Coach() {
   // one thing, in their own words, and this asks whether they want to on the
   // rest. Not a sales line the app made up about them.
   const longestLine = useMemo(() => {
-    const lines = state.analyses.map((a) => a.paragraph?.trim() || a.line.trim()).filter((l) => l.length > 0);
+    const lines = quotable(state.analyses)
+      .map((a) => a.paragraph?.trim() || a.line.trim())
+      .filter((l) => l.length > 0);
     return lines.sort((a, b) => b.length - a.length)[0] ?? '';
   }, [state.analyses]);
   const invitation =
@@ -89,7 +92,7 @@ export default function Coach() {
 
   const ctx = {
     book,
-    analyses: state.analyses,
+    analyses: quotable(state.analyses),
     moves,
     days,
     today,
@@ -127,7 +130,7 @@ export default function Coach() {
     // control that silently does nothing is the worst way to say no.
     const turn = takeCoachTurn();
     if (!turn.allowed) {
-      setThread((t) => [...t, { who: 'me', text }, { who: 'coach', text: turn.reason }]);
+      setThread((t) => [...t, { who: 'me', text, typed: true }, { who: 'coach', text: turn.reason }]);
       setDraft('');
       setCapped(turn.moment);
       return;
@@ -149,7 +152,7 @@ export default function Coach() {
     // unit-tested and then never called, so the coach answered all three.
     const guard = contentGuard(text);
     if (!guard.allowed) {
-      setThread((t) => [...t, { who: 'me', text }, { who: 'coach', text: guard.redirect ?? '' }]);
+      setThread((t) => [...t, { who: 'me', text, typed: true }, { who: 'coach', text: guard.redirect ?? '' }]);
       return;
     }
     // replyToText carries the Returns branch: someone coming back after a gap
@@ -157,7 +160,7 @@ export default function Coach() {
     // The screen used to inline the generic line and never call this at all.
     const reply = replyToText(text, ctx);
     if (!reply.text) return;
-    setThread((t) => [...t, { who: 'me', text }, { who: 'coach', text: reply.text, spans: reply.quotedSpans }]);
+    setThread((t) => [...t, { who: 'me', text, typed: true }, { who: 'coach', text: reply.text, spans: reply.quotedSpans }]);
   };
 
   return (
@@ -304,8 +307,12 @@ export default function Coach() {
                   backgroundColor: m.who === 'me' ? day.ink : day.surface,
                 }}
               >
-                {m.who === 'me' ? (
+                {m.who === 'me' && m.typed ? (
                   <UserText style={{ color: '#FFFFFF', fontSize: 16, lineHeight: 22 }}>{m.text}</UserText>
+                ) : m.who === 'me' ? (
+                  // A chip is the app's sentence, tapped rather than typed:
+                  // their turn, not their words, so not their face.
+                  <Body style={{ color: '#FFFFFF', fontSize: 16, lineHeight: 22 }}>{m.text}</Body>
                 ) : (
                   <Quoted text={m.text} spans={m.spans ?? []} style={{ color: day.ink, fontSize: 16, lineHeight: 22 }} />
                 )}

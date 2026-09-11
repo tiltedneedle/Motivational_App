@@ -72,10 +72,10 @@ export const TABLE_ORDER = [
   'milestones',
   'moves',
   'obstacle_plans',
-  'evidence',
-  'day_summaries',
   'practices',
   'practice_logs',
+  'evidence',
+  'day_summaries',
   'scenes',
   'letters',
   'briefs',
@@ -96,6 +96,19 @@ const orNull = <T>(v: T | undefined): T | null => (v === undefined ? null : v);
  */
 export function toRows(bundle: SyncBundle, userId: string, timezone: string): TableRows[] {
   const p = bundle.profile;
+  // What is actually in the bundle, so a pointer at something that is not —
+  // a dropped goal's practice, an undone move's ledger row, a replaced plan's
+  // milestone — is sent as null, which is what the server would have done to
+  // it itself (`on delete set null`). Sent as an id, the ownership trigger
+  // refused the row for pointing at nothing and the whole push stopped.
+  const goalIds = new Set(bundle.goals.map((g) => g.id));
+  const lineIds = new Set(bundle.analyses.map((a) => a.id));
+  const moveIds = new Set(bundle.plans.flatMap((pl) => pl.moves.map((m) => m.id)));
+  const milestoneIds = new Set(bundle.plans.flatMap((pl) => pl.milestones.map((m) => m.id)));
+  const practiceIds = new Set(bundle.practices.map((pr) => pr.id));
+  const goalOrNull = (id: string | null | undefined) => (id && goalIds.has(id) ? id : null);
+  const lineOrNull = (id: string | null | undefined) => (id && lineIds.has(id) ? id : null);
+  const moveOrNull = (id: string | null | undefined) => (id && moveIds.has(id) ? id : null);
   const books = [...bundle.books].sort((a, b) => a.version - b.version);
   const first = books[0];
   const latest = books[books.length - 1];
@@ -256,8 +269,10 @@ export function toRows(bundle: SyncBundle, userId: string, timezone: string): Ta
           plan_id: pl.id,
           goal_id: m.goalId,
           title: m.title,
-          proof: m.proof,
-          proof_source_line_id: m.proofSourceLineId,
+          // Empty until the person writes how they will know; the column is
+          // nullable for exactly that, and an empty string is not a proof.
+          proof: m.proof.trim() ? m.proof : null,
+          proof_source_line_id: lineOrNull(m.proofSourceLineId),
           target_date: m.targetDate,
           order: m.order,
           reached_at: m.reachedAt,
@@ -272,7 +287,7 @@ export function toRows(bundle: SyncBundle, userId: string, timezone: string): Ta
           user_id: userId,
           goal_id: m.goalId,
           plan_id: pl.id,
-          milestone_id: m.milestoneId,
+          milestone_id: m.milestoneId && milestoneIds.has(m.milestoneId) ? m.milestoneId : null,
           title: m.title,
           effort: m.effort,
           energy: m.energy,
@@ -306,8 +321,11 @@ export function toRows(bundle: SyncBundle, userId: string, timezone: string): Ta
       rows: bundle.evidence.map((e) => ({
         id: e.id,
         user_id: userId,
-        goal_id: e.goalId,
-        move_id: e.moveId ?? null,
+        goal_id: goalOrNull(e.goalId),
+        // Only a move's row names a move. Older rows carried the practice's
+        // id in this column; those are practice rows and go by kind.
+        move_id: e.kind === 'move' ? moveOrNull(e.moveId) : null,
+        practice_id: e.kind === 'practice' ? ((e.practiceId ?? e.moveId) && practiceIds.has((e.practiceId ?? e.moveId) as string) ? (e.practiceId ?? e.moveId) : null) : null,
         kind: e.kind,
         text: e.text,
         day: e.day,
@@ -329,7 +347,7 @@ export function toRows(bundle: SyncBundle, userId: string, timezone: string): Ta
         mood_word: d.moodWord,
         proof: d.proof,
         glad_of: d.gladOf,
-        intention_move_id: d.intentionMoveId ?? null,
+        intention_move_id: moveOrNull(d.intentionMoveId),
         safety_risk: d.safetyRisk ?? 'none',
       })),
     },
@@ -338,14 +356,14 @@ export function toRows(bundle: SyncBundle, userId: string, timezone: string): Ta
       rows: bundle.practices.map((pr) => ({
         id: pr.id,
         user_id: userId,
-        goal_id: pr.goalId,
+        goal_id: goalOrNull(pr.goalId),
         kind: pr.kind,
         title: pr.title,
         steps: pr.steps,
         min_version: pr.minVersion,
         schedule: pr.schedule,
         energy_slot: pr.energySlot,
-        source_line_id: pr.sourceLineId,
+        source_line_id: lineOrNull(pr.sourceLineId),
         archived_at: pr.archivedAt,
       })),
     },
@@ -382,7 +400,7 @@ export function toRows(bundle: SyncBundle, userId: string, timezone: string): Ta
       rows: bundle.letters.map((l) => ({
         id: l.id,
         user_id: userId,
-        goal_id: l.goalId,
+        goal_id: goalOrNull(l.goalId),
         direction: l.direction,
         body: l.body,
         quotes: l.quotes,
@@ -402,7 +420,7 @@ export function toRows(bundle: SyncBundle, userId: string, timezone: string): Ta
         today: b.today,
         if_then: b.ifThen,
         quoted_spans: b.quotedSpans,
-        first_move_id: b.firstMoveId,
+        first_move_id: moveOrNull(b.firstMoveId),
         support: b.support ?? null,
         soften: b.soften ?? false,
         created_at: b.createdAt,
@@ -589,6 +607,7 @@ export function fromRows(tables: Partial<Record<(typeof TABLE_ORDER)[number], Ro
     id: str(r.id),
     goalId: strOrNull(r.goal_id),
     ...(strOrNull(r.move_id) ? { moveId: str(r.move_id) } : {}),
+    ...(strOrNull(r.practice_id) ? { practiceId: str(r.practice_id) } : {}),
     kind: r.kind as Evidence['kind'],
     text: str(r.text),
     day: str(r.day),

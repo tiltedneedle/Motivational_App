@@ -68,7 +68,7 @@ describe('the Book as a document', () => {
   });
 
   it('carries the framing labels small and grey, and the if-then as two lines', () => {
-    expect(html).toContain('Motives · Mine');
+    expect(html).toContain('Why · Mine');
     // The framing is the app's, in the sans; only the words after it are theirs.
     expect(html).toContain('<span class="framing">…then I</span> put the phone in the hall');
   });

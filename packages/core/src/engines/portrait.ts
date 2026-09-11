@@ -47,23 +47,30 @@ function capitalise(s: string): string {
  */
 export function restOfIdeal(ideal: string, shown: string): string {
   const raw = ideal ?? '';
-  const first = shown.endsWith('…') ? shown.slice(0, -1) : shown;
-  let i = 0;
-  let j = 0;
-  const ws = (c: string) => /\s/.test(c);
-  while (i < raw.length && ws(raw[i]!)) i++;
-  while (j < first.length && i < raw.length) {
-    if (ws(first[j]!)) {
-      while (i < raw.length && ws(raw[i]!)) i++;
-      j++;
-    } else if (raw[i] === first[j]) {
-      i++;
-      j++;
-    } else {
-      break;
+  // Walk the shown sentence whole first. Its ellipsis is usually the cut's,
+  // but a Fifteen that ends "someone who runs…" in the person's own hand has
+  // an ellipsis that is theirs, and stripping it printed "…" as the body.
+  const walk = (first: string): number => {
+    let i = 0;
+    let j = 0;
+    const ws = (c: string) => /\s/.test(c);
+    while (i < raw.length && ws(raw[i]!)) i++;
+    while (j < first.length && i < raw.length) {
+      if (ws(first[j]!)) {
+        while (i < raw.length && ws(raw[i]!)) i++;
+        j++;
+      } else if (raw[i] === first[j]) {
+        i++;
+        j++;
+      } else {
+        break;
+      }
     }
-  }
-  if (j < first.length) {
+    return j < first.length ? -1 : i;
+  };
+  let at = walk(shown);
+  if (at < 0 && shown.endsWith('…')) at = walk(shown.slice(0, -1));
+  if (at < 0) {
     // The shown sentence is not a prefix of the text it came from, which
     // means the Book was built by an older rule. Fall back to the whole text
     // rather than to a guess at an offset: printing a sentence twice is a
@@ -72,7 +79,7 @@ export function restOfIdeal(ideal: string, shown: string): string {
   }
   // A cut sentence lost its trailing comma to the ellipsis; the body should
   // not begin with it.
-  return raw.slice(i).replace(/^[\s,;:]+/, '').trim();
+  return raw.slice(at).replace(/^[\s,;:]+/, '').trim();
 }
 
 /**
@@ -86,7 +93,11 @@ export function firstSentence(text: string, max = FIRST_SENTENCE_MAX): string {
   const t = (text ?? '').replace(/\s+/g, ' ').trim();
   if (!t) return '';
 
-  const terminated = t.match(/^[^.!?\n]{1,}?[.!?]/);
+  // The whole run of terminators, with any closing quote, and only when
+  // whitespace or the end follows. One terminator alone cut "every
+  // morning..." to "every morning." and "1.5x fitter" to "1." — and the Book
+  // then opened its body paragraph with the leftover "..".
+  const terminated = t.match(/^.*?[.!?]+["'”’)\]]*(?=\s|$)/);
   const candidate = terminated?.[0]?.trim() ?? t;
   if (candidate.length <= max) return candidate;
 
@@ -156,11 +167,14 @@ export function buildPortrait(input: PortraitInput): Portrait {
   const opener = firstSentence(ideal);
   const why = motives?.paragraph?.trim() || motives?.line?.trim() || '';
   const obstacleText = obstacles?.line?.trim() ?? '';
-  const ifThen = obstacles?.line2?.trim() ? capitalise(ifThenOf(obstacles.line, obstacles.line2).sentence) : obstacleText;
+  const written = obstacles?.line2?.trim() ? ifThenOf(obstacles.line, obstacles.line2) : null;
+  const ifThen = written ? capitalise(written.sentence) : obstacleText;
 
   const moves = splitFirstMoves(strategies?.line ?? '');
 
-  const quoted = [opener, why, strategies?.line ?? ''].filter((s) => s.trim().length > 0);
+  // The if-then's two halves are quoted too, so the Portrait can set them in
+  // the person's face and the "If … then I" around them in the app's.
+  const quoted = [opener, why, strategies?.line ?? '', ...(written ? written.spans : [obstacleText])].filter((s) => s.trim().length > 0);
   const identity = proposeIdentity(ideal, strategies?.line);
 
   return {
@@ -193,16 +207,23 @@ export function splitFirstMoves(strategyLine: string): string[] {
   );
   if (days && days.length >= 2) {
     // "Tuesday, Thursday, Saturday at 6:40, out the back door" is one habit on
-    // three days, so the day names come out of the body and become the schedule.
-    const rest = line
-      .replace(/\b(mon|tues|wednes|thurs|fri|satur|sun)day(s)?\b/gi, '')
-      // Alternation, not a character class: `[\s,;:.and]` is the set
-      // {a, n, d, punctuation, whitespace}, so it ate the first letter of the
-      // person's own sentence — "at 6:40, out the back door" was stored, and
-      // read back to them, as "t 6:40, out the back door".
-      .replace(/^(?:[\s,;:.]+|\b(?:and|then)\b)+/gi, '')
-      .replace(/\s{2,}/g, ' ')
-      .trim();
+    // three days, so the day names come out of the body and become the
+    // schedule — but only when they lead the sentence. Lifted from the middle
+    // of one ("I run on Monday and Wednesday at 6:40") they left "I run on
+    // and at 6:40", a sentence the person never wrote, on Today in their
+    // face. Mid-sentence, the whole line stays as they wrote it.
+    const lead = line.match(/^(?:(?:every|each|on)\s+)?(?:(?:mon|tues|wednes|thurs|fri|satur|sun)days?\b[\s,]*(?:(?:and|then|&)\s+)?)+/i);
+    const rest = lead
+      ? line
+          .slice(lead[0].length)
+          // Alternation, not a character class: `[\s,;:.and]` is the set
+          // {a, n, d, punctuation, whitespace}, so it ate the first letter of
+          // the person's own sentence — "at 6:40, out the back door" was
+          // stored, and read back to them, as "t 6:40, out the back door".
+          .replace(/^(?:[\s,;:.]+|\b(?:and|then)\b)+/gi, '')
+          .replace(/\s{2,}/g, ' ')
+          .trim()
+      : '';
     const body = rest || line;
     return days.slice(0, 3).map((d) => {
       const singular = d.replace(/s$/i, '');

@@ -95,14 +95,16 @@ function printInFrame(html: string, title: string): Promise<PrintResult> {
       // from the frame afterwards, so the frame stays until afterprint says
       // it is finished — or a minute, for a dialogue that was cancelled in a
       // way that fires nothing.
+      inner.open();
+      inner.write(html);
+      inner.close();
+      // After close(), not before open(): document.open() erases every
+      // listener on the frame's window, so one added first never fired and
+      // the frame lived on for the full minute every time.
       win.addEventListener('afterprint', () => {
         finish();
         setTimeout(cleanup, 500);
       });
-
-      inner.open();
-      inner.write(html);
-      inner.close();
       // Fonts and layout settle on the next frame; printing before that
       // gives a blank first page in Safari.
       setTimeout(() => {

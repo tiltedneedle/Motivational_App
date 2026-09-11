@@ -329,6 +329,12 @@ export const Evidence = z.object({
    * one.
    */
   moveId: z.string().nullish(),
+  /**
+   * The practice this row is a run of, when it is one. Kept apart from
+   * `moveId`: a practice id in the move column pointed at a row in the wrong
+   * table, and the server refused every push that carried one.
+   */
+  practiceId: z.string().nullish(),
   kind: z.enum(['move', 'practice', 'milestone', 'capture', 'seal']),
   text: z.string(),
   day: z.string(),

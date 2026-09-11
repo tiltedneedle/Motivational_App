@@ -485,6 +485,42 @@ try {
     [BOB, practiceId],
   );
 
+  // A run of a practice is a ledger row that names the practice, in its own
+  // column: Alice's row is kept, Bob's row naming Alice's practice is not.
+  await as(
+    ALICE,
+    `insert into public.evidence (user_id, goal_id, practice_id, kind, text, day)
+       values ($1, $2, $3, 'practice', 'Out the door', '2026-09-11')`,
+    [ALICE, goalId, practiceId],
+  );
+  check('a practice run lands in the ledger naming its practice', true);
+  await asRejects(
+    "and a run cannot name another person's practice",
+    BOB,
+    `insert into public.evidence (user_id, practice_id, kind, text, day)
+       values ($1, $2, 'practice', 'Out the door', '2026-09-11')`,
+    [BOB, practiceId],
+    'another person',
+  );
+
+  // A milestone before the person has written how they will know: no proof,
+  // and the row is still allowed. An empty string is not.
+  await as(
+    ALICE,
+    `insert into public.milestones (user_id, plan_id, goal_id, title, proof, target_date, "order")
+       values ($1, $2, $3, 'First two weeks', null, '2026-09-24', 5)`,
+    [ALICE, planId, goalId],
+  );
+  check('a milestone may wait for its proof', true);
+  await asRejects(
+    'but an empty proof is refused',
+    ALICE,
+    `insert into public.milestones (user_id, plan_id, goal_id, title, proof, target_date, "order")
+       values ($1, $2, $3, 'First two weeks', '  ', '2026-09-24', 6)`,
+    [ALICE, planId, goalId],
+    'check',
+  );
+
   // ---- the same guard on a different table, through the same function. One
   // parameterised trigger covers every parent pointer; if it only worked on the
   // first table it was tried on, this is where that would show.

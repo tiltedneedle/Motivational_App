@@ -122,12 +122,15 @@ export function buildDawnBrief(input: BriefInput, newId: (p: string) => string):
   // screen can set it in their face. Mid-sentence, so its first letter is
   // lowered unless it is a name — the same string, so the span still matches.
   const todayLine = first
-    ? reg.push(`Start with ${lowerFirst(first.title)}.`)
+    ? reg.push(endSentence(`Start with ${lowerFirst(first.title)}`))
     : 'Nothing is scheduled. One small thing, chosen by you, is a whole day.';
   if (first) quotes.push(lowerFirst(first.title));
 
   // If: the user's own if-then, quoted.
-  const obstacle = analyses.find((a) => a.kind === 'obstacles' && a.line.trim());
+  // Only a line the screen let through. replyToText already checked; the
+  // brief and the chips did not, and a flagged Obstacles stone was read back
+  // over breakfast in the serif.
+  const obstacle = analyses.find((a) => a.kind === 'obstacles' && a.line.trim() && isQuotable(a));
   let ifLine: string;
   if (obstacle?.line2?.trim()) {
     const written = ifThenOf(obstacle.line, obstacle.line2);
@@ -240,8 +243,8 @@ export interface CoachReply {
  * theirs to quote, the coach asks a question instead of inventing encouragement.
  */
 export function replyToChip(chip: ChipId, ctx: ChipContext): CoachReply {
-  const obstacle = ctx.analyses.find((a) => a.kind === 'obstacles' && a.line.trim());
-  const strategy = ctx.analyses.find((a) => a.kind === 'strategies' && a.line.trim());
+  const obstacle = ctx.analyses.find((a) => a.kind === 'obstacles' && a.line.trim() && isQuotable(a));
+  const strategy = ctx.analyses.find((a) => a.kind === 'strategies' && a.line.trim() && isQuotable(a));
   const next = [...ctx.moves].filter((m) => m.status === 'todo').sort((a, b) => a.order - b.order)[0];
 
   switch (chip) {

@@ -44,18 +44,77 @@ export async function pushAll(bundle: SyncBundle): Promise<SyncOutcome> {
   const session = await currentSession();
   if (!c || !session) return { ok: false, error: NOT_SIGNED_IN, rows: 0 };
 
+  const uid = session.user.id;
+  const tables = toRows(bundle, uid, timezone());
   let written = 0;
-  for (const { table, rows } of toRows(bundle, session.user.id, timezone())) {
+  for (const { table, rows } of tables) {
     for (const part of chunks(rows, 200)) {
-      const conflict = table === 'day_summaries' ? 'user_id,day' : 'id';
-      const { error } = await c.from(table).upsert(part, { onConflict: conflict });
+      const { error } = await c.from(table).upsert(part, { onConflict: CONFLICT[table] ?? 'id' });
       if (error) {
         return { ok: false, error: `${table}: ${error.message}`, rows: written };
       }
       written += part.length;
     }
   }
+
+  // Then what the device no longer has. A dropped goal, an undone move's
+  // ledger row, a superseded log: an upsert leaves them on the account, and a
+  // new device pulled them straight back — the dropped goal's moves on
+  // Today, the very thing dropping it was for. Children first, so a parent
+  // is never deleted from under a row that still points at it.
+  for (const { table, rows } of [...tables].reverse()) {
+    if (table === 'profiles') continue;
+    const key = KEY[table] ?? 'id';
+    const keep = new Set(rows.map((r) => String(r[key])));
+    const have = await allOf(c, table, uid, key);
+    if (!have.ok) return { ok: false, error: `${table}: ${have.error}`, rows: written };
+    const gone = have.values.filter((v) => !keep.has(v));
+    for (const part of chunks(gone, 100)) {
+      const { error } = await c.from(table).delete().eq('user_id', uid).in(key, part);
+      if (error) return { ok: false, error: `${table}: ${error.message}`, rows: written };
+    }
+  }
   return { ok: true, rows: written };
+}
+
+/** The column an upsert matches on, where it is not the id. */
+const CONFLICT: Partial<Record<string, string>> = {
+  day_summaries: 'user_id,day',
+  practice_logs: 'practice_id,day',
+};
+
+/** The column that names a row, where it is not the id. */
+const KEY: Partial<Record<string, string>> = { day_summaries: 'day' };
+
+const PAGE = 1000;
+
+/**
+ * Every value of one column for this person, paged.
+ *
+ * PostgREST answers at most a thousand rows a request and says nothing when
+ * it stops; a ledger a few years long was silently cut there, and the next
+ * push wrote the cut as the truth.
+ */
+async function allOf(
+  c: NonNullable<ReturnType<typeof supabase>>,
+  table: string,
+  uid: string,
+  key: string,
+): Promise<{ ok: true; values: string[] } | { ok: false; error: string }> {
+  const values: string[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await c
+      .from(table)
+      .select(key)
+      .eq('user_id', uid)
+      .order(key)
+      .range(from, from + PAGE - 1);
+    if (error) return { ok: false, error: error.message };
+    const page = (data ?? []) as unknown as Record<string, unknown>[];
+    for (const r of page) values.push(String(r[key]));
+    if (page.length < PAGE) break;
+  }
+  return { ok: true, values };
 }
 
 /**
@@ -78,9 +137,23 @@ export async function pullAll(localHasWriting: boolean): Promise<{ ok: true; bun
 
   const tables: Partial<Record<(typeof TABLE_ORDER)[number], Row[]>> = {};
   for (const table of TABLE_ORDER) {
-    const { data, error } = await c.from(table).select('*').eq(table === 'profiles' ? 'id' : 'user_id', session.user.id);
-    if (error) return { ok: false, error: `${table}: ${error.message}` };
-    tables[table] = (data ?? []) as Row[];
+    const rows: Row[] = [];
+    const key = KEY[table] ?? 'id';
+    // Paged, for the same reason `allOf` is: a thousand rows is the most one
+    // request returns, and a Book's ledger outgrows that.
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await c
+        .from(table)
+        .select('*')
+        .eq(table === 'profiles' ? 'id' : 'user_id', session.user.id)
+        .order(key)
+        .range(from, from + PAGE - 1);
+      if (error) return { ok: false, error: `${table}: ${error.message}` };
+      const page = (data ?? []) as Row[];
+      rows.push(...page);
+      if (page.length < PAGE) break;
+    }
+    tables[table] = rows;
   }
   return { ok: true, bundle: fromRows(tables, DEFAULT_PROFILE) };
 }

@@ -25,8 +25,8 @@ import type { Evidence, Goal, Letter, Move } from '../src/types';
 const IDEAL =
   'It is 6:40 and the kitchen is still blue. I am out the back door before the kettle boils, and I run the towpath as far as the second bridge.';
 
-const ev = (id: string, text: string): Evidence =>
-  ({ id, goalId: 'g_1', kind: 'move', text, day: '2026-09-20', createdAt: `2026-09-2${id.length}T09:00:00.000Z` }) as Evidence;
+const ev = (id: string, text: string, kind: Evidence['kind'] = 'seal'): Evidence =>
+  ({ id, goalId: 'g_1', kind, text, day: '2026-09-20', createdAt: `2026-09-2${id.length}T09:00:00.000Z` }) as Evidence;
 
 const sources: LetterSources = {
   ideal: IDEAL,
@@ -180,6 +180,52 @@ describe('what a letter is allowed to say', () => {
     const { body } = composeLetter('portrait', bare);
     expect(body).not.toContain('mornings you did it anyway');
     expect(body).not.toContain('None of it was the day');
+  });
+
+  it('never quotes a kept move or a practice run, whose rows are plan lines and app prose', () => {
+    // Keeping a move writes its title to the ledger, and a minimal practice
+    // run writes the app's own "Two minutes of it". Quoting either made every
+    // letter after the first kept move fail its own check.
+    const inUse = {
+      ...sources,
+      evidence: [
+        ev('m', 'Tuesday: at 6:40, out the back door', 'move'),
+        ev('pp', 'Two minutes of it', 'practice'),
+        ev('sss', 'Went anyway. Rained the whole way.'),
+      ],
+    };
+    for (const trigger of ['first-return', 'milestone', 'monthly'] as const) {
+      const { check, quotes, body } = composeLetter(trigger, inUse);
+      expect(check.ok, `${trigger}: ${check.problems.join('; ')}`).toBe(true);
+      expect(quotes).not.toContain('Tuesday: at 6:40, out the back door');
+      expect(body).not.toContain('Two minutes of it');
+      expect(body).toContain('3 entries');
+    }
+  });
+
+  it('quotes the start of a first sentence too long to quote whole', () => {
+    const long = {
+      ...sources,
+      ideal:
+        'It is 6:40 in the morning and I am already out of the door with my running shoes on, the kitchen is still blue and quiet and nobody else is awake yet, and I feel the cold air on my face as I head down toward the towpath.',
+      evidence: [],
+    };
+    const { check, body, quotes } = composeLetter('portrait', long);
+    expect(check.ok, check.problems.join('; ')).toBe(true);
+    expect(body).toContain('You began “');
+    expect(long.ideal.startsWith(quotes[0]!)).toBe(true);
+  });
+
+  it("sheds its own prose before the person's sentence when it runs long", () => {
+    const wordy = {
+      ...sources,
+      ideal:
+        'It is six forty in the morning and the kitchen is still blue and quiet and I am standing at the back door with my shoes already on before the kettle has even started to boil for anyone.',
+      evidence: [ev('a', 'Went anyway, in the rain, with the wrong socks and no breakfast and it was fine.')],
+    };
+    const { check, quotes } = composeLetter('portrait', wordy, 'Samantha');
+    expect(check.ok, check.problems.join('; ')).toBe(true);
+    expect(quotes.some((q) => wordy.ideal.startsWith(q))).toBe(true);
   });
 
   it('passes its own check on every occasion there is', () => {

@@ -38,6 +38,12 @@ export default function Account() {
    */
   const onwards = () => {
     markAccountAsked();
+    // A Book brought back from the account lands on Today, whatever screen
+    // asked: the thing behind this one was an empty device.
+    if (pulled) {
+      router.replace('/today');
+      return;
+    }
     const to = typeof next === 'string' && /^\/[a-z-]+$/i.test(next) ? next : '';
     if (to) {
       router.replace(to);
@@ -63,23 +69,37 @@ export default function Account() {
     setStage('code');
   };
 
-  const confirm = async () => {
-    setBusy(true);
-    setProblem(null);
-    const out = await confirmCode(sent ?? email, code);
-    setBusy(false);
-    if (!out.ok) {
-      setProblem(out.error);
-      return;
-    }
+  const [pulled, setPulled] = useState(false);
+
+  /** Signed in: the copy, one way or the other, with the button held busy throughout. */
+  const settle = async () => {
     await setAccount();
     const synced = await afterSignIn();
     if (!synced.ok) {
       // Signed in, but the copy did not land. Said plainly: the sign-in is real,
       // the writing is still here, and the next launch will try again.
       setProblem(synced.error);
+    } else {
+      setProblem(null);
+      setPulled(synced.pulled);
     }
     setStage('done');
+  };
+
+  const confirm = async () => {
+    if (busy) return;
+    setBusy(true);
+    setProblem(null);
+    try {
+      const out = await confirmCode(sent ?? email, code);
+      if (!out.ok) {
+        setProblem(out.error);
+        return;
+      }
+      await settle();
+    } finally {
+      setBusy(false);
+    }
   };
 
   const apple = async () => {
@@ -98,10 +118,7 @@ export default function Account() {
         setProblem(out.error);
         return;
       }
-      await setAccount();
-      const synced = await afterSignIn();
-      if (!synced.ok) setProblem(synced.error);
-      setStage('done');
+      await settle();
     } catch (err) {
       const m = err instanceof Error ? err.message : '';
       // The person closed the sheet. Not an error, and not worth a sentence.
@@ -136,7 +153,9 @@ export default function Account() {
           ) : stage === 'done' ? (
             <View testID="account-done" style={{ gap: 10 }}>
               <Rule />
-              <Body style={{ color: day.ink }}>Signed in. The Book has a second home now.</Body>
+              <Body style={{ color: day.ink }}>
+                {pulled ? 'Signed in. Your Book is back on this phone.' : 'Signed in. The Book has a second home now.'}
+              </Body>
               {problem ? (
                 <Body testID="account-problem" style={{ color: day.ink }}>
                   {problem}
@@ -158,7 +177,7 @@ export default function Account() {
                     autoCapitalize="none"
                     keyboardType="email-address"
                   />
-                  <InkButton testID="account-send" label={busy ? 'Sending…' : 'Send me a code'} onPress={() => void send()} />
+                  <InkButton testID="account-send" label={busy ? 'Sending…' : 'Send me a code'} busy={busy} onPress={() => void send()} />
                   {Platform.OS === 'ios' ? (
                     <Chip testID="account-apple" label="Sign in with Apple" onPress={() => void apple()} />
                   ) : null}
@@ -174,7 +193,7 @@ export default function Account() {
                     placeholder="000000"
                     keyboardType="number-pad"
                   />
-                  <InkButton testID="account-confirm" label={busy ? 'Checking…' : 'Sign in'} onPress={() => void confirm()} />
+                  <InkButton testID="account-confirm" label={busy ? 'Checking…' : 'Sign in'} busy={busy} onPress={() => void confirm()} />
                   <TextButton label="Use a different email" onPress={() => setStage('email')} />
                 </>
               )}

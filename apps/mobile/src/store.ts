@@ -9,7 +9,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { STORE_KEY, failureReason, guardedStorage, hasFailed, onStorageFailure } from './storage';
 import { syncNotices } from './notify';
 import { billing, type BillingResult, type PlanId } from './billing';
-import { FUNCTIONS_URL, currentSession, deleteAccount, functionHeaders, hasSupabase, signOut } from './supabase';
+import { FUNCTIONS_URL, deleteAccount, functionHeaders, hasSupabase, sessionState, signOut } from './supabase';
 import { pullAll, pushAll } from './sync';
 import {
   DEFAULT_PROFILE,
@@ -44,6 +44,7 @@ import {
   movesOpenOn,
   practiceValue,
   dayOf,
+  sealedOn,
   draftLockUntil,
   draftOf,
   guarded,
@@ -358,7 +359,7 @@ export interface MorrowState {
    * Right after signing in: a device with writing pushes it up; an empty
    * device pulls the account's copy down. Never a merge — see src/sync.ts.
    */
-  afterSignIn: () => Promise<{ ok: true } | { ok: false; error: string }>;
+  afterSignIn: () => Promise<{ ok: true; pulled: boolean } | { ok: false; error: string }>;
   /** Everything on the device, up. Safe to call on every launch. */
   pushToAccount: () => Promise<{ ok: true } | { ok: false; error: string }>;
   signOutAccount: () => Promise<void>;
@@ -675,7 +676,8 @@ export const useMorrow = create<MorrowState>()(
               shadow: shadow?.body ?? null,
               iWill: s.iWill,
               goals: s.goals,
-              analyses: s.analyses,
+              // Only lines the screen let through; the engine checks too.
+              analyses: quotable(s.analyses),
             },
             newId,
           );
@@ -719,9 +721,12 @@ export const useMorrow = create<MorrowState>()(
         let week = 0;
         for (let d = shiftDay(since, 1); d <= day; d = shiftDay(d, 1)) week += movesForDay(plan.moves, d, boundary).length;
         const kept = plan.moves.filter((m) => m.status === 'done' && (closedOn(m, boundary) ?? '') > since).length;
+        // With no scored day in the window, what was actually asked for by
+        // today — not the whole plan, most of which is still ahead.
+        const asked = plan.moves.filter((m) => m.scheduledFor && m.scheduledFor <= day).length;
         return proposeReplan(plan, {
           done: kept,
-          planned: Math.max(kept, week > 0 ? week : plan.moves.length),
+          planned: Math.max(kept, week > 0 ? week : asked),
           newId,
           today: day,
         });
@@ -871,7 +876,7 @@ export const useMorrow = create<MorrowState>()(
           (a) => a.goalId === input.goalId && a.kind === 'strategies' && a.line.trim() && isQuotable(a),
         );
         if (!source) {
-          set({ toast: { text: 'Write the Strategies line for this goal first.', kind: 'info' } });
+          set({ toast: { text: 'Write how you’ll do this goal first — the How stone.', kind: 'info' } });
           return null;
         }
         try {
@@ -904,22 +909,27 @@ export const useMorrow = create<MorrowState>()(
         const practice = s.practices.find((p) => p.id === runner.practiceId);
         if (!practice) return;
         const day = dayOf(new Date(), s.profile.dayBoundaryHour);
-        const log = logOf(runner, practice, day, newId);
-
         // One log per practice per day: doing it twice is still one day of
         // having done it, and two rows would count it twice in the score.
-        const logs = [...s.practiceLogs.filter((l) => !(l.practiceId === practice.id && l.day === day)), log];
+        // The day's log keeps its id when it is replaced, so the copy on the
+        // account is the same row updated and not a second one the server's
+        // (practice, day) constraint refuses.
+        const existing = s.practiceLogs.find((l) => l.practiceId === practice.id && l.day === day);
+        const log = logOf(runner, practice, day, existing ? () => existing.id : newId);
+        const logs = [...s.practiceLogs.filter((l) => l.id !== existing?.id), log];
 
         // A finished practice is proof, and proof belongs in the ledger in the
         // person's own words - the step titles are cut from their line.
         const evidence =
           log.stepsDone > 0
             ? [
-                ...s.evidence.filter((e) => !(e.kind === 'practice' && e.moveId === practice.id && e.day === day)),
+                ...s.evidence.filter(
+                  (e) => !(e.kind === 'practice' && (e.practiceId ?? e.moveId) === practice.id && e.day === day),
+                ),
                 {
                   id: newId('ev'),
                   goalId: practice.goalId,
-                  moveId: practice.id,
+                  practiceId: practice.id,
                   kind: 'practice' as const,
                   text: log.minimal ? practice.minVersion : practice.title,
                   day,
@@ -1050,7 +1060,7 @@ export const useMorrow = create<MorrowState>()(
         const source = given ?? s.analyses.find((a) => a.goalId === goalId && a.kind === 'strategies');
         if (!plan || !source) {
           // Without a line of theirs behind it there is no move.
-          set({ toast: { text: 'Write the Strategies line for this goal first.', kind: 'info' } });
+          set({ toast: { text: 'Write how you’ll do this goal first — the How stone.', kind: 'info' } });
           return false;
         }
         const move = {
@@ -1123,40 +1133,49 @@ export const useMorrow = create<MorrowState>()(
           // The proof line is typed at night, is free text, and the coach reads
           // it back the next morning as "and you wrote …". It gets the same
           // screen as everything else the app quotes.
+          const wrote = proof.trim().length > 0 || gladOf.trim().length > 0;
           const risk = screen([proof, gladOf].join(' '));
-          const sealRow = proof.trim()
-            ? {
-                id: newId('ev'),
-                goalId: null,
-                kind: 'seal' as const,
-                text: proof.trim(),
-                day,
-                safetyRisk: risk.risk,
-                createdAt: new Date().toISOString(),
-              }
-            : null;
-          // One seal row a day. Sealing twice — the screen can be reached
-          // again after a seal — appended a second proof line and counted it
-          // as a second piece of evidence.
-          const evidence = sealRow
-            ? [...s.evidence.filter((e) => !(e.kind === 'seal' && e.day === day)), sealRow]
-            : s.evidence;
+          const text = proof.trim();
+          // A second seal of the same day is an edit of the first, and an
+          // edit never destroys: the same sentence twice is one ledger row,
+          // a different sentence is a second entry, and a blank field keeps
+          // what was written before rather than nulling it. The first
+          // version of this replaced the day's earlier proof line outright,
+          // which is the one kind of loss this store exists to prevent.
+          const already = text ? s.evidence.some((e) => e.kind === 'seal' && e.day === day && e.text === text) : true;
+          const evidence = already
+            ? s.evidence
+            : [
+                ...s.evidence,
+                {
+                  id: newId('ev'),
+                  goalId: null,
+                  kind: 'seal' as const,
+                  text,
+                  day,
+                  safetyRisk: risk.risk,
+                  createdAt: new Date().toISOString(),
+                },
+              ];
           const days = recomputeDay(s, s.plans, evidence, day);
           const existing = days[day];
           if (existing) {
             days[day] = {
               ...existing,
               sealedAt: new Date().toISOString(),
-              moodWord: moodWord || null,
-              proof: proof.trim() || null,
-              gladOf: gladOf.trim() || null,
-              safetyRisk: risk.risk,
+              moodWord: moodWord || existing.moodWord || null,
+              proof: text || existing.proof || null,
+              gladOf: gladOf.trim() || existing.gladOf || null,
+              // The verdict belongs to the words it was given. With nothing
+              // new written the old one stands — including one the person
+              // has already appealed, which re-screening would re-raise.
+              ...(wrote ? { safetyRisk: risk.risk } : {}),
             };
           }
           return {
             evidence,
             days,
-            safetyPause: risk.risk === 'crisis' ? pauseOn(risk.risk, 'day', day) : s.safetyPause,
+            safetyPause: wrote && risk.risk === 'crisis' ? pauseOn(risk.risk, 'day', day) : s.safetyPause,
           };
         }),
 
@@ -1282,7 +1301,9 @@ export const useMorrow = create<MorrowState>()(
         {
           const st = get();
           const now = new Date().toISOString();
-          const stamped = st.plans.map((p) => reachMilestones(p, st.evidence, day, now));
+          const stamped = st.plans.map((p) =>
+            reachMilestones(p, st.evidence, day, now, dayOf(new Date(p.createdAt), st.profile.dayBoundaryHour)),
+          );
           if (stamped.some((p, i) => p !== st.plans[i])) set({ plans: stamped });
         }
         const s = get();
@@ -1295,7 +1316,7 @@ export const useMorrow = create<MorrowState>()(
             .filter((m) => m.reachedAt)
             .map((m) => ({ id: m.id, goalId: m.goalId, reachedAt: m.reachedAt as string })),
           existing: s.letters.map((l) => l.trigger),
-          firstSealedOn: s.books[0]?.sealedAt?.slice(0, 10) ?? null,
+          firstSealedOn: s.books[0] ? sealedOn(s.books[0].sealedAt, s.profile.dayBoundaryHour) : null,
         });
 
         if (occasions.length === 0) return deliverable(s.letters, day);
@@ -1359,7 +1380,9 @@ export const useMorrow = create<MorrowState>()(
           direction: 'to_future',
           body: text,
           quotes: [],
-          trigger: `self:${deliverAt}`,
+          // Keyed by the letter, not the day: two letters for the same day
+          // shared a key and the account refused the second.
+          trigger: `self:${newId('self')}`,
           deliverAt,
           readAt: null,
         };
@@ -1418,7 +1441,15 @@ export const useMorrow = create<MorrowState>()(
       markAccountAsked: () => set({ accountAsked: true }),
 
       setAccount: async () => {
-        const session = await currentSession();
+        const known = await sessionState();
+        if (known.reachable && !known.session && get().account) {
+          // The session is gone for good — the account was closed from
+          // another device, or the sweep took it — and Settings must not go
+          // on saying "Signed in" while every push says the opposite.
+          set({ account: null });
+          return;
+        }
+        const session = known.session;
         if (!session) return;
         set((s) => ({
           accountAsked: true,
@@ -1433,11 +1464,14 @@ export const useMorrow = create<MorrowState>()(
 
       afterSignIn: async () => {
         const s = get();
-        if (hasWriting(s)) return get().pushToAccount();
+        if (hasWriting(s)) {
+          const pushed = await get().pushToAccount();
+          return pushed.ok ? { ok: true, pulled: false } : pushed;
+        }
         const pulled = await pullAll(false);
         if (!pulled.ok) return { ok: false, error: pulled.error };
         const b = pulled.bundle;
-        if (!hasWriting(b)) return { ok: true };
+        if (!hasWriting(b)) return { ok: true, pulled: false };
         // A new phone, handed the same shape back. The profile merges over
         // the defaults the same way a rehydrate does, so a field this build
         // added since the copy was made is not undefined.
@@ -1456,11 +1490,15 @@ export const useMorrow = create<MorrowState>()(
           letters: b.letters,
           briefs: b.briefs,
         });
-        return { ok: true };
+        return { ok: true, pulled: true };
       },
 
       pushToAccount: async () => {
         if (!hasSupabase || !get().account) return { ok: false, error: 'Not signed in.' };
+        // A device with nothing on it that has never copied anything up has
+        // nothing to say about the account, and its default profile must not
+        // land over the one the account already holds.
+        if (!hasWriting(get()) && !get().account?.lastPushAt) return { ok: false, error: 'Nothing to copy yet.' };
         const out = await pushAll(bundleOf(get()));
         if (!out.ok) return { ok: false, error: out.error };
         set((st) => (st.account ? { account: { ...st.account, lastPushAt: new Date().toISOString() } } : {}));
@@ -1496,8 +1534,14 @@ export const useMorrow = create<MorrowState>()(
             case 'evidence':
               return { evidence: st.evidence.map((e) => (e.id === source.id ? clear(e) : e)), safetyPause: null };
             case 'day': {
+              // The proof line lives twice — on the day and in the ledger —
+              // and both carried the one verdict, so both are cleared.
               const d = st.days[source.id];
-              return { days: d ? { ...st.days, [source.id]: clear(d) } : st.days, safetyPause: null };
+              return {
+                days: d ? { ...st.days, [source.id]: clear(d) } : st.days,
+                evidence: st.evidence.map((e) => (e.kind === 'seal' && e.day === source.id ? clear(e) : e)),
+                safetyPause: null,
+              };
             }
           }
         }),

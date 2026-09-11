@@ -7,6 +7,7 @@ import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Body, Chip, InkButton, Label, Statement, Stone, Studio, TextButton, day } from '@morrow/ui';
 import { useLatestBook, useMorrow } from '../src/store';
+import { hasSupabase } from '../src/supabase';
 
 const SITTINGS: { when: string; what: string; long: string }[] = [
   { when: 'Tonight', what: 'Find it, then write it', long: '25–35 min' },
@@ -18,6 +19,7 @@ export default function Welcome() {
   const router = useRouter();
   const book = useLatestBook();
   const profile = useMorrow((s) => s.profile);
+  const account = useMorrow((s) => s.account);
   const setProfile = useMorrow((s) => s.setProfile);
 
   return (
@@ -76,6 +78,14 @@ export default function Welcome() {
             onPress={() => router.push(book ? '/today' : '/consent')}
           />
           {book ? null : <TextButton testID="welcome-have-book" label="I already have a Book" onPress={() => router.push('/today')} />}
+          {/*
+            A new phone (PRD §7.12): the one door back to a Book kept on the
+            account, before anything is written here — once a goal exists the
+            device has writing of its own and the account will not overwrite it.
+          */}
+          {!book && hasSupabase && !account ? (
+            <TextButton testID="welcome-bring-back" label="Bring my Book back from my account" onPress={() => router.push('/account')} />
+          ) : null}
           <Label style={{ textAlign: 'center', marginTop: 4 }}>No sign-up until your Book exists</Label>
         </View>
       </SafeAreaView>

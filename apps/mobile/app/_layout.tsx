@@ -54,13 +54,15 @@ export default function RootLayout() {
    * whole. Nothing here can fail loudly; Settings says when the last copy
    * landed, and the next launch tries again.
    */
-  const account = useMorrow((s) => s.account);
   const pushToAccount = useMorrow((s) => s.pushToAccount);
   const setAccount = useMorrow((s) => s.setAccount);
   useEffect(() => {
     if (!hydrated) return;
     // The auth layer may hold a session the store does not know about yet —
-    // a relaunch after signing in — so ask it first.
+    // a relaunch after signing in — so ask it first. Once, at hydration:
+    // keyed on the account as well, this re-ran the moment someone signed
+    // in and pushed an empty device's defaults over the account's profile
+    // while the sign-in screen was still pulling it down.
     void setAccount().then(() => {
       if (useMorrow.getState().account) void pushToAccount();
     });
@@ -68,8 +70,7 @@ export default function RootLayout() {
       if (next !== 'active' && useMorrow.getState().account) void pushToAccount();
     });
     return () => sub.remove();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hydrated, account?.userId]);
+  }, [hydrated, setAccount, pushToAccount]);
 
   /**
    * A tapped notification opens its screen (PRD §7.11). Subscribed once the

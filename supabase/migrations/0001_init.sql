@@ -192,8 +192,10 @@ create table public.milestones (
   plan_id text not null references public.plans on delete cascade,
   goal_id text not null references public.goals on delete cascade,
   title text not null check (length(btrim(title)) > 0),
-  -- the user's Monitoring line, verbatim
-  proof text not null check (length(btrim(proof)) > 0),
+  -- the user's line on how they will know, verbatim. Null until they write
+  -- it: the plan is built before that stone on the shorter track, and the
+  -- Goal screen asks for the line rather than inventing a proof.
+  proof text check (proof is null or length(btrim(proof)) > 0),
   proof_source_line_id text references public.goal_analyses on delete set null,
   target_date date not null,
   "order" int not null default 0,
@@ -317,6 +319,13 @@ create table public.practice_logs (
   unique (practice_id, day)
 );
 create index practice_logs_user_day on public.practice_logs (user_id, day);
+
+-- The practice a ledger row is a run of. Added here rather than in the
+-- evidence table above because practices is created after it; the practice
+-- id used to travel in move_id, where it pointed at the wrong table and the
+-- ownership guard refused every push that carried one.
+alter table public.evidence
+  add column practice_id text references public.practices on delete set null;
 
 -- ---------------------------------------------------------------- scenes
 
@@ -576,6 +585,8 @@ create trigger evidence_goal_owner before insert or update on public.evidence
   for each row execute function public.check_parent_owner('goal_id', 'goals');
 create trigger evidence_move_owner before insert or update on public.evidence
   for each row execute function public.check_parent_owner('move_id', 'moves');
+create trigger evidence_practice_owner before insert or update on public.evidence
+  for each row execute function public.check_parent_owner('practice_id', 'practices');
 create trigger day_summaries_owner before insert or update on public.day_summaries
   for each row execute function public.check_parent_owner('intention_move_id', 'moves');
 create trigger practices_goal_owner before insert or update on public.practices

@@ -13,6 +13,7 @@
  * two can disagree.
  */
 import type { Evidence, Milestone, Plan } from '../types';
+import { isQuotable } from './safety';
 
 export interface PathNode {
   id: string;
@@ -114,7 +115,8 @@ export function goalPath(plan: Plan | undefined, today: string, targetDate?: str
  */
 export function pathEvidence(evidence: readonly Evidence[], goalId: string, limit = PATH_EVIDENCE): Evidence[] {
   return [...evidence]
-    .filter((e) => e.goalId === goalId)
+    // Never a flagged line, whichever screen asks.
+    .filter((e) => e.goalId === goalId && isQuotable(e))
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
     .slice(0, limit);
 }

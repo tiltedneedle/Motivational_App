@@ -17,6 +17,7 @@ import {
   pathEvidence,
   plural,
   sourceLineFor,
+  thenHalf,
 } from '@morrow/core';
 import {
   Body,
@@ -193,8 +194,8 @@ export default function GoalScreen() {
                           <>
                             <UserText style={{ fontSize: 16, lineHeight: 23 }}>{a.paragraph?.trim() || a.line}</UserText>
                             {a.line2 ? (
-                              <UserText italic framing="…then I" style={{ fontSize: 15, color: day.ink2 }}>
-                                {a.line2}
+                              <UserText italic framing={thenHalf(a.line2).framing} style={{ fontSize: 15, lineHeight: 22, color: day.ink2 }}>
+                                {thenHalf(a.line2).act}
                               </UserText>
                             ) : null}
                           </>
@@ -238,7 +239,7 @@ export default function GoalScreen() {
                       {path.next.node.proof ? (
                         <Body style={{ fontSize: 13, color: day.ink2 }}>
                           Proof, in your words:{' '}
-                          <UserText italic style={{ fontSize: 13, color: day.ink2 }}>
+                          <UserText italic style={{ fontSize: 13, lineHeight: 20, color: day.ink2 }}>
                             “{path.next.node.proof}”
                           </UserText>
                         </Body>
@@ -293,11 +294,11 @@ export default function GoalScreen() {
                       */}
                       {ms.proofSourceLineId ? (
                         <Body style={{ fontSize: 13 }}>
-                          Proof, in your words: <UserText italic style={{ fontSize: 13 }}>“{ms.proof}”</UserText>
+                          Proof, in your words: <UserText italic style={{ fontSize: 13, lineHeight: 20 }}>“{ms.proof}”</UserText>
                         </Body>
                       ) : (
                         <Body style={{ fontSize: 13 }}>
-                          No proof yet. Write the Monitoring line and it goes here.
+                          No proof yet. Write how you’ll know, and it goes here.
                         </Body>
                       )}
                     </View>
@@ -339,7 +340,7 @@ export default function GoalScreen() {
                         </Label>
                         {from ? (
                           <Body style={{ fontSize: 13, color: day.ink2 }}>
-                            from <UserText italic style={{ fontSize: 13, color: day.ink2 }}>“{from}”</UserText>
+                            from <UserText italic style={{ fontSize: 13, lineHeight: 20, color: day.ink2 }}>“{from}”</UserText>
                           </Body>
                         ) : null}
                       </View>
@@ -377,8 +378,8 @@ export default function GoalScreen() {
                       <>
                         <UserText style={{ fontSize: 16, lineHeight: 23 }}>{a.paragraph?.trim() || a.line}</UserText>
                         {a.line2 ? (
-                          <UserText italic framing="…then I" style={{ fontSize: 15, color: day.ink2 }}>
-                                {a.line2}
+                          <UserText italic framing={thenHalf(a.line2).framing} style={{ fontSize: 15, lineHeight: 22, color: day.ink2 }}>
+                                {thenHalf(a.line2).act}
                               </UserText>
                         ) : null}
                       </>
@@ -420,7 +421,7 @@ export default function GoalScreen() {
                   {path.next.node.proof ? (
                     <Body style={{ fontSize: 13, color: day.ink2 }}>
                       Proof, in your words:{' '}
-                      <UserText italic style={{ fontSize: 13, color: day.ink2 }}>
+                      <UserText italic style={{ fontSize: 13, lineHeight: 20, color: day.ink2 }}>
                         “{path.next.node.proof}”
                       </UserText>
                     </Body>
@@ -475,11 +476,11 @@ export default function GoalScreen() {
                   */}
                   {ms.proofSourceLineId ? (
                     <Body style={{ fontSize: 13 }}>
-                      Proof, in your words: <UserText italic style={{ fontSize: 13 }}>“{ms.proof}”</UserText>
+                      Proof, in your words: <UserText italic style={{ fontSize: 13, lineHeight: 20 }}>“{ms.proof}”</UserText>
                     </Body>
                   ) : (
                     <Body style={{ fontSize: 13 }}>
-                      No proof yet. Write the Monitoring line and it goes here.
+                      No proof yet. Write how you’ll know, and it goes here.
                     </Body>
                   )}
                 </View>
@@ -521,7 +522,7 @@ export default function GoalScreen() {
                     </Label>
                     {from ? (
                       <Body style={{ fontSize: 13, color: day.ink2 }}>
-                        from <UserText italic style={{ fontSize: 13, color: day.ink2 }}>“{from}”</UserText>
+                        from <UserText italic style={{ fontSize: 13, lineHeight: 20, color: day.ink2 }}>“{from}”</UserText>
                       </Body>
                     ) : null}
                   </View>

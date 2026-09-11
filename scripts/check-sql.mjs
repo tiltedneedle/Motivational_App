@@ -132,6 +132,10 @@ for (const [, table, body] of sql.matchAll(/create table public\.(\w+) \(([\s\S]
     if (OWNED.has(parent) && !EXEMPT.has(`${table}.${col}`)) pointers.push({ table, col, parent });
   }
 }
+// Columns added after their table, for a parent created later in the file.
+for (const [, table, col, parent] of sql.matchAll(/alter table public\.(\w+)\s+add column (\w+) text references public\.(\w+)/g)) {
+  if (OWNED.has(parent) && !EXEMPT.has(`${table}.${col}`)) pointers.push({ table, col, parent });
+}
 const unguarded = pointers.filter(
   ({ table, col, parent }) =>
     !sql.includes(`on public.${table}\n  for each row execute function public.check_parent_owner('${col}', '${parent}');`),

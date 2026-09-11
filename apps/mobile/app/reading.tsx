@@ -13,7 +13,7 @@ import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ANALYSIS_TITLES, bookPages, formatDay, plural, sealedOn } from '@morrow/core';
+import { ANALYSIS_TITLES, bookPages, formatDay, plural, sealedOn, thenHalf } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, UserText, night, paper, radius } from '@morrow/ui';
 import { useGoals, useLatestBook, useMorrow } from '../src/store';
 
@@ -126,8 +126,8 @@ export default function Reading() {
                     </Label>
                     <UserText style={{ fontSize: 17, lineHeight: 27, color: paper.ink }}>{l.text}</UserText>
                     {l.text2 ? (
-                      <UserText italic framing="…then I" style={{ fontSize: 16, lineHeight: 25, color: paper.ink2 }}>
-                        {l.text2}
+                      <UserText italic framing={thenHalf(l.text2).framing} style={{ fontSize: 16, lineHeight: 25, color: paper.ink2 }}>
+                        {thenHalf(l.text2).act}
                       </UserText>
                     ) : null}
                   </View>

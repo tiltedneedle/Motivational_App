@@ -105,7 +105,10 @@ export default function Write() {
     // on backgrounding only. The cleanup used to check the phase through a
     // ref, which had already moved on to 'closed' by the time it ran, so the
     // last flush on the way out of the room was the one that never happened.
-    if (phase === 'doorway') return;
+    // And never while the screen has fired: close() has cleared the draft
+    // on purpose, and a flush from the background — a helpline tap opens
+    // the dialler — wrote the crisis text straight back as a draft.
+    if (phase === 'doorway' || paused) return;
     const id = phase === 'writing' ? setInterval(flush, 4_000) : null;
     const sub = AppState.addEventListener('change', (next) => {
       // Backgrounding is the moment the process can be reaped, so write now.
@@ -116,7 +119,7 @@ export default function Write() {
       sub.remove();
       if (phase === 'writing') flush();
     };
-  }, [phase, flush]);
+  }, [phase, paused, flush]);
 
   const onChange = useCallback((body: string) => {
     typingRef.current = true;

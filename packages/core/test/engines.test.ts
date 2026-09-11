@@ -57,7 +57,7 @@ import {
   type DaySummary,
   type GoalAnalysis,
 } from '../src/index';
-import { dayOf, endSentence, ifThenOf, sequentialIds } from '../src/ids';
+import { dayOf, endSentence, ifThenOf, sequentialIds, thenHalf } from '../src/ids';
 import { firstSentence, restOfIdeal } from '../src/engines/portrait';
 
 describe('the Interview', () => {
@@ -1021,5 +1021,50 @@ describe('the if-then as one sentence', () => {
       expect(line.includes(s) || line2.includes(s), s).toBe(true);
       expect(sentence).toContain(s);
     }
+  });
+});
+
+describe('the first sentence, at its real end', () => {
+  it('takes the whole run of terminators and a decimal point is not an end', () => {
+    expect(firstSentence('I want to run every morning... Not just some mornings.')).toBe('I want to run every morning...');
+    expect(firstSentence('Is this really it?! I want more.')).toBe('Is this really it?!');
+    expect(firstSentence('I want to be 1.5x fitter by spring. Then more.')).toBe('I want to be 1.5x fitter by spring.');
+    expect(firstSentence('He said “go.” So I went.')).toBe('He said “go.”');
+  });
+
+  it('leaves the body starting at the next sentence', () => {
+    const ideal = 'I want to run every morning... Not just some mornings.';
+    expect(restOfIdeal(ideal, firstSentence(ideal))).toBe('Not just some mornings.');
+  });
+
+  it('keeps an ellipsis that is theirs', () => {
+    const ideal = 'I want to be someone who runs…';
+    const shown = firstSentence(ideal);
+    expect(shown).toBe(ideal);
+    expect(restOfIdeal(ideal, shown)).toBe('');
+  });
+});
+
+describe('the second half of an if-then on its own line', () => {
+  it('prints whatever framing they did not type themselves', () => {
+    expect(thenHalf('put the phone in the hall')).toEqual({ framing: '…then I', act: 'put the phone in the hall' });
+    expect(thenHalf('then I put the phone in the hall.')).toEqual({ framing: '…then I', act: 'put the phone in the hall' });
+    expect(thenHalf("I'll put the phone in the hall")).toEqual({ framing: '…then', act: "I'll put the phone in the hall" });
+    expect(thenHalf('then, i put the phone in the hall')).toEqual({ framing: '…then I', act: 'put the phone in the hall' });
+  });
+});
+
+describe('moves cut from a line with days in the middle of it', () => {
+  it('keeps the sentence whole rather than lifting the days out of it', () => {
+    const moves = splitFirstMoves('I run on Monday and Wednesday at 6:40 before work');
+    expect(moves).toEqual(['Monday: I run on Monday and Wednesday at 6:40 before work', 'Wednesday: I run on Monday and Wednesday at 6:40 before work']);
+  });
+  it('still lifts a leading run of days', () => {
+    expect(splitFirstMoves('Tuesday, Thursday, Saturday at 6:40, out the back door')).toEqual([
+      'Tuesday: at 6:40, out the back door',
+      'Thursday: at 6:40, out the back door',
+      'Saturday: at 6:40, out the back door',
+    ]);
+    expect(splitFirstMoves('Every Monday, Wednesday and Friday I go to the pool at 7')[0]).toBe('Monday: I go to the pool at 7');
   });
 });

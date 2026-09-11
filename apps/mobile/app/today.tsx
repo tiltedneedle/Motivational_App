@@ -40,6 +40,7 @@ import {
   useReducedMotion,
 } from '@morrow/ui';
 import { MoveStone } from '../src/components/MoveStone';
+import { hasSupabase } from '../src/supabase';
 import {
   entitlementOf,
   useConsistency,
@@ -132,6 +133,9 @@ export default function Today() {
           <Statement>Nothing here yet, and that is the right starting point.</Statement>
           <Body>Three evenings from now there will be a Book, a plan, and a first move for the morning.</Body>
           <InkButton testID="today-begin" label="Begin the Interview" onPress={() => router.push('/consent')} />
+          {hasSupabase && !state.account ? (
+            <TextButton testID="today-bring-back" label="Bring my Book back from my account" onPress={() => router.push('/account')} />
+          ) : null}
         </SafeAreaView>
       </Studio>
     );

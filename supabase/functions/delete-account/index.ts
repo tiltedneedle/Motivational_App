@@ -35,17 +35,18 @@ Deno.serve(async (req) => {
 
   const url = Deno.env.get('SUPABASE_URL') ?? '';
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-  const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
-  if (!url || !serviceKey || !anonKey) return json({ error: 'not configured' }, 500);
+  if (!url || !serviceKey) return json({ error: 'not configured' }, 500);
 
-  // Who is asking. The user is read from their own token, never from the body.
-  const authorization = req.headers.get('authorization') ?? '';
-  const asUser = createClient(url, anonKey, { global: { headers: { authorization } } });
-  const { data: who, error: whoError } = await asUser.auth.getUser();
+  const admin = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
+
+  // Who is asking. The user is read from their own token, never from the
+  // body: the token is verified by the auth server, so a body that named
+  // somebody else would name nobody.
+  const token = (req.headers.get('authorization') ?? '').replace(/^bearer\s+/i, '');
+  if (!token) return json({ error: 'not signed in' }, 401);
+  const { data: who, error: whoError } = await admin.auth.getUser(token);
   if (whoError || !who?.user) return json({ error: 'not signed in' }, 401);
   const userId = who.user.id;
-
-  const admin = createClient(url, serviceKey);
 
   // The sweep: anyone whose grace period has run out, gone for good. Run on
   // every call rather than only on a schedule, so the promise holds even on a
@@ -65,7 +66,6 @@ Deno.serve(async (req) => {
 
   // Every session ends. The app signs out locally as well; this is the half
   // the app cannot do for other devices.
-  const token = authorization.replace(/^bearer\s+/i, '');
   await admin.auth.admin.signOut(token, 'global').catch(() => {});
 
   return json({ ok: true, hardDeleteAfter: new Date(Date.now() + GRACE_DAYS * 86_400_000).toISOString() });

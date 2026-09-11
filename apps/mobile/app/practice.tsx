@@ -145,7 +145,7 @@ export default function PracticeBuilder() {
               </Body>
             ) : (
               <Body testID="practice-no-source" style={{ fontSize: 13 }}>
-                There is no Strategies line for this goal yet, so there is nothing to cut steps from. You can write them
+                You have not written how yet for this goal, so there is nothing to cut steps from. You can write them
                 here, or write that line first and come back to a form that is already filled in.
               </Body>
             )}

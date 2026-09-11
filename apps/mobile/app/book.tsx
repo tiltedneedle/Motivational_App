@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { Share, View } from 'react-native';
 import { ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ANALYSIS_TITLES, bookToHtml, bookToText, formatDay, ordinal, pageCount, restOfIdeal, sealedOn } from '@morrow/core';
+import { ANALYSIS_TITLES, bookToHtml, bookToText, formatDay, ordinal, pageCount, restOfIdeal, sealedOn, thenHalf } from '@morrow/core';
 import {
   Body,
   Chip,
@@ -196,8 +196,8 @@ export default function BookScreen() {
                       </Label>
                       <UserText style={{ fontSize: 17, lineHeight: 26, color: paper.ink }}>{l.text}</UserText>
                       {l.text2 ? (
-                        <UserText italic framing="…then I" style={{ fontSize: 16, lineHeight: 24, color: paper.ink2 }}>
-                          {l.text2}
+                        <UserText italic framing={thenHalf(l.text2).framing} style={{ fontSize: 16, lineHeight: 24, color: paper.ink2 }}>
+                          {thenHalf(l.text2).act}
                         </UserText>
                       ) : null}
                     </View>
@@ -254,8 +254,8 @@ export default function BookScreen() {
                   </Label>
                   <UserText style={{ fontSize: 17, lineHeight: 26, color: paper.ink }}>{l.text}</UserText>
                   {l.text2 ? (
-                    <UserText italic framing="…then I" style={{ fontSize: 16, lineHeight: 24, color: paper.ink2 }}>
-                      {l.text2}
+                    <UserText italic framing={thenHalf(l.text2).framing} style={{ fontSize: 16, lineHeight: 24, color: paper.ink2 }}>
+                      {thenHalf(l.text2).act}
                     </UserText>
                   ) : null}
                 </View>

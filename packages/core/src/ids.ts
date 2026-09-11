@@ -72,21 +72,41 @@ export function ifThenOf(line: string, line2: string): { sentence: string; spans
     .replace(/[\s,;.!?]+$/, '');
   let act = line2
     .trim()
-    .replace(/^,?\s*then\s+/i, '')
+    .replace(/^,?\s*then\b[\s,]*/i, '')
     .replace(/[\s.!?]+$/, '');
   // They typed the subject the framing supplies. "I put …" loses its "I" to
   // the framing's; "I'll put …" keeps its contraction and the framing stops
   // at "then".
   let then: string;
-  if (/^I\s+/.test(act)) {
-    act = act.replace(/^I\s+/, '');
+  if (/^i\s+/i.test(act)) {
+    act = act.replace(/^i\s+/i, '');
     then = `then I ${act}`;
-  } else if (/^I['’]/.test(act)) {
+  } else if (/^i['’]/i.test(act)) {
     then = `then ${act}`;
   } else {
     then = `then I ${act}`;
   }
   return { sentence: `if ${cond}, ${then}`, spans: [cond, act].filter((s) => s.length > 0) };
+}
+
+/**
+ * The second half of an if-then, for the places that print it on its own
+ * line under a framing — the Book, the reading view, the Goal screen, the
+ * PDF. Same rules as `ifThenOf`: whatever framing the person typed is not
+ * printed twice, and their contraction is kept. `act` is a substring of what
+ * they wrote, so it still belongs in their face; `framing` never does.
+ */
+export function thenHalf(line2: string): { framing: '…then I' | '…then'; act: string } {
+  let act = (line2 ?? '')
+    .trim()
+    .replace(/^,?\s*then\b[\s,]*/i, '')
+    .replace(/[\s.!?]+$/, '');
+  if (/^i\s+/i.test(act)) {
+    act = act.replace(/^i\s+/i, '');
+    return { framing: '…then I', act };
+  }
+  if (/^i['’]/i.test(act)) return { framing: '…then', act };
+  return { framing: '…then I', act };
 }
 
 /**
@@ -177,7 +197,9 @@ export function formatDay(iso: string, opts: { weekday?: boolean; today?: string
   const [, y, mo, d] = m;
   const month = MONTHS[Number(mo) - 1] ?? mo;
   const day = String(Number(d));
-  const thisYear = (opts.today ?? new Date().toISOString().slice(0, 10)).slice(0, 4);
+  // The person's year, not UTC's: on New Year's Eve west of Greenwich the
+  // UTC date is already next year, and every date printed grew a year.
+  const thisYear = (opts.today ?? dayOf(new Date(), 0)).slice(0, 4);
   const year = y === thisYear ? '' : ` ${y}`;
   if (!opts.weekday) return `${day} ${month}${year}`;
   const dow = WEEKDAYS[new Date(`${iso}T00:00:00Z`).getUTCDay()] ?? '';

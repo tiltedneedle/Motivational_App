@@ -20,6 +20,18 @@ enable_signup = true
 [auth.email]
 enable_signup = true
 enable_confirmations = false
+# The app asks for a six-digit code, not a link: a link opens the mail app and
+# then has to find its way back. The hosted project needs the same — set the
+# Magic Link template to carry {{ .Token }} (see README, "What needs a key").
+otp_length = 6
+otp_expiry = 600
+
+[auth.external.apple]
+# Sign in with Apple, from the identity token the OS hands the app. The client
+# id is the bundle identifier; the secret is not needed for native sign-in.
+enabled = true
+client_id = "app.morrow.client"
+secret = ""
 
 # Every function needs a signed-in user. None of them are public.
 [functions.readback]
