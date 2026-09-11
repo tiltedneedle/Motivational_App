@@ -5,12 +5,25 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ANALYSIS_ORDER, ANALYSIS_TITLES, closedOn, dayOf, domainMeta, formatDay, sourceLineFor } from '@morrow/core';
+import {
+  ANALYSIS_ORDER,
+  ANALYSIS_TITLES,
+  closedOn,
+  dayOf,
+  distanceLabel,
+  domainMeta,
+  formatDay,
+  goalPath,
+  pathEvidence,
+  plural,
+  sourceLineFor,
+} from '@morrow/core';
 import {
   Body,
   Chip,
   InkButton,
   Label,
+  Path as PathTrack,
   Ring,
   Rule,
   Statement,
@@ -60,6 +73,22 @@ export default function GoalScreen() {
   const portrait = state.portraits.find((p) => p.goalId === goal.id);
   const wanted = analysisPlan(goal.rank, state.profile.track);
   const meta = domainMeta(goal.domain);
+  const path = goalPath(plan, today, goal.targetDate ?? null);
+  const recent = pathEvidence(state.evidence, goal.id);
+  const daysLeftLabel =
+    path.daysLeft > 0
+      ? `${plural(path.daysLeft, 'day')} to go`
+      : path.daysLeft === 0
+        ? 'The last day'
+        : `${plural(Math.abs(path.daysLeft), 'day')} past`;
+  /**
+   * What the drawing says, for somebody who cannot see it. Everything in the
+   * picture is in this sentence, which is the test of whether the picture was
+   * carrying anything it should not have been.
+   */
+  const pathLabel = `${Math.round(path.at * 100)}% of the way from ${formatDay(path.from)} to ${formatDay(
+    path.to,
+  )}. ${plural(path.nodes.filter((n) => n.reached).length, 'milestone')} reached of ${path.nodes.length}.`;
   const doneCount = plan?.moves.filter((m) => m.status === 'done').length ?? 0;
   const pct = plan?.moves.length ? doneCount / plan.moves.length : 0;
 
@@ -152,6 +181,66 @@ export default function GoalScreen() {
               </View>
               </View>
               <View style={{ flex: 1, gap: 20 }}>
+              {!path.empty ? (
+                <View testID="goal-path" style={{ gap: 10 }}>
+                  <Rule />
+                  <Label>The path · {formatDay(path.from)} to {formatDay(path.to)}</Label>
+                  <PathTrack
+                    testID="goal-path-track"
+                    at={path.at}
+                    nodes={path.nodes.map((n) => ({ id: n.id, at: n.at, reached: n.reached }))}
+                    color={meta.hex}
+                    accessibilityLabel={pathLabel}
+                  />
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
+                    <Label testID="goal-path-here" style={{ color: meta.ink }}>
+                      You are here
+                    </Label>
+                    <Label style={{ color: day.ink2 }}>{daysLeftLabel}</Label>
+                  </View>
+
+                  {path.next ? (
+                    <View testID="goal-path-next" style={{ gap: 3 }}>
+                      <Label style={{ color: accent.coralText }}>Next · {distanceLabel(path.next.daysAway)}</Label>
+                      <Body style={{ color: day.ink, fontSize: 16 }}>{path.next.node.title}</Body>
+                      {path.next.node.proof ? (
+                        <Body style={{ fontSize: 13, color: day.ink2 }}>
+                          Proof, in your words:{' '}
+                          <UserText italic style={{ fontSize: 13, color: day.ink2 }}>
+                            “{path.next.node.proof}”
+                          </UserText>
+                        </Body>
+                      ) : null}
+                    </View>
+                  ) : (
+                    <Body testID="goal-path-done" style={{ fontSize: 14 }}>
+                      Every milestone on this one is behind you.
+                    </Body>
+                  )}
+
+                  {/*
+                    And what they actually did. A route without this is a progress
+                    bar with a nicer name; the ledger rows are the reason the dot
+                    means anything.
+                  */}
+                  {recent.length ? (
+                    <View testID="goal-path-evidence" style={{ gap: 6, marginTop: 4 }}>
+                      <Label style={{ color: day.ink2 }}>The last {plural(recent.length, 'thing')} you did</Label>
+                      {recent.map((e) => (
+                        <View key={e.id} style={{ flexDirection: 'row', gap: 10 }}>
+                          <Label style={{ color: day.ink3, minWidth: 62 }}>{formatDay(e.day, { today })}</Label>
+                          <UserText style={{ flex: 1, fontSize: 15, lineHeight: 22, color: day.ink2 }}>{e.text}</UserText>
+                        </View>
+                      ))}
+                    </View>
+                  ) : (
+                    <Body testID="goal-path-nothing-yet" style={{ fontSize: 13 }}>
+                      Nothing in the ledger for this one yet. The first thing you do goes here.
+                    </Body>
+                  )}
+                </View>
+              ) : null}
+
               {plan ? (
                 <View style={{ gap: 10 }}>
                   <Rule />
@@ -270,6 +359,66 @@ export default function GoalScreen() {
               );
             })}
           </View>
+          {!path.empty ? (
+            <View testID="goal-path" style={{ gap: 10 }}>
+              <Rule />
+              <Label>The path · {formatDay(path.from)} to {formatDay(path.to)}</Label>
+              <PathTrack
+                testID="goal-path-track"
+                at={path.at}
+                nodes={path.nodes.map((n) => ({ id: n.id, at: n.at, reached: n.reached }))}
+                color={meta.hex}
+                accessibilityLabel={pathLabel}
+              />
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
+                <Label testID="goal-path-here" style={{ color: meta.ink }}>
+                  You are here
+                </Label>
+                <Label style={{ color: day.ink2 }}>{daysLeftLabel}</Label>
+              </View>
+
+              {path.next ? (
+                <View testID="goal-path-next" style={{ gap: 3 }}>
+                  <Label style={{ color: accent.coralText }}>Next · {distanceLabel(path.next.daysAway)}</Label>
+                  <Body style={{ color: day.ink, fontSize: 16 }}>{path.next.node.title}</Body>
+                  {path.next.node.proof ? (
+                    <Body style={{ fontSize: 13, color: day.ink2 }}>
+                      Proof, in your words:{' '}
+                      <UserText italic style={{ fontSize: 13, color: day.ink2 }}>
+                        “{path.next.node.proof}”
+                      </UserText>
+                    </Body>
+                  ) : null}
+                </View>
+              ) : (
+                <Body testID="goal-path-done" style={{ fontSize: 14 }}>
+                  Every milestone on this one is behind you.
+                </Body>
+              )}
+
+              {/*
+                And what they actually did. A route without this is a progress
+                bar with a nicer name; the ledger rows are the reason the dot
+                means anything.
+              */}
+              {recent.length ? (
+                <View testID="goal-path-evidence" style={{ gap: 6, marginTop: 4 }}>
+                  <Label style={{ color: day.ink2 }}>The last {plural(recent.length, 'thing')} you did</Label>
+                  {recent.map((e) => (
+                    <View key={e.id} style={{ flexDirection: 'row', gap: 10 }}>
+                      <Label style={{ color: day.ink3, minWidth: 62 }}>{formatDay(e.day, { today })}</Label>
+                      <UserText style={{ flex: 1, fontSize: 15, lineHeight: 22, color: day.ink2 }}>{e.text}</UserText>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <Body testID="goal-path-nothing-yet" style={{ fontSize: 13 }}>
+                  Nothing in the ledger for this one yet. The first thing you do goes here.
+                </Body>
+              )}
+            </View>
+          ) : null}
+
           {plan ? (
             <View style={{ gap: 10 }}>
               <Rule />

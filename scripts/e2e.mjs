@@ -635,6 +635,41 @@ async function main() {
     check('a phone gets one column, not two narrow ones', !(await seen('book-two-column')));
     check('and the Book is all still there', (await text('book-i-will')).length > 10);
 
+    // ---- the Goal Path (PRD 7.7)
+    //
+    // "A single route from now to the target date with milestone nodes, the
+    // user's dot at the current fraction, You are here, distance to next, and
+    // the last five evidence entries." The dot is time, not completions, so
+    // that where they are and what is behind them are allowed to disagree.
+    const pathGoal = await page.evaluate(() => {
+      const key = Object.keys(localStorage).find((k) => k.includes('morrow'));
+      const st = key ? JSON.parse(localStorage.getItem(key)).state : null;
+      return st?.goals?.[0]?.id ?? null;
+    });
+    if (pathGoal) {
+      await page.goto(`${BASE}/goal?id=${pathGoal}`, { waitUntil: 'networkidle' });
+      await page.clock.runFor(1500);
+      await page.waitForTimeout(500);
+      check('the goal has a path', await seen('goal-path'));
+      check('with "You are here" on it', await seen('goal-path-here'));
+      check('and the next milestone with how far off it is', await seen('goal-path-next'));
+      const next = (await seen('goal-path-next')) ? await text('goal-path-next') : '';
+      check(
+        'the next milestone carries their own Monitoring line as its proof',
+        next.includes('one run in the ledger') || next.includes('Proof, in your words'),
+        next.slice(0, 120),
+      );
+      // The drawing must not be the only place the information lives.
+      const label = await page.evaluate(
+        () => document.querySelector('[data-testid="goal-path-track"]')?.getAttribute('aria-label') ?? '',
+      );
+      check(
+        'and everything the drawing shows is also said in words',
+        /%/.test(label) && /milestone/.test(label),
+        label,
+      );
+    }
+
     // ---- Sunday reading (PRD 7.3)
     //
     // "A reading view with no controls but a page turn; at the end, Still true
