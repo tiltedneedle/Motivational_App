@@ -975,6 +975,13 @@ With the rules met, the compiler itself: `babel-plugin-react-compiler` at Expo's
 
 A phone in dark mode opened on the day studio's splash for a moment before the night one drew. `make-icons.mjs` draws a night splash now — the pale stone on the night ground, the same ink the night studio's buttons wear — and `expo-splash-screen` gets it under `dark`. The day splash is byte-identical to before.
 
+### The dependencies, audited (2026-09-12)
+
+`pnpm audit --prod`: four advisories, none fixable here and none that reach a person's data.
+
+- `image-size` 1.2.1 (two highs, infinite loops on malformed ICNS/JXL/HEIF) and `uuid` 7.0.3 (moderate) sit under metro and the xcode config plugin — build-time tools that only ever read this repo's own assets. Nothing of either ships in the app.
+- `decode-uri-component` 0.2.2 (moderate, CVE-2026-45822: super-linear decoding of malformed percent-encoded input) is inside `query-string` 7, which `expo-router` uses to parse URLs — that one does ship, and a crafted deep link could pin the CPU for seconds. The fixed line (0.5.0) is ESM-only and `query-string` 7 `require`s it, so a pnpm override would break URL parsing at runtime; the fix has to come from `expo-router` moving to `query-string` 8+. Availability only — no memory corruption, no disclosure. Re-check on the next SDK patch.
+
 ### Predictive back (2026-09-12)
 
 §7.14 asks for predictive back and edge to edge on Android. Edge to edge is what SDK 57 builds by default (the old key is gone). Predictive back is one key that defaults to off — `android.predictiveBackGestureEnabled: true` — and the config plugin writes `enableOnBackInvokedCallback` into the manifest (`expo config --type introspect` shows it). What the gesture actually looks like through expo-router's stack on a device is on the Mac list.
