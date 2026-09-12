@@ -61,7 +61,7 @@ export default function SealBook() {
   return (
     <Studio dark testID="screen-seal-book">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'seal-book-back' }} right={<Label style={{ color: night.ink3 }}>Sitting 3 · the seal</Label>} />
+        <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'seal-book-back' }} right={<Label style={{ color: night.ink3 }}>The seal</Label>} />
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 20 }}>
           <Label style={{ color: night.ink3 }}>Last thing</Label>
           <Statement style={{ color: night.ink }}>Finish this, in your words.</Statement>

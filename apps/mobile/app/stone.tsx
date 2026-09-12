@@ -163,6 +163,12 @@ export default function StoneScreen() {
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18, gap: 16 }}>
+          {stepIndex === 0 && goals.findIndex((g) => g.id === goalId) === 0 && !existing ? (
+            <Body testID="stone-intro" style={{ fontSize: 14, color: day.ink2 }}>
+              Each goal gets {plan.length} short lines in your words — five questions, one line each. The chips are ways in;
+              the line is yours. Seat one and the next appears.
+            </Body>
+          ) : null}
           <Statement testID="stone-question">{set.question}</Statement>
 
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>

@@ -85,7 +85,7 @@ export default function Heard() {
   return (
     <Studio testID="screen-heard">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'heard-back' }} where="Sitting 1 · the read-back" />
+        <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'heard-back' }} where="The read-back" />
         <View style={{ paddingTop: 2 }}>
           <Label>What I heard</Label>
           <Statement style={{ marginTop: 8 }}>
