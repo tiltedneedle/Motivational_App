@@ -39,6 +39,7 @@ import {
   question,
   reading,
   replyToChip,
+  returnNumberToday,
   returnsLetter,
   ringFraction,
   screen,
@@ -471,6 +472,17 @@ describe('consistency', () => {
     const returns = detectReturns(days, '2026-09-09');
     expect(returns).toHaveLength(1);
     expect(returns[0]!.gapDays).toBe(4);
+  });
+
+  it('numbers the return being made, not the last one made', () => {
+    // Two gaps come back from already; today is the third time. The ledger
+    // cannot show today's return until something is done, so the card that
+    // welcomes the third return used to say "Return #2".
+    const days = [day('2026-08-01'), day('2026-08-06'), day('2026-08-12')];
+    expect(detectReturns(days, '2026-08-20')).toHaveLength(2);
+    expect(returnNumberToday(days, '2026-08-20')).toBe(3);
+    // The very first return is #1.
+    expect(returnNumberToday([day('2026-08-01')], '2026-08-09')).toBe(1);
   });
 
   it('knows when the user is returning right now', () => {

@@ -116,6 +116,17 @@ export function detectReturns(days: DaySummary[], today: string): ReturnRecord[]
   return out;
 }
 
+/**
+ * Which return this is, on the day the person comes back: the returns
+ * already in the ledger, plus this one. `detectReturns` cannot count today
+ * — nothing has been done yet, which is what "coming back" looks like from
+ * the data — so the card that welcomes the third return used to say
+ * "Return #2".
+ */
+export function returnNumberToday(days: DaySummary[], today: string): number {
+  return detectReturns(days, today).length + 1;
+}
+
 export function isReturning(days: DaySummary[], today: string): { returning: boolean; gapDays: number } {
   const active = days
     .filter((d) => d.sealedAt || d.done > 0 || d.evidenceCount > 0)

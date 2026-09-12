@@ -10,12 +10,12 @@ import {
   consistencyCaption,
   paywallMoment,
   dayOf,
-  detectReturns,
   domainMeta,
   formatDay,
   greeting,
   isReturning,
   plural,
+  returnNumberToday,
   returnsLetter,
   scheduleLabel,
   sourceLineFor,
@@ -114,9 +114,8 @@ export default function Today() {
     const r = isReturning(days, today);
     if (!r.returning) return null;
     // "Return #n" is the nth time they came back from a gap, not the
-    // number of sealed days — the coach counts it the same way.
-    const returns = detectReturns(days, today).length;
-    const letter = returnsLetter(book, r.gapDays, Math.max(1, returns));
+    // number of sealed days — and this one is not in the ledger yet.
+    const letter = returnsLetter(book, r.gapDays, returnNumberToday(days, today));
     return { body: letter.body, quotes: letter.quotes };
   });
 
