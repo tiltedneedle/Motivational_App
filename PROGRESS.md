@@ -1182,10 +1182,11 @@ needs either hardware or a credential.
    wins when set. Then: sign in on the built app, push, wipe, sign in on a
    second install, pull, and compare the two stores; close the account and
    confirm the sweep.
-3. **One `supabase db reset` against the real service** before launch. PGlite is
-   Postgres, but Supabase is Postgres plus its own roles, extensions and `auth`
-   schema, and `scripts/test-migration.mjs` stubs the last of those. Then the
-   email template with `{{ .Token }}` and the Apple provider (README).
+3. ~~One `supabase db reset` against the real service~~ — done: the migration
+   is applied to the project itself and the account round-trips through it
+   ("The account service, live"). What remains here is the owner's CLI login
+   for `functions deploy` and `config push` (the six-digit-code template and the
+   Apple provider are in `config.toml`; README has the commands).
 4. **The store keys.** `apps/mobile/src/billing.ts` is one function and one
    seam; the paywall, the gates and their tests all go through the `Billing`
    interface. Until then Continue says plainly that nothing was charged, which
