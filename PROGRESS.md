@@ -975,7 +975,7 @@ Step 4 of the loop — what current practice would add — with no agents to spe
 - **A disabled ink button was the same button at 35% opacity** — "Pick at least one" measured 1.4:1, an instruction set in a colour nobody could read. Disabled is a flat face on the ground with no edge to press and its label in the second ink.
 - **The night studio caught one more:** the selected track card's description was white at 75%, which on the night studio's light ink is white on white. Two tokens — `onInkSoft`, `onInkWash` — replace every hard-coded white-on-ink, with a contrast test for both studios.
 
-Second run, both studios: 0. The pass is in `pnpm verify` after the e2e suite.
+Second run, both studios: 0. The pass is in `pnpm verify` after the e2e suite. It takes `SEED=` as the screenshots do; the empty, many-goals, long-lines and ninety-days-in stores are all at 0 too.
 
 The e2e suite runs axe as well, at four states only a flow reaches — the room mid-sitting, the seal with its line written, a toast with its undo, the resources card — which found one more: `aria-modal` on a container with no dialog role (it is an `alertdialog` named by its title now). 148 checks.
 

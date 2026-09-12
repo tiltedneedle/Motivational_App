@@ -12,6 +12,7 @@
  *   node scripts/a11y.mjs            # every route; exits 1 on serious/critical
  *   node scripts/a11y.mjs today book # some
  *   DARK=1 node scripts/a11y.mjs     # the night studio
+ *   SEED=scripts/fixtures/empty.json node scripts/a11y.mjs   # another store
  */
 import { chromium } from 'playwright';
 import { createServer } from 'node:http';
@@ -118,7 +119,7 @@ const context = await browser.newContext({
 });
 const page = await context.newPage();
 
-const seed = JSON.parse(await readFile(join(ROOT, 'scripts', 'fixtures', 'seeded-state.json'), 'utf8'));
+const seed = JSON.parse(await readFile(process.env.SEED ? join(ROOT, process.env.SEED) : join(ROOT, 'scripts', 'fixtures', 'seeded-state.json'), 'utf8'));
 if (process.env.DARK) seed.state.profile.appearance = 'dark';
 await page.addInitScript((s) => {
   localStorage.setItem('morrow-v1', JSON.stringify(s));
