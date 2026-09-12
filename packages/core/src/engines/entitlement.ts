@@ -89,6 +89,23 @@ export const PLANS: PricePlan[] = [
 
 export const HIGHLIGHTED: PricePlan['id'] = 'annual';
 
+/**
+ * Why the annual is highlighted, as arithmetic rather than a claim. "Most
+ * people choose this one" was on the paywall of a product with no customers
+ * yet — a statistic nobody had measured, which is the kind of line §8.9's
+ * "no fake discounts" is about. What is true is the maths: a year costs the
+ * same as this many months of monthly.
+ */
+export function annualAgainstMonthly(plans: PricePlan[] = PLANS): string | null {
+  const monthly = plans.find((p) => p.id === 'monthly');
+  const annual = plans.find((p) => p.id === 'annual');
+  if (!monthly || !annual || monthly.cents <= 0) return null;
+  const months = Math.round(annual.cents / monthly.cents);
+  if (months >= 12 || months < 1) return null;
+  const words = ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven'];
+  return `A year for the price of ${words[months - 1]} months.`;
+}
+
 /** The three lines on the paywall. App chrome; never set in the serif. */
 export const BENEFITS = [
   'Every goal gets its own Blueprint, not just the first.',

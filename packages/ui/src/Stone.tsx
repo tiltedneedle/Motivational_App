@@ -7,7 +7,7 @@
  */
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, Easing, View, type ViewStyle } from 'react-native';
-import Svg, { Circle, Defs, Ellipse, RadialGradient, Stop } from 'react-native-svg';
+import Svg, { Circle, Defs, Ellipse, LinearGradient, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { domainMeta, type DomainId } from '@morrow/core';
 
 export interface StoneProps {
@@ -128,6 +128,9 @@ export function Stone({
  */
 function Sweep({ size }: { size: number }) {
   const x = useRef(new Animated.Value(-size)).current;
+  const id = useMemo(() => `sw${Math.random().toString(36).slice(2, 9)}`, []);
+  const bandW = size * 0.42;
+  const bandH = size * 1.4;
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
@@ -145,13 +148,22 @@ function Sweep({ size }: { size: number }) {
         style={{
           position: 'absolute',
           top: -size * 0.2,
-          width: size * 0.34,
-          height: size * 1.4,
-          backgroundColor: '#FFFFFF',
-          opacity: 0.16,
+          width: bandW,
+          height: bandH,
           transform: [{ translateX: x }, { rotate: '22deg' }],
         }}
-      />
+      >
+        <Svg width={bandW} height={bandH}>
+          <Defs>
+            <LinearGradient id={id} x1="0" y1="0" x2="1" y2="0">
+              <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0} />
+              <Stop offset="0.5" stopColor="#FFFFFF" stopOpacity={0.22} />
+              <Stop offset="1" stopColor="#FFFFFF" stopOpacity={0} />
+            </LinearGradient>
+          </Defs>
+          <Rect x={0} y={0} width={bandW} height={bandH} fill={`url(#${id})`} />
+        </Svg>
+      </Animated.View>
     </View>
   );
 }

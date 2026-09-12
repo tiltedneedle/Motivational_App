@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   BENEFITS,
   HIGHLIGHTED,
+  annualAgainstMonthly,
   MOMENT_HEADING,
   PLANS,
   plural,
@@ -45,6 +46,7 @@ export default function Paywall() {
   const [busy, setBusy] = useState(false);
 
   const selected = PLANS.find((p) => p.id === choice) ?? PLANS[0]!;
+  const annualNote = annualAgainstMonthly();
 
   /**
    * Shown counts as shown, whichever way they leave.
@@ -178,8 +180,10 @@ export default function Paywall() {
                   it.
                 </Body>
               ) : null}
-              {selected.id === HIGHLIGHTED ? (
-                <Body style={{ fontSize: 13, color: accent.coralText }}>Most people choose this one.</Body>
+              {selected.id === HIGHLIGHTED && annualNote ? (
+                <Body testID="plan-maths" style={{ fontSize: 13, color: accent.coralText }}>
+                  {annualNote}
+                </Body>
               ) : null}
             </Card>
           </View>

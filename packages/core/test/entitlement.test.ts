@@ -13,6 +13,7 @@ import {
   BENEFITS,
   FREE,
   HIGHLIGHTED,
+  annualAgainstMonthly,
   MOMENT_HEADING,
   PLANS,
   PRO,
@@ -98,6 +99,15 @@ describe('the screen it opens', () => {
     // here is a number that drifts from the price beside it.
     expect(annual.note).toContain('$4.17');
     expect(HIGHLIGHTED).toBe('annual');
+    // The highlight is explained with arithmetic, not a statistic nobody measured.
+    expect(annualAgainstMonthly()).toBe('A year for the price of five months.');
+    expect(
+      annualAgainstMonthly([
+        { id: 'monthly', label: 'Monthly', cents: 400, note: '' },
+        { id: 'annual', label: 'Annual', cents: 4800, note: '' },
+      ]),
+    ).toBeNull();
+    expect(annualAgainstMonthly([{ id: 'annual', label: 'Annual', cents: 4999, note: '' }])).toBeNull();
   });
 
   it('offers a trial on exactly one plan, and never a countdown', () => {

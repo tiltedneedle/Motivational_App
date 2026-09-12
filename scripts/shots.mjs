@@ -10,6 +10,7 @@
  *   node scripts/shots.mjs today book      # some
  *   OUT=some/dir node scripts/shots.mjs    # elsewhere
  *   DARK=1 node scripts/shots.mjs          # the night studio pinned → scripts/shots/dark/
+ *   W=375 H=667 node scripts/shots.mjs    # a smaller phone (an SE) → scripts/shots/375x667/
  */
 import { chromium } from 'playwright';
 import { createServer } from 'node:http';
@@ -21,7 +22,10 @@ const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 const DIST = join(ROOT, 'apps', 'mobile', 'dist');
 const PORT = Number(process.env.PORT ?? 8798);
 const BASE = `http://localhost:${PORT}`;
-const OUT = process.env.OUT ?? join(ROOT, 'scripts', 'shots', process.env.DARK ? 'dark' : '.');
+const W = Number(process.env.W ?? 390);
+const H = Number(process.env.H ?? 844);
+const SUBDIR = [W !== 390 || H !== 844 ? `${W}x${H}` : null, process.env.DARK ? 'dark' : null].filter(Boolean).join('-') || '.';
+const OUT = process.env.OUT ?? join(ROOT, 'scripts', 'shots', SUBDIR);
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -101,7 +105,7 @@ for (const executablePath of [...candidates, undefined]) {
   }
 }
 const context = await browser.newContext({
-  viewport: { width: 390, height: 844 },
+  viewport: { width: W, height: H },
   deviceScaleFactor: 2,
   colorScheme: process.env.DARK ? 'dark' : 'light',
 });
