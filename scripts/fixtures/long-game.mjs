@@ -102,5 +102,7 @@ for (let day = shift(START, 1); day < TODAY; day = shift(day, 1)) {
 
 // The seed's dawn brief was written for the seed's day; this store makes its own.
 s.briefs = [];
+// And the seed's first letter said the ledger was empty, which it is not here.
+s.letters = [];
 
 process.stdout.write(JSON.stringify(seed));
