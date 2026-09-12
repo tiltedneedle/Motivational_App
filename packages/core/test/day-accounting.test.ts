@@ -8,7 +8,7 @@
  * 100%, and the other dropped a parked move out of the product entirely.
  */
 import { describe, expect, it } from 'vitest';
-import { movesForDay, movesOpenOn, type DayMove } from '../src/engines/days';
+import { movesForDay, movesOpenOn, orderForToday, type DayMove, type OrderedMove } from '../src/engines/days';
 import { dayOf, formatDay } from '../src/ids';
 import { greeting } from '../src/engines/coach';
 
@@ -52,6 +52,35 @@ describe('which day a move counts on', () => {
   it('counts a parked move on the day it was asked for', () => {
     const parked = move({ status: 'skip', scheduledFor: '2026-09-10' });
     expect(movesForDay([parked], '2026-09-10', BOUNDARY)).toHaveLength(1);
+  });
+});
+
+describe('which move is Now', () => {
+  const ranked = (over: Partial<OrderedMove> = {}): OrderedMove => ({ ...move(), goalId: 'g_health', order: 0, ...over });
+  const rank = (goalId: string) => ({ g_health: 0, g_money: 1, g_people: 2 })[goalId] ?? 99;
+
+  it('puts the top-ranked goal first, then the plan order, not every plan\'s first move first', () => {
+    const list = [
+      ranked({ id: 'money0', goalId: 'g_money', order: 0 }),
+      ranked({ id: 'health1', goalId: 'g_health', order: 1 }),
+      ranked({ id: 'people0', goalId: 'g_people', order: 0 }),
+      ranked({ id: 'health0', goalId: 'g_health', order: 0 }),
+    ];
+    expect(orderForToday(list, rank, null).map((m) => m.id)).toEqual(['health0', 'health1', 'money0', 'people0']);
+  });
+
+  it('puts the move the person said this morning first while it is open', () => {
+    const list = [ranked({ id: 'health0' }), ranked({ id: 'people0', goalId: 'g_people' })];
+    expect(orderForToday(list, rank, 'people0')[0]!.id).toBe('people0');
+    // Once it is done it takes its ordinary place; the day-done card says it instead.
+    const done = [ranked({ id: 'health0' }), ranked({ id: 'people0', goalId: 'g_people', status: 'done', completedAt: '2026-09-10T08:00:00Z' })];
+    expect(orderForToday(done, rank, 'people0')[0]!.id).toBe('health0');
+  });
+
+  it('does not change what it was given', () => {
+    const list = [ranked({ id: 'b', order: 1 }), ranked({ id: 'a', order: 0 })];
+    orderForToday(list, rank, null);
+    expect(list.map((m) => m.id)).toEqual(['b', 'a']);
   });
 });
 

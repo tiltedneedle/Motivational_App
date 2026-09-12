@@ -45,6 +45,7 @@ import {
   planNotices,
   type Moment,
   movesOpenOn,
+  orderForToday,
   practiceValue,
   dayOf,
   sealedOn,
@@ -1882,8 +1883,10 @@ export function todaysMoves(s: MorrowState) {
   // What the day is still asking for, plus what was finished today. A parked
   // move is still open: "not today" is not "never". See `movesOpenOn`.
   const due = movesOpenOn(all, day, boundary);
+  const rankOf = (goalId: string) => s.goals.find((g) => g.id === goalId)?.rank ?? Number.MAX_SAFE_INTEGER;
+  const said = s.days[day]?.intentionMoveId ?? null;
   if (due.some((m) => m.status === 'todo')) {
-    return due.sort((a, b) => a.order - b.order);
+    return orderForToday(due, rankOf, said);
   }
 
   // Everything the day asked for is closed. Show it as closed.
@@ -1893,7 +1896,7 @@ export function todaysMoves(s: MorrowState) {
   // more thing waiting. A day you can finish is the entire point of the screen,
   // and the seal at the end of it only means something if the work stops.
   if (due.length > 0) {
-    return due.sort((a, b) => a.order - b.order);
+    return orderForToday(due, rankOf, said);
   }
 
   // Nothing was scheduled for today at all — the evening the Book is sealed,

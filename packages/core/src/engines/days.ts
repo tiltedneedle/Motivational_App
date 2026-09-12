@@ -61,3 +61,37 @@ export function movesOpenOn<T extends DayMove>(moves: readonly T[], day: string,
     (m) => (open(m) && (!m.scheduledFor || m.scheduledFor <= day)) || closedOn(m, boundaryHour) === day,
   );
 }
+
+/** The part of a Move the ordering reads, beyond what the day rules do. */
+export interface OrderedMove extends DayMove {
+  goalId: string;
+  order: number;
+}
+
+/**
+ * The order Today shows the day's moves in, and so which one is Now.
+ *
+ * The one the person said this morning comes first while it is open: the
+ * Now card labels it "You said this one", and a Now card that showed some
+ * other move while the said one waited in Later was the ritual forgotten by
+ * lunchtime. After that, the top-ranked goal's moves before the next goal's —
+ * the goals were ranked in the Interview for exactly this — and within a goal
+ * the plan's own order. Sorting on the plan's `order` alone put every plan's
+ * first move ahead of every plan's second, so with five goals the Now card
+ * belonged to whichever plan happened to be listed first.
+ */
+export function orderForToday<T extends OrderedMove>(
+  moves: readonly T[],
+  rankOf: (goalId: string) => number,
+  intentionId: string | null,
+): T[] {
+  const open = (m: T) => m.status === 'todo' || m.status === 'skip';
+  return [...moves].sort((a, b) => {
+    const aSaid = a.id === intentionId && open(a) ? 0 : 1;
+    const bSaid = b.id === intentionId && open(b) ? 0 : 1;
+    if (aSaid !== bSaid) return aSaid - bSaid;
+    const rank = rankOf(a.goalId) - rankOf(b.goalId);
+    if (rank !== 0) return rank;
+    return a.order - b.order;
+  });
+}
