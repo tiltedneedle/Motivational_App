@@ -255,12 +255,15 @@ export default function Envision() {
             person writes to their own future self went with it. §7.8 puts
             scenes and letters in the same room, so this is that room.
           */}
-          <TextButton testID="envision-letters" label="Letters →" onPress={() => router.push('/letters')} />
-          <TextButton
-            testID="envision-wallpaper"
-            label="Lock screen →"
-            onPress={() => router.push(goal ? `/wallpaper?goal=${goal.id}` : '/wallpaper')}
-          />
+          {/* One quiet row, the way the Book's exports sit — not two centred lines with a gulf between them. */}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 18, alignItems: 'center' }}>
+            <TextButton testID="envision-letters" label="Letters →" onPress={() => router.push('/letters')} />
+            <TextButton
+              testID="envision-wallpaper"
+              label="Lock screen →"
+              onPress={() => router.push(goal ? `/wallpaper?goal=${goal.id}` : '/wallpaper')}
+            />
+          </View>
 
           <Body style={{ color: night.ink3, fontSize: 12, lineHeight: 18 }}>
             Every one of these is built from something you wrote. If there is nothing of yours to build it from, nothing
