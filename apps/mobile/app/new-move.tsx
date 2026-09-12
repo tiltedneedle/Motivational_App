@@ -102,11 +102,18 @@ export default function NewMove() {
                 ))}
               </View>
             </View>
-          ) : (
-            <Body>There is no goal yet to put a move under.</Body>
-          )}
+          ) : mode === 'move' ? (
+            // No goal, no move: a move is cut from a line written for a goal.
+            // The sheet used to go on to show a What, a How long and a button
+            // that did nothing when pressed. The only honest door is the one
+            // to the Interview.
+            <View style={{ gap: 12, alignItems: 'flex-start' }}>
+              <Body>There is no goal yet to put a move under. A move is cut from a line you write for one.</Body>
+              <Chip testID="new-move-name-goal" label="Name a goal" onPress={() => router.push('/interview')} />
+            </View>
+          ) : null}
 
-          {mode === 'move' ? (
+          {mode === 'move' && goals.length ? (
             <>
               <View style={{ gap: 8 }}>
                 <Label>What</Label>
@@ -200,7 +207,7 @@ export default function NewMove() {
               ) : null}
               <InkButton testID="new-move-keep" label="Put it on today" onPress={keep} />
             </>
-          ) : (
+          ) : mode === 'capture' ? (
             <>
               <Statement style={{ fontSize: 22, lineHeight: 28 }}>A thought, a thing that happened, a question.</Statement>
               <Body style={{ fontSize: 14 }}>It goes in the ledger under today, in your words, and nowhere else.</Body>
@@ -222,7 +229,7 @@ export default function NewMove() {
               ) : null}
               <InkButton testID="capture-keep" label="Keep it" onPress={file} />
             </>
-          )}
+          ) : null}
         </ScrollView>
       </SafeAreaView>
     </Studio>
