@@ -965,6 +965,10 @@ The linter's compiler-era warnings — refs read during render, state set inside
 
 With the rules met, the compiler itself: `babel-plugin-react-compiler` at Expo's pin and `experiments.reactCompiler: true`. The web bundle carries 252 memo caches; the e2e suite (151), the axe pass (both studios), the screenshots (Today differs by six pixels) and `expo-doctor` (18/18) are unchanged on the compiled bundle. What it buys: Today re-renders on every store change, and now only the parts whose inputs changed are rebuilt — which matters most on the phone, where it cannot yet be measured. If a device shows anything odd, the switch is one line in `app.json`.
 
+### The night splash (2026-09-12)
+
+A phone in dark mode opened on the day studio's splash for a moment before the night one drew. `make-icons.mjs` draws a night splash now — the pale stone on the night ground, the same ink the night studio's buttons wear — and `expo-splash-screen` gets it under `dark`. The day splash is byte-identical to before.
+
 ### Predictive back (2026-09-12)
 
 §7.14 asks for predictive back and edge to edge on Android. Edge to edge is what SDK 57 builds by default (the old key is gone). Predictive back is one key that defaults to off — `android.predictiveBackGestureEnabled: true` — and the config plugin writes `enableOnBackInvokedCallback` into the manifest (`expo config --type introspect` shows it). What the gesture actually looks like through expo-router's stack on a device is on the Mac list.

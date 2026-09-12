@@ -42,7 +42,11 @@
           "image": "./assets/splash.png",
           "imageWidth": 220,
           "resizeMode": "contain",
-          "backgroundColor": "#F1F0EC"
+          "backgroundColor": "#F1F0EC",
+          "dark": {
+            "image": "./assets/splash-dark.png",
+            "backgroundColor": "#17181C"
+          }
         }
       ],
       "expo-sharing",

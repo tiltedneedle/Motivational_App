@@ -1,5 +1,5 @@
 /**
- * The app icon, splash and notification glyph, drawn by hand.
+ * The app icon, splash (day and night) and notification glyph, drawn by hand.
  *
  * One stone on the studio ground: a dark disc, lit from the top left, seated
  * in a slot. It is the mark the whole design system is built around and it
@@ -101,26 +101,32 @@ const smooth = (edge0, edge1, x) => {
  * A disc with a highlight from the top-left, a darker rim, and a soft slot
  * beneath it on the ground — the same three things the on-screen Stone draws.
  */
-function stone(u, v, cx, cy, r, dark) {
+function stone(u, v, cx, cy, r, dark, night = false) {
   const dx = u - cx;
   const dy = v - cy;
   const d = Math.sqrt(dx * dx + dy * dy);
   const aa = 0.004;
+  // On the night ground the stone is the pale one — the same ink the night
+  // studio's buttons wear — and its slot is a deeper dark rather than a grey.
+  const ground = night ? NIGHT : GROUND;
+  const slotInk = night ? [0x00, 0x00, 0x00] : NIGHT;
   // the slot: a soft shadow below and slightly larger than the stone
   const sd = Math.sqrt(dx * dx + (dy - r * 0.18) * (dy - r * 0.18));
   const slot = 1 - smooth(r * 1.02, r * 1.28, sd);
   if (d > r + aa) {
-    return slot > 0 ? [...mix(GROUND, NIGHT, slot * 0.18), 255] : null;
+    return slot > 0 ? [...mix(ground, slotInk, slot * (night ? 0.35 : 0.18)), 255] : null;
   }
   // the disc, lit from the top left
   const nx = dx / r;
   const ny = dy / r;
   const light = Math.max(0, 1 - Math.sqrt((nx + 0.45) ** 2 + (ny + 0.5) ** 2) / 1.35);
   const rim = smooth(0.82, 1, d / r);
-  let col = mix(dark ? [0x3a, 0x3b, 0x40] : [0x2b, 0x2c, 0x31], [0x8c, 0x8d, 0x93], light * light * 0.9);
-  col = mix(col, [0x0f, 0x10, 0x13], rim * 0.55);
+  let col = night
+    ? mix([0xd9, 0xd8, 0xd3], [0xff, 0xff, 0xfd], light * light * 0.9)
+    : mix(dark ? [0x3a, 0x3b, 0x40] : [0x2b, 0x2c, 0x31], [0x8c, 0x8d, 0x93], light * light * 0.9);
+  col = mix(col, night ? [0xa8, 0xa7, 0xa2] : [0x0f, 0x10, 0x13], rim * 0.55);
   const edge = smooth(r + aa, r - aa, d);
-  const under = slot > 0 ? mix(GROUND, NIGHT, slot * 0.18) : GROUND;
+  const under = slot > 0 ? mix(ground, slotInk, slot * (night ? 0.35 : 0.18)) : ground;
   return [...mix(under, col, edge), 255];
 }
 
@@ -137,9 +143,11 @@ function adaptiveForeground(size) {
   }, [0, 0, 0, 0]);
 }
 
-// The splash: the stone, smaller, a little above centre, on the ground.
-function splash(size) {
-  return paint(size, (u, v) => stone(u, v, 0.5, 0.46, 0.09, false), GROUND);
+// The splash: the stone, smaller, a little above centre, on the ground —
+// and the night version for a phone in dark mode, so the first frame is not
+// a flash of the day studio before the night one.
+function splash(size, night = false) {
+  return paint(size, (u, v) => stone(u, v, 0.5, 0.46, 0.09, false, night), night ? NIGHT : GROUND);
 }
 
 // The notification glyph: Android wants a white silhouette on transparent and
@@ -158,8 +166,9 @@ function notificationGlyph(size) {
 writeFileSync(join(OUT, 'icon.png'), png(1024, 1024, icon(1024)));
 writeFileSync(join(OUT, 'adaptive-icon.png'), png(1024, 1024, adaptiveForeground(1024)));
 writeFileSync(join(OUT, 'splash.png'), png(1284, 1284, splash(1284)));
+writeFileSync(join(OUT, 'splash-dark.png'), png(1284, 1284, splash(1284, true)));
 writeFileSync(join(OUT, 'notification-icon.png'), png(96, 96, notificationGlyph(96)));
 writeFileSync(join(OUT, 'favicon.png'), png(48, 48, icon(48)));
 
-console.log(`wrote icon, adaptive-icon, splash, notification-icon and favicon to ${OUT}`);
+console.log(`wrote icon, adaptive-icon, splash, splash-dark, notification-icon and favicon to ${OUT}`);
 console.log(`coral for the notification tint: #${CORAL.map((c) => c.toString(16).padStart(2, '0')).join('')}`);
