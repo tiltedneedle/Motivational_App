@@ -248,7 +248,9 @@ export interface CoachReply {
 export function replyToChip(chip: ChipId, ctx: ChipContext): CoachReply {
   const obstacle = ctx.analyses.find((a) => a.kind === 'obstacles' && a.line.trim() && isQuotable(a));
   const strategy = ctx.analyses.find((a) => a.kind === 'strategies' && a.line.trim() && isQuotable(a));
-  const next = [...ctx.moves].filter((m) => m.status === 'todo').sort((a, b) => a.order - b.order)[0];
+  // The first open move in the order Today shows them — the same one on the
+  // Now card — not the first of whichever plan sorts first.
+  const next = ctx.moves.find((m) => m.status === 'todo');
 
   switch (chip) {
     case 'stuck': {
