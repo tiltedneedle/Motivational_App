@@ -47,6 +47,9 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 24. The React Compiler on (`experiments.reactCompiler`), after the ref and
+      effect patterns it objects to were rewritten; 151 e2e and axe green on the
+      compiled bundle
 - [x] 23. An accessibility pass with axe-core over every screen, both studios
       (`pnpm test:a11y`, in `verify`; four more states inside e2e): 11 serious findings fixed, 0 left
 - [x] 22. The studio, lit (§8): the ground's light, one elevated card a screen,
@@ -955,6 +958,12 @@ recogniser is the phone's own. Walked on the web build (the pane has no
 microphone, so the fallback is what was seen); the recogniser itself needs a
 phone. Expo's patch releases of the day were taken with `expo install --fix`;
 expo-doctor is 18/18 again.
+
+### The React Compiler (2026-09-12)
+
+The linter's compiler-era warnings — refs read during render, state set inside effects — had been left as warnings on purpose (see "The PDF, and a linter"). With the fan-outs gone this was the pass to do them by hand: `useRef(new Animated.Value(0)).current` built a fresh value every render and threw it away (a lazy `useState` builds one; six sites), the "latest ref" assignments in the runner and the writing room are written after commit rather than during render, the return card on Today is decided once in the state's initialiser rather than set from an effect, and duplicate imports merged. 39 warnings to 9; the nine left are async results landing and resets, which is what an effect is for.
+
+With the rules met, the compiler itself: `babel-plugin-react-compiler` at Expo's pin and `experiments.reactCompiler: true`. The web bundle carries 252 memo caches; the e2e suite (151), the axe pass (both studios), the screenshots (Today differs by six pixels) and `expo-doctor` (18/18) are unchanged on the compiled bundle. What it buys: Today re-renders on every store change, and now only the parts whose inputs changed are rebuilt — which matters most on the phone, where it cannot yet be measured. If a device shows anything odd, the switch is one line in `app.json`.
 
 ### Axe over every screen (2026-09-12)
 
