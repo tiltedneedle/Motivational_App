@@ -1444,7 +1444,9 @@ const store = create<MorrowState>()(
             day,
             book: s.books[s.books.length - 1] ?? null,
             yesterday: s.days[yesterdayKey] ?? null,
-            moves: s.plans.flatMap((p) => p.moves),
+            // The day's moves in Today's order, so the brief's "start with"
+            // is the move on the Now card, not the first move of any plan.
+            moves: todaysMoves(s),
             analyses: s.analyses,
             persona: s.profile.persona,
             score: r.score,

@@ -256,6 +256,31 @@ describe('the dawn brief inside a sentence', () => {
     expect(brief.today).toContain('Tuesday');
     expect(brief.today).not.toContain('tuesday');
   });
+
+  it('starts with the first open move it is given, in the order Today shows them', () => {
+    // The store hands the day's moves already ordered (the one said this
+    // morning, then the top-ranked goal's). Re-sorting on each plan's own
+    // `order` here used to name a different move from the Now card.
+    const mv = (id: string, goalId: string, title: string, order: number, status: 'todo' | 'done' = 'todo') => ({
+      id, goalId, milestoneId: null, title, effort: 'S', energy: 'high', ifThen: null, scheduledFor: '2026-09-10',
+      week: 1, status, completedAt: status === 'done' ? '2026-09-10T07:00:00Z' : null, minVersion: null, sourceLineId: 'a1', order,
+    });
+    const brief = buildDawnBrief(
+      {
+        day: '2026-09-10',
+        book: null,
+        yesterday: null,
+        moves: [mv('done', 'g1', 'Already done', 0, 'done'), mv('health1', 'g_health', 'Out the back door', 1), mv('money0', 'g_money', 'Move the rent', 0)],
+        analyses: [],
+        persona: 'gentle',
+        score: 40,
+        previousScore: 40,
+      } as never,
+      sequentialIds(),
+    );
+    expect(brief.firstMoveId).toBe('health1');
+    expect(brief.today.toLowerCase()).toContain('start with out the back door');
+  });
 });
 
 describe('dates a person can read', () => {

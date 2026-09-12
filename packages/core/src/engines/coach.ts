@@ -114,10 +114,13 @@ export function buildDawnBrief(input: BriefInput, newId: (p: string) => string):
     yesterdayLine = trend ? `${endSentence(bits.join(' '))} ${trend}` : endSentence(bits.join(' '));
   }
 
-  // Today: the first move, and why it is first.
-  const first = [...moves]
-    .filter((m) => m.status === 'todo')
-    .sort((a, b) => a.order - b.order)[0];
+  // Today: the first move, and why it is first. The caller hands the day's
+  // moves in the order Today shows them (`orderForToday`: the one said this
+  // morning, then the top-ranked goal's), so "start with" and the Now card
+  // name the same move. Sorting here on each plan's own `order` used to pick
+  // whichever plan's first move came first — with five goals, a different
+  // move from the one on the card, and sometimes one dated next week.
+  const first = moves.find((m) => m.status === 'todo');
   // The move is their sentence, cut from their own line; it is quoted so the
   // screen can set it in their face. Mid-sentence, so its first letter is
   // lowered unless it is a name — the same string, so the span still matches.
