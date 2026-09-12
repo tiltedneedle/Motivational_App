@@ -1095,6 +1095,10 @@ rather than its heading now, for the same reason. What remains for counsel:
 a comparison of `framings.ts` and the interview scripts against the
 program's actual prompt text by someone with a licensed copy.
 
+## Where it lives
+
+`github.com/tiltedneedle/Motivational_App`, branch `main`, pushed 2026-09-12 from this machine over the `github-tn` SSH alias (never an https remote here — see the machine notes). First push was `77a0070`, 35 commits after the UI pass began; the tree was clean and `pnpm verify` green at that commit. No CI yet: the gate runs locally.
+
 ## Blocked on the user
 - Supabase project URL/anon key, Anthropic API key, fal.ai key, RevenueCat keys: needed to test real providers. Everything runs on local fallbacks without them.
 - Google sign-in: `signInWithGoogle(idToken)` is in `src/supabase.ts`; the native half (`@react-native-google-signin/google-signin`) needs the client's iOS and web OAuth client ids before it can be added and built.
