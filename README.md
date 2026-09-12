@@ -115,6 +115,7 @@ Everything runs on local fallbacks without one. To go beyond them:
    ```
 
    The service-role key and the anon key are already in the functions' environment; neither belongs in the app or this repo.
+4. The account, end to end, against the project: `pnpm build:web && pnpm test:account`. A throwaway user is made with the service role (from `supabase/.env.local`, never the browser), signed into the built app, the seeded store pushed, the device wiped, the Book brought back and compared, the user deleted. Not part of `verify` — it reaches the network.
 3. Authentication → Email: the app asks for a **six-digit code**, and `config.toml` carries the template (`supabase/templates/magic_link.html`, `{{ .Token }}`) so `config push` sets it; check the dashboard shows it after. Authentication → Providers → Apple: `config.toml` enables it with the bundle id `app.morrow.client` as the client id (native sign-in needs no secret).
 4. Put the project URL and the publishable (anon) key in the app's environment (`EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`) — `apps/mobile/.env` works for `expo start`, `expo run:*` and `pnpm build:web`. The tests build with `pnpm build:web:offline`, which blanks every `EXPO_PUBLIC_*` so `pnpm verify` never reaches the network.
 5. The hard delete: schedule a call to the `delete-account` sweep daily if you want it on the clock (it also runs on every call), e.g. a pg_cron job hitting the function, or leave it: every close of an account runs the sweep for the ones whose week is up.

@@ -995,6 +995,8 @@ The user handed over the Supabase project (`fxsaxganeyajxbcbignq`, Singapore). W
 - **The CLI is a dev dependency** (`pnpm exec supabase`, 2.117), with the six-digit-code email template in `config.toml` + `supabase/templates/` so `config push` sets it.
 - **Waiting on the owner's login:** `functions deploy`, `config push` and `secrets set`. This machine holds a CLI login for some other Supabase account (its projects are TZ-Wellness and LA-Tech), which cannot see this project; replacing a stored credential is the user's to do, not mine. Until the functions deploy the app runs on its device engines (`guarded()` falls back), so nothing is broken, only local.
 - The database password lives in `supabase/.env.local` (gitignored) for `pnpm db:push`; it was never on a command line and is in no tracked file.
+- **The account round trip, for real** (`pnpm test:account`, 30 checks): a throwaway user minted with the service role and a session verified with the publishable key — the six-digit code's own path — the built app opened signed in with the seeded store, Settings' "Copy it now" landing every table under RLS (a stranger with the publishable key sees nothing), the device wiped, the account screen's new signed-in state offering "Bring my Book back", the pull, and the store that came back compared field by field with the one that went up: goals, Book, chapters, moves, ledger, days, the Fifteen, the analyses, the persona. Then the user deleted and its rows gone with it. This was "Next steps 2"; the only part of it still open is the edge functions, which wait on the owner's CLI login.
+- **The account screen knows when you are already signed in** — a wiped device with a live session used to be shown the email form as though it were nobody; it offers "Bring my Book back" now.
 
 ### The first run (2026-09-12)
 
@@ -1170,7 +1172,7 @@ needs either hardware or a credential.
    Material on Android) in place of Today's pill — a `(tabs)` group for
    Today, Book, Envision, Coach and You, `dismissTo('/today')` re-pointed,
    and the e2e suite run against the web fallback.
-2. **Wire the real providers** once the keys arrive, and confirm `guarded()`
+2. **Wire the real providers** once the keys arrive (the account itself is live and round-trips — see "The account service, live"), and confirm `guarded()`
    still refuses what it should with a real model behind it. Every one of those
    paths is currently exercised only against `LocalProvider`, and
    `hasRemoteProvider` is false in every build so far — which is why the app

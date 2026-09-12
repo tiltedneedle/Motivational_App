@@ -25,6 +25,7 @@ export default function Account() {
   const markAccountAsked = useMorrow((s) => s.markAccountAsked);
   const setAccount = useMorrow((s) => s.setAccount);
   const afterSignIn = useMorrow((s) => s.afterSignIn);
+  const account = useMorrow((s) => s.account);
 
   const [stage, setStage] = useState<Stage>('email');
   const [email, setEmail] = useState('');
@@ -86,6 +87,23 @@ export default function Account() {
       setPulled(synced.pulled);
     }
     setStage('done');
+  };
+
+  /**
+   * Already signed in — a device that was cleared but kept its session, or
+   * somebody who came back through Welcome's "bring my Book back" while the
+   * account was still live. The screen used to show them the email form as
+   * though they were nobody; this is the one button they came for.
+   */
+  const bringBack = async () => {
+    if (busy) return;
+    setBusy(true);
+    setProblem(null);
+    try {
+      await settle('email');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const confirm = async () => {
@@ -152,6 +170,21 @@ export default function Account() {
                 this device, and Settings can copy it all out whenever you like.
               </Body>
               <InkButton testID="account-continue" label="Carry on" onPress={onwards} />
+            </View>
+          ) : stage !== 'done' && account ? (
+            <View testID="account-signed-in" style={{ gap: 12 }}>
+              <Rule />
+              <Body style={{ color: day.ink }}>
+                Signed in{account.email ? ` as ${account.email}` : ''}. The copy on the account is the one this button brings back;
+                if this phone already has writing, it goes up instead.
+              </Body>
+              <InkButton testID="account-bring-back" label={busy ? 'One moment…' : 'Bring my Book back'} busy={busy} onPress={() => void bringBack()} />
+              {problem ? (
+                <Body testID="account-problem" style={{ color: day.ink }}>
+                  {problem}
+                </Body>
+              ) : null}
+              <TextButton testID="account-not-now" label="Not now" onPress={onwards} />
             </View>
           ) : stage === 'done' ? (
             <View testID="account-done" style={{ gap: 10 }}>
