@@ -306,6 +306,23 @@ async function main() {
         await tap('stone-seat');
       }
       await page.waitForTimeout(300);
+
+      // On the second stone: Back is the previous stone, with its line still
+      // there, and the way forward is the same stone again. The stones
+      // replace each other on the stack, so the router's own back would have
+      // landed two screens too far.
+      if (i === 1 && (await seen('screen-stone'))) {
+        const here = new URL(page.url()).searchParams.get('kind');
+        await tap('stone-back');
+        const before = new URL(page.url()).searchParams.get('kind');
+        check('Back on a stone is the previous stone', (await seen('screen-stone')) && before !== here, `${here} → ${before}`);
+        const kept = await page.locator('[data-testid="stone-line"]').inputValue();
+        check('and what was written on it is still there', kept.trim().length > 0, kept);
+        await tap('stone-seat');
+        if (await seen('stone-followup')) await tap('stone-seat');
+        await page.waitForTimeout(300);
+        check('and forward is the same stone again', new URL(page.url()).searchParams.get('kind') === here);
+      }
     }
     check('all five stones were asked', seenKinds.length >= 5, seenKinds.join(','));
 

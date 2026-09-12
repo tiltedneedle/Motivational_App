@@ -61,6 +61,30 @@ export default function StoneScreen() {
 
   const makePlan = useMorrow((s) => s.makePortraitAndPlan);
 
+  /**
+   * Back is the previous stone — this goal's, or the last of the goal before
+   * — not whatever screen happens to be under this one. The stones replace
+   * each other on the stack so the path does not pile up, which meant the
+   * router's own back from stone 3 landed on the order screen, two stones
+   * ago. What was written on a stone stays written; Back only turns the page.
+   * Before the first stone of the first goal, the router's back is right.
+   */
+  const goBack = () => {
+    if (stepIndex > 0) {
+      router.replace(`/stone?goal=${goalId}&kind=${plan[stepIndex - 1]}`);
+      return;
+    }
+    const idx = goals.findIndex((g) => g.id === goalId);
+    const prevGoal = idx > 0 ? goals[idx - 1] : undefined;
+    if (prevGoal) {
+      const prevPlan = analysisPlan(prevGoal.rank, track);
+      router.replace(`/stone?goal=${prevGoal.id}&kind=${prevPlan[prevPlan.length - 1]}`);
+      return;
+    }
+    if (router.canGoBack()) router.back();
+    else router.dismissTo('/today');
+  };
+
   const goNext = () => {
     write(goalId, kind, {
       framingId,
@@ -112,7 +136,7 @@ export default function StoneScreen() {
   return (
     <Studio testID="screen-stone">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'stone-back' }} style={{ paddingTop: 6, minHeight: 44 }} />
+        <TopBar back={{ onPress: goBack, testID: 'stone-back' }} style={{ paddingTop: 6, minHeight: 44 }} />
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 2 }}>
           <Stone size={30} domain={goal.domain} polish={1} />
           <View style={{ flex: 1 }}>
