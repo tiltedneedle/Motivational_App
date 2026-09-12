@@ -88,7 +88,7 @@ export default function NewMove() {
             <View style={{ gap: 8 }}>
               <Label>Which one</Label>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-                {goals.slice(0, 4).map((g) => (
+                {goals.map((g) => (
                   <Chip
                     key={g.id}
                     testID={`new-move-goal-${g.id}`}

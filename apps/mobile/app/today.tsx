@@ -247,10 +247,16 @@ export default function Today() {
             </View>
           ) : null}
 
-          {/* the goal row */}
+          {/* the goal row: one stone per goal (PRD 7.6), however many; past four it scrolls, bleeding under the gutter */}
           {goals.length ? (
-            <Rise index={1} reducedMotion={reduced} style={{ flexDirection: 'row', justifyContent: 'flex-start', gap: 6, marginTop: 24 }}>
-              {goals.slice(0, 4).map((g) => {
+            <Rise index={1} reducedMotion={reduced} style={{ marginTop: 24, marginHorizontal: -22 }}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ flexDirection: 'row', gap: 6, paddingHorizontal: 22 }}
+                testID="goal-row"
+              >
+              {goals.map((g) => {
                 const plan = plansById.get(g.id);
                 const total = plan?.moves.length ?? 0;
                 const doneCount = plan?.moves.filter((m) => m.status === 'done').length ?? 0;
@@ -276,6 +282,7 @@ export default function Today() {
                   </Pressable>
                 );
               })}
+              </ScrollView>
             </Rise>
           ) : null}
 
