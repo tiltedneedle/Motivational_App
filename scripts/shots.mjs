@@ -15,6 +15,7 @@
  *   SEED=scripts/fixtures/long-lines.json node scripts/shots.mjs   # another store → scripts/shots/<seed name>/
  *   FULL=1 node scripts/shots.mjs          # the whole screen, however long it scrolls → …/full/
  *   DAY=2026-09-13 node scripts/shots.mjs  # another day on the clock (a Sunday) → …/2026-09-13/
+ *   DAY=2026-09-12T22:00 node scripts/shots.mjs   # an evening → …/2026-09-12T22-00/
  */
 import { chromium } from 'playwright';
 import { createServer } from 'node:http';
@@ -31,8 +32,9 @@ const H = Number(process.env.H ?? 844);
 const SEED = process.env.SEED ? join(ROOT, process.env.SEED) : join(ROOT, 'scripts', 'fixtures', 'seeded-state.json');
 const SEED_NAME = process.env.SEED ? basename(SEED, '.json') : null;
 const DAY = process.env.DAY ?? '2026-09-12';
+const DAY_NAME = DAY === '2026-09-12' ? null : DAY.replace(/:/g, '-');
 const SUBDIR =
-  [SEED_NAME, DAY !== '2026-09-12' ? DAY : null, W !== 390 || H !== 844 ? `${W}x${H}` : null, process.env.DARK ? 'dark' : null, process.env.REDUCED ? 'reduced' : null, process.env.FULL ? 'full' : null]
+  [SEED_NAME, DAY_NAME, W !== 390 || H !== 844 ? `${W}x${H}` : null, process.env.DARK ? 'dark' : null, process.env.REDUCED ? 'reduced' : null, process.env.FULL ? 'full' : null]
     .filter(Boolean)
     .join('-') || '.';
 const OUT = process.env.OUT ?? join(ROOT, 'scripts', 'shots', SUBDIR);
@@ -129,7 +131,7 @@ await page.addInitScript((s) => {
   localStorage.setItem('morrow-v1', JSON.stringify(s));
 }, seed);
 // The seed's day. A clock pinned so "today" and the plan's dates agree.
-await page.clock.install({ time: new Date(`${DAY}T09:00:00`) });
+await page.clock.install({ time: new Date(DAY.includes('T') ? DAY : `${DAY}T09:00:00`) });
 
 const wanted = process.argv.slice(2);
 const names = wanted.length ? wanted : Object.keys(ROUTES);
