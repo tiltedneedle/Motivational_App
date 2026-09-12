@@ -1162,6 +1162,8 @@ Worth keeping on the next resume, because each cost an hour to learn:
 - **A long pointer hold does not drive react-native-web's responder** from
   synthetic events; the keyboard route does, and Playwright's real mouse plus
   `page.clock.runFor` does. Both are exercised in `scripts/e2e.mjs`.
+- **Look at the product, not only its tests.** `pnpm shots` renders every screen from a seeded store; `SEED=scripts/fixtures/<store>.json` for the empty, many-goals, long-lines, long-game and full-track stores (each is a `.mjs` that derives from the seed — regenerate the `.json` after editing); `FULL=1` for the whole screen however long it scrolls; `DARK=1`, `REDUCED=1`, `W= H=` for the other conditions. Most of what the fourth audit missed was found this way in an afternoon. `pnpm test:a11y` takes the same `SEED=` and `DARK=`.
+- **`sed -i` on this machine eats backslashes in replacement text** the same way heredocs do (a `.json` became `.json`). Regexes and escapes go through a Write-tool patch script.
 - **After a fan-out, check `git status` and file mtimes before staging.** The
   first audit's subagents edited twelve product files they had been told not to
   touch.
