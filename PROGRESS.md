@@ -74,7 +74,7 @@ only tested. What is left needs a machine or a key this one does not have;
 see "Next steps".
 
 - The tree is green and committed: `pnpm verify` runs the toolchain guard,
-  typecheck, lint, 353 core tests, 47 ui tests (contrast, the quoted-span
+  typecheck, lint, 359 core tests, 47 ui tests (contrast, the quoted-span
   split, the type that fits a long line), 8 storage tests, the edge-function
   guards, the SQL structural guards, 37 checks against a real Postgres, the
   serif authorship guard, the web build, 151 end-to-end checks and the axe
