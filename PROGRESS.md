@@ -47,6 +47,11 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 25. The product looked at in five more stores (`scripts/fixtures/`:
+      empty, many-goals, long-lines, long-game, full-track; `SEED=` on the
+      screenshots and the axe pass) and at three phone sizes, reduce motion
+      on, both studios — what that caught is under "The studio, lit"; a night
+      splash; predictive back on Android
 - [x] 24. The React Compiler on (`experiments.reactCompiler`), after the ref and
       effect patterns it objects to were rewritten; 151 e2e and axe green on the
       compiled bundle
@@ -69,10 +74,11 @@ only tested. What is left needs a machine or a key this one does not have;
 see "Next steps".
 
 - The tree is green and committed: `pnpm verify` runs the toolchain guard,
-  typecheck, lint, 352 core tests, 43 ui tests (contrast and the quoted-span
-  split), 8 storage tests, the edge-function guards, the SQL structural
-  guards, 37 checks against a real Postgres, the serif authorship guard, the
-  web build and 144 end-to-end checks.
+  typecheck, lint, 353 core tests, 47 ui tests (contrast, the quoted-span
+  split, the type that fits a long line), 8 storage tests, the edge-function
+  guards, the SQL structural guards, 37 checks against a real Postgres, the
+  serif authorship guard, the web build, 151 end-to-end checks and the axe
+  pass over 26 screens.
 - **The account's spend limit is the month's, not the run's.** The fourth
   audit was ten agents and 1.59M tokens and tripped the monthly limit with
   two verifiers still running; their lenses' findings were verified by hand.
