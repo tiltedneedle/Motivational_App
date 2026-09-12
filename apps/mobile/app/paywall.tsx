@@ -23,7 +23,7 @@ import {
   type PaywallMoment,
   type PricePlan,
 } from '@morrow/core';
-import { Body, Card, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, UserText, accent, day } from '@morrow/ui';
+import { Body, Card, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, TopBar, UserText, accent, day } from '@morrow/ui';
 import { useLatestBook, useMorrow } from '../src/store';
 
 function isMoment(s: string | undefined): s is PaywallMoment {
@@ -127,10 +127,15 @@ export default function Paywall() {
   return (
     <Studio testID="screen-paywall">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12 }}>
-          <Label>Morrow Pro</Label>
-          <TextButton testID="paywall-restore" label="Restore" onPress={() => void onRestore()} />
-        </View>
+        <TopBar
+          back={{ onPress: goBack, testID: 'paywall-back' }}
+          right={
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+              <Label>Morrow Pro</Label>
+              <TextButton testID="paywall-restore" label="Restore" onPress={() => void onRestore()} />
+            </View>
+          }
+        />
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18, gap: 18 }}>
           {/*

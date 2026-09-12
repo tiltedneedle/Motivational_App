@@ -12,7 +12,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Platform, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, UserField, day } from '@morrow/ui';
+import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, TopBar, UserField, day } from '@morrow/ui';
 import { confirmCode, hasSupabase, sendCode, signInWithApple } from '../src/supabase';
 import { useMorrow } from '../src/store';
 import { track } from '../src/analytics';
@@ -134,7 +134,8 @@ export default function Account() {
   return (
     <Studio testID="screen-account">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 22, gap: 18 }}>
+        <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'account-back' }} />
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 18 }}>
           <Label>An account, if you want one</Label>
           <Statement style={{ fontSize: 27, lineHeight: 33 }}>Keep the Book somewhere a lost phone cannot reach.</Statement>
           <Body>

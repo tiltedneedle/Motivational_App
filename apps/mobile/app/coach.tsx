@@ -22,7 +22,7 @@ import {
   fullTrackInvitation,
   type CoachReply,
 } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Quoted, Rule, Stone, Studio, TextButton, Toast, UserField, UserText, accent, day, type as fonts } from '@morrow/ui';
+import { Body, Chip, InkButton, Label, Quoted, Rule, Stone, Studio, Toast, TopBar, UserField, UserText, accent, day, type as fonts } from '@morrow/ui';
 import { useConsistency, useLatestBook, useMorrow, useTodaysMoves } from '../src/store';
 import { dictation } from '../src/dictation';
 
@@ -203,13 +203,13 @@ export default function Coach() {
   return (
     <Studio testID="screen-coach">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingTop: 12 }}>
+        <TopBar back={{ label: 'Today', onPress: () => router.dismissTo('/today'), testID: 'coach-back' }} where="The coach" />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingTop: 4 }}>
           <Stone size={46} gradient={['#FFFFFF', '#F3F1EC', '#CFCBC2', '#8E8A80']} polish={1} />
           <View style={{ flex: 1 }}>
             <Label>Your coach</Label>
             <Body style={{ fontSize: 13 }}>{thread.length ? 'Listening' : `Remembers ${plural(days.length, 'day')}`}</Body>
           </View>
-          <TextButton testID="coach-back" label="Today" onPress={() => router.dismissTo('/today')} />
         </View>
 
         {/*

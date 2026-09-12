@@ -475,6 +475,13 @@ export const Profile = z.object({
    * relaunch, which is why it lives here rather than in a screen's state.
    */
   paywallSeen: z.array(z.string()).default([]),
+  /**
+   * Whether the first Today has explained itself. Once: the card that says
+   * what the Now stone, the drag and the evening check are goes away the
+   * first time it is dismissed and never comes back (PRD §7.1's welcome is
+   * three screens before anything exists; this is the one line after).
+   */
+  todayIntroSeen: z.boolean().default(false),
 });
 export type Profile = z.infer<typeof Profile>;
 
@@ -496,6 +503,7 @@ export const DEFAULT_PROFILE: Profile = {
   mutedMoments: [],
   notificationsOff: false,
   paywallSeen: [],
+  todayIntroSeen: false,
 };
 
 // ---------------------------------------------------------------- domain meta

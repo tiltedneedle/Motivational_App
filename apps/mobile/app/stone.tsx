@@ -19,7 +19,7 @@ import {
   specificityCaption,
   type AnalysisKind,
 } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Question, Statement, Stone, Studio, TextButton, UserField, accent, day } from '@morrow/ui';
+import { Body, Chip, InkButton, Label, Question, Statement, Stone, Studio, TextButton, TopBar, UserField, accent, day } from '@morrow/ui';
 import { analysesFor, useGoals, useMorrow } from '../src/store';
 
 /** Which analyses this goal gets, on this track, at this rank. */
@@ -112,7 +112,8 @@ export default function StoneScreen() {
   return (
     <Studio testID="screen-stone">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 12 }}>
+        <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'stone-back' }} style={{ paddingTop: 6, minHeight: 44 }} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 2 }}>
           <Stone size={30} domain={goal.domain} polish={1} />
           <View style={{ flex: 1 }}>
             <Label testID="stone-goal">{goal.title}</Label>

@@ -18,7 +18,7 @@ import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { domainMeta } from '@morrow/core';
-import { Body, Card, InkButton, Label, Quoted, Rise, Rule, Statement, Stone, Studio, TextButton, UserField, UserText, accent, day, useReducedMotion } from '@morrow/ui';
+import { Body, Card, InkButton, Label, Quoted, Rise, Rule, Statement, Stone, Studio, TextButton, TopBar, UserField, UserText, accent, day, useReducedMotion } from '@morrow/ui';
 import { useGoals, useMorrow } from '../src/store';
 import { hasSupabase } from '../src/supabase';
 
@@ -89,7 +89,8 @@ export default function PortraitScreen() {
   return (
     <Studio testID="screen-portrait">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18, gap: 20 }}>
+        <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'portrait-back' }} where="Sitting 3 · the Portrait" />
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 20 }}>
           <Rise index={0} reducedMotion={reduced} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
             <Stone size={44} domain={goal.domain} polish={1} />
             <View style={{ flex: 1 }}>

@@ -26,7 +26,7 @@ import {
   type WritingMode,
   type WritingSessionState,
 } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Question, Ring, Statement, Stone, Studio, UserText, accent, focusRing, night, type as fonts, useReducedMotion, webOnlyStyle } from '@morrow/ui';
+import { Body, Chip, InkButton, Label, Question, Ring, Statement, Stone, Studio, TopBar, UserText, accent, focusRing, night, type as fonts, useReducedMotion, webOnlyStyle } from '@morrow/ui';
 import { latestText, useMorrow } from '../src/store';
 import { dictation } from '../src/dictation';
 
@@ -241,9 +241,10 @@ export default function Write() {
     return (
       <Studio dark testID="screen-write-doorway">
         <SafeAreaView style={{ flex: 1, paddingHorizontal: 22, justifyContent: 'space-between' }}>
-          <View style={{ paddingTop: 14 }}>
-            <Label style={{ color: night.ink3 }}>{doorway.eyebrow}</Label>
-          </View>
+          <TopBar
+            back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'write-back' }}
+            right={<Label style={{ color: night.ink3 }}>{doorway.eyebrow}</Label>}
+          />
           <View style={{ gap: 20 }}>
             <Stone size={120} domain="health" polish={0.4} style={{ alignSelf: 'center' }} />
             {/* The prompt is read once, calmly: a question's weight, not a headline's. */}
@@ -398,12 +399,28 @@ export default function Write() {
   return (
     <Studio dark testID="screen-write">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 10 }}>
-          <Label style={{ color: night.ink3 }}>{doorway.eyebrow}</Label>
-          <Label testID="write-remaining" style={{ color: night.ink3 }}>
-            {formatRemaining(remaining(session))} left
-          </Label>
-        </View>
+        {/*
+          Leaving mid-sitting keeps the draft — the autosave already does, and
+          the doorway offers it back — so the way out says what it does
+          rather than "Back", which would sound like losing the writing.
+        */}
+        <TopBar
+          back={{
+            label: 'Leave for now',
+            testID: 'write-leave',
+            onPress: () => {
+              flush();
+              if (router.canGoBack()) router.back();
+              else router.dismissTo('/today');
+            },
+          }}
+          right={
+            <Label testID="write-remaining" style={{ color: night.ink3 }}>
+              {formatRemaining(remaining(session))} left
+            </Label>
+          }
+          style={{ paddingTop: 6, minHeight: 44 }}
+        />
 
         <View style={{ alignItems: 'center', paddingVertical: 14 }}>
           {/*

@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { domainMeta, plural, type Span } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Statement, Stone, Studio, UserField, UserText, day } from '@morrow/ui';
+import { Body, Chip, InkButton, Label, Statement, Stone, Studio, TopBar, UserField, UserText, day } from '@morrow/ui';
 import { ai, latestText, useMorrow } from '../src/store';
 
 interface Row {
@@ -85,7 +85,8 @@ export default function Heard() {
   return (
     <Studio testID="screen-heard">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <View style={{ paddingTop: 12 }}>
+        <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'heard-back' }} where="Sitting 1 · the read-back" />
+        <View style={{ paddingTop: 2 }}>
           <Label>What I heard</Label>
           <Statement style={{ marginTop: 8 }}>
             {rows === null

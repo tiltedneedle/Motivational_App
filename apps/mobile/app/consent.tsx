@@ -5,7 +5,7 @@
 import { useRouter } from 'expo-router';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Body, InkButton, Label, Rule, Statement, Studio, TextButton, day, keyboardScroll } from '@morrow/ui';
+import { Body, InkButton, Label, Rule, Statement, Studio, TextButton, TopBar, day, keyboardScroll } from '@morrow/ui';
 import { useMorrow } from '../src/store';
 
 const ROWS: { label: string; body: string }[] = [
@@ -34,7 +34,8 @@ export default function Consent() {
   return (
     <Studio testID="screen-consent">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <ScrollView {...keyboardScroll} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 24, gap: 18 }}>
+        <TopBar back={{ onPress: () => router.back(), testID: 'consent-back' }} where="Before the Interview" />
+        <ScrollView {...keyboardScroll} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 12, gap: 18 }}>
           <Statement>Before you write anything.</Statement>
           {ROWS.map((r) => (
             <View key={r.label} style={{ gap: 6 }}>

@@ -47,6 +47,17 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 27. The first run, for somebody who has never used a thing like this:
+      Welcome as the PRD's three screens (what it is; three evenings and what
+      they make; your name and how you want to be spoken to), `← Back` in the
+      same place on every screen that is not Today — the Interview's Back
+      undoes one answer and keeps the rest — a "where you are" label on the
+      first-run path, and the first Today explaining its stone and its check
+      once (163 e2e)
+- [x] 26. Supabase, as far as the CLI-free parts go: the project's URL and
+      publishable key in `apps/mobile/.env`, `pnpm db:push` / `pnpm db:find`
+      (the direct host is IPv6-only; the pooler is in Singapore), the build in
+      two modes so the tests never reach the network; hover on the web build
 - [x] 25. The product looked at in five more stores (`scripts/fixtures/`:
       empty, many-goals, long-lines, long-game, full-track; `SEED=` on the
       screenshots and the axe pass) and at three phone sizes, reduce motion
@@ -974,6 +985,18 @@ With the rules met, the compiler itself: `babel-plugin-react-compiler` at Expo's
 ### The night splash (2026-09-12)
 
 A phone in dark mode opened on the day studio's splash for a moment before the night one drew. `make-icons.mjs` draws a night splash now — the pale stone on the night ground, the same ink the night studio's buttons wear — and `expo-splash-screen` gets it under `dark`. The day splash is byte-identical to before.
+
+### The first run (2026-09-12)
+
+The user, looking at the app fresh: "the UI seems very complex, there doesn't seem any ease with the flow… the go back option should display on all the pages… a brand new user might not even understand the flow and delete it… once someone joins we need an intro as well." Fair, and specific. What was true: the first-run path — Consent, the Interview, the track, the doorway, the room, the read-back, five stones, the Portrait, the seal — had no way back on any of it and no sense of where you were on it; a wrong tap in the Interview was final; Welcome put the stone, the three sittings and the persona chips on one screen; and the first Today arrived with a stone, a check, a plus and five tabs and said nothing about any of them.
+
+- **Welcome is the PRD's three screens now** (§7.1): what this is; the three evenings with their real lengths and what they make (the Book, the Blueprint, Today); your name and how you want to be spoken to. Dots, Next, Back, Skip. Somebody with a Book lands on the last page, where Back to today is.
+- **`TopBar`** in `@morrow/ui`: `← Back` on the left, where you are on the right, the same row on every screen that is not Today. Consent, the Interview, the track, the doorway, the read-back, every stone, the order, the Portrait, the seal, Seal the day, the account, the paywall and the coach all have it; the screens that already said "← Today" keep saying it. In the writing room the way out is "← Leave for now", because that is what it does — the draft is kept and the doorway offers it back.
+- **The Interview's Back undoes one answer and keeps the rest** (§7.1: "Back always keeps answers"); a history of states in the screen, popped one at a time, and on the first question it leaves.
+- **The first Today explains itself once:** what the Now stone is, the tap and the drag, what the coral check does in the evening, where the rest lives. "Got it" and it never comes back (`profile.todayIntroSeen`, on the device).
+- The e2e suite walks all of it (163): the three pages and their Back and Skip, the name carried through, Consent's Back, the Interview's undo, the card and its dismissal surviving a reload.
+
+What this does not do: change the shape of the path itself. Three sittings, five stones, a seal — that is the studied program and the reason the app exists (§2). It is now possible to see where you are on it and to step back along it.
 
 ### The dependencies, audited (2026-09-12)
 

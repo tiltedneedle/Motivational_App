@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Chip, HoldBar, Label, Quoted, Statement, Stone, Studio, UserField, night, useReducedMotion } from '@morrow/ui';
+import { Chip, HoldBar, Label, Quoted, Statement, Stone, Studio, TopBar, UserField, night, useReducedMotion } from '@morrow/ui';
 import { dayOf } from '@morrow/core';
 import { feelSealed } from '../src/feel';
 import { dictation } from '../src/dictation';
@@ -61,7 +61,8 @@ export default function SealDay() {
   return (
     <Studio dark testID="screen-seal-day">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18, gap: 20 }}>
+        <TopBar back={{ label: 'Today', onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'seal-day-back' }} />
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 6, gap: 20 }}>
           <Label style={{ color: night.ink3 }}>Seal the day</Label>
           <Statement style={{ color: night.ink }}>
             {sealed ? 'Sealed. See you at dawn.' : 'Quiet day or not, it goes in the ledger.'}

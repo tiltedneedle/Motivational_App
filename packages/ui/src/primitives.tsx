@@ -593,6 +593,39 @@ export function InkButton({
  */
 export const keyboardScroll: { tabIndex?: 0 } = Platform.OS === 'web' ? { tabIndex: 0 } : {};
 
+/**
+ * The top of every screen that is not Today: a way back on the left, where
+ * you are on the right.
+ *
+ * A person new to this finds the way out of a screen in the same place on
+ * every screen, or stops trusting the screens. Progress, the Book, Envision
+ * and the rest had a "← Today" here already; the first-run path — the
+ * Interview, the Fifteen, the stones, the Portrait, the seal — had nothing,
+ * and a wrong tap in the Interview could not be undone (§7.1: "Back always
+ * keeps answers"). The same row everywhere now, with the same words.
+ */
+export function TopBar({
+  back,
+  where,
+  right,
+  style,
+}: {
+  /** The way back. Omit only on a root screen. */
+  back?: { label?: string; onPress: () => void; testID?: string };
+  /** Where this screen is: "The Interview", "Stone 3 of 5", "Progress". */
+  where?: string;
+  /** Something else on the right, instead of `where`. */
+  right?: React.ReactNode;
+  style?: StyleProp<ViewStyle>;
+}) {
+  return (
+    <View style={[{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, minHeight: 56 }, style]}>
+      {back ? <TextButton testID={back.testID ?? 'top-back'} label={`← ${back.label ?? 'Back'}`} onPress={back.onPress} /> : <View />}
+      {right ?? (where ? <Label>{where}</Label> : null)}
+    </View>
+  );
+}
+
 export function TextButton({ label, onPress, testID }: { label: string; onPress?: () => void; testID?: string }) {
   const { p } = usePalette();
   const { hovered, hoverProps } = useHover();

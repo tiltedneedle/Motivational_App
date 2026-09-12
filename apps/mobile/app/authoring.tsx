@@ -5,7 +5,7 @@
 import { useRouter } from 'expo-router';
 import { View , Pressable, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Body, InkButton, Label, Rule, Statement, Studio, TextButton, day , type as fonts } from '@morrow/ui';
+import { Body, InkButton, Label, Rule, Statement, Studio, TextButton, TopBar, day , type as fonts } from '@morrow/ui';
 
 
 import { useMorrow } from '../src/store';
@@ -28,6 +28,7 @@ export default function Authoring() {
   return (
     <Studio testID="screen-authoring">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
+        <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/')), testID: 'authoring-back' }} where="Sitting 1 · before the Fifteen" />
         <View style={{ flex: 1, justifyContent: 'center', gap: 24 }}>
           <Statement>Three evenings from now you will have a plan you wrote yourself.</Statement>
           <Body>

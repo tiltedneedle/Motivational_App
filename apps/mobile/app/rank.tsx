@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, View , Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Body, Chip, InkButton, Label, Ring, Statement, Stone, Studio, UserField, accent, day , type as fonts } from '@morrow/ui';
+import { Body, Chip, InkButton, Label, Ring, Statement, Stone, Studio, TopBar, UserField, accent, day , type as fonts } from '@morrow/ui';
 
 
 import { useGoals, useMorrow } from '../src/store';
@@ -37,7 +37,8 @@ export default function Rank() {
   return (
     <Studio testID="screen-rank">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 16, gap: 22 }}>
+        <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'rank-back' }} where="Sitting 2 · the order" />
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 22 }}>
           <View style={{ gap: 8 }}>
             <Label>Sitting 2</Label>
             <Statement>Top is the one you&apos;d keep if you could only keep one.</Statement>

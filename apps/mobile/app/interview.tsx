@@ -32,6 +32,7 @@ import {
   Stone,
   Studio,
   TextButton,
+  TopBar,
   UserField,
   accent,
   day,
@@ -45,6 +46,27 @@ const LETTERS = 'ABCDEFGH';
 export default function Interview() {
   const router = useRouter();
   const [s, setS] = useState<InterviewState>(initialInterview);
+  // Every answer is a step forward that can be stepped back from, with
+  // everything before it kept (§7.1: "Back always keeps answers"). A wrong
+  // tap used to be final, and the only way out was to leave.
+  const [history, setHistory] = useState<InterviewState[]>([]);
+  const advance = (next: InterviewState) => {
+    setHistory((h) => [...h, s]);
+    setS(next);
+    setCustomOpen(false);
+    setCustomText('');
+  };
+  const stepBack = () => {
+    const prev = history[history.length - 1];
+    if (!prev) {
+      if (router.canGoBack()) router.back();
+      else router.dismissTo('/');
+      return;
+    }
+    setHistory((h) => h.slice(0, -1));
+    setS(prev);
+    setCustomOpen(false);
+  };
   const [customOpen, setCustomOpen] = useState(false);
   const [customText, setCustomText] = useState('');
   const addGoals = useMorrow((st) => st.addGoals);
@@ -71,7 +93,7 @@ export default function Interview() {
       if (area) setS(toggleArea(s, area.id));
       return;
     }
-    setS(answer(s, label));
+    advance(answer(s, label));
   };
 
   const useCustom = () => {
@@ -79,8 +101,8 @@ export default function Interview() {
     if (!text) return;
     setCustomOpen(false);
     setCustomText('');
-    if (q.stage === 'areas') setS(addCustomArea(s, text));
-    else setS(answer(s, text, true));
+    if (q.stage === 'areas') advance(addCustomArea(s, text));
+    else advance(answer(s, text, true));
   };
 
   const finish = () => {
@@ -101,8 +123,13 @@ export default function Interview() {
   return (
     <Studio testID="screen-interview">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
+        <TopBar
+          back={{ onPress: stepBack, testID: 'interview-back' }}
+          where={s.stage === 'summary' ? 'The Interview · what I heard' : `The Interview · question ${s.answered + 1}`}
+          style={{ paddingTop: 6, minHeight: 48 }}
+        />
         {/* the coach's pearl inside the clarity ring, and its guess */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingTop: 10 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingTop: 2 }}>
           <Ring size={64} progress={clarity(s)} color={accent.coral} width={3.5} testID="clarity-ring">
             <Stone size={46} gradient={['#FFFFFF', '#F3F1EC', '#CFCBC2', '#8E8A80']} polish={0.8} />
           </Ring>
@@ -245,7 +272,7 @@ export default function Interview() {
                         : `Continue with ${s.picked.length}`
                   }
                   disabled={s.picked.length === 0}
-                  onPress={() => setS(beginBranches(s))}
+                  onPress={() => advance(beginBranches(s))}
                 />
               ) : (
                 <Tray s={s} />

@@ -9,7 +9,7 @@ import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ordinal, type PaywallMoment } from '@morrow/core';
-import { Body, HoldBar, InkButton, Label, Statement, Stone, Studio, UserField, useReducedMotion, night } from '@morrow/ui';
+import { Body, HoldBar, InkButton, Label, Statement, Stone, Studio, TopBar, UserField, useReducedMotion, night } from '@morrow/ui';
 import { feelDrained, feelSealed } from '../src/feel';
 import { useGoals, useMorrow } from '../src/store';
 
@@ -61,7 +61,8 @@ export default function SealBook() {
   return (
     <Studio dark testID="screen-seal-book">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 20, gap: 20 }}>
+        <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'seal-book-back' }} right={<Label style={{ color: night.ink3 }}>Sitting 3 · the seal</Label>} />
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 20 }}>
           <Label style={{ color: night.ink3 }}>Last thing</Label>
           <Statement style={{ color: night.ink }}>Finish this, in your words.</Statement>
           <View style={{ gap: 8 }}>

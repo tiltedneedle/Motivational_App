@@ -77,6 +77,7 @@ export default function Today() {
   const setStatus = useMorrow((s) => s.setMoveStatus);
   const removeEvidence = useMorrow((s) => s.removeEvidence);
   const makeBrief = useMorrow((s) => s.makeBrief);
+  const setProfile = useMorrow((s) => s.setProfile);
 
   const today = dayOf(new Date(), state.profile.dayBoundaryHour);
   const intendedMoveId = state.days[today]?.intentionMoveId ?? null;
@@ -241,6 +242,24 @@ export default function Today() {
               <Label style={{ color: accent.coralText }}>Sunday</Label>
               <Body style={{ color: day.ink, fontSize: 16 }}>Ten minutes with what you wrote.</Body>
             </Pressable>
+          ) : null}
+
+          {/*
+            The first Today, explained once. A person arrives here from the
+            seal with a Book, a plan and a screen full of new things; without
+            this the stone was a picture and the check a mystery, and the
+            fastest way to lose somebody is a screen they cannot read.
+          */}
+          {book && !state.profile.todayIntroSeen ? (
+            <View testID="today-intro" style={{ marginTop: 16, backgroundColor: day.surface2, borderRadius: radius.card, padding: 18, gap: 10 }}>
+              <Label style={{ color: accent.coralText }}>This is Today</Label>
+              <Body style={{ color: day.ink }}>
+                The stone on the Now card is your first move, cut from your own line. Tap it when it is done; drag it up for not
+                today. In the evening the coral check seals the day: a word, one line of proof, a hold. Your Book, the scenes and
+                the coach are in the bar below.
+              </Body>
+              <Chip testID="today-intro-done" label="Got it" onPress={() => setProfile({ todayIntroSeen: true })} />
+            </View>
           ) : null}
 
           {returnCard ? (

@@ -153,11 +153,28 @@ async function main() {
 
     check('welcome renders', await seen('screen-welcome'));
 
+    // ---- Welcome is three screens (PRD 7.1), each with a way back and a way past
+    check('the first page says what this is', await seen('welcome-page-0'));
+    await tap('welcome-next');
+    check('the second says what three evenings make', await seen('welcome-page-1'));
+    await tap('welcome-back');
+    check('and Back goes back a page', await seen('welcome-page-0'));
+    await tap('welcome-skip');
+    check('Skip lands on the last page', await seen('welcome-page-2'));
+    await page.locator('[data-testid="welcome-name"]').fill('Sam');
+
     // ---- Interview
     await tap('welcome-begin');
     check('consent screen', await seen('screen-consent'));
+    await tap('consent-back');
+    check('consent has a way back to Welcome', await seen('screen-welcome'));
+    await tap('welcome-begin');
     await tap('consent-continue');
     check('interview screen', await seen('screen-interview'));
+    check('the name given on Welcome is kept', await page.evaluate(() => {
+      const key = Object.keys(localStorage).find((k) => k.includes('morrow'));
+      return JSON.parse(localStorage.getItem(key)).state.profile.displayName === 'Sam';
+    }));
     check('clarity starts at the floor', (await text('clarity-value')).startsWith('8%'));
 
     await tap('option-0'); // Health
@@ -165,6 +182,12 @@ async function main() {
     await tap('interview-continue');
     await tap('option-0'); // Finish a race
     check('follow-up asked', (await text('interview-question')) === 'How far?');
+    // A wrong tap is not final: Back undoes it and keeps everything before it (§7.1).
+    await tap('interview-back');
+    check('Back in the Interview undoes the last answer', (await text('interview-question')) !== 'How far?');
+    check('and keeps the ones before it', (await text('guess-line')).toLowerCase().includes('health'));
+    await tap('option-0'); // Finish a race, again
+    check('the follow-up is asked again', (await text('interview-question')) === 'How far?');
     await tap('option-2'); // A half marathon
     check('horizon asked', (await text('interview-question')) === 'By when?');
     await tap('option-1'); // Six months
@@ -492,6 +515,16 @@ async function main() {
     check('and it does not come back the next time Today opens', !(await seen('screen-paywall')));
     check('today renders', await seen('screen-today'));
     check('and Not now put them back where they were', !(await seen('screen-paywall')));
+    // The first Today explains itself, once.
+    check('the first Today says what the stone and the check are', await seen('today-intro'));
+    if (await seen('today-intro')) {
+      await tap('today-intro-done');
+      check('Got it takes the card away', !(await seen('today-intro')));
+      await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
+      await page.clock.runFor(1500);
+      await page.waitForTimeout(500);
+      check('and it stays away', !(await seen('today-intro')));
+    }
     // The quotation has its own id. Reading the card's innerText and splitting
     // on a newline made this depend on a line break the layout happens to
     // produce, and it stopped producing one the moment another screen was
