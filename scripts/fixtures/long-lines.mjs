@@ -41,4 +41,7 @@ for (const key of Object.keys(s.days)) {
   if (d.note) d.note = `${d.note} ${FIRST}`;
 }
 
+// The seed's dawn brief was written for the seed's day; this store makes its own.
+s.briefs = [];
+
 process.stdout.write(JSON.stringify(seed));

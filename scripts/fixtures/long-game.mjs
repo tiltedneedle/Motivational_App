@@ -100,4 +100,7 @@ for (let day = shift(START, 1); day < TODAY; day = shift(day, 1)) {
   });
 }
 
+// The seed's dawn brief was written for the seed's day; this store makes its own.
+s.briefs = [];
+
 process.stdout.write(JSON.stringify(seed));

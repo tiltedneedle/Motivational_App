@@ -74,4 +74,7 @@ if (practice) {
   );
 }
 
+// The seed's dawn brief was written for the seed's day; this store makes its own.
+s.briefs = [];
+
 process.stdout.write(JSON.stringify(seed));
