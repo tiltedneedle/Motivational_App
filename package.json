@@ -13,6 +13,7 @@
     "test:sql": "node scripts/check-sql.mjs",
     "test:migration": "node scripts/test-migration.mjs",
     "test:authorship": "node scripts/check-authorship.mjs",
+    "test:back": "node scripts/check-back.mjs",
     "build:web": "node scripts/build-web.mjs",
     "build:web:offline": "node scripts/build-web.mjs --offline",
     "db:push": "node scripts/db-push.mjs",
@@ -21,7 +22,7 @@
     "test:e2e": "node scripts/e2e.mjs",
     "test:a11y": "node scripts/a11y.mjs",
     "shots": "node scripts/shots.mjs",
-    "verify": "pnpm test:deps && pnpm test:dates && pnpm test:copy && pnpm typecheck && pnpm lint && pnpm test && pnpm test:functions && pnpm test:sql && pnpm test:migration && pnpm test:authorship && pnpm build:web:offline && pnpm test:e2e && pnpm test:a11y",
+    "verify": "pnpm test:deps && pnpm test:dates && pnpm test:copy && pnpm typecheck && pnpm lint && pnpm test && pnpm test:functions && pnpm test:sql && pnpm test:migration && pnpm test:authorship && pnpm test:back && pnpm build:web:offline && pnpm test:e2e && pnpm test:a11y",
     "web": "pnpm --filter mobile web",
     "lint": "pnpm -r lint"
   },

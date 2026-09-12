@@ -65,8 +65,9 @@ pnpm verify
 
 Toolchain guard, date guard, copy guard, typecheck, lint, every unit test, the
 edge-function and SQL guards, the migration against a real Postgres, the serif
-authorship guard, the web build, the end-to-end suite and an axe-core
-accessibility pass over every screen. Nothing ships without it passing.
+authorship guard, the guard that every screen has a way back at its top,
+the web build (offline: every key blanked), the end-to-end suite and an
+axe-core accessibility pass over every screen. Nothing ships without it passing.
 `npx expo-doctor` in `apps/mobile` checks the native configuration; it
 passes 18/18.
 
