@@ -17,6 +17,7 @@ import {
   isReturning,
   plural,
   returnsLetter,
+  scheduleLabel,
   sourceLineFor,
 } from '@morrow/core';
 import {
@@ -67,6 +68,7 @@ export default function Today() {
   const book = useLatestBook();
   const score = useConsistency();
   const practices = useTodaysPractices();
+  const allPractices = useMorrow((s) => s.practices).filter((p) => !p.archivedAt);
   const practiceLogs = useMorrow((s) => s.practiceLogs);
   const toast = useMorrow((s) => s.toast);
   const setToast = useMorrow((s) => s.setToast);
@@ -524,14 +526,32 @@ export default function Today() {
             </View>
           ) : null}
 
+          {/*
+            Two different nothings. No practice at all: say what one is and
+            offer to build it. A practice that is not asked for today: say
+            when it is, in one line — on a Sunday the explainer for a person
+            who has never made a practice was being read by somebody who runs
+            three mornings a week.
+          */}
           {!practices.length && goals.length ? (
-            <View testID="today-no-practices" style={{ marginTop: 26, gap: 6 }}>
-              <Label>Practices</Label>
-              <Body style={{ fontSize: 13 }}>
-                The things you do rather than finish. Built out of the line you already wrote about how you will do it.
-              </Body>
-              <Chip testID="today-add-first-practice" label="Add one" ghost onPress={() => router.push('/practice')} />
-            </View>
+            allPractices.length ? (
+              <View testID="today-practices-rest" style={{ marginTop: 26, gap: 6 }}>
+                <Label>Practices</Label>
+                <Body style={{ fontSize: 13 }}>
+                  {allPractices.length === 1
+                    ? `Nothing today. ${allPractices[0]!.title}: ${scheduleLabel(allPractices[0]!.schedule)}.`
+                    : `Nothing today. ${allPractices.map((p) => `${p.title}: ${scheduleLabel(p.schedule)}`).join('; ')}.`}
+                </Body>
+              </View>
+            ) : (
+              <View testID="today-no-practices" style={{ marginTop: 26, gap: 6 }}>
+                <Label>Practices</Label>
+                <Body style={{ fontSize: 13 }}>
+                  The things you do rather than finish. Built out of the line you already wrote about how you will do it.
+                </Body>
+                <Chip testID="today-add-first-practice" label="Add one" ghost onPress={() => router.push('/practice')} />
+              </View>
+            )
           ) : null}
 
           {/* Consistency. Tapping it opens the thing it is a summary of. */}
