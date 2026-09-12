@@ -187,6 +187,21 @@ export default function Today() {
             <Statement style={{ marginTop: 12 }}>{greeting(new Date(), state.profile.displayName)}</Statement>
           </Rise>
 
+          {/* The greeting's own line, before anything that has arrived: a letter or the Sunday card sits under it, not between the greeting and its sentence. */}
+          {book ? (
+            <Pressable testID="today-book-line" onPress={() => router.push('/book')} style={{ marginTop: 8 }}>
+              <UserText
+                testID="today-book-quote"
+                italic
+                numberOfLines={2}
+                style={{ fontSize: 17, lineHeight: 24, color: day.ink2 }}
+              >
+                “{book.firstSentence}”
+              </UserText>
+              <Label style={{ marginTop: 4 }}>You, in the Book</Label>
+            </Pressable>
+          ) : null}
+
           {/*
             A letter that has arrived (PRD §7.8). Offered once, on the day it
             arrives, and never counted or nagged about: a letter you are
@@ -222,20 +237,6 @@ export default function Today() {
             >
               <Label style={{ color: accent.coralText }}>Sunday</Label>
               <Body style={{ color: day.ink, fontSize: 16 }}>Ten minutes with what you wrote.</Body>
-            </Pressable>
-          ) : null}
-
-          {book ? (
-            <Pressable testID="today-book-line" onPress={() => router.push('/book')} style={{ marginTop: 8 }}>
-              <UserText
-                testID="today-book-quote"
-                italic
-                numberOfLines={2}
-                style={{ fontSize: 17, lineHeight: 24, color: day.ink2 }}
-              >
-                “{book.firstSentence}”
-              </UserText>
-              <Label style={{ marginTop: 4 }}>You, in the Book</Label>
             </Pressable>
           ) : null}
 
