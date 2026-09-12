@@ -3,11 +3,11 @@
  * lengths, and the depth question with Starter preselected.
  */
 import { useRouter } from 'expo-router';
-import { View } from 'react-native';
+import { View , Pressable, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Body, InkButton, Label, Rule, Statement, Studio, TextButton, day } from '@morrow/ui';
-import { Pressable, Text } from 'react-native';
-import { type as fonts } from '@morrow/ui';
+import { Body, InkButton, Label, Rule, Statement, Studio, TextButton, day , type as fonts } from '@morrow/ui';
+
+
 import { useMorrow } from '../src/store';
 import type { DepthTrack } from '@morrow/core';
 

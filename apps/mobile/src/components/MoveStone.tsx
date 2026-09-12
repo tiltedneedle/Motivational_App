@@ -5,7 +5,7 @@
  * the same thing, because a drag is not available to everyone and the gesture
  * must never be the only way to say it.
  */
-import { useRef } from 'react';
+import { useState } from 'react';
 import { Animated, Pressable, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Ring, Socket, Stone, accent, day } from '@morrow/ui';
@@ -41,8 +41,8 @@ export function MoveStone({
   testID,
   reducedMotion = false,
 }: MoveStoneProps) {
-  const dy = useRef(new Animated.Value(0)).current;
-  const hint = useRef(new Animated.Value(0)).current;
+  const [dy] = useState(() => new Animated.Value(0));
+  const [hint] = useState(() => new Animated.Value(0));
   const socket = size * 1.35;
 
   const settle = () => {

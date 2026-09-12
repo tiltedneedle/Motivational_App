@@ -4,8 +4,7 @@
  */
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Share, View } from 'react-native';
-import { ScrollView } from 'react-native';
+import { Share, View , ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ANALYSIS_TITLES, bookToHtml, bookToText, formatDay, ordinal, pageCount, restOfIdeal, sealedOn, thenHalf } from '@morrow/core';
 import {

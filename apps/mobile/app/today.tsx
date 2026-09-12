@@ -74,8 +74,6 @@ export default function Today() {
   const removeEvidence = useMorrow((s) => s.removeEvidence);
   const makeBrief = useMorrow((s) => s.makeBrief);
 
-  const [returnCard, setReturnCard] = useState<{ body: string; quotes: string[] } | null>(null);
-
   const today = dayOf(new Date(), state.profile.dayBoundaryHour);
   const intendedMoveId = state.days[today]?.intentionMoveId ?? null;
   const isSunday = new Date(`${today}T00:00:00Z`).getUTCDay() === 0;
@@ -108,16 +106,20 @@ export default function Today() {
     : undefined;
   const days = useMemo(() => Object.values(state.days), [state.days]);
 
+  // The return card is decided once, on arrival: a person who reads it and
+  // starts small should not have it come back as the day's state changes.
+  const [returnCard, setReturnCard] = useState<{ body: string; quotes: string[] } | null>(() => {
+    const r = isReturning(days, today);
+    if (!r.returning) return null;
+    // "Return #n" is the nth time they came back from a gap, not the
+    // number of sealed days — the coach counts it the same way.
+    const returns = detectReturns(days, today).length;
+    const letter = returnsLetter(book, r.gapDays, Math.max(1, returns));
+    return { body: letter.body, quotes: letter.quotes };
+  });
+
   useEffect(() => {
     makeBrief();
-    const r = isReturning(days, today);
-    if (r.returning) {
-      // "Return #n" is the nth time they came back from a gap, not the
-      // number of sealed days — the coach counts it the same way.
-      const returns = detectReturns(days, today).length;
-      const letter = returnsLetter(book, r.gapDays, Math.max(1, returns));
-      setReturnCard({ body: letter.body, quotes: letter.quotes });
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

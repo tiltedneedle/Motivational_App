@@ -5,7 +5,7 @@
  * end-to-end tests drive. Skia can replace this later for the grain pass; the
  * props are the contract and would not change.
  */
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Animated, Easing, View, type ViewStyle } from 'react-native';
 import Svg, { Circle, Defs, Ellipse, LinearGradient, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { domainMeta, type DomainId } from '@morrow/core';
@@ -127,7 +127,7 @@ export function Stone({
  * the circle. Slow enough to be noticed only when looked at.
  */
 function Sweep({ size }: { size: number }) {
-  const x = useRef(new Animated.Value(-size)).current;
+  const [x] = useState(() => new Animated.Value(-size));
   const id = useMemo(() => `sw${Math.random().toString(36).slice(2, 9)}`, []);
   const bandW = size * 0.42;
   const bandH = size * 1.4;

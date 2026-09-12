@@ -4,7 +4,7 @@
  */
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View , Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   addAnother,
@@ -38,7 +38,6 @@ import {
   radius,
   type as fonts,
 } from '@morrow/ui';
-import { Text } from 'react-native';
 import { useMorrow } from '../src/store';
 
 const LETTERS = 'ABCDEFGH';

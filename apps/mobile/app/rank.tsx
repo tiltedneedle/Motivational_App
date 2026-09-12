@@ -4,11 +4,11 @@
  */
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View , Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Body, Chip, InkButton, Label, Ring, Statement, Stone, Studio, UserField, accent, day } from '@morrow/ui';
-import { Text } from 'react-native';
-import { type as fonts } from '@morrow/ui';
+import { Body, Chip, InkButton, Label, Ring, Statement, Stone, Studio, UserField, accent, day , type as fonts } from '@morrow/ui';
+
+
 import { useGoals, useMorrow } from '../src/store';
 
 const TITLE_FRAMINGS = ['A year of…', 'The one where I…', 'Back to…'];

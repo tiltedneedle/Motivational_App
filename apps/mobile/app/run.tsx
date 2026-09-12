@@ -51,8 +51,12 @@ export default function Runner() {
   const [run, setRun] = useState<RunnerState | null>(() =>
     practice ? startRun(practice, params.minimal === '1') : null,
   );
+  // The latest run, for the AppState handler. Written after each commit
+  // rather than during render, which is the only time a ref may be written.
   const runRef = useRef(run);
-  runRef.current = run;
+  useEffect(() => {
+    runRef.current = run;
+  });
 
   // The clock. It only ever reduces the number on screen; what happens when it
   // reaches zero is the person's decision, not this timer's.

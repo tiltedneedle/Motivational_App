@@ -156,8 +156,8 @@ export function Rise({
   style?: StyleProp<ViewStyle>;
   reducedMotion?: boolean;
 }) {
-  const opacity = useRef(new Animated.Value(0)).current;
-  const y = useRef(new Animated.Value(reducedMotion ? 0 : 12)).current;
+  const [opacity] = useState(() => new Animated.Value(0));
+  const [y] = useState(() => new Animated.Value(reducedMotion ? 0 : 12));
   useEffect(() => {
     const delay = index * motion.stagger;
     const fade = Animated.timing(opacity, { toValue: 1, duration: motion.fade, delay, useNativeDriver: true });
@@ -690,7 +690,7 @@ export function HoldBar({
   reducedMotion?: boolean;
 }) {
   const { p, dark } = usePalette();
-  const fill = useRef(new Animated.Value(done ? 1 : 0)).current;
+  const [fill] = useState(() => new Animated.Value(done ? 1 : 0));
   const [holding, setHolding] = useState(false);
   const [screenReader, setScreenReader] = useState(false);
   const anim = useRef<Animated.CompositeAnimation | null>(null);

@@ -75,7 +75,7 @@ export default function Write() {
    */
   const reduced = useReducedMotion();
   const focused = useIsFocused();
-  const bob = useRef(new Animated.Value(0)).current;
+  const [bob] = useState(() => new Animated.Value(0));
   const writing = phase === 'writing' && session.body.trim().length > 0;
   useEffect(() => {
     if (reduced || !focused || phase !== 'writing' || writing) {
@@ -94,7 +94,9 @@ export default function Write() {
   // The autosave reads the newest session without re-arming its timer on
   // every keystroke, which would make the timer useless.
   const sessionRef = useRef(session);
-  sessionRef.current = session;
+  useEffect(() => {
+    sessionRef.current = session;
+  });
 
   const doorway = DOORWAY[kind];
   const seeds = goals
