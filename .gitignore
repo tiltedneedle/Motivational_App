@@ -21,3 +21,4 @@ e2e-failure.png
 apps/mobile/android/
 apps/mobile/ios/
 scripts/shots/
+supabase/.temp/

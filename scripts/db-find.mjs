@@ -9,7 +9,31 @@
  *
  *   SUPABASE_REF=… PGPASSWORD=… node scripts/db-find.mjs
  */
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import pg from 'pg';
+
+const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '..');
+
+/**
+ * `supabase/.env.local` (gitignored), so the password never has to be on a
+ * command line. Shell variables win over the file.
+ */
+async function loadLocalEnv() {
+  try {
+    const text = await readFile(join(ROOT, 'supabase', '.env.local'), 'utf8');
+    for (const line of text.split(/\r?\n/)) {
+      const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/);
+      if (!m) continue;
+      const value = m[2].replace(/^(['"])(.*)\1$/, '$2');
+      if (process.env[m[1]] === undefined) process.env[m[1]] = value;
+    }
+  } catch {
+    // no file: the environment has to carry everything
+  }
+}
+await loadLocalEnv();
 
 const ref = process.env.SUPABASE_REF;
 const password = process.env.PGPASSWORD;

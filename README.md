@@ -94,15 +94,28 @@ Everything runs on local fallbacks without one. To go beyond them:
 
 ### Setting the Supabase project up, once
 
-1. The schema. With the CLI: `supabase link --project-ref <ref>`, then `supabase db push`. Without it — the CLI wants `supabase login`, and the database only wants its password — `pnpm db:push` applies whatever is in `supabase/migrations/` that the project has not seen and records it where the CLI looks, so the two never fight:
+1. The schema. `pnpm db:push` applies whatever is in `supabase/migrations/` that the project has not seen and records it where the CLI looks (`supabase_migrations.schema_migrations`), so a later `supabase db push` finds nothing to do. It needs three values, in `supabase/.env.local` (gitignored) or the environment:
 
-   ```bash
-   SUPABASE_REF=<ref> SUPABASE_REGION=<pooler region> PGPASSWORD='<database password>' pnpm db:push
+   ```
+   SUPABASE_REF=<ref>
+   SUPABASE_REGION=<pooler region>
+   PGPASSWORD=<database password>
    ```
 
-   The region is the session pooler's (`aws-0-<region>.pooler.supabase.com`; the dashboard's *Connect* panel shows it, or `pnpm db:find` with the same variables tries each one) — the direct `db.<ref>.supabase.co` host is IPv6-only. The password goes in the environment of that one command and nowhere else.
-2. The functions: `supabase functions deploy` (this one does need the CLI signed in). Secrets for them: `supabase secrets set ANTHROPIC_API_KEY=… FAL_KEY=…`. The service-role key and the anon key are already in the functions' environment; neither belongs in the app or this repo.
-3. Authentication → Email: the app asks for a **six-digit code**, so the *Magic Link* email template must carry `{{ .Token }}` rather than only the link. Authentication → Providers → Apple: enable it with the bundle id `app.morrow.client` as the client id (native sign-in needs no secret).
+   The region is the session pooler's (`aws-0-<region>.pooler.supabase.com`; the dashboard's *Connect* panel shows it, or `pnpm db:find` tries each one) — the direct `db.<ref>.supabase.co` host is IPv6-only, which is also why the CLI's own `db push` fails on an IPv4 network until `supabase link` has set the pooler up. The password is written nowhere by the scripts. `pnpm db:push -- --dry` lists without applying.
+2. The functions and the auth config need the CLI signed in **as the project's owner**. The CLI is a dev dependency (`pnpm exec supabase`); a machine may already hold a login for some other account, and `supabase login` replaces it:
+
+   ```bash
+   pnpm exec supabase login
+   pnpm exec supabase link --project-ref <ref>
+   pnpm exec supabase functions deploy
+   pnpm exec supabase config diff --project-ref <ref>   # read it
+   pnpm exec supabase config push --project-ref <ref>   # the six-digit code template, otp length, Apple
+   pnpm exec supabase secrets set ANTHROPIC_API_KEY=… FAL_KEY=…
+   ```
+
+   The service-role key and the anon key are already in the functions' environment; neither belongs in the app or this repo.
+3. Authentication → Email: the app asks for a **six-digit code**, and `config.toml` carries the template (`supabase/templates/magic_link.html`, `{{ .Token }}`) so `config push` sets it; check the dashboard shows it after. Authentication → Providers → Apple: `config.toml` enables it with the bundle id `app.morrow.client` as the client id (native sign-in needs no secret).
 4. Put the project URL and the publishable (anon) key in the app's environment (`EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`) — `apps/mobile/.env` works for `expo start`, `expo run:*` and `pnpm build:web`. The tests build with `pnpm build:web:offline`, which blanks every `EXPO_PUBLIC_*` so `pnpm verify` never reaches the network.
 5. The hard delete: schedule a call to the `delete-account` sweep daily if you want it on the clock (it also runs on every call), e.g. a pg_cron job hitting the function, or leave it: every close of an account runs the sweep for the ones whose week is up.
 

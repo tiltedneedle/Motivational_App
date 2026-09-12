@@ -986,6 +986,16 @@ With the rules met, the compiler itself: `babel-plugin-react-compiler` at Expo's
 
 A phone in dark mode opened on the day studio's splash for a moment before the night one drew. `make-icons.mjs` draws a night splash now — the pale stone on the night ground, the same ink the night studio's buttons wear — and `expo-splash-screen` gets it under `dark`. The day splash is byte-identical to before.
 
+### The account service, live (2026-09-12)
+
+The user handed over the Supabase project (`fxsaxganeyajxbcbignq`, Singapore). What is done, and how:
+
+- **The schema is on the project.** `0001_init.sql` applied in one transaction over the session pooler (`aws-0-ap-southeast-1`; the direct host is IPv6-only and this machine has no IPv6 route) — 18 tables, 18 policies, RLS on every one — and recorded in `supabase_migrations.schema_migrations` so the CLI's own `db push` finds nothing to do. Checked from outside with the publishable key: every table answers `[]`, an anonymous insert is refused with 42501.
+- **The app points at it.** `apps/mobile/.env` (gitignored) carries the URL and the publishable key; the configured bundle has them and nothing else — no secret, no service role, no password, checked by grep. The tests build with every key blanked (`pnpm build:web:offline`).
+- **The CLI is a dev dependency** (`pnpm exec supabase`, 2.117), with the six-digit-code email template in `config.toml` + `supabase/templates/` so `config push` sets it.
+- **Waiting on the owner's login:** `functions deploy`, `config push` and `secrets set`. This machine holds a CLI login for some other Supabase account (its projects are TZ-Wellness and LA-Tech), which cannot see this project; replacing a stored credential is the user's to do, not mine. Until the functions deploy the app runs on its device engines (`guarded()` falls back), so nothing is broken, only local.
+- The database password lives in `supabase/.env.local` (gitignored) for `pnpm db:push`; it was never on a command line and is in no tracked file.
+
 ### The first run (2026-09-12)
 
 The user, looking at the app fresh: "the UI seems very complex, there doesn't seem any ease with the flow… the go back option should display on all the pages… a brand new user might not even understand the flow and delete it… once someone joins we need an intro as well." Fair, and specific. What was true: the first-run path — Consent, the Interview, the track, the doorway, the room, the read-back, five stones, the Portrait, the seal — had no way back on any of it and no sense of where you were on it; a wrong tap in the Interview was final; Welcome put the stone, the three sittings and the persona chips on one screen; and the first Today arrived with a stone, a check, a plus and five tabs and said nothing about any of them.

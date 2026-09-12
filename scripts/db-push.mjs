@@ -13,8 +13,9 @@
  *   …                                                  node scripts/db-push.mjs --dry   # list only
  *
  * The region is the pooler's (`scripts/db-find.mjs` finds it); the direct
- * host is IPv6-only. The password is read from the environment and written
- * nowhere.
+ * host is IPv6-only. The three values can also sit in `supabase/.env.local`
+ * (gitignored), so the password never has to be typed on a command line;
+ * the script writes it nowhere.
  */
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -23,6 +24,26 @@ import pg from 'pg';
 
 const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 const DIR = join(ROOT, 'supabase', 'migrations');
+
+/**
+ * `supabase/.env.local` (gitignored), so the password never has to be on a
+ * command line. Shell variables win over the file.
+ */
+async function loadLocalEnv() {
+  try {
+    const text = await readFile(join(ROOT, 'supabase', '.env.local'), 'utf8');
+    for (const line of text.split(/\r?\n/)) {
+      const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/);
+      if (!m) continue;
+      const value = m[2].replace(/^(['"])(.*)\1$/, '$2');
+      if (process.env[m[1]] === undefined) process.env[m[1]] = value;
+    }
+  } catch {
+    // no file: the environment has to carry everything
+  }
+}
+await loadLocalEnv();
+
 const ref = process.env.SUPABASE_REF;
 const region = process.env.SUPABASE_REGION;
 const password = process.env.PGPASSWORD;

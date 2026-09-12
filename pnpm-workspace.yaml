@@ -25,6 +25,11 @@ allowBuilds:
   # build script only downloads the binary. Not needed to lint, and a build
   # script that reaches the network on install is not something to nod through.
   unrs-resolver: false
+  # The Supabase CLI: the build script downloads the CLI binary for this
+  # platform. Nodded through on purpose — it is the one way to deploy the
+  # edge functions and push the auth config, and it needs a login only the
+  # project owner can do (README, "Setting the Supabase project up, once").
+  supabase: true
 
 # pnpm 11 waits a day before it will install a freshly published version, as
 # a guard against a poisoned release. Expo ships its SDK patches in one go and

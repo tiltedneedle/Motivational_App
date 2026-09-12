@@ -26,6 +26,13 @@ enable_confirmations = false
 otp_length = 6
 otp_expiry = 600
 
+# The email that carries the code. `supabase config push` sets this on the
+# hosted project, so nobody has to paste it into the dashboard; the file is
+# the whole template, and {{ .Token }} is the six digits.
+[auth.email.template.magic_link]
+subject = "Your Morrow code"
+content_path = "./supabase/templates/magic_link.html"
+
 [auth.external.apple]
 # Sign in with Apple, from the identity token the OS hands the app. The client
 # id is the bundle identifier; the secret is not needed for native sign-in.
