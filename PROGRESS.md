@@ -965,6 +965,10 @@ The linter's compiler-era warnings — refs read during render, state set inside
 
 With the rules met, the compiler itself: `babel-plugin-react-compiler` at Expo's pin and `experiments.reactCompiler: true`. The web bundle carries 252 memo caches; the e2e suite (151), the axe pass (both studios), the screenshots (Today differs by six pixels) and `expo-doctor` (18/18) are unchanged on the compiled bundle. What it buys: Today re-renders on every store change, and now only the parts whose inputs changed are rebuilt — which matters most on the phone, where it cannot yet be measured. If a device shows anything odd, the switch is one line in `app.json`.
 
+### Predictive back (2026-09-12)
+
+§7.14 asks for predictive back and edge to edge on Android. Edge to edge is what SDK 57 builds by default (the old key is gone). Predictive back is one key that defaults to off — `android.predictiveBackGestureEnabled: true` — and the config plugin writes `enableOnBackInvokedCallback` into the manifest (`expo config --type introspect` shows it). What the gesture actually looks like through expo-router's stack on a device is on the Mac list.
+
 ### Axe over every screen (2026-09-12)
 
 Step 4 of the loop — what current practice would add — with no agents to spend: an automated accessibility pass is the obvious one, and it costs a dev dependency. `scripts/a11y.mjs` loads the built bundle with the seeded store, the same 26 routes the screenshots use, and runs axe-core 4.13 (WCAG 2.1 AA + best-practice; landmark and heading rules off, since a phone screen has neither). First run: 10 serious or critical findings on 9 screens. What they were, and what was wrong underneath:
