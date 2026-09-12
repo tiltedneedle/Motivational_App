@@ -196,6 +196,23 @@ async function main() {
     await tap('interview-finish');
     check('authoring opening', await seen('screen-authoring'));
 
+    // ---- halfway along, the app opens on the next step, not the start
+    // Somebody who named goals tonight and comes back tomorrow used to be
+    // offered "Begin tonight" and the Interview again, or a Today with a
+    // goal row and nothing to do on it.
+    await page.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(500);
+    check('Welcome, with goals named, lands on its last page', await seen('welcome-page-2'));
+    check('and says where they are', (await text('welcome-resume')).includes('The Fifteen comes next'), await text('welcome-resume'));
+    check('and its button is the next step', (await text('welcome-begin')) === 'Write the Fifteen', await text('welcome-begin'));
+    await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(500);
+    check('Today, with goals and no Book, is the path', (await text('today-path')).includes('not finished'), await text('today-path'));
+    await tap('today-begin');
+    check('and its button goes to the Fifteen', await seen('screen-authoring'));
+
     // ---- the Fifteen
     await tap('authoring-begin');
     check('doorway', await seen('screen-write-doorway'));
@@ -271,6 +288,13 @@ async function main() {
     // framing used to be a placeholder, so the opening the person chose
     // vanished the moment they left this screen.
     check('rank screen', await seen('screen-rank'));
+    // The path from here is the order and the title, then the stones.
+    await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(500);
+    check('with the Fifteen written, Today points at the order', (await text('today-begin')) === 'Put the goals in order', await text('today-begin'));
+    await tap('today-begin');
+    check('and lands on it', await seen('screen-rank'));
     await tap('title-framing-The one where I…');
     await page.waitForTimeout(200);
     await page.locator('[data-testid="book-title"]').fill('stopped negotiating with the alarm');

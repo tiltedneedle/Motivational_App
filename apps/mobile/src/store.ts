@@ -46,6 +46,8 @@ import {
   type Moment,
   movesOpenOn,
   orderForToday,
+  firstRunStep,
+  type FirstRunStep,
   practiceValue,
   dayOf,
   sealedOn,
@@ -1427,9 +1429,12 @@ const store = create<MorrowState>()(
       makeBrief: () => {
         const s = get();
         const day = dayOf(new Date(), s.profile.dayBoundaryHour);
-        if (s.briefs.some((b) => b.day === day && b.kind === 'dawn')) {
-          return s.briefs.find((b) => b.day === day && b.kind === 'dawn') ?? null;
-        }
+        const existing = s.briefs.find((b) => b.day === day && b.kind === 'dawn') ?? null;
+        // A brief written before the plan existed — Today opened halfway along
+        // the path, the Book sealed later the same day — named no first move,
+        // and stayed that way all day. Written again once there is one.
+        const nowHasMove = todaysMoves(s).some((m) => m.status === 'todo');
+        if (existing && (existing.firstMoveId || !nowHasMove)) return existing;
         const daysArr = Object.values(s.days);
         const r = reading(daysArr, day);
         const yesterdayKey = new Date(new Date(`${day}T00:00:00Z`).getTime() - 86_400_000).toISOString().slice(0, 10);
@@ -1457,7 +1462,7 @@ const store = create<MorrowState>()(
           newId,
         );
         set((st) => ({
-          briefs: [...st.briefs, brief],
+          briefs: [...st.briefs.filter((b) => !(b.day === day && b.kind === 'dawn')), brief],
           // Stamped when the line is actually written into a brief, not when
           // the band opens — otherwise a brief that failed to build would still
           // burn the one offer the person gets.
@@ -1951,6 +1956,19 @@ export function logForToday(s: MorrowState, practiceId: string): PracticeLog | n
 
 export const useGoals = () => useMorrow(useShallow(activeGoals));
 export const useTodaysPractices = () => useMorrow(useShallow(todaysPractices));
+/** Where the person is on the first-run path (core's `firstRunStep`), from the store. */
+export function firstRunOf(s: MorrowState): FirstRunStep {
+  return firstRunStep({
+    goals: s.goals,
+    hasIdeal: latestText(s.texts, 'ideal') !== null,
+    hasTitle: s.bookTitle.trim().length > 0,
+    analyses: s.analyses,
+    books: s.books,
+    track: s.profile.track,
+  });
+}
+export const useFirstRun = () => useMorrow(useShallow(firstRunOf));
+
 export const useTodaysMoves = () => useMorrow(useShallow(todaysMoves));
 export const useConsistency = () => useMorrow(useShallow(consistency));
 export const useLatestBook = () => useMorrow(latestBook);

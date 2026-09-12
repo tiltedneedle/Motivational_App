@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ANALYSIS_ORDER,
   ANALYSIS_TITLES,
-  CORE_ANALYSES,
+  analysisPlan,
   followUpPrompt,
   framingSet,
   scoreSpecificity,
@@ -22,11 +22,9 @@ import {
 import { Body, Chip, InkButton, Label, Question, Statement, Stone, Studio, TextButton, TopBar, UserField, accent, day } from '@morrow/ui';
 import { analysesFor, useGoals, useMorrow } from '../src/store';
 
-/** Which analyses this goal gets, on this track, at this rank. */
-export function analysisPlan(rank: number, track: 'starter' | 'full'): AnalysisKind[] {
-  if (track === 'full' || rank < 3) return ANALYSIS_ORDER;
-  return CORE_ANALYSES;
-}
+// The plan of analyses per goal lives in core now (`firstRunStep` needs it
+// too); re-exported so the screens that import it from here keep working.
+export { analysisPlan };
 
 /** PRD 7.2: the Full track's soft floor. Polish, never an error. */
 const FULL_FLOOR = 600;

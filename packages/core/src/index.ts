@@ -22,3 +22,4 @@ export * from './engines/writing';
 export * from './engines/coach';
 export * from './ai/provider';
 export * from './engines/review';
+export * from './engines/firstrun';

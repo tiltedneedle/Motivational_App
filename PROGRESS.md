@@ -53,7 +53,7 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
       same place on every screen that is not Today — the Interview's Back
       undoes one answer and keeps the rest — a "where you are" label on the
       first-run path, and the first Today explaining its stone and its check
-      once (166 e2e)
+      once (173 e2e)
 - [x] 26. Supabase, as far as the CLI-free parts go: the project's URL and
       publishable key in `apps/mobile/.env`, `pnpm db:push` / `pnpm db:find`
       (the direct host is IPv6-only; the pooler is in Singapore), the build in
@@ -1007,8 +1007,9 @@ The user, looking at the app fresh: "the UI seems very complex, there doesn't se
 - **The Interview's Back undoes one answer and keeps the rest** (§7.1: "Back always keeps answers"); a history of states in the screen, popped one at a time, and on the first question it leaves.
 - **Back on a stone is the previous stone** — this goal's, or the last of the goal before — with its line still on it. The stones replace each other on the stack so the path does not pile up, which meant the router's own back from stone 3 landed on the order screen, two stones ago.
 - **The first stone says what a stone is**, once: five questions, one line each, the chips are ways in, the line is yours. And the "where you are" labels say the place — the read-back, the order, the Portrait, the seal — not a sitting number, because the sittings are a pace offered, not a wall, and somebody doing it all in one evening was being told they were on Sitting 3.
+- **Halfway along, the app opens on the next step.** `firstRunStep` (core, tested) knows where somebody is — the Interview, the Fifteen, the order and the title, the first unwritten stone, the Portrait and the seal — and Welcome's one button and a Bookless Today both point at it, with one line about where they are ("2 of 10 stones are written. The rest are where you left them."). Somebody who named goals one night and came back the next used to be offered "Begin tonight" and the Interview again, or a Today with a goal row and nothing to do on it. Two bugs the e2e for this surfaced: Today, still mounted under the path, pushed the paywall over the Portrait the moment the last stone built the first plan (its effect runs only while Today is in front now); and a dawn brief written before the plan existed named no first move all day (rewritten once there is one).
 - **The first Today explains itself once:** what the Now stone is, the tap and the drag, what the coral check does in the evening, where the rest lives. "Got it" and it never comes back (`profile.todayIntroSeen`, on the device).
-- The e2e suite walks all of it (166): the three pages and their Back and Skip, the name carried through, Consent's Back, the Interview's undo, the card and its dismissal surviving a reload.
+- The e2e suite walks all of it (173): the three pages and their Back and Skip, the name carried through, Consent's Back, the Interview's undo, the card and its dismissal surviving a reload.
 
 What this does not do: change the shape of the path itself. Three sittings, five stones, a seal — that is the studied program and the reason the app exists (§2). It is now possible to see where you are on it and to step back along it.
 

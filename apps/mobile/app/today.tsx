@@ -19,6 +19,7 @@ import {
   returnsLetter,
   scheduleLabel,
   sourceLineFor,
+  firstRunCaption,
 } from '@morrow/core';
 import {
   Body,
@@ -51,6 +52,7 @@ import { hasSupabase } from '../src/supabase';
 import {
   entitlementOf,
   useConsistency,
+  useFirstRun,
   useGoals,
   useLatestBook,
   useMorrow,
@@ -78,6 +80,7 @@ export default function Today() {
   const removeEvidence = useMorrow((s) => s.removeEvidence);
   const makeBrief = useMorrow((s) => s.makeBrief);
   const setProfile = useMorrow((s) => s.setProfile);
+  const firstRun = useFirstRun();
 
   const today = dayOf(new Date(), state.profile.dayBoundaryHour);
   const intendedMoveId = state.days[today]?.intentionMoveId ?? null;
@@ -103,9 +106,13 @@ export default function Today() {
    */
   const moment = paywallMoment(entitlementOf(state, today));
   useEffect(() => {
-    if (!state.hydrated || !moment) return;
+    // Only while Today is the screen in front. Today stays mounted under the
+    // path once it has been visited, and the moment the last stone built the
+    // first plan this effect pushed the paywall over the Portrait — a screen
+    // Today had no business interrupting.
+    if (!state.hydrated || !moment || !focused) return;
     router.push(`/paywall?moment=${moment}&from=/today`);
-  }, [state.hydrated, moment, router]);
+  }, [state.hydrated, moment, router, focused]);
   const intendedMove = intendedMoveId
     ? state.plans.flatMap((p) => p.moves).find((m) => m.id === intendedMoveId)
     : undefined;
@@ -140,14 +147,25 @@ export default function Today() {
 
   const plansById = useMemo(() => new Map(state.plans.map((p) => [p.goalId, p])), [state.plans]);
 
-  if (!book && goals.length === 0) {
+  /*
+    No Book yet. Whether nothing has been written or half of it has, Today is
+    not a Today — there is no plan to draw a Now card from — so it is the
+    path: where you are on it, and the one button to the next step. It used
+    to show the full screen to somebody with goals and no Book: a goal row,
+    no Now, no way to the stones.
+  */
+  if (!book) {
     return (
       <Studio testID="screen-today">
         <SafeAreaView style={{ flex: 1, padding: 22, justifyContent: 'center', gap: 14 }}>
-          <Stone size={96} domain="health" polish={0.4} sweep={!reduced && focused} style={{ alignSelf: 'center', marginBottom: 10 }} />
-          <Statement>Nothing here yet, and that is the right starting point.</Statement>
-          <Body>Three evenings from now there will be a Book, a plan, and a first move for the morning.</Body>
-          <InkButton testID="today-begin" label="Begin the Interview" onPress={() => router.push('/consent')} />
+          <Stone size={96} domain={goals[0]?.domain ?? 'health'} polish={firstRun.step === 'interview' ? 0.4 : 0.7} sweep={!reduced && focused} style={{ alignSelf: 'center', marginBottom: 10 }} />
+          <Statement testID="today-path">{firstRun.step === 'interview' ? 'Nothing here yet, and that is the right starting point.' : 'Your Book is not finished yet.'}</Statement>
+          <Body>
+            {firstRun.step === 'interview'
+              ? 'Three evenings from now there will be a Book, a plan, and a first move for the morning.'
+              : firstRunCaption(firstRun, goals.length)}
+          </Body>
+          <InkButton testID="today-begin" label={firstRun.label} onPress={() => router.push(firstRun.route)} />
           {hasSupabase && !state.account ? (
             <TextButton testID="today-bring-back" label="Bring my Book back from my account" onPress={() => router.push('/account')} />
           ) : null}

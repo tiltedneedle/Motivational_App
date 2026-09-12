@@ -12,8 +12,9 @@ import { useIsFocused, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { firstRunCaption } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Rise, Statement, Stone, Studio, TextButton, UserField, day, useReducedMotion } from '@morrow/ui';
-import { useLatestBook, useMorrow } from '../src/store';
+import { useFirstRun, useLatestBook, useMorrow } from '../src/store';
 import { hasSupabase } from '../src/supabase';
 
 const SITTINGS: { when: string; what: string; long: string }[] = [
@@ -35,19 +36,25 @@ export default function Welcome() {
   const book = useLatestBook();
   const profile = useMorrow((s) => s.profile);
   const account = useMorrow((s) => s.account);
+  const goals = useMorrow((s) => s.goals);
   const setProfile = useMorrow((s) => s.setProfile);
   const reduced = useReducedMotion();
   const focused = useIsFocused();
   // Somebody with a Book has read all this; they land on the last page,
   // where the way back to Today is.
-  const [page, setPage] = useState(book ? PAGES - 1 : 0);
+  // Halfway along — goals named, the Fifteen written, some stones — is not
+  // the start. Welcome's one button goes to the next step of the path, and
+  // somebody who has begun lands on the last page, where it is.
+  const step = useFirstRun();
+  const begun = step.step !== 'interview';
+  const [page, setPage] = useState(book || begun ? PAGES - 1 : 0);
   const [name, setName] = useState(profile.displayName);
 
   const next = () => setPage((p) => Math.min(PAGES - 1, p + 1));
   const begin = () => {
     const trimmed = name.trim();
     if (trimmed !== profile.displayName) setProfile({ displayName: trimmed });
-    router.push(book ? '/today' : '/consent');
+    router.push(book ? '/today' : step.route);
   };
 
   return (
@@ -103,7 +110,12 @@ export default function Welcome() {
 
           {page === 2 ? (
             <Rise key="p2" index={0} reducedMotion={reduced} style={{ gap: 22 }}>
-              <Statement testID="welcome-page-2">{book ? 'Welcome back.' : 'Last thing before we start.'}</Statement>
+              <Statement testID="welcome-page-2">{book || begun ? 'Welcome back.' : 'Last thing before we start.'}</Statement>
+              {!book && begun ? (
+                <Body testID="welcome-resume" style={{ color: day.ink }}>
+                  {firstRunCaption(step, goals.length)}
+                </Body>
+              ) : null}
               <UserField
                 testID="welcome-name"
                 label="What should the coach call you? (optional)"
@@ -149,7 +161,7 @@ export default function Welcome() {
             <InkButton testID="welcome-next" label="Next" onPress={next} />
           ) : (
             <>
-              <InkButton testID="welcome-begin" label={book ? 'Back to today' : 'Begin tonight'} onPress={begin} />
+              <InkButton testID="welcome-begin" label={book ? 'Back to today' : begun ? step.label : 'Begin tonight'} onPress={begin} />
               {book ? null : <TextButton testID="welcome-have-book" label="I already have a Book" onPress={() => router.push('/today')} />}
               {/*
                 A new phone (PRD §7.12): the one door back to a Book kept on the
