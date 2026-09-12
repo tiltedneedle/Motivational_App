@@ -13,6 +13,7 @@ import { chromium } from 'playwright';
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { createRequire } from 'node:module';
+import { PNG } from 'pngjs';
 import { join, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -423,6 +424,28 @@ async function main() {
         await tap('wallpaper-save');
         const got = await download;
         check('the capture is a PNG', Boolean(got && /\.png$/.test(got.suggestedFilename())), got ? got.suggestedFilename() : 'no download');
+        // Not only that a file arrived: what is in it. Lock-screen pixels,
+        // the night ground, the stone in its colour and the line in ink —
+        // html2canvas can produce a blank sheet without a word of complaint.
+        if (got) {
+          try {
+            const png = PNG.sync.read(await readFile(await got.path()));
+            check('at lock-screen pixels', png.width === 1170 && png.height === 2532, `${png.width}×${png.height}`);
+            let stone = 0;
+            let ink = 0;
+            for (let i = 0; i < png.data.length; i += 16) {
+              const r = png.data[i];
+              const g = png.data[i + 1];
+              const b = png.data[i + 2];
+              if (r > 170 && g < 120 && b < 110) stone += 1;
+              if (r > 200 && g > 200 && b > 190) ink += 1;
+            }
+            check('with the stone on it', stone > 200, `${stone} stone-coloured samples`);
+            check('and the line in ink', ink > 2000, `${ink} ink samples`);
+          } catch (err) {
+            check('the capture can be read back', false, err instanceof Error ? err.message : String(err));
+          }
+        }
         await tap('wallpaper-back');
         await page.waitForTimeout(400);
         check('and Back returns to the Book', await seen('screen-book'));
