@@ -94,10 +94,16 @@ Everything runs on local fallbacks without one. To go beyond them:
 
 ### Setting the Supabase project up, once
 
-1. `supabase link --project-ref <ref>`, then `supabase db push` (the one migration) and `supabase functions deploy`.
-2. Secrets for the functions: `supabase secrets set ANTHROPIC_API_KEY=… FAL_KEY=…`. The service-role key and the anon key are already in the functions' environment.
+1. The schema. With the CLI: `supabase link --project-ref <ref>`, then `supabase db push`. Without it — the CLI wants `supabase login`, and the database only wants its password — `pnpm db:push` applies whatever is in `supabase/migrations/` that the project has not seen and records it where the CLI looks, so the two never fight:
+
+   ```bash
+   SUPABASE_REF=<ref> SUPABASE_REGION=<pooler region> PGPASSWORD='<database password>' pnpm db:push
+   ```
+
+   The region is the session pooler's (`aws-0-<region>.pooler.supabase.com`; the dashboard's *Connect* panel shows it, or `pnpm db:find` with the same variables tries each one) — the direct `db.<ref>.supabase.co` host is IPv6-only. The password goes in the environment of that one command and nowhere else.
+2. The functions: `supabase functions deploy` (this one does need the CLI signed in). Secrets for them: `supabase secrets set ANTHROPIC_API_KEY=… FAL_KEY=…`. The service-role key and the anon key are already in the functions' environment; neither belongs in the app or this repo.
 3. Authentication → Email: the app asks for a **six-digit code**, so the *Magic Link* email template must carry `{{ .Token }}` rather than only the link. Authentication → Providers → Apple: enable it with the bundle id `app.morrow.client` as the client id (native sign-in needs no secret).
-4. Put the project URL and anon key in the app's environment (`EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`) — `apps/mobile/.env` works for `expo start` and `expo run:*`.
+4. Put the project URL and the publishable (anon) key in the app's environment (`EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`) — `apps/mobile/.env` works for `expo start`, `expo run:*` and `pnpm build:web`. The tests build with `pnpm build:web:offline`, which blanks every `EXPO_PUBLIC_*` so `pnpm verify` never reaches the network.
 5. The hard delete: schedule a call to the `delete-account` sweep daily if you want it on the clock (it also runs on every call), e.g. a pg_cron job hitting the function, or leave it: every close of an account runs the sweep for the ones whose week is up.
 
 ## Layout
