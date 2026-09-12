@@ -263,11 +263,11 @@ export function bookToText(book: BookVersion, boundaryHour = 3): string {
     for (const l of c.lines) {
       out.push(`  ${l.kind}${l.framingLabel ? ` (${l.framingLabel})` : ''}`);
       out.push(`  ${l.text}`);
-      if (l.paragraph) out.push(`  ${l.paragraph}`);
       if (l.text2) {
         const half = thenHalf(l.text2);
         out.push(`  ${half.framing} ${half.act}`);
       }
+      if (l.paragraph) out.push(`  ${l.paragraph}`);
     }
     for (const m of c.memories) out.push(`  from before: ${m}`);
     out.push('');

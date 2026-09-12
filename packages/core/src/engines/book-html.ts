@@ -97,7 +97,7 @@ export function bookToHtml(book: BookVersion, boundaryHour = 3): string {
           const half = l.text2 ? thenHalf(l.text2) : null;
           const then = half ? `<p class="theirs then"><span class="framing">${half.framing}</span> ${escapeHtml(half.act)}</p>` : '';
           const paragraph = l.paragraph ? `<p class="theirs more">${escapeHtml(l.paragraph)}</p>` : '';
-          return `<div class="line"><div class="label">${label}</div><p class="theirs">${escapeHtml(l.text)}</p>${paragraph}${then}</div>`;
+          return `<div class="line"><div class="label">${label}</div><p class="theirs">${escapeHtml(l.text)}</p>${then}${paragraph}</div>`;
         })
         .join('');
       return `<section class="chapter"><hr class="rule" /><h2>${chapterName(c.name, c.nameAuthored !== false)}</h2>${lines}</section>`;

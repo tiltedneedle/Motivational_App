@@ -147,13 +147,13 @@ export default function Reading() {
                       {l.framingLabel ? ` · ${l.framingLabel}` : ''}
                     </Label>
                     <UserText style={{ fontSize: 17, lineHeight: 27, color: paper.ink }}>{l.text}</UserText>
-                    {l.paragraph ? (
-                      <UserText style={{ fontSize: 15, lineHeight: 24, color: paper.ink2 }}>{l.paragraph}</UserText>
-                    ) : null}
                     {l.text2 ? (
                       <UserText italic framing={thenHalf(l.text2).framing} style={{ fontSize: 16, lineHeight: 25, color: paper.ink2 }}>
                         {thenHalf(l.text2).act}
                       </UserText>
+                    ) : null}
+                    {l.paragraph ? (
+                      <UserText style={{ fontSize: 15, lineHeight: 24, color: paper.ink2 }}>{l.paragraph}</UserText>
                     ) : null}
                   </View>
                 ))}
