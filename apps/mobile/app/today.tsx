@@ -3,7 +3,7 @@
  * Every goal is a stone; the stone is the check control.
  */
 import { useIsFocused, useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -38,6 +38,8 @@ import {
   UserText,
   accent,
   day,
+  useHover,
+  webHover,
   radius,
   shadow,
   type as fonts,
@@ -264,16 +266,11 @@ export default function Today() {
                 const doneCount = plan?.moves.filter((m) => m.status === 'done').length ?? 0;
                 const pct = total ? doneCount / total : 0;
                 return (
-                  <Pressable
+                  <GoalStone
                     key={g.id}
                     testID={`goal-chip-${g.id}`}
-                    accessibilityRole="button"
                     accessibilityLabel={`${g.title}, ${Math.round(pct * 100)} percent`}
                     onPress={() => router.push(`/goal?id=${g.id}`)}
-                    // Four of these have to share a 320-point screen with
-                    // 44 points of margin: a fixed 78 each did not, and the
-                    // fourth stone was pushed off the right edge.
-                    style={{ alignItems: 'center', gap: 8, width: 80 }}
                   >
                     <Ring size={62} progress={pct} color={domainMeta(g.domain).hex} width={3} track={day.line2}>
                       <Stone size={42} domain={g.domain} polish={0.5 + pct * 0.5} />
@@ -281,7 +278,7 @@ export default function Today() {
                     <Text numberOfLines={2} style={{ fontFamily: fonts.sansMedium, fontSize: 12, lineHeight: 15, color: day.ink2, textAlign: 'center' }}>
                       {g.title}
                     </Text>
-                  </Pressable>
+                  </GoalStone>
                 );
               })}
               </ScrollView>
@@ -594,46 +591,31 @@ export default function Today() {
         */}
         <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 18, paddingBottom: 10, gap: 12 }}>
           <View pointerEvents="box-none" style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 10 }}>
-            <Pressable
+            <FloatingButton
               testID="new-move-button"
-              accessibilityRole="button"
               accessibilityLabel="A new move, or something to keep"
               onPress={() => router.push('/new-move')}
-              style={({ pressed }) => ({
-                width: 50,
-                height: 50,
-                borderRadius: 25,
-                backgroundColor: day.surface,
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderWidth: 1,
-                borderColor: day.line2,
-                transform: [{ scale: pressed ? 0.95 : 1 }],
-                ...(Platform.OS === 'web' ? webOnlyStyle({ boxShadow: shadow.cardWeb }) : shadow.card),
-              })}
+              size={50}
+              backgroundColor={day.surface}
+              borderColor={day.line2}
+              shadowWeb={shadow.cardWeb}
+              shadowWebHover="0 12px 28px rgba(23,24,28,0.16)"
+              shadowNative={shadow.card}
             >
               <Text style={{ color: day.ink, fontSize: 26, lineHeight: 30, fontFamily: fonts.sansMedium }}>+</Text>
-            </Pressable>
-            <Pressable
+            </FloatingButton>
+            <FloatingButton
               testID="seal-day-button"
-              accessibilityRole="button"
               accessibilityLabel="Seal the day"
               onPress={() => router.push('/seal-day')}
-              style={({ pressed }) => ({
-                width: 58,
-                height: 58,
-                borderRadius: 29,
-                backgroundColor: accent.coral,
-                alignItems: 'center',
-                justifyContent: 'center',
-                transform: [{ scale: pressed ? 0.95 : 1 }],
-                ...(Platform.OS === 'web'
-                  ? webOnlyStyle({ boxShadow: '0 10px 28px rgba(234,75,46,0.35)' })
-                  : { shadowColor: accent.coral, shadowOpacity: 0.35, shadowRadius: 18, shadowOffset: { width: 0, height: 10 } }),
-              })}
+              size={58}
+              backgroundColor={accent.coral}
+              shadowWeb="0 10px 28px rgba(234,75,46,0.35)"
+              shadowWebHover="0 14px 34px rgba(234,75,46,0.48)"
+              shadowNative={{ shadowColor: accent.coral, shadowOpacity: 0.35, shadowRadius: 18, shadowOffset: { width: 0, height: 10 } }}
             >
               <Text style={{ color: '#FFFFFF', fontSize: 22, lineHeight: 26, fontFamily: fonts.sansBold }}>✓</Text>
-            </Pressable>
+            </FloatingButton>
           </View>
           <View
             accessibilityRole="tablist"
@@ -661,13 +643,102 @@ export default function Today() {
   );
 }
 
+/** The round buttons above the tab bar: a lift and a deeper shadow under a pointer, a press down. */
+function FloatingButton({
+  children,
+  onPress,
+  accessibilityLabel,
+  testID,
+  size,
+  backgroundColor,
+  borderColor,
+  shadowWeb,
+  shadowWebHover,
+  shadowNative,
+}: {
+  children: ReactNode;
+  onPress: () => void;
+  accessibilityLabel: string;
+  testID?: string;
+  size: number;
+  backgroundColor: string;
+  borderColor?: string;
+  shadowWeb: string;
+  shadowWebHover: string;
+  shadowNative: Record<string, unknown>;
+}) {
+  const { hovered, hoverProps } = useHover();
+  return (
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      onPress={onPress}
+      {...hoverProps}
+      style={({ pressed }) => ({
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        backgroundColor,
+        alignItems: 'center',
+        justifyContent: 'center',
+        ...(borderColor ? { borderWidth: 1, borderColor } : {}),
+        transform: [{ translateY: hovered && !pressed ? -2 : 0 }, { scale: pressed ? 0.95 : 1 }],
+        ...(Platform.OS === 'web'
+          ? { ...webOnlyStyle({ boxShadow: hovered && !pressed ? shadowWebHover : shadowWeb }), ...webHover.transition }
+          : shadowNative),
+      })}
+    >
+      {children}
+    </Pressable>
+  );
+}
+
+/** A goal's stone on the row: a pressable that rises a little under a pointer. */
+function GoalStone({
+  children,
+  onPress,
+  accessibilityLabel,
+  testID,
+}: {
+  children: ReactNode;
+  onPress: () => void;
+  accessibilityLabel: string;
+  testID?: string;
+}) {
+  const { hovered, hoverProps } = useHover();
+  return (
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      onPress={onPress}
+      {...hoverProps}
+      // Four of these have to share a 320-point screen with 44 points of
+      // margin: a fixed 78 each did not, and the fourth stone was pushed
+      // off the right edge.
+      style={({ pressed }) => ({
+        alignItems: 'center',
+        gap: 8,
+        width: 80,
+        transform: [{ translateY: hovered && !pressed ? -2 : 0 }, { scale: pressed ? 0.96 : 1 }],
+        ...(Platform.OS === 'web' ? webHover.transition : {}),
+      })}
+    >
+      {children}
+    </Pressable>
+  );
+}
+
 function TabButton({ label, active, onPress, testID }: { label: string; active?: boolean; onPress: () => void; testID?: string }) {
+  const { hovered, hoverProps } = useHover();
   return (
     <Pressable
       testID={testID}
       accessibilityRole="tab"
       aria-selected={Boolean(active)}
       onPress={onPress}
+      {...hoverProps}
       style={({ pressed }) => ({
         flex: 1,
         minWidth: 0,
@@ -675,8 +746,10 @@ function TabButton({ label, active, onPress, testID }: { label: string; active?:
         borderRadius: 23,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: active ? day.surface2 : 'transparent',
+        // The pill under the active tab; a fainter one under the pointer.
+        backgroundColor: active ? day.surface2 : hovered ? day.line2 : 'transparent',
         opacity: pressed ? 0.7 : 1,
+        ...(Platform.OS === 'web' ? webHover.transition : {}),
       })}
     >
       <Text numberOfLines={1} style={{ fontFamily: active ? fonts.sansSemi : fonts.sansMedium, fontSize: 13, lineHeight: 16, color: active ? day.ink : day.ink2 }}>

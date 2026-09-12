@@ -198,6 +198,33 @@ export function webOnlyStyle(style: Record<string, unknown>): Record<string, nev
 
 export const space = [0, 4, 8, 12, 16, 22, 32, 48, 64] as const;
 
+/**
+ * The pointer's studio (PRD §8.5, for the web build only).
+ *
+ * A phone has no hover, so the design system has none — but the same bundle
+ * runs in a browser, where a pointer that changes nothing reads as a page
+ * that is not working. These are the web's answers: a short transition on
+ * the things a pointer can rest on, and a lift while it does. Native ignores
+ * every key here; react-native-web turns them into CSS.
+ */
+export const webHover = {
+  /** Spread into any hoverable control's style: what animates, and how fast. */
+  transition: webOnlyStyle({
+    transitionProperty: 'transform, box-shadow, border-color, background-color, color, opacity',
+    transitionDuration: '160ms',
+    transitionTimingFunction: 'cubic-bezier(0.2, 0.7, 0.2, 1)',
+  }),
+  /** The lift under a resting pointer: a point up, and a shadow to say so. */
+  lift: webOnlyStyle({
+    transform: [{ translateY: -1 }],
+    boxShadow: '0 4px 12px rgba(23,24,28,0.10)',
+  }),
+  liftNight: webOnlyStyle({
+    transform: [{ translateY: -1 }],
+    boxShadow: '0 4px 12px rgba(0,0,0,0.45)',
+  }),
+};
+
 export const radius = {
   chip: 999,
   field: 16,

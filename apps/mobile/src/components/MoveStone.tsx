@@ -6,9 +6,9 @@
  * must never be the only way to say it.
  */
 import { useState } from 'react';
-import { Animated, Pressable, View } from 'react-native';
+import { Animated, Platform, Pressable, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { Ring, Socket, Stone, accent, day } from '@morrow/ui';
+import { Ring, Socket, Stone, accent, day, useHover, webHover } from '@morrow/ui';
 import { plural, type DomainId } from '@morrow/core';
 import { feelPark, feelSeat } from '../feel';
 
@@ -41,6 +41,7 @@ export function MoveStone({
   testID,
   reducedMotion = false,
 }: MoveStoneProps) {
+  const { hovered, hoverProps } = useHover();
   const [dy] = useState(() => new Animated.Value(0));
   const [hint] = useState(() => new Animated.Value(0));
   const socket = size * 1.35;
@@ -135,7 +136,12 @@ export function MoveStone({
             onPark();
           }}
           delayLongPress={420}
-          style={{ padding: 2 }}
+          {...hoverProps}
+          style={{
+            padding: 2,
+            transform: [{ scale: hovered ? 1.04 : 1 }],
+            ...(Platform.OS === 'web' ? webHover.transition : {}),
+          }}
         >
           {steps ? (
             <Ring

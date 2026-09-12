@@ -5,7 +5,7 @@
  * component that sets the serif, and it is the only one the user's own words go
  * through. If a screen wants to render app prose in the serif, it cannot.
  */
-import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
   AccessibilityInfo,
   ActivityIndicator,
@@ -22,7 +22,24 @@ import {
   type ViewStyle,
 } from 'react-native';
 import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
-import { accent, day, focusRing, ground, inkEdge, isDark, motion, night, radius, shadow, size, subscribeDark, type as fonts, webOnlyStyle, type Palette } from './tokens';
+import { accent, day, focusRing, ground, inkEdge, isDark, motion, night, radius, shadow, size, subscribeDark, type as fonts, webHover, webOnlyStyle, type Palette } from './tokens';
+
+/**
+ * Hover, on the web only. Returns the props to spread onto a Pressable and
+ * whether the pointer is on it right now; on a phone the events never fire
+ * and `hovered` stays false, so nothing here costs a touch screen anything.
+ */
+export function useHover(): { hovered: boolean; hoverProps: { onHoverIn: () => void; onHoverOut: () => void } } {
+  const [hovered, setHovered] = useState(false);
+  const hoverProps = useMemo(() => ({ onHoverIn: () => setHovered(true), onHoverOut: () => setHovered(false) }), []);
+  return { hovered: Platform.OS === 'web' && hovered, hoverProps };
+}
+
+/** The transition and, when the pointer rests, the lift — as one style object. */
+export function hoverStyle(hovered: boolean, dark: boolean): Record<string, never> {
+  if (Platform.OS !== 'web') return {} as Record<string, never>;
+  return { ...webHover.transition, ...(hovered ? (dark ? webHover.liftNight : webHover.lift) : {}) } as Record<string, never>;
+}
 import { splitQuoted } from './quoted';
 
 export const PaletteContext = React.createContext<{ p: Palette; dark: boolean }>({ p: day, dark: false });
@@ -436,6 +453,7 @@ export function Chip({
   style?: StyleProp<ViewStyle>;
 }) {
   const { p, dark } = usePalette();
+  const { hovered, hoverProps } = useHover();
   const on = selected === true;
   const kind = role ?? (selected === undefined ? 'button' : 'radio');
   const bg = on ? p.ink : ghost ? 'transparent' : p.surface;
@@ -444,6 +462,7 @@ export function Chip({
     <Pressable
       testID={testID}
       onPress={onPress}
+      {...hoverProps}
       accessibilityRole={kind}
       aria-checked={kind === 'button' ? undefined : on}
       accessibilityLabel={label}
@@ -457,12 +476,14 @@ export function Chip({
           // A hairline on the unselected chip lifts it off the lit ground
           // without a shadow, which the studio saves for its one card.
           borderWidth: 1,
-          borderColor: on ? p.ink : ghost ? p.line : dark ? p.line2 : 'rgba(23,24,28,0.06)',
+          borderColor: on ? p.ink : hovered ? p.ink2 : ghost ? p.line : dark ? p.line2 : 'rgba(23,24,28,0.06)',
           opacity: pressed ? 0.85 : 1,
           transform: [{ scale: pressed ? 0.97 : 1 }],
           justifyContent: 'center',
           alignItems: 'center',
         },
+        // The pointer's lift, after the scale so the press still wins.
+        hoverStyle(hovered && !pressed, dark),
         style,
       ]}
     >
@@ -490,11 +511,17 @@ export function InkButton({
   style?: StyleProp<ViewStyle>;
 }) {
   const { p, dark } = usePalette();
+  const { hovered, hoverProps } = useHover();
   const EDGE = 3;
+  // Under a resting pointer the face sits one point higher on its edge, so
+  // the press has that point further to drop: a button that answers before
+  // it is pressed.
+  const lift = hovered && !disabled && !busy ? 1 : 0;
   return (
     <Pressable
       testID={testID}
       onPress={disabled || busy ? undefined : onPress}
+      {...hoverProps}
       accessibilityRole="button"
       accessibilityLabel={label}
       aria-disabled={disabled || busy}
@@ -515,7 +542,9 @@ export function InkButton({
           style={{
             borderRadius: radius.chip,
             backgroundColor: disabled ? 'transparent' : dark ? inkEdge.night : inkEdge.day,
-            paddingBottom: pressed && !disabled ? 0 : EDGE,
+            paddingBottom: pressed && !disabled ? 0 : EDGE + lift,
+            marginTop: -lift,
+            ...(Platform.OS === 'web' ? webHover.transition : {}),
           }}
         >
           <View
@@ -531,7 +560,8 @@ export function InkButton({
               borderColor: disabled ? p.line : p.ink,
               alignItems: 'center',
               justifyContent: 'center',
-              transform: [{ translateY: pressed && !disabled ? EDGE : 0 }],
+              transform: [{ translateY: pressed && !disabled ? EDGE + lift : 0 }],
+              ...(Platform.OS === 'web' ? webHover.transition : {}),
             }}
           >
             {busy ? (
@@ -565,15 +595,27 @@ export const keyboardScroll: { tabIndex?: 0 } = Platform.OS === 'web' ? { tabInd
 
 export function TextButton({ label, onPress, testID }: { label: string; onPress?: () => void; testID?: string }) {
   const { p } = usePalette();
+  const { hovered, hoverProps } = useHover();
   return (
     <Pressable
       testID={testID}
       onPress={onPress}
+      {...hoverProps}
       accessibilityRole="button"
       accessibilityLabel={label}
       style={({ pressed }) => ({ minHeight: 44, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}
     >
-      <Text style={{ fontFamily: fonts.sansMedium, fontSize: 15, lineHeight: 20, color: p.ink2 }}>{label}</Text>
+      <Text
+        style={{
+          fontFamily: fonts.sansMedium,
+          fontSize: 15,
+          lineHeight: 20,
+          color: hovered ? p.ink : p.ink2,
+          ...(Platform.OS === 'web' ? webHover.transition : {}),
+        }}
+      >
+        {label}
+      </Text>
     </Pressable>
   );
 }
