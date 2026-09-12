@@ -27,6 +27,10 @@ export const dayStudio = {
   ink3: '#62656E',
   /** Text set on a fill of `ink`: the one place white is a colour here. */
   onInk: '#FFFFFF',
+  /** The second line of text on a fill of `ink`, still legible on it. */
+  onInkSoft: '#D9D9DC',
+  /** A wash on a fill of `ink`, for a marker, not for text. */
+  onInkWash: 'rgba(255,255,255,0.18)',
   line: 'rgba(23,24,28,0.12)',
   line2: 'rgba(23,24,28,0.06)',
   scrim: 'rgba(23,24,28,0.38)',
@@ -42,6 +46,8 @@ export const night = {
   ink2: '#B4B6BC',
   ink3: '#8B8E95',
   onInk: '#17181C',
+  onInkSoft: '#44464C',
+  onInkWash: 'rgba(23,24,28,0.12)',
   line: 'rgba(255,255,255,0.14)',
   line2: 'rgba(255,255,255,0.07)',
   scrim: 'rgba(0,0,0,0.55)',

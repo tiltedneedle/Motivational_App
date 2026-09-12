@@ -139,8 +139,9 @@ export default function Interview() {
                 <Pressable
                   key={label}
                   testID={`option-${i}`}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: isSelected(label) }}
+                  // Pick at least one, so each option is a box to tick.
+                  accessibilityRole="checkbox"
+                  aria-checked={isSelected(label)}
                   onPress={() => choose(label)}
                   style={({ pressed }) => ({
                     flexDirection: 'row',
@@ -166,7 +167,7 @@ export default function Interview() {
                       borderRadius: 13,
                       alignItems: 'center',
                       justifyContent: 'center',
-                      backgroundColor: isSelected(label) ? 'rgba(255,255,255,0.18)' : 'rgba(23,24,28,0.06)',
+                      backgroundColor: isSelected(label) ? day.onInkWash : day.line2,
                     }}
                   >
                     <Text style={{ fontFamily: fonts.sansSemi, fontSize: 12, color: isSelected(label) ? day.onInk : day.ink2 }}>

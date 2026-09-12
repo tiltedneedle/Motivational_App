@@ -260,7 +260,7 @@ export default function PracticeBuilder() {
                     key={i}
                     testID={`practice-day-${i}`}
                     accessibilityRole="checkbox"
-                    accessibilityState={{ checked: on }}
+                    aria-checked={on}
                     accessibilityLabel={['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][i]}
                     onPress={() => setDays((d) => (on ? d.filter((x) => x !== i) : [...d, i]))}
                     style={{

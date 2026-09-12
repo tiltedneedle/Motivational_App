@@ -411,28 +411,41 @@ export function Readout({ children, style, testID, accessibilityLabel }: TextPro
 
 export function Chip({
   label,
-  selected = false,
+  selected,
+  role,
   ghost = false,
   onPress,
   testID,
   style,
 }: {
   label: string;
+  /** For a chip that is one of a set: which one is on. */
   selected?: boolean;
+  /**
+   * What the chip is to a screen reader. A chip with `selected` is one of a
+   * set, and a set of exclusive choices is a row of radios (the default when
+   * `selected` is given); a chip that toggles on its own is a checkbox; a
+   * chip with no `selected` is a plain button. Spelled out because
+   * "selected" on a button is not a state assistive tech can read, and
+   * react-native-web turns `accessibilityState` into nothing at all.
+   */
+  role?: 'button' | 'radio' | 'checkbox';
   ghost?: boolean;
   onPress?: () => void;
   testID?: string;
   style?: StyleProp<ViewStyle>;
 }) {
   const { p, dark } = usePalette();
-  const bg = selected ? p.ink : ghost ? 'transparent' : p.surface;
-  const fg = selected ? p.onInk : p.ink;
+  const on = selected === true;
+  const kind = role ?? (selected === undefined ? 'button' : 'radio');
+  const bg = on ? p.ink : ghost ? 'transparent' : p.surface;
+  const fg = on ? p.onInk : p.ink;
   return (
     <Pressable
       testID={testID}
       onPress={onPress}
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
+      accessibilityRole={kind}
+      aria-checked={kind === 'button' ? undefined : on}
       accessibilityLabel={label}
       style={({ pressed }) => [
         {
@@ -444,7 +457,7 @@ export function Chip({
           // A hairline on the unselected chip lifts it off the lit ground
           // without a shadow, which the studio saves for its one card.
           borderWidth: 1,
-          borderColor: selected ? p.ink : ghost ? p.line : dark ? p.line2 : 'rgba(23,24,28,0.06)',
+          borderColor: on ? p.ink : ghost ? p.line : dark ? p.line2 : 'rgba(23,24,28,0.06)',
           opacity: pressed ? 0.85 : 1,
           transform: [{ scale: pressed ? 0.97 : 1 }],
           justifyContent: 'center',
@@ -484,15 +497,27 @@ export function InkButton({
       onPress={disabled || busy ? undefined : onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
-      accessibilityState={{ disabled: disabled || busy, busy }}
-      style={[{ opacity: disabled ? 0.35 : 1 }, style]}
+      aria-disabled={disabled || busy}
+      aria-busy={busy}
+      style={style}
     >
       {({ pressed }) => (
         // The edge is a real thing under the button (PRD 8.1: "controls are
         // ink with a physical bottom edge they press into"): a darker slab
         // the face sits on and drops onto when pressed, rather than a hard
         // black shadow painted beside it.
-        <View style={{ borderRadius: radius.chip, backgroundColor: dark ? inkEdge.night : inkEdge.day, paddingBottom: pressed ? 0 : EDGE }}>
+        //
+        // Disabled is not the same button at a third of its opacity — that
+        // left "Pick at least one" at a contrast of 1.4:1, an instruction
+        // nobody could read. It is a flat face on the ground with no edge to
+        // press, and its label in the second ink.
+        <View
+          style={{
+            borderRadius: radius.chip,
+            backgroundColor: disabled ? 'transparent' : dark ? inkEdge.night : inkEdge.day,
+            paddingBottom: pressed && !disabled ? 0 : EDGE,
+          }}
+        >
           <View
             style={{
               // A floor, not a ceiling. At 200% type a fixed 58 clipped the
@@ -501,16 +526,28 @@ export function InkButton({
               paddingVertical: compact ? 9 : 14,
               paddingHorizontal: compact ? 18 : 22,
               borderRadius: radius.chip,
-              backgroundColor: p.ink,
+              backgroundColor: disabled ? p.surface2 : p.ink,
+              borderWidth: 1,
+              borderColor: disabled ? p.line : p.ink,
               alignItems: 'center',
               justifyContent: 'center',
-              transform: [{ translateY: pressed ? EDGE : 0 }],
+              transform: [{ translateY: pressed && !disabled ? EDGE : 0 }],
             }}
           >
             {busy ? (
               <ActivityIndicator color={p.onInk} />
             ) : (
-              <Text style={{ fontFamily: fonts.sansSemi, fontSize: compact ? 14 : 17, lineHeight: compact ? 20 : 22, textAlign: 'center', color: p.onInk }}>{label}</Text>
+              <Text
+                style={{
+                  fontFamily: fonts.sansSemi,
+                  fontSize: compact ? 14 : 17,
+                  lineHeight: compact ? 20 : 22,
+                  textAlign: 'center',
+                  color: disabled ? p.ink2 : p.onInk,
+                }}
+              >
+                {label}
+              </Text>
             )}
           </View>
         </View>
@@ -518,6 +555,13 @@ export function InkButton({
     </Pressable>
   );
 }
+
+/**
+ * Spread onto a ScrollView whose content has nothing focusable in it, so a
+ * keyboard on the web build can still reach it and scroll (WCAG 2.1.1). On
+ * the phones the scroll view is reachable already; the prop is web's.
+ */
+export const keyboardScroll: { tabIndex?: 0 } = Platform.OS === 'web' ? { tabIndex: 0 } : {};
 
 export function TextButton({ label, onPress, testID }: { label: string; onPress?: () => void; testID?: string }) {
   const { p } = usePalette();
@@ -831,7 +875,7 @@ export function HoldBar({
       accessibilityHint={
         screenReader ? 'Double tap to seal' : 'Press and hold until the bar fills'
       }
-      accessibilityState={{ disabled: done }}
+      aria-disabled={done}
       focusable
       onLongPress={undefined}
       onAccessibilityTap={sealDirectly}

@@ -203,7 +203,7 @@ export function SafetyGate() {
           testID="safety-continue"
           accessibilityRole="button"
           accessibilityLabel={RESOURCES_COPY.dismiss}
-          accessibilityState={{ disabled: !armed }}
+          aria-disabled={!armed}
           disabled={!armed}
           onPress={clear}
           style={({ pressed }) => ({
@@ -235,7 +235,7 @@ export function SafetyGate() {
           testID="safety-wrong"
           accessibilityRole="button"
           accessibilityLabel="This was not about me. Keep my writing."
-          accessibilityState={{ disabled: !armed }}
+          aria-disabled={!armed}
           disabled={!armed}
           onPress={reconsider}
           style={{ paddingVertical: 12, marginTop: 14, alignItems: 'center', opacity: armed ? 1 : 0.45 }}

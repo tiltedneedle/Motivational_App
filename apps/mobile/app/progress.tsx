@@ -40,6 +40,7 @@ import {
   day,
   type as fonts,
   COLUMN,
+  keyboardScroll,
 } from '@morrow/ui';
 import { useConsistency, useMorrow } from '../src/store';
 
@@ -91,7 +92,7 @@ export default function Progress() {
           <Label>Progress</Label>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18, gap: 26 }}>
+        <ScrollView {...keyboardScroll} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18, gap: 26 }}>
           {/* ---- the score */}
           <View style={{ gap: 6 }}>
             <Label>Consistency</Label>
@@ -273,6 +274,7 @@ function Almanac({ marks, today }: { marks: AlmanacMark[]; today: string }) {
               <View
                 key={m.day}
                 accessible
+                accessibilityRole="image"
                 // Spoken, so a date a person would say and a count in the
                 // right number. "2026-09-11, 1 in the ledger" is what a screen
                 // reader used to read out for every stone on the shelf.

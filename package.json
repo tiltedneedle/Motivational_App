@@ -15,13 +15,16 @@
     "test:authorship": "node scripts/check-authorship.mjs",
     "build:web": "pnpm --filter mobile export:web",
     "test:e2e": "node scripts/e2e.mjs",
-    "verify": "pnpm test:deps && pnpm test:dates && pnpm test:copy && pnpm typecheck && pnpm lint && pnpm test && pnpm test:functions && pnpm test:sql && pnpm test:migration && pnpm test:authorship && pnpm build:web && pnpm test:e2e",
+    "test:a11y": "node scripts/a11y.mjs",
+    "shots": "node scripts/shots.mjs",
+    "verify": "pnpm test:deps && pnpm test:dates && pnpm test:copy && pnpm typecheck && pnpm lint && pnpm test && pnpm test:functions && pnpm test:sql && pnpm test:migration && pnpm test:authorship && pnpm build:web && pnpm test:e2e && pnpm test:a11y",
     "web": "pnpm --filter mobile web",
     "lint": "pnpm -r lint"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
     "@types/react": "~19.2.4",
+    "axe-core": "^4.13.0",
     "playwright": "^1.56.0",
     "react": "19.2.3",
     "react-native": "0.86.3",

@@ -47,6 +47,8 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 23. An accessibility pass with axe-core over every screen, both studios
+      (`pnpm test:a11y`, in `verify`): 10 serious findings fixed, 0 left
 - [x] 22. The studio, lit (§8): the ground's light, one elevated card a screen,
       a physical ink edge, chips on hairlines, stones that cast a shadow and
       sweep, entry sequences, the tab bar with all five tabs, the Almanac as a
@@ -953,6 +955,18 @@ recogniser is the phone's own. Walked on the web build (the pane has no
 microphone, so the fallback is what was seen); the recogniser itself needs a
 phone. Expo's patch releases of the day were taken with `expo install --fix`;
 expo-doctor is 18/18 again.
+
+### Axe over every screen (2026-09-12)
+
+Step 4 of the loop — what current practice would add — with no agents to spend: an automated accessibility pass is the obvious one, and it costs a dev dependency. `scripts/a11y.mjs` loads the built bundle with the seeded store, the same 26 routes the screenshots use, and runs axe-core 4.13 (WCAG 2.1 AA + best-practice; landmark and heading rules off, since a phone screen has neither). First run: 10 serious or critical findings on 9 screens. What they were, and what was wrong underneath:
+
+- **react-native-web 0.21 turns `accessibilityState` into nothing.** Every `checked`, `selected`, `disabled`, `busy` and `expanded` the app set through `accessibilityState` was absent from the DOM — the move stones announced as checkboxes with no checked state, the track cards as radios with none, the tab bar as tabs with no selected one. The app uses RN's `aria-checked` / `aria-selected` / `aria-disabled` / `aria-busy` / `aria-expanded` props now, which are native on the phones and real attributes on the web.
+- **A chip's "selected" was a state a button cannot have.** `Chip` takes a role now: one of a set is a radio (the default when `selected` is given), a toggle is a checkbox (the mic chips, Accept, Keeping), a plain action is a button.
+- **The tab bar's tabs had no tablist**; the Almanac's 365 labelled stones had no role for the label to hang on (they are images now); three scroll views with nothing focusable inside could not be reached from a keyboard (`keyboardScroll`, a web-only `tabIndex`).
+- **A disabled ink button was the same button at 35% opacity** — "Pick at least one" measured 1.4:1, an instruction set in a colour nobody could read. Disabled is a flat face on the ground with no edge to press and its label in the second ink.
+- **The night studio caught one more:** the selected track card's description was white at 75%, which on the night studio's light ink is white on white. Two tokens — `onInkSoft`, `onInkWash` — replace every hard-coded white-on-ink, with a contrast test for both studios.
+
+Second run, both studios: 0. The pass is in `pnpm verify` after the e2e suite.
 
 ### The studio, lit (2026-09-12)
 

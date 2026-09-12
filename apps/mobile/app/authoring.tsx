@@ -46,8 +46,10 @@ export default function Authoring() {
                   accessibilityRole="radio"
                   // A radio announces `checked`, not `selected`. With only
                   // `selected` set, both tracks read as unchecked and there was
-                  // no way to hear which one you were about to start.
-                  accessibilityState={{ checked: on, selected: on }}
+                  // no way to hear which one you were about to start. As an
+                  // aria prop rather than accessibilityState because the web
+                  // build drops the latter on the floor.
+                  aria-checked={on}
                   onPress={() => setProfile({ track: t.id })}
                   style={{
                     padding: 16,
@@ -64,7 +66,7 @@ export default function Authoring() {
                       fontFamily: fonts.sans,
                       fontSize: 14,
                       lineHeight: 19,
-                      color: on ? 'rgba(255,255,255,0.75)' : day.ink2,
+                      color: on ? day.onInkSoft : day.ink2,
                     }}
                   >
                     {t.blurb}

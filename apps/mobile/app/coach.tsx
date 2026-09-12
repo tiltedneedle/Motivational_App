@@ -399,7 +399,7 @@ export default function Coach() {
                 onSubmitEditing={send}
               />
             </View>
-            <Chip testID="coach-mic" label={listening ? 'Listening' : 'Say it'} selected={listening} onPress={() => void listen()} />
+            <Chip testID="coach-mic" label={listening ? 'Listening' : 'Say it'} selected={listening} role="checkbox" onPress={() => void listen()} />
             <InkButton testID="coach-send" label="Send" onPress={send} compact />
           </View>
           {micNote ? (

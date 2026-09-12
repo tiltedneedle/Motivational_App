@@ -65,9 +65,20 @@ pnpm verify
 
 Toolchain guard, date guard, copy guard, typecheck, lint, every unit test, the
 edge-function and SQL guards, the migration against a real Postgres, the serif
-authorship guard, the web build and the end-to-end suite. Nothing ships
-without it passing. `npx expo-doctor` in `apps/mobile` checks the native
-configuration; it passes 18/18.
+authorship guard, the web build, the end-to-end suite and an axe-core
+accessibility pass over every screen. Nothing ships without it passing.
+`npx expo-doctor` in `apps/mobile` checks the native configuration; it
+passes 18/18.
+
+To look at the product rather than its tests:
+
+```bash
+pnpm shots
+```
+
+renders every screen from a seeded store at phone size into `scripts/shots/`
+(`DARK=1` for the night studio, `W=375 H=667` for a smaller phone), and
+`pnpm test:a11y` runs the same screens through axe (`DARK=1` there too).
 
 ## What needs a key
 

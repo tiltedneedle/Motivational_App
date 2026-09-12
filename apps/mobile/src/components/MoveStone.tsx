@@ -103,7 +103,7 @@ export function MoveStone({
           // "parked" and "not done yet" both announced as unchecked and a
           // screen-reader user could not tell a move they had set aside from
           // one they had not reached. The state is spelled out in the label.
-          accessibilityState={{ checked: status === 'done' }}
+          aria-checked={status === 'done'}
           accessibilityLabel={
             status === 'done'
               ? `${label}. Done.`

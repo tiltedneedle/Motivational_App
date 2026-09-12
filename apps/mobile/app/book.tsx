@@ -18,6 +18,7 @@ import {
   Studio,
   TextButton,
   UserText,
+  keyboardScroll,
   night,
   paper,
   radius,
@@ -103,6 +104,7 @@ export default function BookScreen() {
 
         {/* the paper page */}
         <ScrollView
+          {...keyboardScroll}
           testID="book-page"
           showsVerticalScrollIndicator={false}
           style={{ flex: 1, backgroundColor: paper.ground, borderRadius: radius.card }}

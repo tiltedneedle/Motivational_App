@@ -607,6 +607,7 @@ export default function Today() {
             </Pressable>
           </View>
           <View
+            accessibilityRole="tablist"
             style={{
               flexDirection: 'row',
               alignItems: 'center',
@@ -636,7 +637,7 @@ function TabButton({ label, active, onPress, testID }: { label: string; active?:
     <Pressable
       testID={testID}
       accessibilityRole="tab"
-      accessibilityState={{ selected: Boolean(active) }}
+      aria-selected={Boolean(active)}
       onPress={onPress}
       style={({ pressed }) => ({
         flex: 1,

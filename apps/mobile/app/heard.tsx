@@ -133,6 +133,7 @@ export default function Heard() {
                       testID={`keep-${i}`}
                       label={row.state === 'kept' ? 'Keeping' : 'Keep'}
                       selected={row.state === 'kept'}
+                      role="checkbox"
                       onPress={() => keep(i)}
                     />
                     <Chip testID={`drop-${i}`} label="Not a goal" ghost onPress={() => drop(i)} />

@@ -495,6 +495,7 @@ export default function Write() {
                 testID="write-mic"
                 label={listening ? 'Listening' : micNote ? 'Type instead' : 'Starting…'}
                 selected={listening}
+                role="checkbox"
                 onPress={() => {
                   if (listening) {
                     dictationRef.current.stop();

@@ -40,7 +40,7 @@ export function StorageWarning({ onExport }: { onExport?: () => void }) {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={open ? 'Hide the details' : 'Why nothing is being saved'}
-        accessibilityState={{ expanded: open }}
+        aria-expanded={open}
         onPress={() => setOpen((v) => !v)}
       >
         <Text style={{ fontFamily: fonts.sansSemi, fontSize: 15, lineHeight: 21, color: '#FFFFFF' }}>

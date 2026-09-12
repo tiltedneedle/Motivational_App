@@ -7,7 +7,7 @@
  * designer's calibrated screen is not a colour anyone else has.
  */
 import { describe, expect, it } from 'vitest';
-import { accent, day, night, paper, setDark } from '../src/tokens';
+import { accent, day, dayStudio, night, paper, setDark } from '../src/tokens';
 
 /** sRGB relative luminance, WCAG 2.x definition. */
 function luminance(hex: string): number {
@@ -164,5 +164,12 @@ describe('the night studio as dark mode', () => {
 
   it('sets white on the ink fill legibly in the day studio', () => {
     expect(ratio(day.onInk, day.ink)).toBeGreaterThanOrEqual(AA_BODY);
+  });
+
+  it('sets the second line on an ink fill legibly, in both studios', () => {
+    // A selected track card's description was white at 75% — a colour that
+    // vanished on the night studio's light ink.
+    expect(ratio(dayStudio.onInkSoft, dayStudio.ink)).toBeGreaterThanOrEqual(AA_BODY);
+    expect(ratio(night.onInkSoft, night.ink)).toBeGreaterThanOrEqual(AA_BODY);
   });
 });

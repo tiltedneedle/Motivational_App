@@ -187,6 +187,7 @@ export default function Replan() {
                         testID={`replan-accept-${i}`}
                         label={on ? 'Accepted' : 'Accept'}
                         selected={on}
+                        role="checkbox"
                         onPress={() => toggle(i)}
                       />
                       {on ? <TextButton testID={`replan-keep-${i}`} label="Keep mine" onPress={() => toggle(i)} /> : null}

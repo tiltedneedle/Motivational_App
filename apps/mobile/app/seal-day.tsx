@@ -92,7 +92,7 @@ export default function SealDay() {
               multiline
             />
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <Chip testID="seal-mic" label={listening ? 'Listening' : 'Say it instead'} selected={listening} onPress={() => void listen()} />
+              <Chip testID="seal-mic" label={listening ? 'Listening' : 'Say it instead'} selected={listening} role="checkbox" onPress={() => void listen()} />
               {micNote ? (
                 <Label testID="seal-mic-note" style={{ color: night.ink3, flex: 1 }}>
                   {micNote}

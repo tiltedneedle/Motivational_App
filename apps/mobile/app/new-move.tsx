@@ -123,8 +123,8 @@ export default function NewMove() {
                         <Pressable
                           key={s}
                           testID={`new-move-pick-${i}`}
-                          accessibilityRole="button"
-                          accessibilityState={{ selected: on }}
+                          accessibilityRole="radio"
+                          aria-checked={on}
                           onPress={() => {
                             setPicked(on ? null : s);
                             setProblem(null);
