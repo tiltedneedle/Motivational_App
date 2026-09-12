@@ -15,6 +15,7 @@ import {
   quotable,
   MIN_AUTHORSHIP_RATIO,
   authorshipRatio,
+  sourceLineFor,
   bookToHtml,
   bookToText,
   SealRefused,
@@ -282,6 +283,23 @@ describe('plan validation', () => {
       { today: '2026-09-09', newId: sequentialIds() },
     );
     expect(plan.milestones[0]!.proof).toBe(monitoring.line);
+  });
+
+  it('shows one sentence under a move, not the whole Full-track paragraph', () => {
+    // On Full the stone carries a paragraph; the plan is cut from it, and
+    // "from …" under each of nine moves used to print all of it nine times.
+    const full = analysis({
+      id: 'a-full',
+      line: 'Tuesday, Thursday, Saturday at 6:40, out the back door',
+      paragraph:
+        'Shoes by the door the night before. Tuesday, Thursday and Saturday at 6:40, out the back door. If the morning is lost, the ten-minute version to the first bridge still counts.',
+    });
+    const fromLine = { id: 'm1', goalId: 'g1', milestoneId: null, title: 'Tuesday: at 6:40, out the back door', effort: 'S', energy: 'high', ifThen: null, scheduledFor: null, week: 1, status: 'todo', completedAt: null, minVersion: null, sourceLineId: 'a-full', order: 0 } as const;
+    expect(sourceLineFor(fromLine as never, [full])).toBe(full.line);
+    const fromParagraph = { ...fromLine, id: 'm2', title: 'the ten-minute version to the first bridge still counts' };
+    expect(sourceLineFor(fromParagraph as never, [full])).toBe('If the morning is lost, the ten-minute version to the first bridge still counts.');
+    const elsewhere = { ...fromLine, id: 'm3', title: 'something the person typed themselves' };
+    expect(sourceLineFor(elsewhere as never, [full])).toBe(full.line);
   });
 
   it('rejects a plan whose move has no user line behind it', () => {

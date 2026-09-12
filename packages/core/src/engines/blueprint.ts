@@ -305,11 +305,28 @@ export function validatePlan(
   return problems;
 }
 
-/** Shown under every move in the Blueprint: the sentence it came from. */
+/**
+ * Shown under every move in the Blueprint: the sentence it came from.
+ *
+ * A sentence, not the stone. On the Full track the stone carries a paragraph,
+ * and printing the whole of it under each of nine moves was a wall of the
+ * same text nine times. The line is the answer and is preferred; when the
+ * move was cut from the paragraph instead, the one sentence of it that holds
+ * the move's words; failing that the line, and only then the paragraph.
+ */
 export function sourceLineFor(move: Move, analyses: GoalAnalysis[]): string | null {
   const a = analyses.find((x) => x.id === move.sourceLineId);
   if (!a) return null;
-  return a.paragraph?.trim() || a.line.trim() || null;
+  const line = a.line.trim();
+  const paragraph = a.paragraph?.trim() ?? '';
+  const norm = (s: string) => s.replace(/\s+/g, ' ').trim().toLowerCase();
+  const needle = norm(move.title).replace(/^(?:mon|tues|wednes|thurs|fri|satur|sun)day:\s*/, '');
+  if (line && (!needle || norm(line).includes(needle))) return line;
+  if (paragraph && needle) {
+    const sentence = paragraph.split(/(?<=[.!?])\s+/).find((s) => norm(s).includes(needle));
+    if (sentence) return sentence.trim();
+  }
+  return line || paragraph || null;
 }
 
 export interface ReplanChange {

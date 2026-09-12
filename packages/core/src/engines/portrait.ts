@@ -165,7 +165,7 @@ export function buildPortrait(input: PortraitInput): Portrait {
   if (missing.length) throw new PortraitIncomplete(missing);
 
   const opener = firstSentence(ideal);
-  const why = motives?.paragraph?.trim() || motives?.line?.trim() || '';
+  const why = motives?.line?.trim() || motives?.paragraph?.trim() || '';
   const obstacleText = obstacles?.line?.trim() ?? '';
   const written = obstacles?.line2?.trim() ? ifThenOf(obstacles.line, obstacles.line2) : null;
   const ifThen = written ? capitalise(written.sentence) : obstacleText;
