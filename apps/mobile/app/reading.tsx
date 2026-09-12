@@ -14,7 +14,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ANALYSIS_TITLES, bookPages, dayOf, distanceLabel, formatDay, horizonReview, plural, sealedOn, thenHalf } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Quoted, Rule, Statement, Studio, TextButton, UserText, night, paper, radius } from '@morrow/ui';
+import { Body, Chip, InkButton, Label, Quoted, Rule, Statement, Studio, TextButton, UserText, fitSentence, night, paper, radius } from '@morrow/ui';
 import { useGoals, useLatestBook, useMorrow } from '../src/store';
 
 export default function Reading() {
@@ -101,7 +101,7 @@ export default function Reading() {
             {page.kind === 'opening' ? (
               <>
                 <Label style={{ color: paper.ink3 }}>Chapter one · the Fifteen</Label>
-                <UserText testID="reading-first-sentence" style={{ fontSize: 28, lineHeight: 36, color: '#15181F' }}>
+                <UserText testID="reading-first-sentence" style={{ ...fitSentence(page.firstSentence.length), color: '#15181F' }}>
                   {page.firstSentence}
                 </UserText>
                 <UserText style={{ fontSize: 17, lineHeight: 28, color: paper.ink }}>{page.rest}</UserText>

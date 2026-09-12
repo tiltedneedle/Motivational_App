@@ -13,7 +13,7 @@ import { useRef, useState } from 'react';
 import { Platform, ScrollView, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatDay, sealedOn } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Statement, Stone, Studio, TextButton, UserText, night } from '@morrow/ui';
+import { Body, Chip, InkButton, Label, Statement, Stone, Studio, TextButton, UserText, fitLine, night } from '@morrow/ui';
 import { WALLPAPER, saveWallpaper, shareWallpaper } from '../src/wallpaper';
 import { useGoals, useLatestBook, useMorrow } from '../src/store';
 
@@ -106,7 +106,7 @@ export default function Wallpaper() {
               }}
             >
               <Stone size={44} domain={goal?.domain ?? 'health'} polish={1} />
-              <UserText testID="wallpaper-line" style={{ fontSize: 26, lineHeight: 34, color: night.ink }}>
+              <UserText testID="wallpaper-line" style={{ ...fitLine(line.length), color: night.ink }}>
                 {line}
               </UserText>
               <Label style={{ color: night.ink3 }}>{formatDay(sealedOn(book.sealedAt, boundary))}</Label>

@@ -12,11 +12,12 @@
  *   DARK=1 node scripts/shots.mjs          # the night studio pinned → scripts/shots/dark/
  *   W=375 H=667 node scripts/shots.mjs    # a smaller phone (an SE) → scripts/shots/375x667/
  *   REDUCED=1 node scripts/shots.mjs       # reduce motion on → scripts/shots/reduced/
+ *   SEED=scripts/fixtures/long-lines.json node scripts/shots.mjs   # another store → scripts/shots/<seed name>/
  */
 import { chromium } from 'playwright';
 import { createServer } from 'node:http';
 import { mkdir, readFile, stat } from 'node:fs/promises';
-import { join, extname } from 'node:path';
+import { basename, join, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '..');
@@ -25,7 +26,9 @@ const PORT = Number(process.env.PORT ?? 8798);
 const BASE = `http://localhost:${PORT}`;
 const W = Number(process.env.W ?? 390);
 const H = Number(process.env.H ?? 844);
-const SUBDIR = [W !== 390 || H !== 844 ? `${W}x${H}` : null, process.env.DARK ? 'dark' : null, process.env.REDUCED ? 'reduced' : null].filter(Boolean).join('-') || '.';
+const SEED = process.env.SEED ? join(ROOT, process.env.SEED) : join(ROOT, 'scripts', 'fixtures', 'seeded-state.json');
+const SEED_NAME = process.env.SEED ? basename(SEED, '.json') : null;
+const SUBDIR = [SEED_NAME, W !== 390 || H !== 844 ? `${W}x${H}` : null, process.env.DARK ? 'dark' : null, process.env.REDUCED ? 'reduced' : null].filter(Boolean).join('-') || '.';
 const OUT = process.env.OUT ?? join(ROOT, 'scripts', 'shots', SUBDIR);
 
 const MIME = {
@@ -114,7 +117,7 @@ const context = await browser.newContext({
 const page = await context.newPage();
 await mkdir(OUT, { recursive: true });
 
-const seed = JSON.parse(await readFile(join(ROOT, 'scripts', 'fixtures', 'seeded-state.json'), 'utf8'));
+const seed = JSON.parse(await readFile(SEED, 'utf8'));
 if (process.env.DARK) seed.state.profile.appearance = 'dark';
 await page.addInitScript((s) => {
   localStorage.setItem('morrow-v1', JSON.stringify(s));

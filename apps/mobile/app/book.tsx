@@ -17,6 +17,7 @@ import {
   Studio,
   TextButton,
   UserText,
+  fitSentence,
   keyboardScroll,
   night,
   paper,
@@ -158,7 +159,7 @@ export default function BookScreen() {
             <View testID="book-two-column" style={{ flexDirection: 'row', gap: 34 }}>
               <View style={{ flex: 1, gap: 18 }}>
               <Label style={{ color: paper.ink3 }}>Chapter one · the Fifteen</Label>
-              <UserText testID="book-first-sentence" style={{ fontSize: 28, lineHeight: 34, color: '#15181F' }}>
+              <UserText testID="book-first-sentence" style={{ ...fitSentence(book.firstSentence.length), color: '#15181F' }}>
                 {book.firstSentence}
               </UserText>
               <UserText style={{ fontSize: 17, lineHeight: 27, color: paper.ink }}>
@@ -218,7 +219,7 @@ export default function BookScreen() {
           ) : (
             <>
           <Label style={{ color: paper.ink3 }}>Chapter one · the Fifteen</Label>
-          <UserText testID="book-first-sentence" style={{ fontSize: 28, lineHeight: 34, color: '#15181F' }}>
+          <UserText testID="book-first-sentence" style={{ ...fitSentence(book.firstSentence.length), color: '#15181F' }}>
             {book.firstSentence}
           </UserText>
           <UserText style={{ fontSize: 17, lineHeight: 27, color: paper.ink }}>
