@@ -11,6 +11,7 @@
  *   OUT=some/dir node scripts/shots.mjs    # elsewhere
  *   DARK=1 node scripts/shots.mjs          # the night studio pinned → scripts/shots/dark/
  *   W=375 H=667 node scripts/shots.mjs    # a smaller phone (an SE) → scripts/shots/375x667/
+ *   REDUCED=1 node scripts/shots.mjs       # reduce motion on → scripts/shots/reduced/
  */
 import { chromium } from 'playwright';
 import { createServer } from 'node:http';
@@ -24,7 +25,7 @@ const PORT = Number(process.env.PORT ?? 8798);
 const BASE = `http://localhost:${PORT}`;
 const W = Number(process.env.W ?? 390);
 const H = Number(process.env.H ?? 844);
-const SUBDIR = [W !== 390 || H !== 844 ? `${W}x${H}` : null, process.env.DARK ? 'dark' : null].filter(Boolean).join('-') || '.';
+const SUBDIR = [W !== 390 || H !== 844 ? `${W}x${H}` : null, process.env.DARK ? 'dark' : null, process.env.REDUCED ? 'reduced' : null].filter(Boolean).join('-') || '.';
 const OUT = process.env.OUT ?? join(ROOT, 'scripts', 'shots', SUBDIR);
 
 const MIME = {
@@ -108,6 +109,7 @@ const context = await browser.newContext({
   viewport: { width: W, height: H },
   deviceScaleFactor: 2,
   colorScheme: process.env.DARK ? 'dark' : 'light',
+  reducedMotion: process.env.REDUCED ? 'reduce' : 'no-preference',
 });
 const page = await context.newPage();
 await mkdir(OUT, { recursive: true });
