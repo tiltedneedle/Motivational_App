@@ -13,6 +13,7 @@
  *   W=375 H=667 node scripts/shots.mjs    # a smaller phone (an SE) → scripts/shots/375x667/
  *   REDUCED=1 node scripts/shots.mjs       # reduce motion on → scripts/shots/reduced/
  *   SEED=scripts/fixtures/long-lines.json node scripts/shots.mjs   # another store → scripts/shots/<seed name>/
+ *   FULL=1 node scripts/shots.mjs          # the whole screen, however long it scrolls → …/full/
  */
 import { chromium } from 'playwright';
 import { createServer } from 'node:http';
@@ -28,7 +29,10 @@ const W = Number(process.env.W ?? 390);
 const H = Number(process.env.H ?? 844);
 const SEED = process.env.SEED ? join(ROOT, process.env.SEED) : join(ROOT, 'scripts', 'fixtures', 'seeded-state.json');
 const SEED_NAME = process.env.SEED ? basename(SEED, '.json') : null;
-const SUBDIR = [SEED_NAME, W !== 390 || H !== 844 ? `${W}x${H}` : null, process.env.DARK ? 'dark' : null, process.env.REDUCED ? 'reduced' : null].filter(Boolean).join('-') || '.';
+const SUBDIR =
+  [SEED_NAME, W !== 390 || H !== 844 ? `${W}x${H}` : null, process.env.DARK ? 'dark' : null, process.env.REDUCED ? 'reduced' : null, process.env.FULL ? 'full' : null]
+    .filter(Boolean)
+    .join('-') || '.';
 const OUT = process.env.OUT ?? join(ROOT, 'scripts', 'shots', SUBDIR);
 
 const MIME = {
@@ -136,8 +140,29 @@ for (const name of names) {
   await page.goto(`${BASE}${route}`, { waitUntil: 'networkidle' });
   await page.clock.runFor(1800);
   await page.waitForTimeout(700);
+  if (process.env.FULL) {
+    // The app is one full-height column with a scroll view in it, so a
+    // full-page screenshot shows only the first screenful. Grow the viewport
+    // to the tallest scroll region's content and everything lays out at
+    // once; the fixed chrome (a tab bar, a hold bar) lands at the bottom.
+    const tall = await page.evaluate(() => {
+      let max = 0;
+      for (const el of document.querySelectorAll('*')) {
+        const cs = getComputedStyle(el);
+        if ((cs.overflowY === 'auto' || cs.overflowY === 'scroll') && el.scrollHeight > el.clientHeight) {
+          max = Math.max(max, el.scrollHeight - el.clientHeight);
+        }
+      }
+      return max;
+    });
+    if (tall > 0) {
+      await page.setViewportSize({ width: W, height: H + tall + 40 });
+      await page.waitForTimeout(400);
+    }
+  }
   const file = join(OUT, `${name}.png`);
   await page.screenshot({ path: file, fullPage: true });
+  if (process.env.FULL) await page.setViewportSize({ width: W, height: H });
   console.log(`${name.padEnd(14)} ${route}`);
 }
 

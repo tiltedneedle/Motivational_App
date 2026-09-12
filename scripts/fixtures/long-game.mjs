@@ -51,7 +51,17 @@ const seededDay = s.days['2026-09-11'];
 // Move the seal back to June so the Book has a season behind it.
 s.books[0].sealedAt = `${START}T20:15:00.000Z`;
 for (const g of s.goals) g.createdAt = `${START}T19:00:00.000Z`;
+// Three months from June is mid-September: the race is two days away.
+s.goals[0].targetDate = '2026-09-14';
 for (const p of s.plans) p.createdAt = `${START}T20:20:00.000Z`;
+// The milestones fall inside the season: the first two reached in July and August, the third due with the race.
+for (const p of s.plans) {
+  const dates = ['2026-07-14', '2026-08-14', '2026-09-14'];
+  p.milestones.forEach((m, i) => {
+    m.targetDate = dates[i] ?? m.targetDate;
+    m.reachedAt = i < 2 ? `${dates[i]}T21:30:00.000Z` : null;
+  });
+}
 
 s.days = {};
 s.evidence = [];

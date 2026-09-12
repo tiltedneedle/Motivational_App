@@ -51,6 +51,7 @@ export default function GoalScreen() {
   const goBack = () => (router.canGoBack() ? router.back() : router.replace('/today'));
   const boundary = state.profile.dayBoundaryHour;
   const today = dayOf(new Date(), boundary);
+
   const twoColumn = useTwoColumn();
 
   if (!goal) {
@@ -72,6 +73,14 @@ export default function GoalScreen() {
   const analyses = analysesFor(state, goal.id);
   const plan = state.plans.find((p) => p.goalId === goal.id);
   const portrait = state.portraits.find((p) => p.goalId === goal.id);
+  // The milestone the plan is on: the first not yet reached, or the last one
+  // once they all are. "Milestone 1" ninety days in, with the first two
+  // reached in July and August, was the plan reading from the wrong page.
+  const current = plan ? (plan.milestones.find((m) => !m.reachedAt) ?? plan.milestones[plan.milestones.length - 1]) : undefined;
+  const milestoneLabel = (ms: { order: number; targetDate: string; reachedAt: string | null }) =>
+    ms.reachedAt
+      ? `Milestone ${ms.order + 1} · reached ${formatDay(dayOf(new Date(ms.reachedAt), boundary))}`
+      : `Milestone ${ms.order + 1} · by ${formatDay(ms.targetDate)}`;
   const wanted = analysisPlan(goal.rank, state.profile.track);
   const meta = domainMeta(goal.domain);
   const path = goalPath(plan, today, goal.targetDate ?? null);
@@ -284,11 +293,9 @@ export default function GoalScreen() {
                 <View style={{ gap: 10 }}>
                   <Rule />
                   <Label>The plan · every move shows the line it came from</Label>
-                  {plan.milestones.slice(0, 1).map((ms) => (
+                  {(current ? [current] : []).map((ms) => (
                     <View key={ms.id} style={{ gap: 4 }}>
-                      <Label style={{ color: accent.coralText }}>
-                        Milestone 1 · by {formatDay(ms.targetDate)}
-                      </Label>
+                      <Label style={{ color: accent.coralText }}>{milestoneLabel(ms)}</Label>
                       <Statement style={{ fontSize: 22, lineHeight: 27 }}>{ms.title}</Statement>
                       {/*
                         "In your words" is only true when a Monitoring line is
@@ -469,11 +476,9 @@ export default function GoalScreen() {
             <View style={{ gap: 10 }}>
               <Rule />
               <Label>The plan · every move shows the line it came from</Label>
-              {plan.milestones.slice(0, 1).map((ms) => (
+              {(current ? [current] : []).map((ms) => (
                 <View key={ms.id} style={{ gap: 4 }}>
-                  <Label style={{ color: accent.coralText }}>
-                    Milestone 1 · by {formatDay(ms.targetDate)}
-                  </Label>
+                  <Label style={{ color: accent.coralText }}>{milestoneLabel(ms)}</Label>
                   <Statement style={{ fontSize: 22, lineHeight: 27 }}>{ms.title}</Statement>
                   {/*
                     "In your words" is only true when a Monitoring line is
