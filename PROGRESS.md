@@ -47,6 +47,14 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 29. The account, round-tripped against the real project
+      (`pnpm test:account`, 30 checks): push, RLS from a stranger's side,
+      wipe, pull, field-by-field the same; the schema applied to the project
+      with `pnpm db:push`; only `functions deploy` / `config push` wait, on
+      the owner's CLI login
+- [x] 28. Halfway along the path the app opens on the next step
+      (`firstRunStep`): Welcome and a Bookless Today both point at it, with a
+      line about where they are; a guard that every screen has a way back
 - [x] 27. The first run, for somebody who has never used a thing like this:
       Welcome as the PRD's three screens (what it is; three evenings and what
       they make; your name and how you want to be spoken to), `← Back` in the
@@ -85,11 +93,12 @@ only tested. What is left needs a machine or a key this one does not have;
 see "Next steps".
 
 - The tree is green and committed: `pnpm verify` runs the toolchain guard,
-  typecheck, lint, 359 core tests, 47 ui tests (contrast, the quoted-span
+  typecheck, lint, 367 core tests, 47 ui tests (contrast, the quoted-span
   split, the type that fits a long line), 8 storage tests, the edge-function
   guards, the SQL structural guards, 37 checks against a real Postgres, the
-  serif authorship guard, the web build, 151 end-to-end checks and the axe
-  pass over 26 screens.
+  serif authorship guard, the way-back guard, the web build (offline), 173
+  end-to-end checks and the axe pass over 26 screens. Against the real
+  project: `pnpm test:account`, 30 more.
 - **The account's spend limit is the month's, not the run's.** The fourth
   audit was ten agents and 1.59M tokens and tripped the monthly limit with
   two verifiers still running; their lenses' findings were verified by hand.
