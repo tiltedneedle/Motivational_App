@@ -48,7 +48,7 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
 - [x] 23. An accessibility pass with axe-core over every screen, both studios
-      (`pnpm test:a11y`, in `verify`): 10 serious findings fixed, 0 left
+      (`pnpm test:a11y`, in `verify`; four more states inside e2e): 11 serious findings fixed, 0 left
 - [x] 22. The studio, lit (§8): the ground's light, one elevated card a screen,
       a physical ink edge, chips on hairlines, stones that cast a shadow and
       sweep, entry sequences, the tab bar with all five tabs, the Almanac as a
@@ -967,6 +967,8 @@ Step 4 of the loop — what current practice would add — with no agents to spe
 - **The night studio caught one more:** the selected track card's description was white at 75%, which on the night studio's light ink is white on white. Two tokens — `onInkSoft`, `onInkWash` — replace every hard-coded white-on-ink, with a contrast test for both studios.
 
 Second run, both studios: 0. The pass is in `pnpm verify` after the e2e suite.
+
+The e2e suite runs axe as well, at four states only a flow reaches — the room mid-sitting, the seal with its line written, a toast with its undo, the resources card — which found one more: `aria-modal` on a container with no dialog role (it is an `alertdialog` named by its title now). 148 checks.
 
 ### The studio, lit (2026-09-12)
 

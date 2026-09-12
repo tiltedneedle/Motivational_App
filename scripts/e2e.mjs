@@ -12,10 +12,12 @@
 import { chromium } from 'playwright';
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import { join, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '..');
+const AXE = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
 const DIST = join(ROOT, 'apps', 'mobile', 'dist');
 const PORT = Number(process.env.PORT ?? 8799);
 const BASE = `http://localhost:${PORT}`;
@@ -113,6 +115,30 @@ async function main() {
   const seen = async (id) => (await page.locator(`[data-testid="${id}"]`).count()) > 0;
   const text = async (id) => (await page.locator(`[data-testid="${id}"]`).first().innerText()).trim();
 
+  /**
+   * axe-core over the screen as it is right now. `scripts/a11y.mjs` covers
+   * every route at rest; this covers the states only a flow reaches — a room
+   * being written in, the seal bar, a toast with its undo, the safety card.
+   * Serious or critical only, the same rules as the route pass.
+   */
+  const axeSource = await readFile(AXE, 'utf8');
+  const accessible = async (name) => {
+    await page.addScriptTag({ content: axeSource });
+    const result = await page.evaluate(
+      async () =>
+        await globalThis.axe.run(document, {
+          runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'] },
+          rules: { region: { enabled: false }, 'landmark-one-main': { enabled: false }, 'page-has-heading-one': { enabled: false }, bypass: { enabled: false } },
+        }),
+    );
+    const bad = result.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+    check(
+      `axe: ${name}`,
+      bad.length === 0,
+      bad.map((v) => `${v.id} (${v.nodes[0]?.target.join(' ')})`).join('; '),
+    );
+  };
+
   try {
     // The clock is installed before the app boots so every timer is ours.
     // Pinned, not "now". The plan builder schedules from named weekdays, so an
@@ -192,6 +218,7 @@ async function main() {
       );
       const left = await text('write-remaining');
       check('the ring picks up where it stopped, not at the top', !left.startsWith('15:00'), left);
+      await accessible('the room, mid-sitting');
     }
 
     // fast-forward past the ten-minute floor
@@ -302,6 +329,7 @@ async function main() {
     check('seal screen', await seen('screen-seal-book'));
     await page.locator('[data-testid="i-will"]').fill('I will be out the back door before the kettle boils');
     await page.waitForTimeout(200);
+    await accessible('the seal, line written, before the hold');
 
     // Keyboard first, before the pointer touches it. Somebody who cannot press
     // and hold has exactly one way to seal their Book, and the guard that tells
@@ -514,6 +542,7 @@ async function main() {
       check('a capture is filed in the ledger', kept === 1, String(kept));
       check('with undo', await seen('toast-action'));
       if (await seen('toast-action')) {
+        await accessible('a toast with its undo');
         await tap('toast-action');
         await page.waitForTimeout(300);
         const after = await page.evaluate(() => {
@@ -1217,6 +1246,7 @@ async function main() {
       // double tap must not land on it and close a card nobody has read.
       await page.locator('[data-testid="safety-continue"]').click({ force: true, timeout: 2000 }).catch(() => {});
       check('a stray tap straight after cannot dismiss the card', await seen('safety-card'));
+      await accessible('the resources card');
 
       // And once it has settled, it must still be the easiest thing to press.
       await page.waitForTimeout(1100);

@@ -86,8 +86,12 @@ export function SafetyGate() {
       accessibilityViewIsModal
       // iOS reads the first; Android needs the second; the web build needs the
       // third. All three say the same thing: nothing behind this exists yet.
+      // `aria-modal` is only allowed on a dialog, so the container says what
+      // it is, and carries the card's title as its name.
       importantForAccessibility="yes"
+      role="alertdialog"
       aria-modal
+      aria-label={RESOURCES_COPY.title}
       style={{
         position: 'absolute',
         top: 0,
