@@ -1075,6 +1075,7 @@ program's actual prompt text by someone with a licensed copy.
 - 2026-09-11: the concern band softens the register whatever persona is set. Somebody who chose "fierce" on a good week did not choose to be pushed on this one, and the alternative — honouring the setting — means printing "No negotiation with yourself this morning" at the person the band exists for.
 - 2026-09-11: `Studio` holds one 560 pt column rather than each screen carrying its own max-width. Forty screens each remembering a number is forty chances to forget it, and the ground stays full-bleed so the constraint is on the writing, not on the room.
 - 2026-09-12: the account is a copy of one device, not a merge. A push upserts and then prunes what the device no longer has, so two phones each writing their own Book take turns being the copy; nothing is lost on either phone. The day a merge is built, `pushAll`'s prune is what it replaces.
+- 2026-09-12: the tab bar is Morrow's own pill on every platform for now, not expo-router's `NativeTabs`. The PRD asks for the native bar (glass on iOS 26, Material on Android, §7.14) and that is still the intent; it is native chrome that cannot be seen from this machine, moving Today, Book, Envision, Coach and You into a tab group changes what `dismissTo('/today')` means on every screen, and building it blind would mean shipping a navigation model nobody has run. It is the first thing to do on a Mac (Next steps, 1), with the e2e suite as the net.
 - 2026-09-11: the app's day, not the wall clock's, is what any screen prints. `dayOf(new Date(), boundary)` is the only definition of "today" in the product; a screen that reaches for `new Date()` to display a date is a bug even when it happens to agree.
 
 ## Next steps
@@ -1091,7 +1092,11 @@ needs either hardware or a credential.
    the safety card, Dynamic Type at 200%, the notification permission prompt
    landing at the right moment, the microphone prompt and the recogniser in
    the room, the haptics, the wallpaper landing in Photos, and dark mode
-   following the OS.
+   following the OS. Then the one piece of P1 chrome that waits on a device:
+   the native tab bar (`expo-router/unstable-native-tabs`, glass on iOS 26,
+   Material on Android) in place of Today's pill — a `(tabs)` group for
+   Today, Book, Envision, Coach and You, `dismissTo('/today')` re-pointed,
+   and the e2e suite run against the web fallback.
 2. **Wire the real providers** once the keys arrive, and confirm `guarded()`
    still refuses what it should with a real model behind it. Every one of those
    paths is currently exercised only against `LocalProvider`, and
