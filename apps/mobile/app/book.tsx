@@ -197,6 +197,9 @@ export default function BookScreen() {
                         {l.framingLabel ? ` · ${l.framingLabel}` : ''}
                       </Label>
                       <UserText style={{ fontSize: 17, lineHeight: 26, color: paper.ink }}>{l.text}</UserText>
+                      {l.paragraph ? (
+                        <UserText style={{ fontSize: 15, lineHeight: 23, color: paper.ink2 }}>{l.paragraph}</UserText>
+                      ) : null}
                       {l.text2 ? (
                         <UserText italic framing={thenHalf(l.text2).framing} style={{ fontSize: 16, lineHeight: 24, color: paper.ink2 }}>
                           {thenHalf(l.text2).act}
@@ -255,6 +258,9 @@ export default function BookScreen() {
                     {l.framingLabel ? ` · ${l.framingLabel}` : ''}
                   </Label>
                   <UserText style={{ fontSize: 17, lineHeight: 26, color: paper.ink }}>{l.text}</UserText>
+                  {l.paragraph ? (
+                    <UserText style={{ fontSize: 15, lineHeight: 23, color: paper.ink2 }}>{l.paragraph}</UserText>
+                  ) : null}
                   {l.text2 ? (
                     <UserText italic framing={thenHalf(l.text2).framing} style={{ fontSize: 16, lineHeight: 24, color: paper.ink2 }}>
                       {thenHalf(l.text2).act}

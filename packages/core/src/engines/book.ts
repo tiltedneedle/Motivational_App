@@ -73,8 +73,13 @@ export function buildChapters(input: BookInput): BookChapter[] {
           {
             kind,
             framingLabel: framingLabel(kind, goal.domain, a.framingId),
-            text: a.paragraph?.trim() || a.line.trim(),
+            // The line answers the question; on the Full track the paragraph
+            // is the thinking behind it, printed under it. It used to replace
+            // the line, which lost the one sentence the coach quotes and the
+            // Blueprint is cut from under its own reasoning.
+            text: a.line.trim() || a.paragraph?.trim() || '',
             ...(a.line2?.trim() ? { text2: a.line2.trim() } : {}),
+            ...(a.line.trim() && a.paragraph?.trim() ? { paragraph: a.paragraph.trim() } : {}),
             // Carried through, not dropped. If any future path ever writes
             // prose about this person that they did not write, it arrives here
             // and the ratio below falls. A tripwire nothing is wired to is not
@@ -131,7 +136,7 @@ export function authorshipRatio(input: BookInput, chapters: BookChapter[]): numb
     // does not count, exactly like a framing label.
     if (ch.nameAuthored !== false) user += ch.name.length;
     for (const line of ch.lines) {
-      user += line.text.length + (line.text2?.length ?? 0);
+      user += line.text.length + (line.text2?.length ?? 0) + (line.paragraph?.length ?? 0);
       generated += line.generated?.length ?? 0;
     }
     for (const m of ch.memories) user += m.length;
@@ -226,7 +231,7 @@ export function diffBooks(previous: BookVersion, next: BookVersion): BookDiff {
     }
     const same =
       before.lines.length === ch.lines.length &&
-      before.lines.every((l, i) => l.text === ch.lines[i]?.text);
+      before.lines.every((l, i) => l.text === ch.lines[i]?.text && (l.paragraph ?? '') === (ch.lines[i]?.paragraph ?? ''));
     (same ? kept : rewritten).push(ch.name);
     prev.delete(ch.goalId);
   }
@@ -258,6 +263,7 @@ export function bookToText(book: BookVersion, boundaryHour = 3): string {
     for (const l of c.lines) {
       out.push(`  ${l.kind}${l.framingLabel ? ` (${l.framingLabel})` : ''}`);
       out.push(`  ${l.text}`);
+      if (l.paragraph) out.push(`  ${l.paragraph}`);
       if (l.text2) {
         const half = thenHalf(l.text2);
         out.push(`  ${half.framing} ${half.act}`);

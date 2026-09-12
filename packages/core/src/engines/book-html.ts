@@ -57,6 +57,7 @@ const CSS = `
   .line { margin: 0 0 8pt; }
   .line p { margin: 0; font-size: 12pt; line-height: 1.55; }
   .line .then { font-style: italic; color: #5A5750; }
+  .line .more { font-size: 10.5pt; line-height: 1.55; color: #5A5750; margin: 4pt 0 0; }
   /* The app's framing, not their words: the sans, upright, small. */
   .line .then .framing { font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-style: normal; font-size: 9.5pt; color: #6F6552; }
   .iwill { font-size: 17pt; line-height: 1.4; margin: 0; }
@@ -95,7 +96,8 @@ export function bookToHtml(book: BookVersion, boundaryHour = 3): string {
           const label = `${ANALYSIS_TITLES[l.kind]}${l.framingLabel ? ` · ${escapeHtml(l.framingLabel)}` : ''}`;
           const half = l.text2 ? thenHalf(l.text2) : null;
           const then = half ? `<p class="theirs then"><span class="framing">${half.framing}</span> ${escapeHtml(half.act)}</p>` : '';
-          return `<div class="line"><div class="label">${label}</div><p class="theirs">${escapeHtml(l.text)}</p>${then}</div>`;
+          const paragraph = l.paragraph ? `<p class="theirs more">${escapeHtml(l.paragraph)}</p>` : '';
+          return `<div class="line"><div class="label">${label}</div><p class="theirs">${escapeHtml(l.text)}</p>${paragraph}${then}</div>`;
         })
         .join('');
       return `<section class="chapter"><hr class="rule" /><h2>${chapterName(c.name, c.nameAuthored !== false)}</h2>${lines}</section>`;

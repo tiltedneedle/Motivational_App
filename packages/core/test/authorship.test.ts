@@ -15,6 +15,8 @@ import {
   quotable,
   MIN_AUTHORSHIP_RATIO,
   authorshipRatio,
+  bookToHtml,
+  bookToText,
   SealRefused,
   validatePlan,
   verifySpans,
@@ -327,6 +329,33 @@ describe('the Book', () => {
     const book = buildBookVersion(base, ids);
     expect(book.authorshipRatio).toBeGreaterThanOrEqual(MIN_AUTHORSHIP_RATIO);
     expect(book.firstSentence).toContain('the kitchen is still blue');
+  });
+
+  it('keeps the Full-track paragraph under its line rather than in place of it', () => {
+    // The line is the answer the coach quotes and the Blueprint is cut from;
+    // the paragraph is the thinking behind it. Both are the person's, both
+    // are printed, both count as theirs.
+    const full = {
+      ...base,
+      track: 'full' as const,
+      analyses: [
+        analysis({ id: 'a4', kind: 'motives', line: 'Because I said I would.', paragraph: 'I have said it out loud to Sam twice now, and the second time I heard myself.' }),
+        analysis({ id: 'a3', kind: 'strategies', line: '', paragraph: 'Tuesday, Thursday and Saturday at 6:40, out the back door.' }),
+      ],
+    };
+    const book = buildBookVersion(full, sequentialIds());
+    const lines = book.chapters[0]!.lines;
+    const motives = lines.find((l) => l.kind === 'motives')!;
+    expect(motives.text).toBe('Because I said I would.');
+    expect(motives.paragraph).toContain('out loud to Sam');
+    // No line at all: the paragraph stands in, and nothing is doubled.
+    const strategies = lines.find((l) => l.kind === 'strategies')!;
+    expect(strategies.text).toContain('Tuesday, Thursday and Saturday');
+    expect(strategies.paragraph).toBeUndefined();
+    // Both reach the exports.
+    expect(bookToText(book)).toContain('out loud to Sam');
+    expect(bookToHtml(book)).toContain('out loud to Sam');
+    expect(book.authorshipRatio).toBe(1);
   });
 
   it('refuses to seal without the I will line', () => {

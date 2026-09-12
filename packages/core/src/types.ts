@@ -245,9 +245,11 @@ export const BookChapterLine = z.object({
   kind: AnalysisKind,
   /** From the fixed bank. Chrome, printed small and grey; not rival authorship. */
   framingLabel: z.string().nullable(),
-  /** The user's words. */
+  /** The user's words: the line that answers the stone's question. */
   text: z.string(),
   text2: z.string().optional(),
+  /** On the Full track, the paragraph the person wrote behind the line. Theirs too. */
+  paragraph: z.string().optional(),
   /**
    * Any prose about this person's life that the user did not write. Nothing
    * fills this today; it exists so `authorshipRatio` can catch the day it does.

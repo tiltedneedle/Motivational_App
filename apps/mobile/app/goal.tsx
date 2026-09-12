@@ -193,7 +193,10 @@ export default function GoalScreen() {
                         <Label>{ANALYSIS_TITLES[kind]}</Label>
                         {a ? (
                           <>
-                            <UserText style={{ fontSize: 16, lineHeight: 23 }}>{a.paragraph?.trim() || a.line}</UserText>
+                            <UserText style={{ fontSize: 16, lineHeight: 23 }}>{a.line.trim() || a.paragraph?.trim()}</UserText>
+                            {a.line.trim() && a.paragraph?.trim() ? (
+                              <UserText style={{ fontSize: 15, lineHeight: 23, color: day.ink2 }}>{a.paragraph.trim()}</UserText>
+                            ) : null}
                             {a.line2 ? (
                               <UserText italic framing={thenHalf(a.line2).framing} style={{ fontSize: 15, lineHeight: 22, color: day.ink2 }}>
                                 {thenHalf(a.line2).act}
@@ -377,7 +380,10 @@ export default function GoalScreen() {
                     <Label>{ANALYSIS_TITLES[kind]}</Label>
                     {a ? (
                       <>
-                        <UserText style={{ fontSize: 16, lineHeight: 23 }}>{a.paragraph?.trim() || a.line}</UserText>
+                        <UserText style={{ fontSize: 16, lineHeight: 23 }}>{a.line.trim() || a.paragraph?.trim()}</UserText>
+                        {a.line.trim() && a.paragraph?.trim() ? (
+                          <UserText style={{ fontSize: 15, lineHeight: 23, color: day.ink2 }}>{a.paragraph.trim()}</UserText>
+                        ) : null}
                         {a.line2 ? (
                           <UserText italic framing={thenHalf(a.line2).framing} style={{ fontSize: 15, lineHeight: 22, color: day.ink2 }}>
                                 {thenHalf(a.line2).act}
