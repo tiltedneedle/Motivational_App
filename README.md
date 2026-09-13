@@ -66,6 +66,7 @@ pnpm verify
 Toolchain guard, date guard, copy guard, typecheck, lint, every unit test, the
 edge-function and SQL guards, the migration against a real Postgres, the serif
 authorship guard, the guard that every screen has a way back at its top,
+the accessibility lint (eslint-plugin-react-native-a11y, thirteen rules),
 the web build (offline: every key blanked), the end-to-end suite and an
 axe-core accessibility pass over every screen. Nothing ships without it passing.
 `npx expo-doctor` in `apps/mobile` checks the native configuration; it

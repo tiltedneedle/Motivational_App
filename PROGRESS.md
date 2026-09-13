@@ -47,6 +47,13 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 30. The research, and what it changed: four passes over current
+      accessibility and first-run practice (WCAG 2.2, WCAG2Mobile, Apple HIG,
+      Material, NN/g, GOV.UK, COGA, RN's own docs), each audited against the
+      app, merged into 36 items (`design/audits/accessibility-first-run-2026-09-13.md`);
+      all 8 P0 and 12 of the 13 P1 items done, most of the P2 — see "The
+      research, and what it changed". Gate now 374 core / 48 ui / 8 storage,
+      37 migration, way-back guard, a11y lint (13 rules), 191 e2e, axe 0 × 26.
 - [x] 29. The account, round-tripped against the real project
       (`pnpm test:account`, 30 checks): push, RLS from a stranger's side,
       wipe, pull, field-by-field the same; the schema applied to the project
@@ -93,11 +100,12 @@ only tested. What is left needs a machine or a key this one does not have;
 see "Next steps".
 
 - The tree is green and committed: `pnpm verify` runs the toolchain guard,
-  typecheck, lint, 367 core tests, 47 ui tests (contrast, the quoted-span
+  typecheck, lint, 374 core tests, 48 ui tests (contrast, the quoted-span
   split, the type that fits a long line), 8 storage tests, the edge-function
   guards, the SQL structural guards, 37 checks against a real Postgres, the
-  serif authorship guard, the way-back guard, the web build (offline), 173
-  end-to-end checks and the axe pass over 26 screens. Against the real
+  serif authorship guard, the way-back guard, the accessibility lint (13
+  rules), the web build (offline), 191 end-to-end checks and the axe pass
+  over 26 screens. Against the real
   project: `pnpm test:account`, 30 more.
 - **The account's spend limit is the month's, not the run's.** The fourth
   audit was ten agents and 1.59M tokens and tripped the monthly limit with
@@ -995,6 +1003,39 @@ With the rules met, the compiler itself: `babel-plugin-react-compiler` at Expo's
 
 A phone in dark mode opened on the day studio's splash for a moment before the night one drew. `make-icons.mjs` draws a night splash now — the pale stone on the night ground, the same ink the night studio's buttons wear — and `expo-splash-screen` gets it under `dark`. The day splash is byte-identical to before.
 
+### The research, and what it changed (2026-09-13)
+
+The user asked, twice, for the flow to be looked at with a brand-new person in mind — and to research what apps should do for accessibility first, then check ours. So: four research passes over primary, current sources (WCAG 2.2 and its 2.2-only criteria, the W3C mobile guidance, Apple HIG accessibility and onboarding, Material, the EAA; NN/g, Baymard, Growth.Design and Apple on onboarding and retention; React Native 0.8x / Expo / react-native-web accessibility; COGA, GOV.UK content design, plain language, trauma-informed design), each producing a checklist, each checklist audited against this codebase by a separate reader, the four audits merged and de-duplicated by a fifth. 73 findings before the merge, 36 after, in `design/audits/accessibility-first-run-2026-09-13.md` with the sources. What changed, in the order the list gave:
+
+**P0 — the "delete it" moments.**
+- Every cold launch opened on Welcome's last page, name field and all. Anyone with a Book, or halfway to one, is redirected to Today; "See the introduction again" lives under You.
+- The Interview and the read-back lost everything on a kill or the platform's back. Both persist mid-way (`interviewDraft`, `readBackDraft`), the Interview resumes on the same question, and the platform's back — button, edge swipe, browser arrow — is the same one-step undo (`beforeRemove`), leaving only when there is nothing left to undo.
+- Back on a stone discarded the line being typed. It keeps it.
+- The keyboard covered the field on iOS: `automaticallyAdjustKeyboardInsets` on every writing ScrollView; the four centred screens scroll.
+- Three unasked-for asks landed on the first value moment. The microphone is asked for on the doorway, before the clock, with one sentence about what "Say it" uses; refused, the room is a typed one and says so. Notifications are primed in words on Today after the first sealed day ("7:00 — your first move; 21:30 — a line to close the day"), and the OS is asked only on "Yes" — `allowed()` never asks any more. The paywall waits for the first sealed day (`firstDaySealed`), so the first Today is a Today.
+- The path's buttons were undefined coined nouns: "Write five lines per goal", "Keep this line · next", "Keep this plan", "Hold to close the day"; the four places that said "Settings" say "You, the last tab", which is what the tab says.
+- "Tonight about twenty-five minutes" ran straight on into the second and third sittings. The read-back lands on Today's path card, which offers the next step now or tomorrow.
+- The seal landed on the Book's Sunday-reading verdicts; from the seal the Book has one door, "On to Today — your first move". The first Today shows the Now card, the check and the tabs; the practices invitation and the consistency score wait for the first sealed day.
+
+**P1 — understanding, and assistive technology.**
+- Nothing was announced when a step changed inside a screen. `announce()` in @morrow/ui; each Welcome page, each Interview question, each stone says itself.
+- Interview options were "checkbox, unchecked" buttons that answered and advanced: checkbox only on the multi-pick, button with a hint elsewhere.
+- Inline errors and status were silent: a `Notice` primitive (live region + announcement) carries the seal's refusal, the account's problems, the read-back's messages.
+- The Fifteen: the clock can be paused, "Five more minutes" when it ends (ten times, WCAG 2.2.1), one minute's warning announced. Not done: hiding the clock, and a shorter floor for the first sitting — the studied program's dose, left as it is.
+- "Not today" was drag-or-long-press only and its Undo died in 3.4 s: a visible "Not today" under the Now card and on each row, "Put it back" on a parked row that never expires, the toast at eight seconds.
+- Fields were placeholder-only: UserField draws its label (or `labelHidden` where the screen already does), carries an `error` that is heard, and the email and one-time-code fields have their purpose for autofill.
+- At large type chip rows ran off the screen: they wrap; tab labels cap at 1.4×. Not testable on the web build; the device list below.
+- Repeated controls shared a name: Keep / Not a goal / Drop / Not today name their line; the Book line on Today is a named button; Back's name has no arrow in it; the Welcome dots are decoration with the count in words.
+- Consent carried a 56-word sentence: one idea per line, the four "when" items as a list.
+- The helplines were three taps away: "Need someone?" in the TopBar of the Interview, the room, the read-back, the stones, both seals and the coach opens the resources card without a pause and without "not about me".
+- The shadow doorway asked for self-blame; the ideal doorway stacked prohibitions: rewritten positively.
+- The safety card on the web took no focus and left the screen behind tabbable: focus to the title, Escape, the screen behind `inert`.
+- Not done: orientation (still portrait; WCAG 1.3.4 says default, and it needs a device to check the absolute-positioned pieces).
+
+**P2, done:** the admire question can be skipped; the stone's follow-up has its own field; "Two of them might be one" no longer implies a Merge; the specificity hint only where a time or place is the point; the order screen says what the top three means; the field underline reaches 3:1 (tested); the storage banner's name is its text; the paywall says what happens after the trial; heading levels (Statement 1, Question 2); the almanac speaks one row per month; first-run analytics (`first_run_step`, `first_value`); `eslint-plugin-react-native-a11y` in the lint (13 rules as errors; the hint-on-everything rule off, with the reason). **P2, not done:** the order/title split; native focus styles for hardware keyboards; the aria-* vocabulary migration (the lint plugin only reads the legacy spellings; decide after).
+
+**What only a device can verify** (from the audit's verification list): VoiceOver and TalkBack through the whole first run; iOS keyboard on the Interview's custom field, a stone's "then I" and the account code; Dynamic Type at 200% on the room, Today and the seal; the one-time-code autofill from Mail; rotation. Written into "Next steps 1".
+
 ### The account service, live (2026-09-12)
 
 The user handed over the Supabase project (`fxsaxganeyajxbcbignq`, Singapore). What is done, and how:
@@ -1174,10 +1215,14 @@ needs either hardware or a credential.
    are committed, and `README.md` has the Mac steps. `cd apps/mobile && npx
    expo run:ios` on a Mac with Xcode, or `run:android` with an Android SDK.
    What only a device can show: the fonts, the hold gesture, the drag on Today,
-   the safety card, Dynamic Type at 200%, the notification permission prompt
-   landing at the right moment, the microphone prompt and the recogniser in
-   the room, the haptics, the wallpaper landing in Photos, and dark mode
-   following the OS. Then the one piece of P1 chrome that waits on a device:
+   the safety card, Dynamic Type at 200% (the room, Today, the seal), the
+   notification primer's "Yes" raising the OS dialog once, the microphone
+   asked on the doorway and the recogniser in the room, the one-time-code
+   autofill from Mail, the iOS keyboard on the Interview's custom field and a
+   stone's "then I", VoiceOver and then TalkBack through the whole first run
+   (Welcome → Consent → Interview → doorway → the Fifteen → read-back → order →
+   stones → Portrait → seal → Today → seal the day), rotation, the haptics,
+   the wallpaper landing in Photos, and dark mode following the OS. Then the one piece of P1 chrome that waits on a device:
    the native tab bar (`expo-router/unstable-native-tabs`, glass on iOS 26,
    Material on Android) in place of Today's pill — a `(tabs)` group for
    Today, Book, Envision, Coach and You, `dismissTo('/today')` re-pointed,
