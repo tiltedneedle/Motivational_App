@@ -3,7 +3,7 @@
  * lengths, and the depth question with Starter preselected.
  */
 import { useRouter } from 'expo-router';
-import { View , Pressable, Text } from 'react-native';
+import { View , Pressable, ScrollView, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Body, InkButton, Label, Rule, Statement, Studio, TextButton, TopBar, day , type as fonts } from '@morrow/ui';
 
@@ -29,7 +29,7 @@ export default function Authoring() {
     <Studio testID="screen-authoring">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
         <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/')), testID: 'authoring-back' }} where="Before the Fifteen" />
-        <View style={{ flex: 1, justifyContent: 'center', gap: 24 }}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', gap: 24 }} showsVerticalScrollIndicator={false}>
           <Statement>Three evenings from now you will have a plan you wrote yourself.</Statement>
           <Body>
             Tonight about twenty-five minutes. Tomorrow morning fifteen. Tomorrow evening twenty. Everything you write
@@ -78,7 +78,7 @@ export default function Authoring() {
             <Body style={{ fontSize: 13 }}>You can change this any time. Nothing you write is lost by switching.</Body>
           </View>
           <Rule />
-        </View>
+        </ScrollView>
 
         <View style={{ paddingBottom: 18, gap: 4 }}>
           <InkButton testID="authoring-begin" label="Begin" onPress={() => router.push('/write?kind=ideal')} />

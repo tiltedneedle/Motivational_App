@@ -21,10 +21,14 @@ interface Row {
 
 export default function Heard() {
   const router = useRouter();
+  const showResources = useMorrow((st) => st.showResources);
   const texts = useMorrow((s) => s.texts);
   const addGoals = useMorrow((s) => s.addGoals);
   const goals = useMorrow((s) => s.goals);
 
+  const savedRows = useMorrow((s) => s.readBackDraft);
+  const saveRows = useMorrow((s) => s.saveReadBackDraft);
+  const clearRows = useMorrow((s) => s.clearReadBackDraft);
   const [rows, setRows] = useState<Row[] | null>(null);
   const [leftOut, setLeftOut] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +40,14 @@ export default function Heard() {
     let alive = true;
     if (!source.trim()) {
       setRows([]);
+      return;
+    }
+    // The rows as they were left — kept, named, dropped — if this is the
+    // same sitting. A kill mid-read-back used to ask the coach again and
+    // hand back a page with every name gone.
+    if (savedRows && savedRows.source === source) {
+      setRows(savedRows.rows);
+      setLeftOut(savedRows.leftOut);
       return;
     }
     ai.readBack({ text: source, limit: 7 })
@@ -66,10 +78,16 @@ export default function Heard() {
   const rename = (i: number, name: string) =>
     setRows((r) => r?.map((row, j) => (j === i ? { ...row, name } : row)) ?? r);
 
+  // Written as it changes, cleared when the goals are named.
+  useEffect(() => {
+    if (rows && rows.length) saveRows(rows, source, leftOut);
+  }, [rows, source, leftOut, saveRows]);
+
   const named = rows?.filter((r) => r.state === 'kept' && r.name.trim()) ?? [];
   const unnamed = rows?.filter((r) => r.state === 'kept' && !r.name.trim()) ?? [];
 
   const done = () => {
+    clearRows();
     if (named.length) {
       addGoals(
         named.map((r) => ({
@@ -92,7 +110,7 @@ export default function Heard() {
   return (
     <Studio testID="screen-heard">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'heard-back' }} where="The read-back" />
+        <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'heard-back' }} where="The read-back" help={{ onPress: showResources }} />
         <View style={{ paddingTop: 2 }}>
           <Label>What I heard</Label>
           <Statement style={{ marginTop: 8 }}>
@@ -109,7 +127,7 @@ export default function Heard() {
             <ActivityIndicator color={day.ink} />
           </View>
         ) : (
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 0 }}>
+          <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 0 }}>
             <Notice testID="heard-error" kind="error" text={error} />
 
             {rows.map((row, i) => {

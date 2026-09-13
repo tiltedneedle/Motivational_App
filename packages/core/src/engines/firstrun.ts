@@ -17,7 +17,7 @@ export function analysisPlan(rank: number, track: DepthTrack): AnalysisKind[] {
 }
 
 export type FirstRunStep =
-  | { step: 'interview'; route: '/consent'; label: string }
+  | { step: 'interview'; route: '/consent' | '/interview'; label: string }
   | { step: 'fifteen'; route: '/authoring'; label: string }
   | { step: 'order'; route: '/rank'; label: string }
   | { step: 'stones'; route: string; label: string; goalId: string; kind: AnalysisKind; written: number; total: number }
@@ -30,6 +30,8 @@ export interface FirstRunInput {
   hasIdeal: boolean;
   /** Whether the Book has been given its order and its title (the rank screen). */
   hasTitle: boolean;
+  /** Whether consent has been given (the screen before the Interview). */
+  consented?: boolean;
   analyses: GoalAnalysis[];
   books: BookVersion[];
   track: DepthTrack;
@@ -39,7 +41,7 @@ export interface FirstRunInput {
 export function firstRunStep(input: FirstRunInput): FirstRunStep {
   if (input.books.length > 0) return { step: 'done', route: '/today', label: 'Today' };
   const goals = [...input.goals].filter((g) => g.status !== 'archived').sort((a, b) => a.rank - b.rank);
-  if (goals.length === 0) return { step: 'interview', route: '/consent', label: 'Begin the Interview' };
+  if (goals.length === 0) return { step: 'interview', route: input.consented ? '/interview' : '/consent', label: 'Begin the Interview' };
   if (!input.hasIdeal) return { step: 'fifteen', route: '/authoring', label: 'Write the Fifteen' };
   // The order and the title come between the Fifteen and the stones; once a
   // stone is written the person has been past that screen, titled or not.

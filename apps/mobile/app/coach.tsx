@@ -28,6 +28,7 @@ import { dictation } from '../src/dictation';
 
 export default function Coach() {
   const router = useRouter();
+  const showResources = useMorrow((st) => st.showResources);
   const state = useMorrow((s) => s);
   const book = useLatestBook();
   const moves = useTodaysMoves();
@@ -203,7 +204,7 @@ export default function Coach() {
   return (
     <Studio testID="screen-coach">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <TopBar back={{ label: 'Today', onPress: () => router.dismissTo('/today'), testID: 'coach-back' }} where="The coach" />
+        <TopBar back={{ label: 'Today', onPress: () => router.dismissTo('/today'), testID: 'coach-back' }} where="The coach" help={{ onPress: showResources }} />
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingTop: 4 }}>
           <Stone size={46} gradient={['#FFFFFF', '#F3F1EC', '#CFCBC2', '#8E8A80']} polish={1} />
           <View style={{ flex: 1 }}>
@@ -225,7 +226,7 @@ export default function Coach() {
           </Body>
         ) : null}
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18, gap: 16 }}>
+        <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18, gap: 16 }}>
           {thread.length === 0 && brief ? (
             <View testID="dawn-brief" style={{ gap: 14 }}>
               {/*

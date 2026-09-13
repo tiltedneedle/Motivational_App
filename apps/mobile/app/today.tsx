@@ -166,7 +166,8 @@ export default function Today() {
   if (!book) {
     return (
       <Studio testID="screen-today">
-        <SafeAreaView style={{ flex: 1, padding: 22, justifyContent: 'center', gap: 14 }}>
+        <SafeAreaView style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 22, justifyContent: 'center', gap: 14 }} showsVerticalScrollIndicator={false}>
           <Stone size={96} domain={goals[0]?.domain ?? 'health'} polish={firstRun.step === 'interview' ? 0.4 : 0.7} sweep={!reduced && focused} style={{ alignSelf: 'center', marginBottom: 10 }} />
           <Statement testID="today-path">{firstRun.step === 'interview' ? 'Nothing here yet, and that is the right starting point.' : 'Your Book is not finished yet.'}</Statement>
           <Body>
@@ -178,6 +179,7 @@ export default function Today() {
           {hasSupabase && !state.account ? (
             <TextButton testID="today-bring-back" label="Bring my Book back from my account" onPress={() => router.push('/account')} />
           ) : null}
+        </ScrollView>
         </SafeAreaView>
       </Studio>
     );

@@ -103,7 +103,7 @@ export default function PracticeBuilder() {
           <Label>{kind === 'routine' ? 'A routine' : 'A habit'}</Label>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 16, gap: 22 }}>
+        <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 16, gap: 22 }}>
           <Statement>Something you do, not something you finish.</Statement>
 
           {goals.length > 1 ? (

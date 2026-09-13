@@ -223,6 +223,10 @@ export const RESOURCES_COPY = {
    * that the service keeps nothing, and that Morrow does not either.
    */
   noteRemote: 'Nothing you wrote was added to what Morrow remembers. The screen that read it keeps nothing.',
+  /** The same card, asked for from "Need someone?" rather than raised by the screen. */
+  askedTitle: 'Someone to talk to.',
+  askedBody: 'These lines are free and answered by people. If you are in danger right now, contact your local emergency number.',
+  askedDismiss: 'Back to what I was doing',
 };
 
 /** Content rules the coach obeys regardless of what was asked (PRD §11.6). */

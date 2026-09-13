@@ -181,8 +181,8 @@ export default function Paywall() {
               {/* The trial line, in a caption. Never a countdown. */}
               {selected.trialDays ? (
                 <Body testID="plan-trial" style={{ fontSize: 13 }}>
-                  {plural(selected.trialDays, 'day')} free first. Cancel any time; nothing you have written depends on
-                  it.
+                  {plural(selected.trialDays, 'day')} free first, then the price above, renewing until you cancel in your
+                  phone’s subscription settings. Nothing you have written depends on it.
                 </Body>
               ) : null}
               {selected.id === HIGHLIGHTED && annualNote ? (

@@ -632,6 +632,7 @@ export function TopBar({
   back,
   where,
   right,
+  help,
   style,
 }: {
   /** The way back. Omit only on a root screen. */
@@ -640,8 +641,16 @@ export function TopBar({
   where?: string;
   /** Something else on the right, instead of `where`. */
   right?: React.ReactNode;
+  /**
+   * The helplines, one tap away. On the screens that ask about a person's
+   * life — the Interview, the room, the stones, the seals, the coach —
+   * "Need someone?" sits in the same place every time (WCAG 3.2.6
+   * Consistent Help; Parrish et al. 2021 on buried crisis resources).
+   */
+  help?: { onPress: () => void; testID?: string };
   style?: StyleProp<ViewStyle>;
 }) {
+  const rightSide = right ?? (where ? <Label>{where}</Label> : null);
   return (
     <View style={[{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, minHeight: 56 }, style]}>
       {back ? (
@@ -649,7 +658,14 @@ export function TopBar({
       ) : (
         <View />
       )}
-      {right ?? (where ? <Label>{where}</Label> : null)}
+      {help ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          {rightSide}
+          <TextButton testID={help.testID ?? 'top-help'} label="Need someone?" accessibilityLabel="Need someone? Helplines" onPress={help.onPress} />
+        </View>
+      ) : (
+        rightSide
+      )}
     </View>
   );
 }

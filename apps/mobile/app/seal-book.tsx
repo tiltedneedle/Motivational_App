@@ -15,6 +15,7 @@ import { useGoals, useMorrow } from '../src/store';
 
 export default function SealBook() {
   const router = useRouter();
+  const showResources = useMorrow((st) => st.showResources);
   const goals = useGoals();
   // Every seal is a new edition and nothing is overwritten (PRD §7.3), so the
   // label has to count. It said "first edition" on every seal there was.
@@ -61,8 +62,8 @@ export default function SealBook() {
   return (
     <Studio dark testID="screen-seal-book">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'seal-book-back' }} right={<Label style={{ color: night.ink3 }}>The seal</Label>} />
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 20 }}>
+        <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'seal-book-back' }} right={<Label style={{ color: night.ink3 }}>The seal</Label>} help={{ onPress: showResources }} />
+        <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 20 }}>
           <Label style={{ color: night.ink3 }}>Last thing</Label>
           <Statement style={{ color: night.ink }}>Finish this, in your words.</Statement>
           <View style={{ gap: 8 }}>

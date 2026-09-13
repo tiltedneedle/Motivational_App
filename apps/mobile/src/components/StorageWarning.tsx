@@ -39,7 +39,7 @@ export function StorageWarning({ onExport }: { onExport?: () => void }) {
     >
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={open ? 'Hide the details' : 'Why nothing is being saved'}
+        accessibilityLabel={`Nothing is being saved on this device right now. ${open ? 'Hide' : 'Show'} the details`}
         aria-expanded={open}
         onPress={() => setOpen((v) => !v)}
       >

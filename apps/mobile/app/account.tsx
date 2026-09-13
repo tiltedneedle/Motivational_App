@@ -153,7 +153,7 @@ export default function Account() {
     <Studio testID="screen-account">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
         <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'account-back' }} />
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 18 }}>
+        <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 18 }}>
           <Label>An account, if you want one</Label>
           <Statement style={{ fontSize: 27, lineHeight: 33 }}>Keep the Book somewhere a lost phone cannot reach.</Statement>
           <Body>

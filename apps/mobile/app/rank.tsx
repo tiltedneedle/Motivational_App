@@ -38,10 +38,11 @@ export default function Rank() {
     <Studio testID="screen-rank">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
         <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'rank-back' }} where="The order" />
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 22 }}>
+        <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 22 }}>
           <View style={{ gap: 8 }}>
-            <Label>Sitting 2</Label>
-            <Statement>Top is the one you&apos;d keep if you could only keep one.</Statement>
+            <Label>The order</Label>
+            <Statement>Put your goals in order. The top one matters most.</Statement>
+            <Body style={{ fontSize: 14 }}>The top three get all five lines; the rest get the two that make a plan.</Body>
           </View>
 
           <View>

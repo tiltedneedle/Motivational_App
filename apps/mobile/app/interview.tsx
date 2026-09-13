@@ -2,7 +2,7 @@
  * The Interview (PRD §7.1). Tap-only. "Something else…" is the last pill and
  * the only place anyone types; a custom answer skips the follow-up.
  */
-import { useRouter } from 'expo-router';
+import { useNavigation, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, View , Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -46,16 +46,26 @@ const LETTERS = 'ABCDEFGH';
 
 export default function Interview() {
   const router = useRouter();
-  const [s, setS] = useState<InterviewState>(initialInterview);
+  const showResources = useMorrow((st) => st.showResources);
+  // Picked up where it was left: a kill or a call mid-Interview used to
+  // restart it from the first question.
+  const saved = useMorrow((st) => st.interviewDraft);
+  const saveDraft = useMorrow((st) => st.saveInterviewDraft);
+  const clearDraft = useMorrow((st) => st.clearInterviewDraft);
+  const [s, setS] = useState<InterviewState>(() => saved?.s ?? initialInterview());
   // Every answer is a step forward that can be stepped back from, with
   // everything before it kept (§7.1: "Back always keeps answers"). A wrong
   // tap used to be final, and the only way out was to leave.
-  const [history, setHistory] = useState<InterviewState[]>([]);
+  const [history, setHistory] = useState<InterviewState[]>(() => saved?.history ?? []);
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customText, setCustomText] = useState('');
   const advance = (next: InterviewState) => {
-    setHistory((h) => [...h, s]);
+    const h = [...history, s];
+    setHistory(h);
     setS(next);
     setCustomOpen(false);
     setCustomText('');
+    saveDraft(next, h);
   };
   // Each new question is said (PRD §7.1: "VoiceOver announces each question");
   // the list under the cursor changes and nothing else moves.
@@ -70,12 +80,25 @@ export default function Interview() {
       else router.dismissTo('/');
       return;
     }
-    setHistory((h) => h.slice(0, -1));
+    const h = history.slice(0, -1);
+    setHistory(h);
     setS(prev);
     setCustomOpen(false);
+    saveDraft(prev, h);
   };
-  const [customOpen, setCustomOpen] = useState(false);
-  const [customText, setCustomText] = useState('');
+  // The platform's back — the Android button, the iOS edge swipe, the
+  // browser's arrow — is the same one-step undo as the screen's Back, and
+  // only leaves once there is nothing left to undo (GOV.UK, Baymard).
+  const navigation = useNavigation();
+  useEffect(() => {
+    const off = navigation.addListener('beforeRemove', (e: { preventDefault: () => void }) => {
+      if (history.length === 0) return;
+      e.preventDefault();
+      stepBack();
+    });
+    return off;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigation, history.length, s]);
   const addGoals = useMorrow((st) => st.addGoals);
 
   const q = question(s);
@@ -113,6 +136,7 @@ export default function Interview() {
   };
 
   const finish = () => {
+    clearDraft();
     addGoals(
       s.drafts.map((d) => ({
         title: d.title,
@@ -132,7 +156,7 @@ export default function Interview() {
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
         <TopBar
           back={{ onPress: stepBack, testID: 'interview-back' }}
-          where={s.stage === 'summary' ? 'The Interview · what I heard' : `The Interview · question ${s.answered + 1}`}
+          where={s.stage === 'summary' ? 'The Interview · what I heard' : `The Interview · question ${s.answered + 1}`} help={{ onPress: showResources }}
           style={{ paddingTop: 6, minHeight: 48 }}
         />
         {/* the coach's pearl inside the clarity ring, and its guess */}
@@ -163,7 +187,7 @@ export default function Interview() {
           />
         ) : (
           <>
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18, gap: 10 }}>
+            <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18, gap: 10 }}>
               <Statement testID="interview-question" style={{ marginBottom: 8 }}>
                 {q.prompt}
               </Statement>
@@ -343,7 +367,7 @@ function Summary({
 }) {
   return (
     <>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18 }}>
+      <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18 }}>
         <Statement style={{ marginBottom: 14 }}>Here&apos;s what I heard.</Statement>
         {s.drafts.map((d) => (
           <View

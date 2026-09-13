@@ -33,6 +33,12 @@ describe('where somebody is on the first-run path', () => {
     expect(s.route).toBe('/consent');
   });
 
+  it('goes straight to the Interview once consent is given', () => {
+    const s = firstRunStep({ goals: [], hasIdeal: false, hasTitle: false, consented: true, analyses: [], books: [], track: 'starter' });
+    expect(s.step).toBe('interview');
+    expect(s.route).toBe('/interview');
+  });
+
   it('points at the Fifteen once goals are named', () => {
     const s = firstRunStep({ goals: [goal('g1', 0)], hasIdeal: false, hasTitle: false, analyses: [], books: [], track: 'starter' });
     expect(s.step).toBe('fifteen');

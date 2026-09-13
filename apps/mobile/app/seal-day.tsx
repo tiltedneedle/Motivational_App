@@ -17,6 +17,7 @@ const WORDS = ['Calm', 'Tired', 'Proud', 'Steady'];
 
 export default function SealDay() {
   const router = useRouter();
+  const showResources = useMorrow((st) => st.showResources);
   const reduced = useReducedMotion();
   const sealDay = useMorrow((s) => s.sealDay);
   const analyses = useMorrow((s) => s.analyses);
@@ -61,8 +62,8 @@ export default function SealDay() {
   return (
     <Studio dark testID="screen-seal-day">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <TopBar back={{ label: 'Today', onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'seal-day-back' }} />
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 6, gap: 20 }}>
+        <TopBar back={{ label: 'Today', onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'seal-day-back' }} help={{ onPress: showResources }} />
+        <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 6, gap: 20 }}>
           <Label style={{ color: night.ink3 }}>Seal the day</Label>
           <Statement style={{ color: night.ink }}>
             {sealed ? 'Sealed. See you at dawn.' : 'Quiet day or not, it goes in the ledger.'}

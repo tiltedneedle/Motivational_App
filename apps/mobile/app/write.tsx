@@ -36,6 +36,7 @@ const TICK_MS = 250;
 
 export default function Write() {
   const router = useRouter();
+  const showResources = useMorrow((st) => st.showResources);
   const params = useLocalSearchParams<{ kind?: string }>();
   const kind = (params.kind === 'shadow' ? 'shadow' : params.kind === 'addition' ? 'addition' : 'ideal') as WritingKind;
 
@@ -265,6 +266,7 @@ export default function Write() {
           <TopBar
             back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'write-back' }}
             right={<Label style={{ color: night.ink3 }}>{doorway.eyebrow}</Label>}
+            help={{ onPress: showResources }}
           />
           <View style={{ gap: 20 }}>
             <Stone size={120} domain="health" polish={0.4} style={{ alignSelf: 'center' }} />
@@ -453,6 +455,7 @@ export default function Write() {
             </Label>
           }
           style={{ paddingTop: 6, minHeight: 44 }}
+          help={{ onPress: showResources }}
         />
 
         <View style={{ alignItems: 'center', paddingVertical: 14 }}>

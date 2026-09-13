@@ -77,7 +77,7 @@ export default function NewMove() {
           <Label>{mode === 'move' ? 'A new move' : 'Capture'}</Label>
           <TextButton testID="new-move-close" label="Close" onPress={back} />
         </View>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 16, gap: 18 }}>
+        <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 16, gap: 18 }}>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <Chip testID="new-move-mode-move" label="A move for today" selected={mode === 'move'} onPress={() => setMode('move')} />
             <Chip testID="new-move-mode-capture" label="Something to keep" selected={mode === 'capture'} onPress={() => setMode('capture')} />

@@ -16,7 +16,7 @@
  *  - `accessibilityViewIsModal` is iOS-only, so the card announces itself and
  *    the screen behind is hidden from assistive technology explicitly.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Linking, Platform, Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { HELPLINES, RESOURCES_COPY } from '@morrow/core';
 import { day, night, radius, type as fonts } from '@morrow/ui';
@@ -36,6 +36,9 @@ export function SafetyGate() {
   const { height } = useWindowDimensions();
   const [armed, setArmed] = useState(false);
   const [dialFailed, setDialFailed] = useState<string | null>(null);
+  // Asked for ("Need someone?"): no settle latch, no "not about me".
+  const asked = Boolean(pause?.voluntary);
+  const titleRef = useRef<Text>(null);
 
   useEffect(() => {
     if (!pause) {
@@ -44,10 +47,40 @@ export function SafetyGate() {
       return;
     }
     // A count, and which kind of row raised it. Never the words.
-    track({ name: 'safety_card_shown', source: pause.source?.kind ?? 'none' });
+    track({ name: 'safety_card_shown', source: pause.voluntary ? 'asked' : (pause.source?.kind ?? 'none') });
+    if (pause.voluntary) {
+      setArmed(true);
+      return;
+    }
     const t = setTimeout(() => setArmed(true), SETTLE_MS);
     return () => clearTimeout(t);
   }, [pause]);
+
+  // A dialog takes focus and gives it back (WAI-ARIA dialog pattern). The
+  // native side has accessibilityViewIsModal; on the web the screen behind
+  // was hidden from the tree but its editor kept the caret and its buttons
+  // stayed in the tab order. Focus moves to the title after the card has
+  // settled, and Escape closes it once it can be closed.
+  useEffect(() => {
+    if (!pause || Platform.OS !== 'web') return;
+    const previous = typeof document !== 'undefined' ? (document.activeElement as HTMLElement | null) : null;
+    const t = setTimeout(() => {
+      const node = titleRef.current as unknown as { focus?: () => void } | null;
+      node?.focus?.();
+    }, 300);
+    return () => {
+      clearTimeout(t);
+      previous?.focus?.();
+    };
+  }, [pause]);
+  useEffect(() => {
+    if (!pause || Platform.OS !== 'web' || !armed) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') clear();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [pause, armed, clear]);
 
   if (!pause) return null;
 
@@ -91,7 +124,8 @@ export function SafetyGate() {
       importantForAccessibility="yes"
       role="alertdialog"
       aria-modal
-      aria-label={RESOURCES_COPY.title}
+      aria-label={asked ? RESOURCES_COPY.askedTitle : RESOURCES_COPY.title}
+      onAccessibilityEscape={armed ? clear : undefined}
       style={{
         position: 'absolute',
         top: 0,
@@ -123,14 +157,17 @@ export function SafetyGate() {
           showsVerticalScrollIndicator={false}
         >
           <Text
+            ref={titleRef}
             testID="safety-title"
             accessibilityRole="header"
+            accessible
+            {...(Platform.OS === 'web' ? { tabIndex: -1 } : {})}
             style={{ fontFamily: fonts.sansSemi, fontSize: 22, lineHeight: 28, color: day.ink }}
           >
-            {RESOURCES_COPY.title}
+            {asked ? RESOURCES_COPY.askedTitle : RESOURCES_COPY.title}
           </Text>
           <Text style={{ fontFamily: fonts.sans, fontSize: 16, lineHeight: 23, color: day.ink2, marginTop: 10 }}>
-            {RESOURCES_COPY.body}
+            {asked ? RESOURCES_COPY.askedBody : RESOURCES_COPY.body}
           </Text>
 
           <View style={{ marginTop: 18 }}>
@@ -197,16 +234,18 @@ export function SafetyGate() {
             </Text>
           ) : null}
 
-          <Text style={{ fontFamily: fonts.sans, fontSize: 14, lineHeight: 20, color: day.ink2, marginTop: 18 }}>
-            {hasRemoteProvider ? RESOURCES_COPY.noteRemote : RESOURCES_COPY.note}
-          </Text>
+          {asked ? null : (
+            <Text style={{ fontFamily: fonts.sans, fontSize: 14, lineHeight: 20, color: day.ink2, marginTop: 18 }}>
+              {hasRemoteProvider ? RESOURCES_COPY.noteRemote : RESOURCES_COPY.note}
+            </Text>
+          )}
         </ScrollView>
 
         {/* outside the scroll view, so it is always reachable */}
         <Pressable
           testID="safety-continue"
           accessibilityRole="button"
-          accessibilityLabel={RESOURCES_COPY.dismiss}
+          accessibilityLabel={asked ? RESOURCES_COPY.askedDismiss : RESOURCES_COPY.dismiss}
           aria-disabled={!armed}
           disabled={!armed}
           onPress={clear}
@@ -226,7 +265,7 @@ export function SafetyGate() {
           })}
         >
           <Text style={{ fontFamily: fonts.sansSemi, fontSize: 17, color: day.onInk, textAlign: 'center' }}>
-            {RESOURCES_COPY.dismiss}
+            {asked ? RESOURCES_COPY.askedDismiss : RESOURCES_COPY.dismiss}
           </Text>
         </Pressable>
         {/*
@@ -235,6 +274,7 @@ export function SafetyGate() {
           so they are given the say. Placed under the way out, in the quieter
           weight: it is the rarer answer, not the encouraged one.
         */}
+        {asked ? null : (
         <Pressable
           testID="safety-wrong"
           accessibilityRole="button"
@@ -248,6 +288,7 @@ export function SafetyGate() {
             This was not about me — keep my writing
           </Text>
         </Pressable>
+        )}
 
       </View>
     </View>

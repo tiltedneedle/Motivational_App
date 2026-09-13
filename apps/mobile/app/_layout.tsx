@@ -1,6 +1,6 @@
 import { Stack, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { AppState, View, Text, ActivityIndicator, useColorScheme } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { AppState, Platform, View, Text, ActivityIndicator, useColorScheme } from 'react-native';
 import { useFonts as useOutfit, Outfit_400Regular, Outfit_500Medium, Outfit_600SemiBold, Outfit_700Bold } from '@expo-google-fonts/outfit';
 import { Newsreader_400Regular, Newsreader_400Regular_Italic, Newsreader_500Medium } from '@expo-google-fonts/newsreader';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -32,6 +32,15 @@ export default function RootLayout() {
     useMorrow.setState({ systemDark: scheme === 'dark' });
   }, [scheme]);
   const paused = useMorrow((s) => s.safetyPause !== null);
+  // On the web, aria-hidden takes the screen out of the accessibility tree
+  // but not out of the tab order: the editor behind the card kept its caret.
+  // `inert` takes both.
+  const behind = useRef<View>(null);
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const node = behind.current as unknown as { inert?: boolean } | null;
+    if (node) node.inert = paused;
+  }, [paused]);
   const storageError = useMorrow((s) => s.storageError);
   const [slowFonts, setSlowFonts] = useState(false);
   const [slowStore, setSlowStore] = useState(false);
@@ -153,6 +162,7 @@ export default function RootLayout() {
         */}
         {storageError ? <StorageWarning onExport={() => router.push('/settings')} /> : null}
         <View
+          ref={behind}
           style={{ flex: 1 }}
           importantForAccessibility={paused ? 'no-hide-descendants' : 'auto'}
           aria-hidden={paused}

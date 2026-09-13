@@ -92,6 +92,8 @@ import {
   type WritingKind,
   type WritingMode,
   type WritingSessionState,
+  type InterviewState,
+  type Span,
 } from '@morrow/core';
 
 /**
@@ -108,6 +110,22 @@ export interface SafetyPause {
   risk: SafetyRisk;
   at: string;
   source?: { kind: 'text' | 'analysis' | 'evidence' | 'day'; id: string } | null;
+  /** Asked for by the person ("Need someone?"), not raised by the screen. */
+  voluntary?: boolean;
+}
+
+/** The Interview mid-way: its state and the steps behind it, so a kill is not a restart. */
+export interface InterviewDraft {
+  s: InterviewState;
+  history: InterviewState[];
+  updatedAt: string;
+}
+
+/** The read-back's rows mid-way, for the same reason. */
+export interface ReadBackRow {
+  span: Span;
+  state: 'open' | 'kept' | 'dropped';
+  name: string;
 }
 
 export interface AccountState {
@@ -198,6 +216,13 @@ export interface MorrowState {
    */
   coachTurns: Record<string, number>;
   toast: ToastState | null;
+  /**
+   * The two first-run steps that used to live only in a screen's state.
+   * A phone call, a kill or the OS back gesture mid-Interview restarted it
+   * from the first question (NN/g: save state so the process can resume).
+   */
+  interviewDraft: InterviewDraft | null;
+  readBackDraft: { rows: ReadBackRow[]; leftOut?: string; source: string; updatedAt: string } | null;
   /** The coach's single invitation to the Full track, once ever. */
   fullTrackInvited: boolean;
   bookTitle: string;
@@ -379,6 +404,12 @@ export interface MorrowState {
   // ui
   setToast: (t: ToastState | null) => void;
   clearSafety: () => void;
+  /** The helplines card, asked for. No pause, no "not about me". */
+  showResources: () => void;
+  saveInterviewDraft: (s: InterviewState, history: InterviewState[]) => void;
+  clearInterviewDraft: () => void;
+  saveReadBackDraft: (rows: ReadBackRow[], source: string, leftOut?: string) => void;
+  clearReadBackDraft: () => void;
   /**
    * The person says the screen was wrong about their writing.
    *
@@ -460,6 +491,8 @@ const EMPTY = {
   concernAt: null,
   coachTurns: {},
   toast: null,
+  interviewDraft: null,
+  readBackDraft: null,
   fullTrackInvited: false,
   bookTitle: '',
   bookTitleFraming: null,
@@ -1552,6 +1585,11 @@ const store = create<MorrowState>()(
       },
 
       setToast: (t) => set({ toast: t }),
+      showResources: () => set({ safetyPause: { risk: 'none', at: new Date().toISOString(), source: null, voluntary: true } }),
+      saveInterviewDraft: (s, history) => set({ interviewDraft: { s, history, updatedAt: new Date().toISOString() } }),
+      clearInterviewDraft: () => set({ interviewDraft: null }),
+      saveReadBackDraft: (rows, source, leftOut) => set({ readBackDraft: { rows, source, ...(leftOut ? { leftOut } : {}), updatedAt: new Date().toISOString() } }),
+      clearReadBackDraft: () => set({ readBackDraft: null }),
       reconsiderLatestFlag: () =>
         set((st) => {
           // The row the card is about, and only that row. A pause with no
@@ -1963,6 +2001,7 @@ export function firstRunOf(s: MorrowState): FirstRunStep {
     goals: s.goals,
     hasIdeal: latestText(s.texts, 'ideal') !== null,
     hasTitle: s.bookTitle.trim().length > 0,
+    consented: Boolean(s.profile.consentedAt),
     analyses: s.analyses,
     books: s.books,
     track: s.profile.track,

@@ -31,6 +31,7 @@ const FULL_FLOOR = 600;
 
 export default function StoneScreen() {
   const router = useRouter();
+  const showResources = useMorrow((st) => st.showResources);
   const params = useLocalSearchParams<{ goal?: string; kind?: string }>();
   const goals = useGoals();
   const track = useMorrow((s) => s.profile.track);
@@ -152,7 +153,7 @@ export default function StoneScreen() {
   return (
     <Studio testID="screen-stone">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <TopBar back={{ onPress: goBack, testID: 'stone-back' }} style={{ paddingTop: 6, minHeight: 44 }} />
+        <TopBar back={{ onPress: goBack, testID: 'stone-back' }} style={{ paddingTop: 6, minHeight: 44 }} help={{ onPress: showResources }} />
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 2 }}>
           <Stone size={30} domain={goal.domain} polish={1} />
           <View style={{ flex: 1 }}>
@@ -178,7 +179,7 @@ export default function StoneScreen() {
           </View>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18, gap: 16 }}>
+        <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18, gap: 16 }}>
           {stepIndex === 0 && goals.findIndex((g) => g.id === goalId) === 0 && !existing ? (
             <Body testID="stone-intro" style={{ fontSize: 14, color: day.ink2 }}>
               Each goal gets {plan.length} short lines in your words — five questions, one line each. The chips are ways in;
@@ -223,7 +224,7 @@ export default function StoneScreen() {
                 />
               </>
             ) : null}
-            {line.trim() ? (
+            {line.trim() && (kind === 'strategies' || kind === 'monitoring') ? (
               <Label testID="stone-specificity" style={{ marginTop: 4 }}>
                 {specificityCaption(spec)}
               </Label>

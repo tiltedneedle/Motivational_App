@@ -91,7 +91,7 @@ export default function Letters() {
           <Label>Letters</Label>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18, gap: 18 }}>
+        <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18, gap: 18 }}>
           {arrived.length === 0 ? (
             <Statement testID="letters-none" style={{ fontSize: 22, lineHeight: 29 }}>
               Nothing has arrived yet.

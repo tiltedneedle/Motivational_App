@@ -188,6 +188,27 @@ async function main() {
     check('and keeps the ones before it', (await text('guess-line')).toLowerCase().includes('health'));
     await tap('option-0'); // Finish a race, again
     check('the follow-up is asked again', (await text('interview-question')) === 'How far?');
+
+    // The Interview survives a kill: reloaded mid-way, it is on the same
+    // question with the same answers behind it.
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(600);
+    check('a reload mid-Interview lands on the same question', (await text('interview-question')) === 'How far?', await text('interview-question'));
+    check('with the answers so far kept', (await text('guess-line')).toLowerCase().includes('health'), await text('guess-line'));
+    // The browser's own Back is the same one-step undo, not an exit.
+    await page.goBack({ waitUntil: 'commit' }).catch(() => {});
+    await page.waitForTimeout(600);
+    check('the platform back undoes one answer rather than leaving', (await seen('screen-interview')) && (await text('interview-question')) !== 'How far?', await text('interview-question'));
+    await tap('option-0'); // Finish a race, once more
+    check('and the follow-up comes back', (await text('interview-question')) === 'How far?');
+    // The helplines, one tap from the question.
+    check('the Interview has "Need someone?" at its top', await seen('top-help'));
+    await tap('top-help');
+    check('which opens the helplines without a pause', await seen('safety-card') && !(await seen('safety-wrong')));
+    await tap('safety-continue');
+    await page.waitForTimeout(300);
+    check('and closes back onto the same question', !(await seen('safety-card')) && (await text('interview-question')) === 'How far?');
     await tap('option-2'); // A half marathon
     check('horizon asked', (await text('interview-question')) === 'By when?');
     await tap('option-1'); // Six months
@@ -294,7 +315,12 @@ async function main() {
 
     await tap('keep-0');
     await page.locator('[data-testid="name-0"]').fill('Half marathon');
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(400);
+    // The read-back survives a kill: the name typed a moment ago is still there.
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(800);
+    check('a reload mid-read-back keeps the names', (await page.locator('[data-testid="name-0"]').inputValue()) === 'Half marathon');
     await tap('heard-continue');
 
     // ---- rank + title

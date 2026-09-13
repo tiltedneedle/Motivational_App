@@ -8,14 +8,24 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Body, InkButton, Label, Rule, Statement, Studio, TextButton, TopBar, day, keyboardScroll } from '@morrow/ui';
 import { useMorrow } from '../src/store';
 
-const ROWS: { label: string; body: string }[] = [
+const ROWS: { label: string; body: string; items?: string[] }[] = [
   {
     label: 'What stays on this device',
-    body: 'Everything you write. The Interview, the Fifteen, your lines, the Book. Writing works with the network off.',
+    body: 'Everything you write: the Interview (a few taps), the Fifteen (fifteen minutes of writing), your lines, the Book. Writing works with the network off.',
   },
   {
-    label: 'What is sent, and when',
-    body: 'Only when a screen needs it: your writing goes to an AI service to be read back to you as your own phrases, to build the plan from the lines you wrote, to be checked for signs you may need a person rather than an app, and to draw a scene from a detail you wrote. If you say the Fifteen rather than type it, your phone’s own recogniser turns it into words — on the phone itself where it can, and nothing is recorded. Never for advertising.',
+    label: 'What is sent to an AI service, and when',
+    body: 'Only when a screen needs it, and never for advertising:',
+    items: [
+      'when you ask for your own phrases to be read back to you;',
+      'when your plan is built from the lines you wrote;',
+      'when a sitting is checked for signs you may need a person rather than an app;',
+      'when you ask for a scene drawn from a detail you wrote.',
+    ],
+  },
+  {
+    label: 'If you say it rather than type it',
+    body: 'Your phone’s own recogniser turns it into words, on the phone where it can. Nothing is recorded.',
   },
   {
     label: 'What the AI is not allowed to do',
@@ -42,6 +52,12 @@ export default function Consent() {
               <Rule />
               <Label style={{ marginTop: 8 }}>{r.label}</Label>
               <Body style={{ color: day.ink }}>{r.body}</Body>
+              {r.items?.map((item) => (
+                <Body key={item} style={{ color: day.ink, paddingLeft: 14 }}>
+                  {'– '}
+                  {item}
+                </Body>
+              ))}
             </View>
           ))}
         </ScrollView>

@@ -90,7 +90,7 @@ export default function PortraitScreen() {
     <Studio testID="screen-portrait">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
         <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'portrait-back' }} where="The Portrait" />
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 20 }}>
+        <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 20 }}>
           <Rise index={0} reducedMotion={reduced} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
             <Stone size={44} domain={goal.domain} polish={1} />
             <View style={{ flex: 1 }}>
