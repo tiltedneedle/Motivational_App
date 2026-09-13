@@ -159,7 +159,7 @@ export default function Account() {
           <Body>
             That is all an account does: a copy of your writing, for a new phone or a cleared one. Nothing you write is
             used for anything else — not for advertising, not for anyone&apos;s model — and you can delete the account and
-            its copy from Settings, in the app, without asking anyone.
+            its copy from You, the last tab, without asking anyone.
           </Body>
 
           {!hasSupabase ? (
@@ -167,7 +167,7 @@ export default function Account() {
               <Rule />
               <Body style={{ color: day.ink }}>
                 There is no account service in this build, so there is nothing to sign in to. Everything stays on
-                this device, and Settings can copy it all out whenever you like.
+                this device, and You, the last tab, can copy it all out whenever you like.
               </Body>
               <InkButton testID="account-continue" label="Carry on" onPress={onwards} />
             </View>

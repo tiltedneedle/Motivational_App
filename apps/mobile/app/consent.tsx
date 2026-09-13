@@ -23,7 +23,7 @@ const ROWS: { label: string; body: string }[] = [
   },
   {
     label: 'You can take it all back',
-    body: 'Export everything, or delete the account and its writing, from Settings. Deletion is immediate here and complete within seven days.',
+    body: 'Export everything, or delete the account and its writing, from You, the last tab. Deletion is immediate here and complete within seven days.',
   },
 ];
 

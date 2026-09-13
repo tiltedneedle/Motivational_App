@@ -240,6 +240,14 @@ export default function Settings() {
           </View>
 
           <Rule />
+          {/* Welcome, again. It never comes back on its own once it has been seen. */}
+          <View style={{ gap: 6 }}>
+            <Label>The introduction</Label>
+            <Body style={{ fontSize: 14 }}>The three pages from the first launch: what this is, the three evenings, and how you want to be spoken to.</Body>
+            <Chip testID="settings-intro" label="See the introduction again" ghost onPress={() => router.push('/?intro=1')} />
+          </View>
+
+          <Rule />
           {/* The other half of PRD §11.6's disclosure. The first is on the Coach. */}
           <View style={{ gap: 6 }}>
             <Label>About the coach</Label>

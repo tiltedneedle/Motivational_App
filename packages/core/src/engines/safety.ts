@@ -135,7 +135,7 @@ export const SOFTEN_WINDOW_DAYS = 1;
  * already on the resources card.
  */
 export const SUPPORT_LINE =
-  'If the last few days have been heavier than usual, talking to someone — a doctor, a therapist, one of the lines in Settings — is a reasonable thing to do. It is there whenever you want it.';
+  'If the last few days have been heavier than usual, talking to someone — a doctor, a therapist, one of the lines under You, the last tab — is a reasonable thing to do. It is there whenever you want it.';
 
 /** Whether a day is inside the soften window of a flagged day. */
 export function withinSoftenWindow(flaggedDay: string, today: string, windowDays = SOFTEN_WINDOW_DAYS): boolean {

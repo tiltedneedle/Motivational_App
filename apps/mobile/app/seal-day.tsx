@@ -122,7 +122,7 @@ export default function SealDay() {
         <View style={{ paddingBottom: 22 }}>
           <HoldBar
             testID="seal-day-hold"
-            label="Hold to seal"
+            label="Hold to close the day"
             doneLabel={`Sealed · ${word}`}
             done={sealed}
             reducedMotion={reduced}

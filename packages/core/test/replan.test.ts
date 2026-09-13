@@ -229,7 +229,7 @@ describe('reaching a milestone', () => {
 });
 
 describe('the monthly replan cap', () => {
-  const ctx = { entitled: false, blueprintsBuilt: 1, coachTurnsToday: 0, afterBlueprintShown: true, replansThisMonth: 0 };
+  const ctx = { entitled: false, blueprintsBuilt: 1, coachTurnsToday: 0, afterBlueprintShown: true, firstDaySealed: true, replansThisMonth: 0 };
   it('allows one a month on the free plan, then refuses with the moment', () => {
     expect(canReplan(ctx).allowed).toBe(true);
     const refused = canReplan({ ...ctx, replansThisMonth: 1 });

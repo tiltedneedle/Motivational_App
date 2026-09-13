@@ -54,7 +54,7 @@ export default function SealBook() {
       }
     }
     setUnplanned(failed);
-    if (failed.length === 0) setTimeout(() => router.replace('/book'), 900);
+    if (failed.length === 0) setTimeout(() => router.replace('/book?from=seal'), 900);
     return true;
   };
 
@@ -194,7 +194,7 @@ export default function SealBook() {
               return onSeal();
             }}
           />
-          {sealed ? <InkButton testID="seal-open-book" label="Read the Book" onPress={() => router.replace('/book')} /> : null}
+          {sealed ? <InkButton testID="seal-open-book" label="Read the Book" onPress={() => router.replace('/book?from=seal')} /> : null}
         </View>
       </SafeAreaView>
     </Studio>

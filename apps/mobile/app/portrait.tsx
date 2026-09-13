@@ -203,7 +203,7 @@ export default function PortraitScreen() {
           />
 
           <View style={{ gap: 10, paddingTop: 4 }}>
-            <InkButton testID="portrait-accept" label="Make this my Blueprint" onPress={onwards} />
+            <InkButton testID="portrait-accept" label="Keep this plan" onPress={onwards} />
             <TextButton
               testID="portrait-not-quite"
               label="Not quite"

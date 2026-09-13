@@ -8,11 +8,10 @@
  * — which is everything a person needs to know and nothing they can take in
  * before they have tapped anything. Three pages read one at a time.
  */
-import { useIsFocused, useRouter } from 'expo-router';
+import { Redirect, useIsFocused, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { firstRunCaption } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Rise, Statement, Stone, Studio, TextButton, UserField, day, useReducedMotion } from '@morrow/ui';
 import { useFirstRun, useLatestBook, useMorrow } from '../src/store';
 import { hasSupabase } from '../src/supabase';
@@ -36,7 +35,6 @@ export default function Welcome() {
   const book = useLatestBook();
   const profile = useMorrow((s) => s.profile);
   const account = useMorrow((s) => s.account);
-  const goals = useMorrow((s) => s.goals);
   const setProfile = useMorrow((s) => s.setProfile);
   const reduced = useReducedMotion();
   const focused = useIsFocused();
@@ -46,16 +44,25 @@ export default function Welcome() {
   // the start. Welcome's one button goes to the next step of the path, and
   // somebody who has begun lands on the last page, where it is.
   const step = useFirstRun();
+  // "See the introduction again", from You: the pages, not the redirect.
+  const { intro } = useLocalSearchParams<{ intro?: string }>();
   const begun = step.step !== 'interview';
-  const [page, setPage] = useState(book || begun ? PAGES - 1 : 0);
+  const [page, setPage] = useState(0);
   const [name, setName] = useState(profile.displayName);
 
   const next = () => setPage((p) => Math.min(PAGES - 1, p + 1));
   const begin = () => {
     const trimmed = name.trim();
     if (trimmed !== profile.displayName) setProfile({ displayName: trimmed });
-    router.push(book ? '/today' : step.route);
+    router.push(step.route);
   };
+
+  // Welcome is for the person who has never been here. Anyone with a Book,
+  // or halfway to one, opens on Today — which is their Book and their day,
+  // or the path card with the next step on it. Every cold launch used to
+  // land on this screen's last page, name field and all (NN/g, Apple HIG:
+  // never re-show onboarding once it is done).
+  if ((book || begun) && intro !== '1') return <Redirect href="/today" />;
 
   return (
     <Studio testID="screen-welcome">
@@ -110,12 +117,7 @@ export default function Welcome() {
 
           {page === 2 ? (
             <Rise key="p2" index={0} reducedMotion={reduced} style={{ gap: 22 }}>
-              <Statement testID="welcome-page-2">{book || begun ? 'Welcome back.' : 'Last thing before we start.'}</Statement>
-              {!book && begun ? (
-                <Body testID="welcome-resume" style={{ color: day.ink }}>
-                  {firstRunCaption(step, goals.length)}
-                </Body>
-              ) : null}
+              <Statement testID="welcome-page-2">Last thing before we start.</Statement>
               <UserField
                 testID="welcome-name"
                 label="What should the coach call you? (optional)"
@@ -161,14 +163,13 @@ export default function Welcome() {
             <InkButton testID="welcome-next" label="Next" onPress={next} />
           ) : (
             <>
-              <InkButton testID="welcome-begin" label={book ? 'Back to today' : begun ? step.label : 'Begin tonight'} onPress={begin} />
-              {book ? null : <TextButton testID="welcome-have-book" label="I already have a Book" onPress={() => router.push('/today')} />}
+              <InkButton testID="welcome-begin" label={book || begun ? 'Back to today' : 'Begin tonight'} onPress={book || begun ? () => router.dismissTo('/today') : begin} />
               {/*
                 A new phone (PRD §7.12): the one door back to a Book kept on the
                 account, before anything is written here — once a goal exists the
                 device has writing of its own and the account will not overwrite it.
               */}
-              {!book && hasSupabase && !account ? (
+              {hasSupabase && !account ? (
                 <TextButton testID="welcome-bring-back" label="Bring my Book back from my account" onPress={() => router.push('/account')} />
               ) : null}
               <Label style={{ textAlign: 'center', marginTop: 4 }}>No sign-up until your Book exists</Label>

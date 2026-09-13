@@ -2,7 +2,7 @@
  * The Book (PRD §7.3): the user's writing, typeset. A paper page in the dark.
  * Everything on it is in the serif because everything on it is theirs.
  */
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Share, View , ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -47,6 +47,9 @@ function ChapterName({ name, authored, size }: { name: string; authored: boolean
 
 export default function BookScreen() {
   const router = useRouter();
+  // Straight from the seal: one door, to Today. Checked against a shape this app owns.
+  const { from } = useLocalSearchParams<{ from?: string }>();
+  const fromSeal = from === 'seal';
   const book = useLatestBook();
   // Kept: this one is read on Today, which is where it navigates to.
   const setToast = useMorrow((s) => s.setToast);
@@ -88,7 +91,7 @@ export default function BookScreen() {
     } catch {
       // The Toast surface is only rendered by Today, so a message put there
       // from this screen was written to something nobody was looking at.
-      setExportError('This device would not open the share sheet. Your Book is safe here, and Settings can export everything as text.');
+      setExportError('This device would not open the share sheet. Your Book is safe here, and You, the last tab, can export everything as text.');
     }
   };
 
@@ -294,24 +297,37 @@ export default function BookScreen() {
           Book no longer describes them — half off the page.
         */}
         <View style={{ gap: 10, paddingVertical: 14 }}>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-            {/*
-              The Sunday reading (PRD §7.3) has a door. The notification
-              points at it and so does Today on a Sunday, but somebody who
-              simply opened their Book and wanted to read it properly had no
-              way through.
-            */}
-            <Chip testID="book-read" label="Read it" onPress={() => router.push('/reading')} />
-            <Chip
-              testID="book-still-true"
-              label="Still true"
-              onPress={() => {
-                setToast({ text: 'Good. Nothing to change today.', kind: 'info' });
-                router.dismissTo('/today');
-              }}
-            />
-            <Chip testID="book-moved" label="Something moved" onPress={() => router.dismissTo('/today')} />
-          </View>
+          {fromSeal ? (
+            /*
+              Straight from the seal, the Book is the thing they made and Today
+              is the thing to do with it. The three Sunday verdicts below are
+              for a Book that has been lived with; on the night it was sealed
+              they read as a quiz, and the first move sat two taps away.
+            */
+            <View style={{ gap: 8 }}>
+              <InkButton testID="book-to-today" label="On to Today — your first move" onPress={() => router.dismissTo('/today')} />
+              <Label style={{ color: night.ink3, textAlign: 'center' }}>Read it any time from the Book tab</Label>
+            </View>
+          ) : (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+              {/*
+                The Sunday reading (PRD §7.3) has a door. The notification
+                points at it and so does Today on a Sunday, but somebody who
+                simply opened their Book and wanted to read it properly had no
+                way through.
+              */}
+              <Chip testID="book-read" label="Read it" onPress={() => router.push('/reading')} />
+              <Chip
+                testID="book-still-true"
+                label="Still true"
+                onPress={() => {
+                  setToast({ text: 'Good. Nothing to change today.', kind: 'info' });
+                  router.dismissTo('/today');
+                }}
+              />
+              <Chip testID="book-moved" label="Something moved" onPress={() => router.dismissTo('/today')} />
+            </View>
+          )}
           {/* The ways out of the app: quieter than the ways through it. */}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 18, alignItems: 'center' }}>
             <TextButton testID="book-export" label="Export" onPress={onExport} />

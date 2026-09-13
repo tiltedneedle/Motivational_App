@@ -203,15 +203,11 @@ async function main() {
     await page.goto(`${BASE}/`, { waitUntil: 'networkidle' });
     await page.clock.runFor(1500);
     await page.waitForTimeout(500);
-    check('Welcome, with goals named, lands on its last page', await seen('welcome-page-2'));
-    check('and says where they are', (await text('welcome-resume')).includes('The Fifteen comes next'), await text('welcome-resume'));
-    check('and its button is the next step', (await text('welcome-begin')) === 'Write the Fifteen', await text('welcome-begin'));
-    await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
-    await page.clock.runFor(1500);
-    await page.waitForTimeout(500);
+    check('a launch with goals named does not show Welcome again', !(await seen('screen-welcome')) && (await seen('screen-today')));
     check('Today, with goals and no Book, is the path', (await text('today-path')).includes('not finished'), await text('today-path'));
+    check('and its button is the next step', (await text('today-begin')) === 'Write the Fifteen', await text('today-begin'));
     await tap('today-begin');
-    check('and its button goes to the Fifteen', await seen('screen-authoring'));
+    check('and it goes to the Fifteen', await seen('screen-authoring'));
 
     // ---- the Fifteen
     await tap('authoring-begin');
@@ -262,10 +258,30 @@ async function main() {
       await accessible('the room, mid-sitting');
     }
 
+    // The clock can be paused (WCAG 2.2.1): held, it does not move.
+    await tap('write-hold');
+    const heldAt = await text('write-remaining');
+    await page.clock.runFor(30 * 1000);
+    await page.waitForTimeout(300);
+    check('Pause holds the clock', (await text('write-remaining')) === heldAt, `${heldAt} → ${await text('write-remaining')}`);
+    await tap('write-hold');
+    await page.clock.runFor(2000);
+    await page.waitForTimeout(300);
+    check('and Carry on starts it again', (await text('write-remaining')) !== heldAt, await text('write-remaining'));
+
     // fast-forward past the ten-minute floor
     await page.clock.runFor(11 * 60 * 1000);
     await page.waitForTimeout(400);
     check('the room can be closed once the floor is met', await seen('write-close'));
+    // Let the clock run out: the room closes, and offers five more minutes.
+    await page.clock.runFor(5 * 60 * 1000);
+    await page.waitForTimeout(500);
+    check('the clock closes the room at fifteen', await seen('screen-write-closed'));
+    check('and offers five more minutes', await seen('write-extend'));
+    await tap('write-extend');
+    check('Five more minutes reopens the room', await seen('screen-write'));
+    check('with the words still on the page', (await page.locator('[data-testid="write-input"]').inputValue()).length > 0);
+    check('and five minutes on the clock', (await text('write-remaining')).startsWith('5:00') || (await text('write-remaining')).startsWith('4:5'), await text('write-remaining'));
     await tap('write-close');
     check('close card', await seen('screen-write-closed'));
     await tap('write-continue');
@@ -287,14 +303,12 @@ async function main() {
     // chip here is what proves the two survive to the Book as two things: the
     // framing used to be a placeholder, so the opening the person chose
     // vanished the moment they left this screen.
-    check('rank screen', await seen('screen-rank'));
-    // The path from here is the order and the title, then the stones.
-    await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
-    await page.clock.runFor(1500);
-    await page.waitForTimeout(500);
+    // The first evening ends on Today, with the next step on the path card
+    // — not straight on into the second sitting.
+    check('the read-back lands on Today, a marked stopping point', await seen('screen-today') && (await seen('today-path')));
     check('with the Fifteen written, Today points at the order', (await text('today-begin')) === 'Put the goals in order', await text('today-begin'));
     await tap('today-begin');
-    check('and lands on it', await seen('screen-rank'));
+    check('rank screen', await seen('screen-rank'));
     await tap('title-framing-The one where I…');
     await page.waitForTimeout(200);
     await page.locator('[data-testid="book-title"]').fill('stopped negotiating with the alarm');
@@ -522,40 +536,18 @@ async function main() {
     // this is the first time Today opens with a Blueprint behind it, and the
     // rest of this suite is the proof that "Not now" costs nothing: everything
     // after this point runs exactly as it did before the paywall existed.
-    await tap('book-still-true');
+    check('straight from the seal, the Book has one door: Today', await seen('book-to-today'));
+    await tap('book-to-today');
     await page.waitForTimeout(900);
-    const sawPaywall = await seen('screen-paywall');
-    check('the paywall arrives once, after the Blueprint', sawPaywall);
-    if (sawPaywall) {
-      check(
-        'and it opens with the line they wrote, not a pitch',
-        (await text('paywall-i-will')).includes('out the back door before the kettle boils'),
-        await text('paywall-i-will'),
-      );
-      check('the annual plan carries the per-month maths', (await text('plan-note')).includes('$4.17'));
-      check('the trial is a caption, never a countdown', (await text('plan-trial')).includes('7 days free'));
-      // Nothing was charged, and the screen says so rather than spinning.
-      await tap('paywall-continue');
-      await page.waitForTimeout(600);
-      check(
-        'Continue says plainly that purchases are not wired up in this build',
-        (await seen('paywall-problem')) && (await text('paywall-problem')).includes('nothing was charged'),
-        (await seen('paywall-problem')) ? await text('paywall-problem') : '(no message)',
-      );
-      await tap('paywall-not-now');
-      await page.waitForTimeout(600);
-    }
+    // No paywall before the first value moment: the first Today is a Today.
+    check('the first Today is not a paywall', !(await seen('screen-paywall')) && (await seen('screen-today')));
+    check('and it shows the few things that matter: no consistency score yet', !(await seen('today-consistency')));
+    check('and no practices invitation yet', !(await seen('today-no-practices')));
 
-    // Once means once, whichever way they left it. Marking it seen on the
-    // dismiss button meant a system back gesture, or closing the app on this
-    // screen, brought it back the next time Today opened — which is the exact
-    // behaviour that makes people delete an app rather than pay for it.
     await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
     await page.clock.runFor(2000);
     await page.waitForTimeout(700);
-    check('and it does not come back the next time Today opens', !(await seen('screen-paywall')));
     check('today renders', await seen('screen-today'));
-    check('and Not now put them back where they were', !(await seen('screen-paywall')));
     // The first Today explains itself, once.
     check('the first Today says what the stone and the check are', await seen('today-intro'));
     if (await seen('today-intro')) {
@@ -598,11 +590,13 @@ async function main() {
     }
 
     if (rows > 0) {
-      const before = await text('consistency');
+      // The consistency score waits for the first sealed day, so the proof
+      // that seating a stone counts is the move itself: done, in the store.
+      const doneBefore = await page.evaluate(() => JSON.parse(localStorage.getItem('morrow-v1')).state.plans.flatMap((p) => p.moves).filter((m) => m.status === 'done').length);
       await page.locator('[data-testid^="stone-mv"]').first().click();
       await page.waitForTimeout(600);
-      const after = await text('consistency');
-      check('seating a stone moves consistency', before !== after, `${before} → ${after}`);
+      const doneAfter = await page.evaluate(() => JSON.parse(localStorage.getItem('morrow-v1')).state.plans.flatMap((p) => p.moves).filter((m) => m.status === 'done').length);
+      check('seating a stone marks the move done', doneAfter === doneBefore + 1, `${doneBefore} → ${doneAfter}`);
     }
 
     // ---- the New move sheet, and capture (PRD 7.6)
@@ -665,6 +659,44 @@ async function main() {
     await page.clock.runFor(1500);
     await page.waitForTimeout(900);
     check('sealing returns to today', await seen('screen-today'));
+
+    // ---- the one paywall moment: once, after the Blueprint AND the first sealed day (PRD §7.13, §8.9)
+    //
+    // "Once after the Blueprint, soft, dismissible." It waits for one real
+    // evening so that the first Today is the thing three sittings were for,
+    // not a price. The rest of this suite is the proof that "Not now" costs
+    // nothing: everything after this point runs as it did before.
+    await page.waitForTimeout(600);
+    const sawPaywallNow = await seen('screen-paywall');
+    check('the paywall arrives once, after the first sealed day', sawPaywallNow);
+    if (sawPaywallNow) {
+      check(
+        'and it opens with the line they wrote, not a pitch',
+        (await text('paywall-i-will')).includes('out the back door before the kettle boils'),
+        await text('paywall-i-will'),
+      );
+      check('the annual plan carries the per-month maths', (await text('plan-note')).includes('$4.17'));
+      check('the trial is a caption, never a countdown', (await text('plan-trial')).includes('7 days free'));
+      // Nothing was charged, and the screen says so rather than spinning.
+      await tap('paywall-continue');
+      await page.waitForTimeout(600);
+      check(
+        'Continue says plainly that purchases are not wired up in this build',
+        (await seen('paywall-problem')) && (await text('paywall-problem')).includes('nothing was charged'),
+        (await seen('paywall-problem')) ? await text('paywall-problem') : '(no message)',
+      );
+      await tap('paywall-not-now');
+      await page.waitForTimeout(600);
+    }
+    // Once means once, whichever way they left it. Marking it seen on the
+    // dismiss button meant a system back gesture, or closing the app on this
+    // screen, brought it back the next time Today opened — which is the exact
+    // behaviour that makes people delete an app rather than pay for it.
+    await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(2000);
+    await page.waitForTimeout(700);
+    check('and it does not come back the next time Today opens', !(await seen('screen-paywall')));
+    check('and after the first sealed day the consistency score appears', await seen('today-consistency'));
     // Back to the Today that was there, not a second one on top of it. A
     // replace from a pushed screen left two Todays mounted, the hidden one
     // first in the DOM, so every later click on Today found the wrong one.

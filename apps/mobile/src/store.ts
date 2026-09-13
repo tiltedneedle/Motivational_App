@@ -1678,6 +1678,7 @@ export function entitlementOf(s: MorrowState, day: string): EntitlementContext {
     blueprintsBuilt: new Set(s.plans.map((p) => p.goalId)).size,
     coachTurnsToday: s.coachTurns[day] ?? 0,
     afterBlueprintShown: (s.profile.paywallSeen ?? []).includes('after-blueprint'),
+    firstDaySealed: Object.values(s.days).some((d) => Boolean(d.sealedAt)),
     replansThisMonth: s.plans.flatMap((p) => p.replannedAt ?? []).filter((at) => dayOf(new Date(at), s.profile.dayBoundaryHour).slice(0, 7) === day.slice(0, 7)).length,
   };
 }

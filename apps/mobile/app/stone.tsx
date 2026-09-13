@@ -265,7 +265,7 @@ export default function StoneScreen() {
         <View style={{ paddingBottom: 18, gap: 4 }}>
           <InkButton
             testID="stone-seat"
-            label={ready ? 'Seat the stone' : kind === 'obstacles' ? 'Write both lines' : 'Write your line'}
+            label={ready ? (stepIndex + 1 < plan.length ? 'Keep this line · next' : 'Keep this line') : kind === 'obstacles' ? 'Write both lines' : 'Write your line'}
             disabled={!ready}
             onPress={() => {
               if (needsFollowUp) {

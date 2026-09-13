@@ -124,6 +124,13 @@ export interface EntitlementContext {
   coachTurnsToday: number;
   /** Whether the once-ever post-Blueprint moment has already been shown. */
   afterBlueprintShown: boolean;
+  /**
+   * Whether a day has been sealed. The unprompted paywall comes once after
+   * the Blueprint (PRD §7.13) — and after the first sealed day, so the first
+   * Today is a Today and not a price. Nothing about the offer changes; only
+   * that it waits for one real evening.
+   */
+  firstDaySealed: boolean;
   /** Replans applied, to any plan, since the first of this month. */
   replansThisMonth: number;
 }
@@ -186,6 +193,7 @@ export function paywallMoment(ctx: EntitlementContext): PaywallMoment | null {
   if (ctx.entitled) return null;
   if (ctx.afterBlueprintShown) return null;
   if (ctx.blueprintsBuilt < 1) return null;
+  if (!ctx.firstDaySealed) return null;
   return 'after-blueprint';
 }
 

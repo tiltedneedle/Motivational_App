@@ -53,7 +53,7 @@ const MIME = {
 
 /** The routes, and the state each needs beyond the seed. */
 const ROUTES = {
-  welcome: '/',
+  welcome: '/?intro=1',
   consent: '/consent',
   interview: '/interview',
   authoring: '/authoring',

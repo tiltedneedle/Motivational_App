@@ -133,9 +133,10 @@ describe('the concern band is a band, not a column in a table', () => {
   });
 
   it('does not put words in the support line that the app cannot back', () => {
-    // It points at Settings, and Settings is where the helplines are. It does
+    // It points at You, the last tab, which is where the helplines are (the tab
+    // is called You, so the line says You: the same word for the same place). It does
     // not diagnose, promise, or name a condition.
-    expect(SUPPORT_LINE).toContain('Settings');
+    expect(SUPPORT_LINE).toContain('You, the last tab');
     expect(SUPPORT_LINE).not.toMatch(/depress|anxiet|disorder|diagnos/i);
   });
 });

@@ -31,6 +31,7 @@ const free: EntitlementContext = {
   blueprintsBuilt: 0,
   coachTurnsToday: 0,
   afterBlueprintShown: false,
+  firstDaySealed: true,
   replansThisMonth: 0,
 };
 
@@ -70,6 +71,14 @@ describe('the one appearance nobody asked for', () => {
   it('is after the first Blueprint, and only then', () => {
     expect(paywallMoment(free)).toBe(null);
     expect(paywallMoment({ ...free, blueprintsBuilt: 1 })).toBe('after-blueprint');
+  });
+
+  it('waits for the first sealed day, so the first Today is not a price', () => {
+    // No paywall before the first value moment: the first Today is the thing
+    // all three sittings were for, and a price on its first paint reads as
+    // the app's real purpose.
+    expect(paywallMoment({ ...free, blueprintsBuilt: 1, firstDaySealed: false })).toBe(null);
+    expect(paywallMoment({ ...free, blueprintsBuilt: 1, firstDaySealed: true })).toBe('after-blueprint');
   });
 
   it('is once, ever', () => {

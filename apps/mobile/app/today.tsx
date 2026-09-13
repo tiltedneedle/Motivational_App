@@ -81,6 +81,12 @@ export default function Today() {
   const makeBrief = useMorrow((s) => s.makeBrief);
   const setProfile = useMorrow((s) => s.setProfile);
   const firstRun = useFirstRun();
+  // Progressive disclosure, keyed on state that already exists: a person on
+  // their first Today has a Now card, a check and five tabs to learn. The
+  // practices invitation and the consistency score wait for the first sealed
+  // day — a score of a first week, on the first morning, was one more thing
+  // with nothing behind it.
+  const settledIn = Object.values(state.days).some((d) => Boolean(d.sealedAt));
 
   const today = dayOf(new Date(), state.profile.dayBoundaryHour);
   const intendedMoveId = state.days[today]?.intentionMoveId ?? null;
@@ -566,7 +572,7 @@ export default function Today() {
             who has never made a practice was being read by somebody who runs
             three mornings a week.
           */}
-          {!practices.length && goals.length ? (
+          {!practices.length && goals.length && settledIn ? (
             allPractices.length ? (
               <View testID="today-practices-rest" style={{ marginTop: 26, gap: 6 }}>
                 <Label>Practices</Label>
@@ -587,7 +593,8 @@ export default function Today() {
             )
           ) : null}
 
-          {/* Consistency. Tapping it opens the thing it is a summary of. */}
+          {/* Consistency. Tapping it opens the thing it is a summary of. After the first sealed day: before that there is nothing to summarise. */}
+          {settledIn ? (
           <Pressable
             testID="today-consistency"
             accessibilityRole="button"
@@ -616,6 +623,7 @@ export default function Today() {
             </View>
             <Body style={{ fontSize: 13 }}>{consistencyCaption(score)}</Body>
           </Pressable>
+          ) : null}
         </ScrollView>
 
         {/*

@@ -38,13 +38,13 @@ export const DOORWAY: Record<WritingKind, { eyebrow: string; prompt: string; not
     eyebrow: 'The Fifteen · the ideal',
     prompt:
       "It is three to five years from now and things went as well as they could. You looked after yourself. Tell me what a Tuesday looks like: where you wake, what you do, who is there, what you have made, what is no longer a problem.",
-    note: "Write or talk. Don't fix spelling. Don't go back. If you run out, say the next true thing.",
+    note: 'Write or talk. Spelling can wait. Keep moving forward. If you run out, say the next true thing.',
   },
   shadow: {
     eyebrow: 'The other road',
     prompt:
       'Same distance ahead, but your worst habits won. The excuses you already know, the things you told yourself, what it cost and who paid.',
-    note: 'Be specific, and unkind to the version of you that let it happen. You will not have to read this often.',
+    note: 'Be specific: what it cost, and who paid. You will not have to read this often.',
   },
   addition: {
     eyebrow: 'Add to it',
@@ -100,7 +100,36 @@ export interface WritingSessionState {
   nudgeCount: number;
   /** A session may be paused and resumed once; a second leave ends the sitting. */
   pausedOnce: boolean;
+  /**
+   * Seconds added to the clock by "Five more minutes" after it ended. The
+   * ring closes at fifteen (PRD §7.2); WCAG 2.2.1 asks that a time limit can
+   * be extended by a simple action, at least ten times. Nothing here changes
+   * what counts — the floor is the floor.
+   */
+  extraSeconds: number;
   closed: boolean;
+}
+
+export const EXTENSION_SECONDS = 5 * 60;
+export const MAX_EXTENSIONS = 10;
+
+/** The clock's length for this sitting: the target, plus what was added. */
+export function targetFor(s: Pick<WritingSessionState, 'kind' | 'track' | 'extraSeconds'>): number {
+  return targetSeconds(s.kind, s.track) + (s.extraSeconds ?? 0);
+}
+
+export function extensionsUsed(s: Pick<WritingSessionState, 'extraSeconds'>): number {
+  return Math.round((s.extraSeconds ?? 0) / EXTENSION_SECONDS);
+}
+
+export function canExtend(s: Pick<WritingSessionState, 'extraSeconds'>): boolean {
+  return extensionsUsed(s) < MAX_EXTENSIONS;
+}
+
+/** Five more minutes on a clock that has ended. A no-op past the tenth. */
+export function extend(s: WritingSessionState): WritingSessionState {
+  if (!canExtend(s)) return s;
+  return { ...s, extraSeconds: (s.extraSeconds ?? 0) + EXTENSION_SECONDS, closed: false, idleMs: 0, nudge: null };
 }
 
 export function startWriting(kind: WritingKind, track: DepthTrack, mode: WritingMode = 'type'): WritingSessionState {
@@ -114,6 +143,7 @@ export function startWriting(kind: WritingKind, track: DepthTrack, mode: Writing
     nudge: null,
     nudgeCount: 0,
     pausedOnce: false,
+    extraSeconds: 0,
     closed: false,
   };
 }
@@ -133,6 +163,8 @@ export interface WritingDraft {
   elapsed: number;
   /** True once the sitting has already been picked back up. */
   pausedOnce: boolean;
+  /** Minutes added at the end of the clock, carried so a resumed sitting keeps them. */
+  extraSeconds?: number;
   updatedAt: string;
 }
 
@@ -144,6 +176,7 @@ export function draftOf(s: WritingSessionState, updatedAt = new Date().toISOStri
     body: s.body,
     elapsed: s.elapsed,
     pausedOnce: s.pausedOnce,
+    extraSeconds: s.extraSeconds ?? 0,
     updatedAt,
   };
 }
@@ -164,7 +197,8 @@ export function resumeWriting(d: WritingDraft): WritingSessionState {
     nudge: null,
     nudgeCount: 0,
     pausedOnce: true,
-    closed: d.elapsed >= targetSeconds(d.kind, d.track),
+    extraSeconds: d.extraSeconds ?? 0,
+    closed: d.elapsed >= targetSeconds(d.kind, d.track) + (d.extraSeconds ?? 0),
   };
 }
 
@@ -192,7 +226,7 @@ export function tick(s: WritingSessionState, deltaMs: number, typing: boolean): 
     nudge = nextNudge(s.nudge);
     nudgeCount += 1;
   }
-  const done = elapsed >= targetSeconds(s.kind, s.track);
+  const done = elapsed >= targetFor(s);
   return { ...s, elapsed, idleMs, nudge, nudgeCount, closed: done };
 }
 
@@ -201,11 +235,11 @@ export function canClose(s: WritingSessionState): boolean {
 }
 
 export function remaining(s: WritingSessionState): number {
-  return Math.max(0, Math.round(targetSeconds(s.kind, s.track) - s.elapsed));
+  return Math.max(0, Math.round(targetFor(s) - s.elapsed));
 }
 
 export function ringFraction(s: WritingSessionState): number {
-  return Math.max(0, Math.min(1, s.elapsed / targetSeconds(s.kind, s.track)));
+  return Math.max(0, Math.min(1, s.elapsed / targetFor(s)));
 }
 
 export function formatRemaining(seconds: number): string {

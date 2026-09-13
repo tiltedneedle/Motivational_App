@@ -5,11 +5,13 @@
  */
 import { useIsFocused, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, AppState, Easing, Platform, ScrollView, TextInput, View } from 'react-native';
+import { AccessibilityInfo, Animated, AppState, Easing, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   DOORWAY,
   canClose,
+  canExtend,
+  extend,
   canResume,
   draftWorthKeeping,
   resumeWriting,
@@ -55,6 +57,14 @@ export default function Write() {
   const [endedEarly, setEndedEarly] = useState(false);
   /** The safety screen stopped this sitting going on to the read-back. */
   const [paused, setPaused] = useState(false);
+  // The person's own pause — the clock waits, the nudges wait, the recogniser
+  // stops — as distinct from the safety pause above. WCAG 2.2.1: a time limit
+  // has to be one a person can stop. Fifteen minutes of continuous writing is
+  // the studied mechanism, and it is still what is asked; this is the door
+  // out of it for a moment, for whoever needs one.
+  const [held, setHeld] = useState(false);
+  // How the room closed: by the clock, by the person, or by the day catching up.
+  const [closedBy, setClosedBy] = useState<'clock' | 'person' | null>(null);
   const typingRef = useRef(false);
   const inputRef = useRef<TextInput>(null);
   /**
@@ -105,7 +115,7 @@ export default function Write() {
   const resumable = draftWorthKeeping(draft);
 
   useEffect(() => {
-    if (phase !== 'writing') return;
+    if (phase !== 'writing' || held) return;
     const id = setInterval(() => {
       setSession((s) => {
         const next = tick(s, TICK_MS, typingRef.current);
@@ -114,14 +124,25 @@ export default function Write() {
       });
     }, TICK_MS);
     return () => clearInterval(id);
-  }, [phase]);
+  }, [phase, held]);
 
   useEffect(() => {
-    if (session.closed && phase === 'writing') setPhase('closed');
+    if (session.closed && phase === 'writing') {
+      setClosedBy((c) => c ?? 'clock');
+      setPhase('closed');
+    }
   }, [session.closed, phase]);
 
+  // One warning before the clock ends, for whoever cannot see the ring: what
+  // is left, and that there is more to be had (WCAG 2.2.1's "warned before").
+  const secondsLeft = remaining(session);
   useEffect(() => {
-    if (phase !== 'writing' || mode === 'type') {
+    if (phase !== 'writing' || secondsLeft !== 60) return;
+    AccessibilityInfo.announceForAccessibility('One minute left on the clock. When it ends you can add five more minutes, or close.');
+  }, [phase, secondsLeft]);
+
+  useEffect(() => {
+    if (phase !== 'writing' || mode === 'type' || held) {
       if (listening) {
         dictationRef.current.stop();
         setListening(false);
@@ -295,7 +316,7 @@ export default function Write() {
                   }}
                 />
                 <Label style={{ color: night.ink3, textAlign: 'center' }}>
-                  {mode === 'type' ? 'No editing. No going back.' : 'Talking counts as writing. Edit the transcript after.'}
+                  {mode === 'type' ? 'Forward only: the page keeps what you type.' : 'Talking counts as writing. Edit the transcript after.'}
                 </Label>
               </>
             )}
@@ -351,6 +372,18 @@ export default function Write() {
             </View>
           ) : (
             <View style={{ gap: 10 }}>
+              {closedBy === 'clock' && !endedEarly && canExtend(session) ? (
+                <InkButton
+                  testID="write-extend"
+                  label="Five more minutes"
+                  onPress={() => {
+                    setSession((s) => extend(s));
+                    setClosedBy(null);
+                    setPhase('writing');
+                  }}
+                  style={{ backgroundColor: 'transparent', borderWidth: 1.5, borderColor: night.line }}
+                />
+              ) : null}
               <InkButton
                 testID="write-continue"
                 label={
@@ -433,13 +466,23 @@ export default function Write() {
             color={accent.coral}
             track="rgba(255,255,255,0.12)"
             width={3}
-            accessibilityLabel="Time left in this sitting"
+            accessibilityLabel={held ? 'The clock is paused' : 'Time left in this sitting'}
             valueText={`${formatRemaining(remaining(session))} left, ${words} words`}
           >
             <Animated.View style={{ transform: [{ translateY: bob }] }}>
               <Stone size={64} domain="health" polish={polish(words)} />
             </Animated.View>
           </Ring>
+          <Pressable
+            testID="write-hold"
+            accessibilityRole="button"
+            accessibilityLabel={held ? 'Carry on: start the clock again' : 'Pause the clock'}
+            onPress={() => setHeld((h) => !h)}
+            hitSlop={8}
+            style={({ pressed }) => ({ minHeight: 44, justifyContent: 'center', paddingHorizontal: 12, opacity: pressed ? 0.6 : 1 })}
+          >
+            <Label style={{ color: held ? night.ink : night.ink3 }}>{held ? 'Paused — tap to carry on' : 'Pause'}</Label>
+          </Pressable>
         </View>
 
         <View style={{ flex: 1, flexDirection: 'row', gap: 14 }}>
@@ -538,7 +581,15 @@ export default function Write() {
             {session.nudge ?? ''}
           </Label>
           {ready ? (
-            <InkButton testID="write-close" label="Close it here" onPress={() => setPhase('closed')} style={{ alignSelf: 'stretch' }} />
+            <InkButton
+              testID="write-close"
+              label="Close it here"
+              onPress={() => {
+                setClosedBy('person');
+                setPhase('closed');
+              }}
+              style={{ alignSelf: 'stretch' }}
+            />
           ) : (
             <Label style={{ color: night.ink3 }}>
               {Math.max(0, Math.ceil((minSecondsToCount(kind, track) - session.elapsed) / 60))} min before this counts

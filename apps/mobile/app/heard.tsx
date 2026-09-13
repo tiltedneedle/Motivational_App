@@ -79,7 +79,11 @@ export default function Heard() {
         })),
       );
     }
-    router.replace('/rank');
+    // The first evening ends here — "Tonight about twenty-five minutes" was
+    // the promise — so the way on is Today, whose path card says what comes
+    // next and offers it now or tomorrow. It used to run straight on into
+    // the second sitting with nothing to mark the stop.
+    router.dismissTo('/today');
   };
 
   return (

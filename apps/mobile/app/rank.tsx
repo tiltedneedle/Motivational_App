@@ -132,7 +132,7 @@ export default function Rank() {
         <View style={{ paddingBottom: 18 }}>
           <InkButton
             testID="rank-continue"
-            label="On to the stones"
+            label="Write five lines per goal"
             disabled={goals.length === 0}
             onPress={() => {
               const first = goals[0];

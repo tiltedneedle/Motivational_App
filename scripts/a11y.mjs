@@ -40,7 +40,7 @@ const MIME = {
 
 /** The same routes the screenshots use, so the two passes look at the same screens. */
 const ROUTES = {
-  welcome: '/',
+  welcome: '/?intro=1',
   consent: '/consent',
   interview: '/interview',
   authoring: '/authoring',
