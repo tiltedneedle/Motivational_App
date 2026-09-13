@@ -173,3 +173,25 @@ describe('the night studio as dark mode', () => {
     expect(ratio(night.onInkSoft, night.ink)).toBeGreaterThanOrEqual(AA_BODY);
   });
 });
+
+/**
+ * Non-text contrast (WCAG 1.4.11): the one line under every text field is
+ * the field's boundary, and it has to clear 3:1 against the ground at rest —
+ * not only when focused. At 45% coral it sat under 2:1.
+ */
+describe('the field underline', () => {
+  const over = (rgba: string, bgHex: string): string => {
+    const m = rgba.match(/rgba\((\d+),(\d+),(\d+),([\d.]+)\)/);
+    if (!m) return rgba;
+    const a = Number(m[4]);
+    const bg = bgHex.replace('#', '');
+    const ch = (i: number) => parseInt(bg.slice(i, i + 2), 16);
+    const mix = (fg: number, b: number) => Math.round(fg * a + b * (1 - a));
+    const hex = [mix(Number(m[1]), ch(0)), mix(Number(m[2]), ch(2)), mix(Number(m[3]), ch(4))].map((v) => v.toString(16).padStart(2, '0')).join('');
+    return `#${hex}`;
+  };
+  it('clears 3:1 at rest on the day ground and on a surface', () => {
+    expect(ratio(over(accent.coralSoftLine, day.ground), day.ground)).toBeGreaterThanOrEqual(3);
+    expect(ratio(over(accent.coralSoftLine, day.surface), day.surface)).toBeGreaterThanOrEqual(3);
+  });
+});

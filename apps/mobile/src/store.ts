@@ -737,6 +737,7 @@ const store = create<MorrowState>()(
             goals: st.goals.map((g) => (g.status === 'authored' ? { ...g, status: 'active' as const } : g)),
           }));
           track({ name: 'book_sealed', edition: book.version, goals: book.chapters.length, track: book.track, authorship: book.authorshipRatio });
+          if (book.version === 1) track({ name: 'first_value', kind: 'book_sealed' });
           return { ok: true, book };
         } catch (err) {
           return { ok: false, error: err instanceof Error ? err.message : 'The Book could not be sealed.' };

@@ -30,12 +30,14 @@ import {
 } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Question, Ring, Statement, Stone, Studio, TopBar, UserText, accent, focusRing, night, type as fonts, useReducedMotion, webOnlyStyle } from '@morrow/ui';
 import { latestText, useMorrow } from '../src/store';
+import { useFirstRunStep } from '../src/analytics';
 import { dictation } from '../src/dictation';
 
 const TICK_MS = 250;
 
 export default function Write() {
   const router = useRouter();
+  useFirstRunStep('fifteen');
   const showResources = useMorrow((st) => st.showResources);
   const params = useLocalSearchParams<{ kind?: string }>();
   const kind = (params.kind === 'shadow' ? 'shadow' : params.kind === 'addition' ? 'addition' : 'ideal') as WritingKind;

@@ -127,7 +127,7 @@ const accentStudio = {
   coralNight: '#ED6147',
   coralSoft: 'rgba(234,75,46,0.12)',
   /** The writing line at rest. Focus moves it to full coral. */
-  coralSoftLine: 'rgba(234,75,46,0.45)',
+  coralSoftLine: 'rgba(234,75,46,0.9)',
   teal: '#169A89',
   tealText: '#11796C',
   tealNight: '#179F8D',

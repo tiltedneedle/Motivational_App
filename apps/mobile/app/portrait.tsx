@@ -20,10 +20,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { domainMeta } from '@morrow/core';
 import { Body, Card, InkButton, Label, Quoted, Rise, Rule, Statement, Stone, Studio, TextButton, TopBar, UserField, UserText, accent, day, useReducedMotion } from '@morrow/ui';
 import { useGoals, useMorrow } from '../src/store';
+import { useFirstRunStep } from '../src/analytics';
 import { hasSupabase } from '../src/supabase';
 
 export default function PortraitScreen() {
   const router = useRouter();
+  useFirstRunStep('portrait');
   const { goal: goalId, next } = useLocalSearchParams<{ goal?: string; next?: string }>();
   const goals = useGoals();
   const portraits = useMorrow((s) => s.portraits);

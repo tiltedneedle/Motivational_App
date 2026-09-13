@@ -10,11 +10,13 @@ import { Body, Chip, InkButton, Label, Ring, Statement, Stone, Studio, TopBar, U
 
 
 import { useGoals, useMorrow } from '../src/store';
+import { useFirstRunStep } from '../src/analytics';
 
 const TITLE_FRAMINGS = ['A year of…', 'The one where I…', 'Back to…'];
 
 export default function Rank() {
   const router = useRouter();
+  useFirstRunStep('order');
   const goals = useGoals();
   const rankGoals = useMorrow((s) => s.rankGoals);
   const bookTitle = useMorrow((s) => s.bookTitle);

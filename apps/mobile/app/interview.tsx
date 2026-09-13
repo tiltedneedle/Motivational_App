@@ -41,11 +41,13 @@ import {
   type as fonts,
 } from '@morrow/ui';
 import { useMorrow } from '../src/store';
+import { track, useFirstRunStep } from '../src/analytics';
 
 const LETTERS = 'ABCDEFGH';
 
 export default function Interview() {
   const router = useRouter();
+  useFirstRunStep('interview');
   const showResources = useMorrow((st) => st.showResources);
   // Picked up where it was left: a kill or a call mid-Interview used to
   // restart it from the first question.
@@ -137,6 +139,7 @@ export default function Interview() {
 
   const finish = () => {
     clearDraft();
+    track({ name: 'first_value', kind: 'goals_named' });
     addGoals(
       s.drafts.map((d) => ({
         title: d.title,

@@ -13,6 +13,7 @@
  * user id is never sent, so the two cannot be joined from here.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEffect } from 'react';
 import { AppState, Platform } from 'react-native';
 
 const KEY = (process.env.EXPO_PUBLIC_POSTHOG_KEY ?? '').trim();
@@ -45,7 +46,9 @@ export type Event =
   | { name: 'purchase'; plan: string; ok: boolean }
   | { name: 'notification_opened'; route: string }
   | { name: 'account_signed_in'; method: 'email' | 'apple' | 'google'; pulled: boolean }
-  | { name: 'safety_card_shown'; source: string };
+  | { name: 'safety_card_shown'; source: string }
+  | { name: 'first_run_step'; step: 'welcome' | 'consent' | 'interview' | 'doorway' | 'fifteen' | 'read_back' | 'order' | 'stone' | 'portrait' | 'seal' }
+  | { name: 'first_value'; kind: 'goals_named' | 'fifteen_closed' | 'book_sealed' | 'first_move_done' | 'first_day_sealed' };
 
 const ID_KEY = 'morrow-analytics-id';
 let id: string | null = null;
@@ -73,6 +76,18 @@ async function distinctId(): Promise<string> {
 }
 
 /** Record one event. Never throws, never blocks, nothing without a key. */
+/**
+ * One event per first-run step, once per mount of that step's screen. The
+ * funnel — where people stop, and how long the path takes to the first
+ * value — is the one measure the retention question needs (OFR-25). Names
+ * and counts only, like every other event here.
+ */
+export function useFirstRunStep(step: Extract<Event, { name: 'first_run_step' }>['step']): void {
+  useEffect(() => {
+    track({ name: 'first_run_step', step });
+  }, [step]);
+}
+
 export function track(event: Event): void {
   if (!hasAnalytics) return;
   const { name, ...props } = event;

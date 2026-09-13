@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { domainMeta, plural, type Span } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Notice, Statement, Stone, Studio, TopBar, UserField, UserText, day } from '@morrow/ui';
 import { ai, latestText, useMorrow } from '../src/store';
+import { useFirstRunStep } from '../src/analytics';
 
 interface Row {
   span: Span;
@@ -21,6 +22,7 @@ interface Row {
 
 export default function Heard() {
   const router = useRouter();
+  useFirstRunStep('read_back');
   const showResources = useMorrow((st) => st.showResources);
   const texts = useMorrow((s) => s.texts);
   const addGoals = useMorrow((s) => s.addGoals);
@@ -118,7 +120,7 @@ export default function Heard() {
               ? 'Reading it back…'
               : rows.length === 0
                 ? 'Your goals are already named.'
-                : `${rows.length} things you want. Two of them might be one.`}
+                : `${rows.length} things you want. Keep the ones that are goals, and name each.`}
           </Statement>
         </View>
 

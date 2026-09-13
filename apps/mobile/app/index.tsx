@@ -14,6 +14,7 @@ import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Body, Chip, InkButton, Label, Rise, Statement, Stone, Studio, TextButton, UserField, announce, day, useReducedMotion } from '@morrow/ui';
 import { useFirstRun, useLatestBook, useMorrow } from '../src/store';
+import { useFirstRunStep } from '../src/analytics';
 import { hasSupabase } from '../src/supabase';
 
 const SITTINGS: { when: string; what: string; long: string }[] = [
@@ -33,6 +34,7 @@ const PAGE_HEADINGS = ['Morrow. Meet who you’re becoming. Page 1 of 3.', 'Thre
 
 export default function Welcome() {
   const router = useRouter();
+  useFirstRunStep('welcome');
   const book = useLatestBook();
   const profile = useMorrow((s) => s.profile);
   const account = useMorrow((s) => s.account);

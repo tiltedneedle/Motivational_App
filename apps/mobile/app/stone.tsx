@@ -21,6 +21,7 @@ import {
 } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Question, Statement, Stone, Studio, TextButton, TopBar, UserField, accent, announce, day } from '@morrow/ui';
 import { analysesFor, useGoals, useMorrow } from '../src/store';
+import { useFirstRunStep } from '../src/analytics';
 
 // The plan of analyses per goal lives in core now (`firstRunStep` needs it
 // too); re-exported so the screens that import it from here keep working.
@@ -31,6 +32,7 @@ const FULL_FLOOR = 600;
 
 export default function StoneScreen() {
   const router = useRouter();
+  useFirstRunStep('stone');
   const showResources = useMorrow((st) => st.showResources);
   const params = useLocalSearchParams<{ goal?: string; kind?: string }>();
   const goals = useGoals();
@@ -48,6 +50,10 @@ export default function StoneScreen() {
   const [line2, setLine2] = useState(existing?.line2 ?? '');
   const [paragraph, setParagraph] = useState(existing?.paragraph ?? '');
   const [followUpAsked, setFollowUpAsked] = useState(false);
+  // The follow-up's own words ("Tuesdays at 7, in the kitchen"), joined to
+  // the line when it is kept. Bound to the same state as the line, the
+  // same text used to appear in two fields at once.
+  const [whenWhere, setWhenWhere] = useState('');
 
   const set = useMemo(() => framingSet(kind, goal?.domain ?? 'custom'), [kind, goal?.domain]);
   const plan = goal ? analysisPlan(goal.rank, track) : ANALYSIS_ORDER;
@@ -102,10 +108,11 @@ export default function StoneScreen() {
     else router.dismissTo('/today');
   };
 
-  const goNext = () => {
+  const goNext = () => goNextWith(line);
+  const goNextWith = (text: string) => {
     write(goalId, kind, {
       framingId,
-      line,
+      line: text,
       ...(kind === 'obstacles' ? { line2 } : {}),
       ...(track === 'full' && paragraph.trim() ? { paragraph } : {}),
     });
@@ -237,10 +244,10 @@ export default function StoneScreen() {
               <Question style={{ fontSize: 18 }}>{followUpPrompt(kind === 'monitoring' ? 'monitoring' : 'strategies')}</Question>
               <UserField
                 testID="stone-followup-input"
-              labelHidden
+                labelHidden
                 label="When and where"
-                value={line}
-                onChangeText={setLine}
+                value={whenWhere}
+                onChangeText={setWhenWhere}
                 placeholder="add the when and the where"
                 multiline
               />
@@ -293,6 +300,14 @@ export default function StoneScreen() {
             onPress={() => {
               if (needsFollowUp) {
                 setFollowUpAsked(true);
+                return;
+              }
+              // The follow-up's words join the line: "… — Tuesdays at 7, in the kitchen".
+              if (whenWhere.trim()) {
+                const joined = `${line.trim()} — ${whenWhere.trim()}`;
+                setLine(joined);
+                setWhenWhere('');
+                goNextWith(joined);
                 return;
               }
               goNext();

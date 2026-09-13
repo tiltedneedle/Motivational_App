@@ -12,9 +12,11 @@ import { ordinal, type PaywallMoment } from '@morrow/core';
 import { Body, HoldBar, InkButton, Label, Notice, Statement, Stone, Studio, TopBar, UserField, useReducedMotion, night } from '@morrow/ui';
 import { feelDrained, feelSealed } from '../src/feel';
 import { useGoals, useMorrow } from '../src/store';
+import { useFirstRunStep } from '../src/analytics';
 
 export default function SealBook() {
   const router = useRouter();
+  useFirstRunStep('seal');
   const showResources = useMorrow((st) => st.showResources);
   const goals = useGoals();
   // Every seal is a new edition and nothing is overwritten (PRD §7.3), so the

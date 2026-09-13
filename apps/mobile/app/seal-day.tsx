@@ -135,6 +135,7 @@ export default function SealDay() {
               {
                 const d = useMorrow.getState().days[dayOf(new Date(), useMorrow.getState().profile.dayBoundaryHour)];
                 track({ name: 'day_sealed', planned: d?.planned ?? 0, done: d?.done ?? 0, wrote_proof: proof.trim().length > 0 });
+                if (Object.values(useMorrow.getState().days).filter((x) => x.sealedAt).length <= 1) track({ name: 'first_value', kind: 'first_day_sealed' });
               }
               setSealed(true);
               setTimeout(() => router.dismissTo('/today'), 900);

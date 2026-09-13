@@ -9,6 +9,7 @@ import { Body, InkButton, Label, Rule, Statement, Studio, TextButton, TopBar, da
 
 
 import { useMorrow } from '../src/store';
+import { useFirstRunStep } from '../src/analytics';
 import type { DepthTrack } from '@morrow/core';
 
 const TRACKS: { id: DepthTrack; title: string; blurb: string }[] = [
@@ -22,6 +23,7 @@ const TRACKS: { id: DepthTrack; title: string; blurb: string }[] = [
 
 export default function Authoring() {
   const router = useRouter();
+  useFirstRunStep('doorway');
   const track = useMorrow((s) => s.profile.track);
   const setProfile = useMorrow((s) => s.setProfile);
 

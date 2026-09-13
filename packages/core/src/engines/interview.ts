@@ -36,6 +36,9 @@ export const ADMIRE_OPTIONS = [
   "Someone I've only read about",
 ] as const;
 
+/** The last option on the admire question: nobody is written down, and the Interview goes on. */
+export const ADMIRE_SKIP = 'Skip this one';
+
 export const AREAS: AreaDef[] = [
   {
     id: 'health',
@@ -417,7 +420,7 @@ export function question(s: InterviewState): Question {
       return {
         stage: 'admire',
         prompt: 'Who already lives a piece of this?',
-        options: [...ADMIRE_OPTIONS],
+        options: [...ADMIRE_OPTIONS, ADMIRE_SKIP],
         multi: false,
         customHint: 'Someone else',
         customSkipsFollow: false,
@@ -530,7 +533,7 @@ export function answer(s: InterviewState, value: string, custom = false): Interv
       };
     }
     case 'admire':
-      return { ...s, admire: { who: value, line: '' }, stage: 'summary', answered: s.answered + 1 };
+      return { ...s, admire: value === ADMIRE_SKIP ? null : { who: value, line: '' }, stage: 'summary', answered: s.answered + 1 };
     default:
       return s;
   }

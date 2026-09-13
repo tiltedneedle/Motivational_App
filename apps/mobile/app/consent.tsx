@@ -7,6 +7,7 @@ import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Body, InkButton, Label, Rule, Statement, Studio, TextButton, TopBar, day, keyboardScroll } from '@morrow/ui';
 import { useMorrow } from '../src/store';
+import { useFirstRunStep } from '../src/analytics';
 
 const ROWS: { label: string; body: string; items?: string[] }[] = [
   {
@@ -39,6 +40,7 @@ const ROWS: { label: string; body: string; items?: string[] }[] = [
 
 export default function Consent() {
   const router = useRouter();
+  useFirstRunStep('consent');
   const consent = useMorrow((s) => s.consent);
 
   return (

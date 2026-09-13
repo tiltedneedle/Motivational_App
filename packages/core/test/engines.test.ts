@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ADMIRE_SKIP,
   AREAS,
   CHIPS,
   HELPLINES,
@@ -74,6 +75,12 @@ describe('the Interview', () => {
     expect(question(s).prompt).toBe('By when?');
     s = answer(s, 'Six months');
     expect(s.stage).toBe('admire');
+    // The one question about somebody else can be skipped, and skipping it
+    // writes nobody down.
+    expect(question(s).options).toContain(ADMIRE_SKIP);
+    const skipped = answer(s, ADMIRE_SKIP);
+    expect(skipped.stage).toBe('summary');
+    expect(skipped.admire).toBeNull();
     s = answer(s, 'A friend');
     expect(s.stage).toBe('summary');
     expect(s.drafts).toHaveLength(1);
