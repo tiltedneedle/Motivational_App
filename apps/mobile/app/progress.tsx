@@ -266,25 +266,32 @@ function Almanac({ marks, today }: { marks: AlmanacMark[]; today: string }) {
 
   return (
     <View testID="progress-almanac" style={{ gap: 8 }}>
-      {months.map((month) => (
+      {months.map((month) => {
+        // One spoken row per month, not 365 swipes: a screen reader used to
+        // walk every stone on the shelf between the ledger and whatever came
+        // next. Today's stone keeps its own element, so "today" is findable.
+        const sealed = month.marks.filter((m) => m.sealed).length;
+        const quiet = month.marks.filter((m) => m.quiet && m.day <= today).length;
+        const ahead = month.marks.filter((m) => m.day > today).length;
+        const summary = `${month.name}: ${plural(sealed, 'day')} sealed, ${quiet} quiet, ${ahead} to come`;
+        return (
         <View key={month.name} style={{ flexDirection: 'row', alignItems: 'center', gap: 0 }}>
           <Label style={{ fontSize: 10, width: LABEL }}>{month.name}</Label>
-          <View style={{ flexDirection: 'row', gap: GAP, alignItems: 'center' }}>
+          <View accessible accessibilityRole="image" accessibilityLabel={summary} style={{ flexDirection: 'row', gap: GAP, alignItems: 'center' }}>
             {month.marks.map((m) => (
               <View
                 key={m.day}
-                accessible
-                accessibilityRole="image"
-                // Spoken, so a date a person would say and a count in the
-                // right number. "2026-09-11, 1 in the ledger" is what a screen
-                // reader used to read out for every stone on the shelf.
-                accessibilityLabel={
-                  m.sealed
-                    ? `${formatDay(m.day, { weekday: true, today })}, sealed, ${plural(m.evidence, 'entry', 'entries')} in the ledger`
-                    : m.quiet
-                      ? `${formatDay(m.day, { weekday: true, today })}, a quiet day`
-                      : `${formatDay(m.day, { weekday: true, today })}, ${plural(m.evidence, 'entry', 'entries')} in the ledger`
-                }
+                {...(m.day === today
+                  ? {
+                      accessible: true,
+                      accessibilityRole: 'image' as const,
+                      accessibilityLabel: m.sealed
+                        ? `Today, sealed, ${plural(m.evidence, 'entry', 'entries')} in the ledger`
+                        : m.quiet
+                          ? 'Today, nothing in the ledger yet'
+                          : `Today, ${plural(m.evidence, 'entry', 'entries')} in the ledger`,
+                    }
+                  : { importantForAccessibility: 'no' as const, 'aria-hidden': true })}
                 style={{
                   // Three weights on the shelf: a day not yet here is a
                   // shadow, a quiet day is a dull stone, a day with
@@ -309,7 +316,8 @@ function Almanac({ marks, today }: { marks: AlmanacMark[]; today: string }) {
             ))}
           </View>
         </View>
-      ))}
+        );
+      })}
     </View>
   );
 }

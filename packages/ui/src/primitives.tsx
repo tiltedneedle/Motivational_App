@@ -254,15 +254,22 @@ type TextProps = {
    * not dial on this device is only any use if it can be copied out.
    */
   selectable?: boolean;
+  /**
+   * The heading's level, for the outline a screen reader user navigates by.
+   * A Statement is the screen's title (1); a Question is a section (2). Every
+   * one used to be an h1, three or four to a screen.
+   */
+  level?: 1 | 2 | 3;
 };
 
-export function Statement({ children, style, testID, accessibilityLabel }: TextProps) {
+export function Statement({ children, style, testID, accessibilityLabel, level = 1 }: TextProps) {
   const { p } = usePalette();
   return (
     <Text
       accessibilityLabel={accessibilityLabel}
       testID={testID}
       accessibilityRole="header"
+      aria-level={level}
       style={[
         { fontFamily: fonts.sansBold, fontSize: size.statement, lineHeight: 38, letterSpacing: -1, color: p.ink },
         style,
@@ -273,13 +280,14 @@ export function Statement({ children, style, testID, accessibilityLabel }: TextP
   );
 }
 
-export function Question({ children, style, testID, accessibilityLabel }: TextProps) {
+export function Question({ children, style, testID, accessibilityLabel, level = 2 }: TextProps) {
   const { p } = usePalette();
   return (
     <Text
       accessibilityLabel={accessibilityLabel}
       testID={testID}
       accessibilityRole="header"
+      aria-level={level}
       style={[{ fontFamily: fonts.sansMedium, fontSize: size.question, lineHeight: 29, color: p.ink }, style]}
     >
       {children}
