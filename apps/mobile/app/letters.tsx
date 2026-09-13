@@ -131,6 +131,7 @@ export default function Letters() {
             */}
             <UserField
               testID="letter-draft"
+              label="Your letter to your future self"
               value={draft}
               onChangeText={setDraft}
               multiline

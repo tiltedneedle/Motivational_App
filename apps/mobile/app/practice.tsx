@@ -128,6 +128,7 @@ export default function PracticeBuilder() {
             <Label>What do you call it?</Label>
             <UserField
               testID="practice-title"
+              labelHidden
               label="What you call this practice"
               value={title}
               onChangeText={setTitle}
@@ -292,6 +293,7 @@ export default function PracticeBuilder() {
             </Body>
             <UserField
               testID="practice-min"
+              labelHidden
               label="The two-minute version"
               value={minVersion}
               onChangeText={setMinVersion}

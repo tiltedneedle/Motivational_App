@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { domainMeta, plural, type Span } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Statement, Stone, Studio, TopBar, UserField, UserText, day } from '@morrow/ui';
+import { Body, Chip, InkButton, Label, Notice, Statement, Stone, Studio, TopBar, UserField, UserText, day } from '@morrow/ui';
 import { ai, latestText, useMorrow } from '../src/store';
 
 interface Row {
@@ -60,6 +60,9 @@ export default function Heard() {
     setRows((r) => r?.map((row, j) => (j === i ? { ...row, state: row.state === 'kept' ? 'open' : 'kept' } : row)) ?? r);
   const drop = (i: number) =>
     setRows((r) => r?.map((row, j) => (j === i ? { ...row, state: 'dropped', name: '' } : row)) ?? r);
+  // Undo over confirm: a dropped line stays on the page, struck through, with
+  // one tap back. It used to vanish.
+  const restore = (i: number) => setRows((r) => r?.map((row, j) => (j === i ? { ...row, state: 'open' } : row)) ?? r);
   const rename = (i: number, name: string) =>
     setRows((r) => r?.map((row, j) => (j === i ? { ...row, name } : row)) ?? r);
 
@@ -107,11 +110,20 @@ export default function Heard() {
           </View>
         ) : (
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 0 }}>
-            {error ? <Body testID="heard-error">{error}</Body> : null}
+            <Notice testID="heard-error" kind="error" text={error} />
 
             {rows.map((row, i) => {
-              if (row.state === 'dropped') return null;
               const meta = domainMeta(row.span.domain);
+              if (row.state === 'dropped') {
+                return (
+                  <View key={`${row.span.start}-${i}`} testID={`span-${i}-dropped`} style={{ paddingVertical: 12, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: day.line, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <Body style={{ flex: 1, fontSize: 14, color: day.ink3, textDecorationLine: 'line-through' }} numberOfLines={1}>
+                      “{row.span.text}”
+                    </Body>
+                    <Chip testID={`restore-${i}`} label="Put it back" accessibilityLabel={`Put it back, “${row.span.text}”`} ghost onPress={() => restore(i)} />
+                  </View>
+                );
+              }
               return (
                 <View
                   key={`${row.span.start}-${i}`}
@@ -137,17 +149,20 @@ export default function Heard() {
                     <Chip
                       testID={`keep-${i}`}
                       label={row.state === 'kept' ? 'Keeping' : 'Keep'}
+                      accessibilityLabel={`${row.state === 'kept' ? 'Keeping' : 'Keep'}, “${row.span.text}”`}
                       selected={row.state === 'kept'}
                       role="checkbox"
                       onPress={() => keep(i)}
                     />
-                    <Chip testID={`drop-${i}`} label="Not a goal" ghost onPress={() => drop(i)} />
+                    <Chip testID={`drop-${i}`} label="Not a goal" accessibilityLabel={`Not a goal, “${row.span.text}”`} ghost onPress={() => drop(i)} />
                     <View style={{ flex: 1 }} />
                     <Label style={{ alignSelf: 'center' }}>{meta.label}</Label>
                   </View>
                   {row.state === 'kept' ? (
                     <UserField
                       testID={`name-${i}`}
+                      label={`Name for “${row.span.text.slice(0, 40)}${row.span.text.length > 40 ? '…' : ''}”`}
+                      labelHidden
                       value={row.name}
                       onChangeText={(t) => rename(i, t)}
                       placeholder="Name it the way you'd say it to a friend"
@@ -175,10 +190,11 @@ export default function Heard() {
             explains where they went.
           */}
           {unnamed.length ? (
-            <Body testID="heard-unnamed" style={{ fontSize: 13 }}>
-              {plural(unnamed.length, 'line')} kept but not named yet. Name a line to keep it — the app will not name it
-              for you.
-            </Body>
+            <Notice
+              testID="heard-unnamed"
+              text={`${plural(unnamed.length, 'line')} kept but not named yet. Name a line to keep it — the app will not name it for you.`}
+              style={{ fontSize: 13 }}
+            />
           ) : null}
           <InkButton
             testID="heard-continue"

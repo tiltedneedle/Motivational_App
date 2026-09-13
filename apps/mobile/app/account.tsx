@@ -12,7 +12,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Platform, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, TopBar, UserField, day } from '@morrow/ui';
+import { Body, Chip, InkButton, Label, Notice, Rule, Statement, Studio, TextButton, TopBar, UserField, day } from '@morrow/ui';
 import { confirmCode, hasSupabase, sendCode, signInWithApple } from '../src/supabase';
 import { useMorrow } from '../src/store';
 import { track } from '../src/analytics';
@@ -179,11 +179,7 @@ export default function Account() {
                 if this phone already has writing, it goes up instead.
               </Body>
               <InkButton testID="account-bring-back" label={busy ? 'One moment…' : 'Bring my Book back'} busy={busy} onPress={() => void bringBack()} />
-              {problem ? (
-                <Body testID="account-problem" style={{ color: day.ink }}>
-                  {problem}
-                </Body>
-              ) : null}
+              <Notice testID="account-problem" kind="error" text={problem} />
               <TextButton testID="account-not-now" label="Not now" onPress={onwards} />
             </View>
           ) : stage === 'done' ? (
@@ -192,11 +188,7 @@ export default function Account() {
               <Body style={{ color: day.ink }}>
                 {pulled ? 'Signed in. Your Book is back on this phone.' : 'Signed in. The Book has a second home now.'}
               </Body>
-              {problem ? (
-                <Body testID="account-problem" style={{ color: day.ink }}>
-                  {problem}
-                </Body>
-              ) : null}
+              <Notice testID="account-problem" kind="error" text={problem} />
               <InkButton testID="account-continue" label="Carry on" onPress={onwards} />
             </View>
           ) : (
@@ -207,6 +199,10 @@ export default function Account() {
                   <UserField
                     testID="account-email"
                     label="Email"
+                    autoComplete="email"
+                    textContentType="emailAddress"
+                    inputMode="email"
+                    returnKeyType="go"
                     value={email}
                     onChangeText={setEmail}
                     placeholder="you@somewhere"
@@ -223,7 +219,12 @@ export default function Account() {
                   <Body style={{ fontSize: 14 }}>A six-digit code is on its way to {sent}.</Body>
                   <UserField
                     testID="account-code"
-                    label="The code"
+                    label="The six-digit code"
+                    autoComplete="one-time-code"
+                    textContentType="oneTimeCode"
+                    inputMode="numeric"
+                    maxLength={6}
+                    returnKeyType="go"
                     value={code}
                     onChangeText={setCode}
                     placeholder="000000"
@@ -233,11 +234,7 @@ export default function Account() {
                   <TextButton label="Use a different email" onPress={() => setStage('email')} />
                 </>
               )}
-              {problem ? (
-                <Body testID="account-problem" style={{ color: day.ink }}>
-                  {problem}
-                </Body>
-              ) : null}
+              <Notice testID="account-problem" kind="error" text={problem} />
               {/*
                 Never a gate. PRD §7.12: a declined account keeps everything
                 local, with a quiet banner rather than a second ask.

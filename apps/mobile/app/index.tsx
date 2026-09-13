@@ -9,10 +9,10 @@
  * before they have tapped anything. Three pages read one at a time.
  */
 import { Redirect, useIsFocused, useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Body, Chip, InkButton, Label, Rise, Statement, Stone, Studio, TextButton, UserField, day, useReducedMotion } from '@morrow/ui';
+import { Body, Chip, InkButton, Label, Rise, Statement, Stone, Studio, TextButton, UserField, announce, day, useReducedMotion } from '@morrow/ui';
 import { useFirstRun, useLatestBook, useMorrow } from '../src/store';
 import { hasSupabase } from '../src/supabase';
 
@@ -29,6 +29,7 @@ const OUT: { name: string; what: string }[] = [
 ];
 
 const PAGES = 3;
+const PAGE_HEADINGS = ['Morrow. Meet who you’re becoming. Page 1 of 3.', 'Three evenings, honestly timed. Then every day. Page 2 of 3.', 'Last thing before we start. Page 3 of 3.'];
 
 export default function Welcome() {
   const router = useRouter();
@@ -51,6 +52,11 @@ export default function Welcome() {
   const [name, setName] = useState(profile.displayName);
 
   const next = () => setPage((p) => Math.min(PAGES - 1, p + 1));
+  // A page change moves nothing on screen that a screen reader would notice;
+  // the new page's heading is said instead (WCAG 4.1.3).
+  useEffect(() => {
+    announce(PAGE_HEADINGS[page] ?? '');
+  }, [page]);
   const begin = () => {
     const trimmed = name.trim();
     if (trimmed !== profile.displayName) setProfile({ displayName: trimmed });
@@ -120,15 +126,15 @@ export default function Welcome() {
               <Statement testID="welcome-page-2">Last thing before we start.</Statement>
               <UserField
                 testID="welcome-name"
-                label="What should the coach call you? (optional)"
+                label="Your first name (optional)"
                 value={name}
                 onChangeText={setName}
-                placeholder="Your first name"
+                placeholder="What the coach should call you"
                 autoCapitalize="words"
               />
               <View style={{ gap: 8 }}>
                 <Label>How do you want to be spoken to?</Label>
-                <View style={{ flexDirection: 'row', gap: 8 }}>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                   {(['gentle', 'straight', 'fierce'] as const).map((p) => (
                     <Chip
                       key={p}
@@ -147,17 +153,22 @@ export default function Welcome() {
 
         {/* The dots, and the one button. */}
         <View style={{ paddingBottom: 18, gap: 12 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 8 }} accessibilityLabel={`Page ${page + 1} of ${PAGES}`} accessible>
+          {/*
+            The dots are for the eye; Next and Back are the controls. Three
+            Pressables inside an accessible group were one node to VoiceOver,
+            with nothing inside it reachable. The count is a Label a screen
+            reader hears as words.
+          */}
+          <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 }}>
             {Array.from({ length: PAGES }, (_, i) => (
-              <Pressable
+              <View
                 key={i}
-                accessibilityRole="button"
-                accessibilityLabel={`Page ${i + 1}`}
-                onPress={() => setPage(i)}
-                hitSlop={8}
+                aria-hidden
+                importantForAccessibility="no"
                 style={{ width: i === page ? 18 : 6, height: 6, borderRadius: 3, backgroundColor: i === page ? day.ink : day.line }}
               />
             ))}
+            <Label testID="welcome-page-count" style={{ marginLeft: 6 }}>{`${page + 1} of ${PAGES}`}</Label>
           </View>
           {page < PAGES - 1 ? (
             <InkButton testID="welcome-next" label="Next" onPress={next} />

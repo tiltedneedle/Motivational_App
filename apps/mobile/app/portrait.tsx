@@ -128,6 +128,7 @@ export default function PortraitScreen() {
                 */}
                 <UserField
                   testID="portrait-identity-field"
+                  label="Who you are becoming, in your words"
                   value={line}
                   onChangeText={setLine}
                   placeholder="Say it the way you would say it"

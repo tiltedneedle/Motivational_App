@@ -142,7 +142,10 @@ export default function Today() {
 
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(null), 3400);
+    // Eight seconds, not three and a half: Undo is on this toast, and a
+    // person with a screen reader or a tremor needs the time (WCAG 2.2.1);
+    // the parked row's own "Put it back" is the undo that never expires.
+    const t = setTimeout(() => setToast(null), 8000);
     return () => clearTimeout(t);
   }, [toast, setToast]);
 
@@ -217,7 +220,13 @@ export default function Today() {
 
           {/* The greeting's own line, before anything that has arrived: a letter or the Sunday card sits under it, not between the greeting and its sentence. */}
           {book ? (
-            <Pressable testID="today-book-line" onPress={() => router.push('/book')} style={{ marginTop: 8 }}>
+            <Pressable
+              testID="today-book-line"
+              accessibilityRole="button"
+              accessibilityLabel={`Open your Book: “${book.firstSentence}”`}
+              onPress={() => router.push('/book')}
+              style={{ marginTop: 8 }}
+            >
               <UserText
                 testID="today-book-quote"
                 italic
@@ -277,11 +286,11 @@ export default function Today() {
           {book && !state.profile.todayIntroSeen ? (
             <View testID="today-intro" style={{ marginTop: 16, backgroundColor: day.surface2, borderRadius: radius.card, padding: 18, gap: 10 }}>
               <Label style={{ color: accent.coralText }}>This is Today</Label>
-              <Body style={{ color: day.ink }}>
-                The stone on the Now card is your first move, cut from your own line. Tap it when it is done; drag it up for not
-                today. In the evening the coral check seals the day: a word, one line of proof, a hold. Your Book, the scenes and
-                the coach are in the bar below.
-              </Body>
+              {/* One instruction per line (COGA: separate each instruction). */}
+              <Body style={{ color: day.ink }}>Your first move is on the Now card, cut from your own line.</Body>
+              <Body style={{ color: day.ink }}>Tap the stone when the move is done. “Not today” sets it aside.</Body>
+              <Body style={{ color: day.ink }}>In the evening, the coral ✓ closes the day: a word, one line of proof, a hold.</Body>
+              <Body style={{ color: day.ink }}>Your Book, the scenes and the coach are in the bar below.</Body>
               <Chip testID="today-intro-done" label="Got it" onPress={() => setProfile({ todayIntroSeen: true })} />
             </View>
           ) : null}
@@ -418,8 +427,24 @@ export default function Today() {
                   </Body>
                 ) : null}
                 <Body style={{ fontSize: 14 }}>
-                  {sourceLineFor(now, state.analyses) ? 'Tap the stone. Drag it up for not today.' : ''}
+                  {sourceLineFor(now, state.analyses) ? 'Tap the stone when it is done.' : ''}
                 </Body>
+                {/*
+                  The drag and the long press are accelerators; this is the
+                  path (WCAG 2.5.1, 2.5.7; Apple HIG: also make a button
+                  available). A move with no button for "not today" was one
+                  a keyboard or a switch could never set aside.
+                */}
+                {now.status === 'todo' ? (
+                  <TextButton
+                    testID="now-not-today"
+                    label="Not today"
+                    onPress={() => {
+                      setStatus(now.id, 'skip');
+                      setToast({ text: `${now.title} · not today`, kind: 'park', undoId: now.id });
+                    }}
+                  />
+                ) : null}
               </View>
               <MoveStone
                 testID={`stone-${now.id}`}
@@ -491,7 +516,22 @@ export default function Today() {
                     >
                       {m.title}
                     </UserText>
-                    <Label>{m.status === 'skip' ? 'not today' : m.status === 'done' ? 'done' : m.effort === 'S' ? '10 min' : '25 min'}</Label>
+                    {m.status === 'skip' ? (
+                      // The undo that never expires: the row itself.
+                      <TextButton testID={`restore-${m.id}`} label="Put it back" onPress={() => setStatus(m.id, 'todo')} />
+                    ) : m.status === 'todo' ? (
+                      <TextButton
+                        testID={`park-${m.id}`}
+                        label="Not today"
+                        accessibilityLabel={`Not today, ${m.title}`}
+                        onPress={() => {
+                          setStatus(m.id, 'skip');
+                          setToast({ text: `${m.title} · not today`, kind: 'park', undoId: m.id });
+                        }}
+                      />
+                    ) : (
+                      <Label>{m.status === 'done' ? 'done' : m.effort === 'S' ? '10 min' : '25 min'}</Label>
+                    )}
                   </View>
                 );
               })}
@@ -797,7 +837,7 @@ function TabButton({ label, active, onPress, testID }: { label: string; active?:
         ...(Platform.OS === 'web' ? webHover.transition : {}),
       })}
     >
-      <Text numberOfLines={1} style={{ fontFamily: active ? fonts.sansSemi : fonts.sansMedium, fontSize: 13, lineHeight: 16, color: active ? day.ink : day.ink2 }}>
+      <Text numberOfLines={1} maxFontSizeMultiplier={1.4} style={{ fontFamily: active ? fonts.sansSemi : fonts.sansMedium, fontSize: 13, lineHeight: 16, color: active ? day.ink : day.ink2 }}>
         {label}
       </Text>
     </Pressable>

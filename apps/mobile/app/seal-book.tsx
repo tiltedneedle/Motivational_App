@@ -9,7 +9,7 @@ import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ordinal, type PaywallMoment } from '@morrow/core';
-import { Body, HoldBar, InkButton, Label, Statement, Stone, Studio, TopBar, UserField, useReducedMotion, night } from '@morrow/ui';
+import { Body, HoldBar, InkButton, Label, Notice, Statement, Stone, Studio, TopBar, UserField, useReducedMotion, night } from '@morrow/ui';
 import { feelDrained, feelSealed } from '../src/feel';
 import { useGoals, useMorrow } from '../src/store';
 
@@ -69,6 +69,7 @@ export default function SealBook() {
             <Label style={{ color: night.ink3 }}>I will…</Label>
             <UserField
               testID="i-will"
+              labelHidden
               label="Your I will line"
               value={iWill}
               onChangeText={(t) => {
@@ -90,11 +91,7 @@ export default function SealBook() {
             {goals.length} {goals.length === 1 ? 'goal' : 'goals'}. Hold, and it&apos;s yours. Nothing in it is fixed for good; a new edition is one sitting away.
           </Body>
 
-          {error ? (
-            <Body testID="seal-error" style={{ color: '#FF8A6E' }}>
-              {error}
-            </Body>
-          ) : null}
+          <Notice testID="seal-error" kind="error" text={error} style={{ color: '#FF8A6E' }} />
 
           {unplanned.length ? (
             <View testID="seal-unplanned" style={{ gap: 12, borderTopWidth: 1, borderTopColor: night.line, paddingTop: 18 }}>

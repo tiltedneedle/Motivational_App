@@ -392,6 +392,7 @@ export default function Coach() {
             <View style={{ flex: 1 }}>
               <UserField
                 testID="coach-input"
+              labelHidden
                 label="Talk to the coach"
                 value={draft}
                 onChangeText={setDraft}

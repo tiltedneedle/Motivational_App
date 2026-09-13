@@ -25,6 +25,21 @@ import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { accent, day, focusRing, ground, inkEdge, isDark, motion, night, radius, shadow, size, subscribeDark, type as fonts, webHover, webOnlyStyle, type Palette } from './tokens';
 
 /**
+ * Say something to a screen reader without moving focus: a step changed, a
+ * line was kept, the seal took. iOS ignores live regions, so this is the
+ * one path that works everywhere (WCAG 4.1.3 Status Messages). Web: RNW
+ * implements it with a live region of its own.
+ */
+export function announce(text: string): void {
+  if (!text) return;
+  try {
+    AccessibilityInfo.announceForAccessibility(text);
+  } catch {
+    // a platform with no accessibility service: nothing to say it to
+  }
+}
+
+/**
  * Hover, on the web only. Returns the props to spread onto a Pressable and
  * whether the pointer is on it right now; on a phone the events never fire
  * and `hovered` stays false, so nothing here costs a touch screen anything.
@@ -434,8 +449,17 @@ export function Chip({
   onPress,
   testID,
   style,
+  accessibilityLabel,
+  minHeight = 44,
 }: {
   label: string;
+  /**
+   * The name a screen reader hears. Must begin with the visible label (WCAG
+   * 2.5.3): "Keep, ‘the 5 km race’" for the fourth Keep in a list of them.
+   */
+  accessibilityLabel?: string;
+  /** 44 points (Apple HIG) unless a row genuinely cannot afford it. */
+  minHeight?: number;
   /** For a chip that is one of a set: which one is on. */
   selected?: boolean;
   /**
@@ -465,10 +489,10 @@ export function Chip({
       {...hoverProps}
       accessibilityRole={kind}
       aria-checked={kind === 'button' ? undefined : on}
-      accessibilityLabel={label}
+      accessibilityLabel={accessibilityLabel ?? label}
       style={({ pressed }) => [
         {
-          minHeight: 40,
+          minHeight,
           paddingVertical: 9,
           paddingHorizontal: 16,
           borderRadius: radius.chip,
@@ -620,13 +644,44 @@ export function TopBar({
 }) {
   return (
     <View style={[{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, minHeight: 56 }, style]}>
-      {back ? <TextButton testID={back.testID ?? 'top-back'} label={`← ${back.label ?? 'Back'}`} onPress={back.onPress} /> : <View />}
+      {back ? (
+        <TextButton testID={back.testID ?? 'top-back'} label={`← ${back.label ?? 'Back'}`} accessibilityLabel={back.label ?? 'Back'} onPress={back.onPress} />
+      ) : (
+        <View />
+      )}
       {right ?? (where ? <Label>{where}</Label> : null)}
     </View>
   );
 }
 
-export function TextButton({ label, onPress, testID }: { label: string; onPress?: () => void; testID?: string }) {
+/**
+ * An inline message that a screen reader hears when it appears: an error
+ * under a field, a "sealed", a "kept". The Toast announces; the plain Body
+ * strings screens used for errors did not, so a refused seal was a bar that
+ * drained and red text nobody heard (WCAG 4.1.3, 3.3.1).
+ */
+export function Notice({ text, kind = 'status', testID, style }: { text: string | null | undefined; kind?: 'status' | 'error'; testID?: string; style?: StyleProp<TextStyle> }) {
+  const { p } = usePalette();
+  const last = useRef<string | null>(null);
+  useEffect(() => {
+    if (!text || text === last.current) return;
+    last.current = text;
+    announce(text);
+  }, [text]);
+  if (!text) return null;
+  return (
+    <Text
+      testID={testID}
+      accessibilityLiveRegion={kind === 'error' ? 'assertive' : 'polite'}
+      role={kind === 'error' ? 'alert' : 'status'}
+      style={[{ fontFamily: fonts.sansMedium, fontSize: 14, lineHeight: 20, color: p.ink }, style]}
+    >
+      {text}
+    </Text>
+  );
+}
+
+export function TextButton({ label, onPress, testID, accessibilityLabel }: { label: string; onPress?: () => void; testID?: string; accessibilityLabel?: string }) {
   const { p } = usePalette();
   const { hovered, hoverProps } = useHover();
   return (
@@ -635,8 +690,9 @@ export function TextButton({ label, onPress, testID }: { label: string; onPress?
       onPress={onPress}
       {...hoverProps}
       accessibilityRole="button"
-      accessibilityLabel={label}
-      style={({ pressed }) => ({ minHeight: 44, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}
+      accessibilityLabel={accessibilityLabel ?? label}
+      // 44 points each way (Apple HIG): "Skip" was thirty wide.
+      style={({ pressed }) => ({ minHeight: 44, minWidth: 44, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}
     >
       <Text
         style={{
@@ -669,10 +725,32 @@ export function UserField({
   minHeight,
   autoCapitalize,
   keyboardType,
+  labelHidden = false,
+  error,
+  autoComplete,
+  textContentType,
+  inputMode,
+  maxLength,
+  returnKeyType,
 }: {
   value: string;
   onChangeText: (t: string) => void;
   placeholder?: string;
+  /**
+   * The label is drawn above the field unless the screen already draws one
+   * there. A placeholder vanishes at the first keystroke; a label stays
+   * (WCAG 3.3.2). Where a visible Label already sits above the field, pass
+   * `labelHidden` and the text still names the field for a screen reader.
+   */
+  labelHidden?: boolean;
+  /** What is wrong, under the field, announced when it appears (WCAG 3.3.1). */
+  error?: string | null;
+  /** The input's purpose, for autofill (WCAG 1.3.5): the email, the one-time code. */
+  autoComplete?: 'email' | 'one-time-code' | 'name' | 'off';
+  textContentType?: 'emailAddress' | 'oneTimeCode' | 'name' | 'none';
+  inputMode?: 'email' | 'numeric' | 'text';
+  maxLength?: number;
+  returnKeyType?: 'done' | 'next' | 'go' | 'send';
   /**
    * What this field is for, in words, and it is not the placeholder.
    *
@@ -697,7 +775,10 @@ export function UserField({
 }) {
   const { p } = usePalette();
   const [focused, setFocused] = useState(false);
+  const hint = [label && placeholder ? placeholder : null, error ?? null].filter(Boolean).join('. ');
   return (
+    <View>
+      {label && !labelHidden ? <Label style={{ marginBottom: 2 }}>{label}</Label> : null}
     <TextInput
       testID={testID}
       value={value}
@@ -708,14 +789,20 @@ export function UserField({
       autoFocus={autoFocus}
       autoCapitalize={autoCapitalize}
       keyboardType={keyboardType}
+      autoComplete={autoComplete}
+      textContentType={textContentType}
+      inputMode={inputMode}
+      maxLength={maxLength}
+      returnKeyType={returnKeyType}
       autoCorrect={keyboardType ? false : undefined}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
       onSubmitEditing={onSubmitEditing}
       accessibilityLabel={label ?? placeholder}
+      aria-invalid={Boolean(error)}
       // The hint stays a hint. It is still announced, and it no longer has to
       // do the job of the name.
-      {...(label && placeholder ? { accessibilityHint: placeholder } : {})}
+      {...(hint ? { accessibilityHint: hint } : {})}
       style={{
         fontFamily: fonts.serif,
         fontSize: 19,
@@ -732,6 +819,8 @@ export function UserField({
         ...(Platform.OS === 'web' ? webOnlyStyle({ outlineStyle: 'none' }) : {}),
       }}
     />
+      <Notice text={error ?? null} kind="error" testID={testID ? `${testID}-error` : undefined} style={{ marginTop: 6, color: accent.coralText }} />
+    </View>
   );
 }
 

@@ -6,7 +6,7 @@
  * Strategies and Monitoring lines earn ONE follow-up and never a second.
  */
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -19,7 +19,7 @@ import {
   specificityCaption,
   type AnalysisKind,
 } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Question, Statement, Stone, Studio, TextButton, TopBar, UserField, accent, day } from '@morrow/ui';
+import { Body, Chip, InkButton, Label, Question, Statement, Stone, Studio, TextButton, TopBar, UserField, accent, announce, day } from '@morrow/ui';
 import { analysesFor, useGoals, useMorrow } from '../src/store';
 
 // The plan of analyses per goal lives in core now (`firstRunStep` needs it
@@ -59,6 +59,14 @@ export default function StoneScreen() {
 
   const makePlan = useMorrow((s) => s.makePortraitAndPlan);
 
+  // A new stone replaces the last on the stack; nothing moves for a screen
+  // reader, so the stone says where it is and what it asks.
+  useEffect(() => {
+    if (!goal) return;
+    announce(`${goal.title}. ${ANALYSIS_TITLES[kind]}, stone ${stepIndex + 1} of ${plan.length}. ${set.question}`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [goalId, kind]);
+
   /**
    * Back is the previous stone — this goal's, or the last of the goal before
    * — not whatever screen happens to be under this one. The stones replace
@@ -68,6 +76,16 @@ export default function StoneScreen() {
    * Before the first stone of the first goal, the router's back is right.
    */
   const goBack = () => {
+    // What is on the stone stays on the stone. Back used to turn the page
+    // and drop the line being typed (WCAG 3.3.7; NN/g: never lose input).
+    if (line.trim()) {
+      write(goalId, kind, {
+        framingId,
+        line,
+        ...(kind === 'obstacles' ? { line2 } : {}),
+        ...(track === 'full' && paragraph.trim() ? { paragraph } : {}),
+      });
+    }
     if (stepIndex > 0) {
       router.replace(`/stone?goal=${goalId}&kind=${plan[stepIndex - 1]}`);
       return;
@@ -185,6 +203,7 @@ export default function StoneScreen() {
             <Label>In your words</Label>
             <UserField
               testID="stone-line"
+              labelHidden
               label="Your line for this stone"
               value={line}
               onChangeText={setLine}
@@ -196,6 +215,7 @@ export default function StoneScreen() {
                 <Label style={{ marginTop: 10 }}>…then I</Label>
                 <UserField
                   testID="stone-line2"
+              labelHidden
                   label="What you do instead"
                   value={line2}
                   onChangeText={setLine2}
@@ -216,6 +236,7 @@ export default function StoneScreen() {
               <Question style={{ fontSize: 18 }}>{followUpPrompt(kind === 'monitoring' ? 'monitoring' : 'strategies')}</Question>
               <UserField
                 testID="stone-followup-input"
+              labelHidden
                 label="When and where"
                 value={line}
                 onChangeText={setLine}
@@ -236,6 +257,7 @@ export default function StoneScreen() {
               ))}
               <UserField
                 testID="stone-paragraph"
+              labelHidden
                 label="Your paragraph for this stone"
                 value={paragraph}
                 onChangeText={setParagraph}

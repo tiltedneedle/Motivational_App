@@ -3,7 +3,7 @@
  * the only place anyone types; a custom answer skips the follow-up.
  */
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, View , Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -35,6 +35,7 @@ import {
   TopBar,
   UserField,
   accent,
+  announce,
   day,
   radius,
   type as fonts,
@@ -56,6 +57,12 @@ export default function Interview() {
     setCustomOpen(false);
     setCustomText('');
   };
+  // Each new question is said (PRD §7.1: "VoiceOver announces each question");
+  // the list under the cursor changes and nothing else moves.
+  useEffect(() => {
+    announce(s.stage === 'summary' ? 'Here is what I heard.' : question(s).prompt);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [s.answered, s.stage, s.cursor]);
   const stepBack = () => {
     const prev = history[history.length - 1];
     if (!prev) {
@@ -165,9 +172,12 @@ export default function Interview() {
                 <Pressable
                   key={label}
                   testID={`option-${i}`}
-                  // Pick at least one, so each option is a box to tick.
-                  accessibilityRole="checkbox"
-                  aria-checked={isSelected(label)}
+                  // "Pick as many as are true" is a box to tick; every other
+                  // question answers and moves on at one tap, which is a button.
+                  // Announced as "checkbox, unchecked" a branch option promised
+                  // a tick it never gave.
+                  accessibilityRole={q.stage === 'areas' ? 'checkbox' : 'button'}
+                  {...(q.stage === 'areas' ? { 'aria-checked': isSelected(label) } : { accessibilityHint: 'Answers, and moves to the next question' })}
                   onPress={() => choose(label)}
                   style={({ pressed }) => ({
                     flexDirection: 'row',
@@ -355,7 +365,7 @@ function Summary({
                 {d.domainLabel ?? domainMeta(d.domain).label} · {d.horizon.toLowerCase()}
               </Body>
             </View>
-            <TextButton testID={`drop-${d.id}`} label="Drop" onPress={() => onDrop(d.id)} />
+            <TextButton testID={`drop-${d.id}`} label="Drop" accessibilityLabel={`Drop ${d.title}`} onPress={() => onDrop(d.id)} />
           </View>
         ))}
         <Pressable

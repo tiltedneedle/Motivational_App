@@ -70,7 +70,7 @@ export default function SealDay() {
 
           <View style={{ gap: 8 }}>
             <Label style={{ color: night.ink3 }}>Today, in a word</Label>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {WORDS.map((wd) => (
                 <Chip key={wd} testID={`mood-${wd}`} label={wd} selected={word === wd} onPress={() => setWord(wd)} />
               ))}
@@ -83,6 +83,7 @@ export default function SealDay() {
             {rule ? <Quoted text={`Your rule: “${rule}”`} spans={[rule]} style={{ color: night.ink3, fontSize: 13, lineHeight: 19 }} /> : null}
             <UserField
               testID="seal-proof"
+              labelHidden
               label="What actually happened today"
               value={proof}
               onChangeText={(t) => {
@@ -106,6 +107,7 @@ export default function SealDay() {
             <Label style={{ color: night.ink3 }}>One thing you are glad of</Label>
             <UserField
               testID="seal-glad"
+              labelHidden
               label="Something you are glad of"
               value={gladOf}
               onChangeText={setGladOf}

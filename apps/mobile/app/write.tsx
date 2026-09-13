@@ -273,7 +273,7 @@ export default function Write() {
               {doorway.prompt}
             </Question>
             <Body style={{ color: night.ink2, textAlign: 'center' }}>{doorway.note}</Body>
-            <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'center' }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
               {(['type', 'say', 'walk'] as const).map((m) => (
                 <Chip
                   key={m}
