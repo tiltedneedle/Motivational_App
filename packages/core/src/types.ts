@@ -470,6 +470,12 @@ export const Profile = z.object({
   mutedMoments: z.array(z.string()).default([]),
   notificationsOff: z.boolean().default(false),
   /**
+   * Whether the primer for notifications has been answered, either way. The
+   * OS dialog is never raised until it has (Apple HIG: ask in context, once,
+   * with a reason); before it, the app schedules nothing.
+   */
+  notificationsAsked: z.boolean().default(false),
+  /**
    * The paywall moments already shown (PRD §7.13). The unprompted one is
    * "once after the Blueprint", and once means once — including across a
    * relaunch, which is why it lives here rather than in a screen's state.
@@ -502,6 +508,7 @@ export const DEFAULT_PROFILE: Profile = {
   supportOfferedAt: null,
   mutedMoments: [],
   notificationsOff: false,
+  notificationsAsked: false,
   paywallSeen: [],
   todayIntroSeen: false,
 };

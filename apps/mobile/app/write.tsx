@@ -312,13 +312,29 @@ export default function Write() {
                   testID="write-begin"
                   label={`Begin · ${Math.round(targetSeconds(kind, track) / 60)} minutes`}
                   onPress={() => {
-                    setSession(startWriting(kind, track, mode));
-                    setPhase('writing');
-                    setTimeout(() => inputRef.current?.focus(), 60);
+                    // The microphone is asked for here, on the doorway, so
+                    // the OS dialog is not the first thing to happen on the
+                    // clock. Refused, the room is a typed one and says so.
+                    void (async () => {
+                      let chosen = mode;
+                      if (mode !== 'type') {
+                        const answer = await dictation().permission();
+                        if (answer !== 'granted') {
+                          chosen = 'type';
+                          setMode('type');
+                          setMicNote(answer === 'refused' ? 'The microphone was not allowed, so this is a typed room. It can be allowed under You.' : 'This device cannot listen, so this is a typed room.');
+                        }
+                      }
+                      setSession(startWriting(kind, track, chosen));
+                      setPhase('writing');
+                      setTimeout(() => inputRef.current?.focus(), 60);
+                    })();
                   }}
                 />
                 <Label style={{ color: night.ink3, textAlign: 'center' }}>
-                  {mode === 'type' ? 'Forward only: the page keeps what you type.' : 'Talking counts as writing. Edit the transcript after.'}
+                  {mode === 'type'
+                    ? 'Forward only: the page keeps what you type.'
+                    : 'Saying it uses the microphone and your phone’s own recogniser. Nothing is recorded. Talking counts as writing.'}
                 </Label>
               </>
             )}

@@ -29,6 +29,11 @@ export interface DictationHandlers {
 export interface Dictation {
   /** Whether this build and device can listen at all. */
   available(): Promise<boolean>;
+  /**
+   * Ask for the microphone before anything else is running. The doorway
+   * asks here, so the OS dialog comes before the clock, not on it.
+   */
+  permission(): Promise<'granted' | 'refused' | 'unavailable'>;
   /** Ask for the microphone (once) and start listening. Resolves false when it cannot. */
   start(handlers: DictationHandlers): Promise<boolean>;
   /** Stop listening. The last stretch is delivered as final if there is one. */
@@ -95,6 +100,17 @@ export function dictation(): Dictation {
         return m.ExpoSpeechRecognitionModule.isRecognitionAvailable();
       } catch {
         return false;
+      }
+    },
+
+    async permission() {
+      const m = await module();
+      if (!m) return 'unavailable';
+      try {
+        const allowed = await m.ExpoSpeechRecognitionModule.requestPermissionsAsync();
+        return allowed?.granted ? 'granted' : 'refused';
+      } catch {
+        return 'unavailable';
       }
     },
 

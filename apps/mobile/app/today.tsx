@@ -59,6 +59,13 @@ import {
   useTodaysMoves,
   useTodaysPractices,
 } from '../src/store';
+import { scheduler } from '../src/notify';
+
+/** "07:00" as a person says it. */
+function clock(hhmm: string): string {
+  const [h, m] = hhmm.split(':');
+  return `${Number(h)}:${m ?? '00'}`;
+}
 
 export default function Today() {
   const router = useRouter();
@@ -80,6 +87,18 @@ export default function Today() {
   const removeEvidence = useMorrow((s) => s.removeEvidence);
   const makeBrief = useMorrow((s) => s.makeBrief);
   const setProfile = useMorrow((s) => s.setProfile);
+  const allowNotifications = useMorrow((s) => s.allowNotifications);
+  const declineNotifications = useMorrow((s) => s.declineNotifications);
+  const [canNotify, setCanNotify] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    void scheduler().then((sched) => {
+      if (alive) setCanNotify(sched.real);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
   const firstRun = useFirstRun();
   // Progressive disclosure, keyed on state that already exists: a person on
   // their first Today has a Now card, a check and five tabs to learn. The
@@ -294,6 +313,26 @@ export default function Today() {
               <Body style={{ color: day.ink }}>In the evening, the coral ✓ closes the day: a word, one line of proof, a hold.</Body>
               <Body style={{ color: day.ink }}>Your Book, the scenes and the coach are in the bar below.</Body>
               <Chip testID="today-intro-done" label="Got it" onPress={() => setProfile({ todayIntroSeen: true })} />
+            </View>
+          ) : null}
+
+          {/*
+            Notifications, asked for in words before the OS asks (Apple HIG;
+            Growth.Design on stacked requests): what will be sent, and when.
+            After the first sealed day, when "tomorrow at seven, your first
+            move" is a concrete thing rather than a promise. On the web there
+            is nothing to ask for.
+          */}
+          {book && settledIn && state.profile.todayIntroSeen && !state.profile.notificationsAsked && canNotify ? (
+            <View testID="today-notify-primer" style={{ marginTop: 16, backgroundColor: day.surface2, borderRadius: radius.card, padding: 18, gap: 10 }}>
+              <Label style={{ color: accent.coralText }}>Two notes a day, if you want them</Label>
+              <Body style={{ color: day.ink }}>{`${clock(state.profile.wakeTime)} — your first move, in your words.`}</Body>
+              <Body style={{ color: day.ink }}>{`${clock(state.profile.eveningTime)} — a line to close the day.`}</Body>
+              <Body style={{ fontSize: 13 }}>Nothing else, ever. The times are yours to change under You.</Body>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                <Chip testID="today-notify-yes" label="Yes, at those times" onPress={() => void allowNotifications()} />
+                <Chip testID="today-notify-no" label="Not now" ghost onPress={declineNotifications} />
+              </View>
             </View>
           ) : null}
 

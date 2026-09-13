@@ -18,8 +18,12 @@ import { toSchedule, withoutMuted, type Moment, type Notice } from '@morrow/core
 /** What a scheduler has to be able to do. Deliberately tiny. */
 export interface Scheduler {
   ids(): Promise<string[]>;
-  /** Whether the person has said yes, asking once if they have not been asked. */
+  /** Whether the person has said yes. Never asks: that is `request()`, from the primer. */
   allowed(): Promise<boolean>;
+  /** Raise the OS dialog. Only ever called from the primer's own "Yes". */
+  request(): Promise<boolean>;
+  /** Whether this build has a scheduler at all (the web does not). */
+  real: boolean;
   schedule(notice: Notice): Promise<void>;
   cancel(id: string): Promise<void>;
 }
@@ -32,6 +36,10 @@ export const noScheduler: Scheduler = {
   async allowed() {
     return false;
   },
+  async request() {
+    return false;
+  },
+  real: false,
   async schedule() {},
   async cancel() {},
 };
@@ -63,17 +71,22 @@ export async function scheduler(): Promise<Scheduler> {
         return (all ?? []).map((n: { identifier: string }) => n.identifier);
       },
       async allowed() {
-        // Asked once, and only here — which is to say only when the planner
-        // has produced something worth asking for. A permission prompt on
-        // first launch, before the person has written a word, is the app
-        // asking for attention it has not earned yet; asking on the morning
-        // the first plan exists is asking for exactly the thing it will use.
+        // Never asks. The OS dialog used to be raised from inside the
+        // schedule sync — on a launch or a foreground, with no words about
+        // what would be sent or when — which is the prompt people refuse
+        // and remember. The primer on Today asks first; `request()` is its
+        // "Yes".
+        const current = await mod.getPermissionsAsync();
+        return Boolean(current?.granted);
+      },
+      async request() {
         const current = await mod.getPermissionsAsync();
         if (current?.granted) return true;
         if (current?.canAskAgain === false) return false;
         const asked = await mod.requestPermissionsAsync();
         return Boolean(asked?.granted);
       },
+      real: true,
       async schedule(notice) {
         await mod.scheduleNotificationAsync({
           identifier: notice.id,

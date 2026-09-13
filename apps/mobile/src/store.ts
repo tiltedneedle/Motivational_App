@@ -9,7 +9,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useSyncExternalStore } from 'react';
 import { isDark, setDark, subscribeDark } from '@morrow/ui';
 import { STORE_KEY, failureReason, guardedStorage, hasFailed, onStorageFailure } from './storage';
-import { syncNotices } from './notify';
+import { scheduler, syncNotices } from './notify';
 import { billing, type BillingResult, type PlanId } from './billing';
 import { FUNCTIONS_URL, deleteAccount, functionHeaders, hasSupabase, sessionState, signOut } from './supabase';
 import { pullAll, pushAll } from './sync';
@@ -362,6 +362,10 @@ export interface MorrowState {
    * else in the app would provide.
    */
   syncNotifications: () => Promise<{ scheduled: number; cancelled: number; silent: boolean }>;
+  /** The primer's "Yes": ask the OS, remember the answer, then schedule. */
+  allowNotifications: () => Promise<boolean>;
+  /** The primer's "Not now": nothing is scheduled, and the primer never returns. */
+  declineNotifications: () => void;
   /** One step quieter (PRD §7.11's "Fewer" action). */
   fewerNotifications: () => void;
 
@@ -1277,6 +1281,20 @@ const store = create<MorrowState>()(
 
       inviteFullTrack: () => set({ fullTrackInvited: true }),
 
+      allowNotifications: async () => {
+        const sched = await scheduler();
+        // A build with no scheduler (the web) has nothing to ask the OS for;
+        // the setting is kept as the person left it.
+        if (!sched.real) {
+          set((s) => ({ profile: { ...s.profile, notificationsAsked: true, notificationsOff: false } }));
+          return true;
+        }
+        const granted = await sched.request().catch(() => false);
+        set((s) => ({ profile: { ...s.profile, notificationsAsked: true, notificationsOff: !granted } }));
+        if (granted) await get().syncNotifications();
+        return granted;
+      },
+      declineNotifications: () => set((s) => ({ profile: { ...s.profile, notificationsAsked: true, notificationsOff: true } })),
       syncNotifications: async () => {
         const s = get();
         const day = dayOf(new Date(), s.profile.dayBoundaryHour);

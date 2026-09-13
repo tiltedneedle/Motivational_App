@@ -36,6 +36,7 @@ export default function Settings() {
   const fewerNotifications = useMorrow((s) => s.fewerNotifications);
   const account = useMorrow((s) => s.account);
   const pushToAccount = useMorrow((s) => s.pushToAccount);
+  const allowNotifications = useMorrow((s) => s.allowNotifications);
   const signOutAccount = useMorrow((s) => s.signOutAccount);
   const deleteAccountAndCopy = useMorrow((s) => s.deleteAccountAndCopy);
   const [accountNote, setAccountNote] = useState<string | null>(null);
@@ -231,7 +232,10 @@ export default function Settings() {
                 <Chip
                   testID="notify-on"
                   label="Turn them back on"
-                  onPress={() => setProfile({ notificationsOff: false, mutedMoments: [] })}
+                  onPress={() => {
+                    setProfile({ mutedMoments: [] });
+                    void allowNotifications();
+                  }}
                 />
               ) : (
                 <Chip testID="notify-fewer" label="Fewer" ghost onPress={() => fewerNotifications()} />
