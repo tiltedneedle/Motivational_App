@@ -310,12 +310,13 @@ export function Body({ children, style, numberOfLines, testID, accessibilityLabe
   );
 }
 
-export function Label({ children, style, testID, accessibilityLabel }: TextProps) {
+export function Label({ children, style, testID, accessibilityLabel, numberOfLines }: TextProps) {
   const { p } = usePalette();
   return (
     <Text
       accessibilityLabel={accessibilityLabel}
       testID={testID}
+      numberOfLines={numberOfLines}
       style={[
         {
           fontFamily: fonts.sansSemi,
@@ -658,16 +659,19 @@ export function TopBar({
   help?: { onPress: () => void; testID?: string };
   style?: StyleProp<ViewStyle>;
 }) {
-  const rightSide = right ?? (where ? <Label>{where}</Label> : null);
+  // With "Need someone?" beside it, the where-label gives way first: on a
+  // 320-point screen "The Interview · question 1" pushed the help off the
+  // edge, which is the one control that must never be off the edge.
+  const rightSide = right ?? (where ? <Label numberOfLines={1} style={help ? { flexShrink: 1 } : undefined}>{where}</Label> : null);
   return (
-    <View style={[{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, minHeight: 56 }, style]}>
+    <View style={[{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, minHeight: 56, gap: 8 }, style]}>
       {back ? (
         <TextButton testID={back.testID ?? 'top-back'} label={`← ${back.label ?? 'Back'}`} accessibilityLabel={back.label ?? 'Back'} onPress={back.onPress} />
       ) : (
         <View />
       )}
       {help ? (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 6, flexShrink: 1 }}>
           {rightSide}
           <TextButton testID={help.testID ?? 'top-help'} label="Need someone?" accessibilityLabel="Need someone? Helplines" onPress={help.onPress} />
         </View>

@@ -159,7 +159,7 @@ export default function Interview() {
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
         <TopBar
           back={{ onPress: stepBack, testID: 'interview-back' }}
-          where={s.stage === 'summary' ? 'The Interview · what I heard' : `The Interview · question ${s.answered + 1}`} help={{ onPress: showResources }}
+          where={s.stage === 'summary' ? 'What I heard' : `Question ${s.answered + 1}`} help={{ onPress: showResources }}
           style={{ paddingTop: 6, minHeight: 48 }}
         />
         {/* the coach's pearl inside the clarity ring, and its guess */}
