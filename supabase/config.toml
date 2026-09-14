@@ -4,7 +4,9 @@ project_id = "morrow"
 [api]
 enabled = true
 port = 54321
-schemas = ["public"]
+# graphql_public is what a fresh project exposes; declared here so a config
+# push does not take it away.
+schemas = ["public", "graphql_public"]
 
 [db]
 port = 54322
@@ -26,12 +28,23 @@ enable_confirmations = false
 otp_length = 6
 otp_expiry = 600
 
-# The email that carries the code. `supabase config push` sets this on the
-# hosted project, so nobody has to paste it into the dashboard; the file is
-# the whole template, and {{ .Token }} is the six digits.
-[auth.email.template.magic_link]
-subject = "Your Morrow code"
-content_path = "./supabase/templates/magic_link.html"
+# The email that carries the code. The project's free tier with the default
+# email provider refuses template changes ("Email template modification is
+# not available for free tier projects using the default email provider"),
+# so these two tables stay commented until the project is on Pro — which the
+# PRD plans before the demo — or has its own SMTP. Until then the email
+# carries a link, and the app signs in from the link (deep link, morrow://)
+# as well as from a code. Uncomment and `pnpm sb config push` when it can.
+#
+# [auth.email.template.magic_link]
+# subject = "Your Morrow code"
+# content_path = "./supabase/templates/magic_link.html"
+#
+# A brand-new address goes through the sign-up path, which sends this
+# template rather than the magic link's; the same six digits, the same file.
+# [auth.email.template.confirmation]
+# subject = "Your Morrow code"
+# content_path = "./supabase/templates/magic_link.html"
 
 [auth.external.apple]
 # Sign in with Apple, from the identity token the OS hands the app. The client

@@ -47,6 +47,11 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 32. Supabase, the rest: the four edge functions deployed, the auth
+      config pushed (a PAT from the owner; `pnpm sb`), sign-in from the email's
+      link (the free tier keeps the templates), a CORS bug in every function
+      found and fixed by the round trip, Close the account through the
+      deployed function; `pnpm test:account` 36
 - [x] 31. After the list: every non-root screen on TopBar (eleven hand-rolled
       rows converted), the clock can be hidden, orientation unlocked, the
       doorway and the closed card scroll; the title on its own page; the

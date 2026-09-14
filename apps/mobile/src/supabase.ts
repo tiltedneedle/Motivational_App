@@ -117,6 +117,54 @@ export async function sendCode(email: string): Promise<AuthResult> {
   }
 }
 
+/**
+ * Sign in from the link in the email (the deep link, `morrow://`).
+ *
+ * The code is the design (PRD §7.12), and the email template that carries
+ * it cannot be set on the project's free tier with the default email
+ * provider, so until the project is on Pro the email carries Supabase's own
+ * link. Tapped on the phone, the link opens the app at `morrow://` with the
+ * session in the URL's fragment (`#access_token=…&refresh_token=…`), or with
+ * a `token_hash` to verify. Either becomes a session here; anything else is
+ * not a sign-in link and is left alone. Nothing is trusted from the URL
+ * beyond handing it to the auth server, which is the one that decides.
+ */
+export async function signInFromUrl(url: string | null | undefined): Promise<AuthResult | null> {
+  const c = supabase();
+  if (!c || !url) return null;
+  let params: URLSearchParams;
+  try {
+    const u = new URL(url);
+    const fragment = u.hash.startsWith('#') ? u.hash.slice(1) : u.hash;
+    params = new URLSearchParams(fragment || u.search);
+    if (!params.has('access_token') && !params.has('token_hash')) {
+      // some senders put the fragment's keys in the query instead
+      params = new URLSearchParams(u.search);
+    }
+  } catch {
+    return null;
+  }
+  const error = params.get('error_description') ?? params.get('error');
+  if (error) return { ok: false, error: plain(error.replace(/\+/g, ' ')) };
+  try {
+    const access = params.get('access_token');
+    const refresh = params.get('refresh_token');
+    if (access && refresh) {
+      const { error: e } = await c.auth.setSession({ access_token: access, refresh_token: refresh });
+      return e ? { ok: false, error: plain(e.message) } : { ok: true };
+    }
+    const hash = params.get('token_hash');
+    const type = params.get('type');
+    if (hash && (type === 'magiclink' || type === 'email' || type === 'signup')) {
+      const { error: e } = await c.auth.verifyOtp({ token_hash: hash, type: type === 'signup' ? 'signup' : 'magiclink' });
+      return e ? { ok: false, error: plain(e.message) } : { ok: true };
+    }
+  } catch (err) {
+    return { ok: false, error: plain(err instanceof Error ? err.message : 'no network') };
+  }
+  return null;
+}
+
 export async function confirmCode(email: string, code: string): Promise<AuthResult> {
   const c = supabase();
   if (!c) return { ok: false, error: NO_SERVICE };

@@ -216,7 +216,10 @@ export default function Account() {
                 </>
               ) : (
                 <>
-                  <Body style={{ fontSize: 14 }}>A six-digit code is on its way to {sent}.</Body>
+                  <Body style={{ fontSize: 14 }}>
+                    An email is on its way to {sent}. Tap the link in it on this phone and you are signed in. If the email
+                    shows a six-digit code instead, type it here.
+                  </Body>
                   <UserField
                     testID="account-code"
                     label="The six-digit code"

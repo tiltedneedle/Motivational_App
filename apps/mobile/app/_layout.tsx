@@ -1,12 +1,13 @@
 import { Stack, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { AppState, Platform, View, Text, ActivityIndicator, useColorScheme } from 'react-native';
+import { AppState, Linking, Platform, View, Text, ActivityIndicator, useColorScheme } from 'react-native';
 import { useFonts as useOutfit, Outfit_400Regular, Outfit_500Medium, Outfit_600SemiBold, Outfit_700Bold } from '@expo-google-fonts/outfit';
 import { Newsreader_400Regular, Newsreader_400Regular_Italic, Newsreader_500Medium } from '@expo-google-fonts/newsreader';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { day } from '@morrow/ui';
 import { useMorrow } from '../src/store';
+import { signInFromUrl } from '../src/supabase';
 import { onNotificationOpened } from '../src/notify';
 import { armAnalytics, track } from '../src/analytics';
 import { SafetyGate } from '../src/components/SafetyGate';
@@ -93,6 +94,30 @@ export default function RootLayout() {
    * store is readable, so the screen it opens has something to show, and
    * only routes of the app's own shape are followed.
    */
+  /**
+   * The sign-in link (PRD §7.12, and the free tier's email). The URL that
+   * opened the app, and any that arrives while it is open, is offered to the
+   * auth server; a session that comes back lands on the account screen,
+   * which knows what to do with a signed-in device. Every other URL is left
+   * to the router.
+   */
+  useEffect(() => {
+    if (!hydrated) return;
+    const handle = async (url: string | null) => {
+      const out = await signInFromUrl(url);
+      if (!out) return;
+      if (out.ok) {
+        await setAccount();
+        router.push('/account');
+      } else {
+        useMorrow.getState().setToast({ text: out.error, kind: 'info' });
+      }
+    };
+    void Linking.getInitialURL().then(handle).catch(() => {});
+    const sub = Linking.addEventListener('url', ({ url }) => void handle(url));
+    return () => sub.remove();
+  }, [hydrated, router, setAccount]);
+
   useEffect(() => {
     if (!hydrated) return;
     let off: (() => void) | null = null;

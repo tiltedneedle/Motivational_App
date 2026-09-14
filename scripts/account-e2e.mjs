@@ -102,12 +102,14 @@ function serve() {
 // ---- 1. a throwaway user and a session
 const email = `e2e-${Date.now().toString(36)}@example.com`;
 let userId = null;
+let deletedUserId = null;
 const server = await serve();
 let browser = null;
 try {
   const made = await admin('/admin/users', { method: 'POST', body: JSON.stringify({ email, email_confirm: true }) });
   const user = await made.json();
   userId = user.id ?? null;
+  deletedUserId = userId;
   check('a test user can be made with the service role', made.status === 200 && Boolean(userId), `${made.status} ${JSON.stringify(user).slice(0, 120)}`);
   if (!userId) throw new Error('no user');
 
@@ -146,12 +148,15 @@ try {
     }
     return false;
   };
+  // The store is seeded; the session is NOT put in storage. It arrives the
+  // way the email's link delivers it: in the fragment of the URL that opens
+  // the app (\`morrow://#access_token=…&refresh_token=…\`), which the root
+  // layout hands to the auth server.
   await page.addInitScript(
-    ({ s, key, sess }) => {
+    ({ s }) => {
       if (!localStorage.getItem('morrow-v1') && !localStorage.getItem('e2e-wiped')) localStorage.setItem('morrow-v1', JSON.stringify(s));
-      localStorage.setItem(key, JSON.stringify(sess));
     },
-    { s: seed, key: `sb-${REF}-auth-token`, sess: session },
+    { s: seed },
   );
   const tap = async (id) => {
     const el = page.locator(`[data-testid="${id}"]`).first();
@@ -162,6 +167,11 @@ try {
   const seen = async (id) => (await page.locator(`[data-testid="${id}"]`).count()) > 0;
   const text = async (id) => (await page.locator(`[data-testid="${id}"]`).first().innerText()).trim();
 
+  const linkUrl = `${BASE}/#access_token=${encodeURIComponent(session.access_token)}&refresh_token=${encodeURIComponent(session.refresh_token)}&expires_in=${session.expires_in ?? 3600}&token_type=bearer&type=magiclink`;
+  await page.goto(linkUrl, { waitUntil: 'networkidle' });
+  const signedIn = await settle(async () => await seen('screen-account'), 20_000);
+  check('the link in the email signs the app in and lands on the account screen', signedIn);
+  check('which shows the signed-in state', await seen('account-signed-in'));
   await page.goto(`${BASE}/settings`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(2500);
   check('Settings sees the session as an account', await seen('settings-account'));
@@ -221,16 +231,43 @@ try {
   await tap('account-continue');
   await page.waitForTimeout(1500);
   check('and Carry on lands on Today with the Book', await seen('screen-today'));
+
+  // ---- 5. Close the account from Settings: the deployed delete-account
+  // function, called the way the app calls it, with the person's own token.
+  await page.goto(`${BASE}/settings`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(2000);
+  await tap('settings-account-delete');
+  await tap('settings-account-delete-confirm');
+  const closed = await settle(async () => !(await seen('settings-account-who')), 20_000);
+  const note = (await seen('settings-account-note')) ? await text('settings-account-note') : '(no note)';
+  check('Close the account, through the deployed function, signs the device out', closed, note);
+  // A soft delete: the profile is stamped, every session is revoked, and the
+  // sweep removes the user for good after the grace period (the function's
+  // own promise: "gone within seven days"). Checked with the service role.
+  const marked = await fetch(`${URL_}/rest/v1/profiles?select=deleted_at&id=eq.${userId}`, { headers: { apikey: SERVICE, Authorization: `Bearer ${SERVICE}` } });
+  const rows = await marked.json();
+  check('the profile is stamped for deletion', Array.isArray(rows) && rows[0]?.deleted_at != null, JSON.stringify(rows).slice(0, 120));
+  // The access token is a JWT and lives out its hour; what the close revokes
+  // is the session behind it, so it cannot be renewed anywhere.
+  const renew = await fetch(`${URL_}/auth/v1/token?grant_type=refresh_token`, {
+    method: 'POST',
+    headers: { apikey: ANON, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refresh_token: session.refresh_token }),
+  });
+  check('and the old session cannot be renewed', renew.status >= 400, String(renew.status));
+  check('the writing stays on the device', await page.evaluate(() => (JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.goals ?? []).length > 0));
   check('no uncaught page errors', pageErrors.length === 0, pageErrors.join(' | '));
   if (process.env.E2E_TRACE) console.log(consoleLines.join('\n'));
 } catch (err) {
   check('the run completed', false, err instanceof Error ? err.message : String(err));
 } finally {
-  // ---- 5. the user goes, and its rows with it
+  // ---- 6. the throwaway user goes now rather than in seven days
   if (userId) {
     const gone = await admin(`/admin/users/${userId}`, { method: 'DELETE' });
-    check('the test user is deleted', gone.status === 200, String(gone.status));
-    const left = await fetch(`${URL_}/rest/v1/goals?select=id&user_id=eq.${userId}`, { headers: { apikey: SERVICE, Authorization: `Bearer ${SERVICE}`, Prefer: 'count=exact' } });
+    check('the test user is removed by the admin API', gone.status === 200, String(gone.status));
+  }
+  if (deletedUserId) {
+    const left = await fetch(`${URL_}/rest/v1/goals?select=id&user_id=eq.${deletedUserId}`, { headers: { apikey: SERVICE, Authorization: `Bearer ${SERVICE}`, Prefer: 'count=exact' } });
     check('and its rows went with it', (left.headers.get('content-range') ?? '').endsWith('/0'), left.headers.get('content-range') ?? '');
   }
   if (browser) await browser.close();
