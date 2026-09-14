@@ -51,9 +51,17 @@ export default function Interview() {
   const showResources = useMorrow((st) => st.showResources);
   // Picked up where it was left: a kill or a call mid-Interview used to
   // restart it from the first question.
-  const saved = useMorrow((st) => st.interviewDraft);
+  const savedRaw = useMorrow((st) => st.interviewDraft);
   const saveDraft = useMorrow((st) => st.saveInterviewDraft);
   const clearDraft = useMorrow((st) => st.clearInterviewDraft);
+  // A draft is persisted state from whichever build wrote it. One with the
+  // wrong shape would crash this screen on every open, and it lives on disk;
+  // it is looked at before it is trusted, and ignored if it does not look
+  // like an Interview.
+  const saved =
+    savedRaw && typeof savedRaw.s?.stage === 'string' && Array.isArray(savedRaw.s.picked) && Array.isArray(savedRaw.s.drafts) && Array.isArray(savedRaw.history)
+      ? savedRaw
+      : null;
   const [s, setS] = useState<InterviewState>(() => saved?.s ?? initialInterview());
   // Every answer is a step forward that can be stepped back from, with
   // everything before it kept (§7.1: "Back always keeps answers"). A wrong

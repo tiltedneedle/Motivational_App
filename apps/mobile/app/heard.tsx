@@ -47,7 +47,7 @@ export default function Heard() {
     // The rows as they were left — kept, named, dropped — if this is the
     // same sitting. A kill mid-read-back used to ask the coach again and
     // hand back a page with every name gone.
-    if (savedRows && savedRows.source === source) {
+    if (savedRows && savedRows.source === source && Array.isArray(savedRows.rows) && savedRows.rows.every((r) => r && typeof r.span?.text === 'string' && typeof r.name === 'string')) {
       setRows(savedRows.rows);
       setLeftOut(savedRows.leftOut);
       return;
