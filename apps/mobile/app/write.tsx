@@ -266,12 +266,14 @@ export default function Write() {
   if (phase === 'doorway') {
     return (
       <Studio dark testID="screen-write-doorway">
-        <SafeAreaView style={{ flex: 1, paddingHorizontal: 22, justifyContent: 'space-between' }}>
+        <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
           <TopBar
             back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'write-back' }}
             right={<Label style={{ color: night.ink3 }}>{doorway.eyebrow}</Label>}
             help={{ onPress: showResources }}
           />
+          {/* Scrolls: at 200% type, or a phone on its side, Begin used to be off the bottom with no way to it. */}
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, justifyContent: 'space-between' }} showsVerticalScrollIndicator={false}>
           <View style={{ gap: 20 }}>
             <Stone size={120} domain="health" polish={0.4} style={{ alignSelf: 'center' }} />
             {/* The prompt is read once, calmly: a question's weight, not a headline's. */}
@@ -358,6 +360,7 @@ export default function Write() {
               </>
             )}
           </View>
+          </ScrollView>
         </SafeAreaView>
       </Studio>
     );
@@ -367,7 +370,8 @@ export default function Write() {
     const words = wordCount(session.body);
     return (
       <Studio dark testID="screen-write-closed">
-        <SafeAreaView style={{ flex: 1, paddingHorizontal: 22, justifyContent: 'center', gap: 24 }}>
+        <SafeAreaView style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 22, justifyContent: 'center', gap: 24 }} showsVerticalScrollIndicator={false}>
           <Stone size={132} domain="health" polish={polish(words)} seated style={{ alignSelf: 'center' }} />
           <Statement style={{ color: night.ink, textAlign: 'center', fontSize: 28, lineHeight: 34 }}>
             {endedEarly ? 'The room closed while you were away.' : 'That is the most you have said about this in one go.'}
@@ -458,6 +462,7 @@ export default function Write() {
               ) : null}
             </View>
           )}
+        </ScrollView>
         </SafeAreaView>
       </Studio>
     );

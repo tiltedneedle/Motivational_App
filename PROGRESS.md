@@ -47,6 +47,9 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 31. After the list: every non-root screen on TopBar (eleven hand-rolled
+      rows converted), the clock can be hidden, orientation unlocked, the
+      doorway and the closed card scroll; e2e 195
 - [x] 30. The research, and what it changed: four passes over current
       accessibility and first-run practice (WCAG 2.2, WCAG2Mobile, Apple HIG,
       Material, NN/g, GOV.UK, COGA, RN's own docs), each audited against the
@@ -1021,7 +1024,7 @@ The user asked, twice, for the flow to be looked at with a brand-new person in m
 - Nothing was announced when a step changed inside a screen. `announce()` in @morrow/ui; each Welcome page, each Interview question, each stone says itself.
 - Interview options were "checkbox, unchecked" buttons that answered and advanced: checkbox only on the multi-pick, button with a hint elsewhere.
 - Inline errors and status were silent: a `Notice` primitive (live region + announcement) carries the seal's refusal, the account's problems, the read-back's messages.
-- The Fifteen: the clock can be paused, "Five more minutes" when it ends (ten times, WCAG 2.2.1), one minute's warning announced. Not done: hiding the clock, and a shorter floor for the first sitting — the studied program's dose, left as it is.
+- The Fifteen: the clock can be paused, "Five more minutes" when it ends (ten times, WCAG 2.2.1), one minute's warning announced, and the countdown can be put away from the doorway (the minutes stay in the accessible name). Not done: a shorter floor for the first sitting — the studied program's dose, left as it is.
 - "Not today" was drag-or-long-press only and its Undo died in 3.4 s: a visible "Not today" under the Now card and on each row, "Put it back" on a parked row that never expires, the toast at eight seconds.
 - Fields were placeholder-only: UserField draws its label (or `labelHidden` where the screen already does), carries an `error` that is heard, and the email and one-time-code fields have their purpose for autofill.
 - At large type chip rows ran off the screen: they wrap; tab labels cap at 1.4×. Not testable on the web build; the device list below.
@@ -1030,7 +1033,7 @@ The user asked, twice, for the flow to be looked at with a brand-new person in m
 - The helplines were three taps away: "Need someone?" in the TopBar of the Interview, the room, the read-back, the stones, both seals and the coach opens the resources card without a pause and without "not about me".
 - The shadow doorway asked for self-blame; the ideal doorway stacked prohibitions: rewritten positively.
 - The safety card on the web took no focus and left the screen behind tabbable: focus to the title, Escape, the screen behind `inert`.
-- Not done: orientation (still portrait; WCAG 1.3.4 says default, and it needs a device to check the absolute-positioned pieces).
+- Orientation unlocked (`"orientation": "default"`, WCAG 1.3.4) after Today, the doorway and Seal the day were looked at at 844×390 in the web build: the column caps at 640 and everything scrolls, and the doorway and the closed card were made to scroll (Begin was off the bottom on a phone on its side, and would have been at 200% type). The device check stays on the list.
 
 **P2, done:** the admire question can be skipped; the stone's follow-up has its own field; "Two of them might be one" no longer implies a Merge; the specificity hint only where a time or place is the point; the order screen says what the top three means; the field underline reaches 3:1 (tested); the storage banner's name is its text; the paywall says what happens after the trial; heading levels (Statement 1, Question 2); the almanac speaks one row per month; first-run analytics (`first_run_step`, `first_value`); `eslint-plugin-react-native-a11y` in the lint (13 rules as errors; the hint-on-everything rule off, with the reason). **P2, not done:** the order/title split; native focus styles for hardware keyboards; the aria-* vocabulary migration (the lint plugin only reads the legacy spellings; decide after).
 
