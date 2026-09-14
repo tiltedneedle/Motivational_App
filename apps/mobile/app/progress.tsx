@@ -34,13 +34,13 @@ import {
   Statement,
   Stone,
   Studio,
-  TextButton,
   UserText,
   accent,
   day,
   type as fonts,
   COLUMN,
   keyboardScroll,
+  TopBar,
 } from '@morrow/ui';
 import { useConsistency, useMorrow } from '../src/store';
 
@@ -87,10 +87,7 @@ export default function Progress() {
   return (
     <Studio testID="screen-progress">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12 }}>
-          <TextButton testID="progress-back" label="← Today" onPress={goBack} />
-          <Label>Progress</Label>
-        </View>
+        <TopBar back={{ label: 'Today', onPress: goBack, testID: 'progress-back' }} where="Progress" />
 
         <ScrollView {...keyboardScroll} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18, gap: 26 }}>
           {/* ---- the score */}

@@ -22,11 +22,11 @@ import {
   Rule,
   Statement,
   Studio,
-  TextButton,
   UserField,
   accent,
   day,
   type as fonts,
+  TopBar,
 } from '@morrow/ui';
 import { useGoals, useMorrow } from '../src/store';
 
@@ -98,10 +98,7 @@ export default function PracticeBuilder() {
   return (
     <Studio testID="screen-practice">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12 }}>
-          <TextButton testID="practice-back" label="← Today" onPress={goBack} />
-          <Label>{kind === 'routine' ? 'A routine' : 'A habit'}</Label>
-        </View>
+        <TopBar back={{ label: 'Today', onPress: goBack, testID: 'practice-back' }} where={kind === 'routine' ? 'A routine' : 'A habit'} />
 
         <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 16, gap: 22 }}>
           <Statement>Something you do, not something you finish.</Statement>

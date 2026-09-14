@@ -17,7 +17,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { splitFirstMoves } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Statement, Stone, Studio, TextButton, UserField, UserText, accent, day, radius } from '@morrow/ui';
+import { Body, Chip, InkButton, Label, Statement, Stone, Studio, UserField, UserText, accent, day, radius, TopBar } from '@morrow/ui';
 import { analysesFor, useGoals, useMorrow } from '../src/store';
 
 const LENGTHS = ['2 min', '10 min', '25 min', '45 min'] as const;
@@ -73,10 +73,7 @@ export default function NewMove() {
   return (
     <Studio testID="screen-new-move">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12 }}>
-          <Label>{mode === 'move' ? 'A new move' : 'Capture'}</Label>
-          <TextButton testID="new-move-close" label="Close" onPress={back} />
-        </View>
+        <TopBar back={{ label: 'Close', onPress: back, testID: 'new-move-close' }} where={mode === 'move' ? 'A new move' : 'Capture'} />
         <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 16, gap: 18 }}>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <Chip testID="new-move-mode-move" label="A move for today" selected={mode === 'move'} onPress={() => setMode('move')} />

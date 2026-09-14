@@ -23,6 +23,7 @@ import {
   paper,
   radius,
   useTwoColumn,
+  TopBar,
 } from '@morrow/ui';
 import { printBook } from '../src/print';
 import { useLatestBook, useMorrow } from '../src/store';
@@ -98,12 +99,15 @@ export default function BookScreen() {
   return (
     <Studio dark wide={twoColumn} testID="screen-book">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 18 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10 }}>
-          <TextButton testID="book-back" label="← Today" onPress={() => router.dismissTo('/today')} />
-          <Label style={{ color: night.ink3 }}>
-            {ordinal(book.version)} edition · {pageCount(book)} pages
-          </Label>
-        </View>
+        <TopBar
+          back={{ label: 'Today', onPress: () => router.dismissTo('/today'), testID: 'book-back' }}
+          right={
+            <Label style={{ color: night.ink3 }}>
+              {ordinal(book.version)} edition · {pageCount(book)} pages
+            </Label>
+          }
+          style={{ paddingTop: 4, minHeight: 52 }}
+        />
 
         {/* the paper page */}
         <ScrollView

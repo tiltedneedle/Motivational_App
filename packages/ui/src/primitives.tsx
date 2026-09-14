@@ -666,14 +666,21 @@ export function TopBar({
   return (
     <View style={[{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, minHeight: 56, gap: 8 }, style]}>
       {back ? (
-        <TextButton testID={back.testID ?? 'top-back'} label={`← ${back.label ?? 'Back'}`} accessibilityLabel={back.label ?? 'Back'} onPress={back.onPress} />
+        <TextButton
+          testID={back.testID ?? 'top-back'}
+          label={`← ${back.label ?? 'Back'}`}
+          accessibilityLabel={back.label ?? 'Back'}
+          onPress={back.onPress}
+          // The 44-point target reaches past the page margin; the words sit on it.
+          style={{ marginLeft: -12 }}
+        />
       ) : (
         <View />
       )}
       {help ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 6, flexShrink: 1 }}>
           {rightSide}
-          <TextButton testID={help.testID ?? 'top-help'} label="Need someone?" accessibilityLabel="Need someone? Helplines" onPress={help.onPress} />
+          <TextButton testID={help.testID ?? 'top-help'} label="Need someone?" accessibilityLabel="Need someone? Helplines" onPress={help.onPress} style={{ marginRight: -12 }} />
         </View>
       ) : (
         rightSide
@@ -709,7 +716,19 @@ export function Notice({ text, kind = 'status', testID, style }: { text: string 
   );
 }
 
-export function TextButton({ label, onPress, testID, accessibilityLabel }: { label: string; onPress?: () => void; testID?: string; accessibilityLabel?: string }) {
+export function TextButton({
+  label,
+  onPress,
+  testID,
+  accessibilityLabel,
+  style,
+}: {
+  label: string;
+  onPress?: () => void;
+  testID?: string;
+  accessibilityLabel?: string;
+  style?: StyleProp<ViewStyle>;
+}) {
   const { p } = usePalette();
   const { hovered, hoverProps } = useHover();
   return (
@@ -720,7 +739,7 @@ export function TextButton({ label, onPress, testID, accessibilityLabel }: { lab
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
       // 44 points each way (Apple HIG): "Skip" was thirty wide.
-      style={({ pressed }) => ({ minHeight: 44, minWidth: 44, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}
+      style={({ pressed }) => [{ minHeight: 44, minWidth: 44, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 }, style]}
     >
       <Text
         style={{

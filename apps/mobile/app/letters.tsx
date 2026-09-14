@@ -15,7 +15,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WRITE_TO_FUTURE_MAX_DAYS, dayOf, formatDay, plural, type Letter } from '@morrow/core';
-import { Body, Card, Chip, InkButton, Label, Quoted, Rule, Statement, Studio, TextButton, UserField, UserText, accent, day } from '@morrow/ui';
+import { Body, Card, Chip, InkButton, Label, Quoted, Rule, Statement, Studio, TextButton, UserField, UserText, accent, day, TopBar } from '@morrow/ui';
 import { useMorrow } from '../src/store';
 
 /** The delivery distances offered, in days. A year is the ceiling. */
@@ -86,10 +86,7 @@ export default function Letters() {
   return (
     <Studio testID="screen-letters">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12 }}>
-          <TextButton testID="letters-back" label="← Today" onPress={() => router.dismissTo('/today')} />
-          <Label>Letters</Label>
-        </View>
+        <TopBar back={{ label: 'Today', onPress: () => router.dismissTo('/today'), testID: 'letters-back' }} where="Letters" />
 
         <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18, gap: 18 }}>
           {arrived.length === 0 ? (

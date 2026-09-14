@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { Linking, Platform, Pressable, ScrollView, Share, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { HELPLINES, bookToText, formatDay, plural, sealedOn, type Moment } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, accent, day } from '@morrow/ui';
+import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, accent, day, TopBar } from '@morrow/ui';
 import { useLatestBook, useMorrow } from '../src/store';
 import { hasSupabase } from '../src/supabase';
 
@@ -132,10 +132,7 @@ export default function Settings() {
   return (
     <Studio testID="screen-settings">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12 }}>
-          <TextButton testID="settings-back" label="← Today" onPress={() => router.dismissTo('/today')} />
-          <Label>You</Label>
-        </View>
+        <TopBar back={{ label: 'Today', onPress: () => router.dismissTo('/today'), testID: 'settings-back' }} where="You" />
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18, gap: 22 }}>
           <Statement>What Morrow knows about you.</Statement>

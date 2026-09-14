@@ -14,7 +14,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ANALYSIS_TITLES, bookPages, dayOf, distanceLabel, formatDay, horizonReview, plural, sealedOn, thenHalf } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Quoted, Rule, Statement, Studio, TextButton, UserText, fitSentence, night, paper, radius } from '@morrow/ui';
+import { Body, Chip, InkButton, Label, Quoted, Rule, Statement, Studio, TextButton, UserText, fitSentence, night, paper, radius, TopBar } from '@morrow/ui';
 import { useGoals, useLatestBook, useMorrow } from '../src/store';
 
 export default function Reading() {
@@ -79,12 +79,15 @@ export default function Reading() {
           then remembered the kettle should not have to force-quit an app about
           keeping promises to themselves.
         */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10 }}>
-          <TextButton testID="reading-leave" label="← Today" onPress={() => router.dismissTo('/today')} />
-          <Label testID="reading-progress" style={{ color: night.ink3 }}>
-            {index + 1} of {plural(pages.length, 'page')}
-          </Label>
-        </View>
+        <TopBar
+          back={{ label: 'Today', onPress: () => router.dismissTo('/today'), testID: 'reading-leave' }}
+          right={
+            <Label testID="reading-progress" style={{ color: night.ink3 }}>
+              {index + 1} of {plural(pages.length, 'page')}
+            </Label>
+          }
+          style={{ paddingTop: 4, minHeight: 52 }}
+        />
 
         <Pressable
           testID="reading-page"

@@ -20,7 +20,7 @@ import { useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { dayOf, formatDay, plural, type ReplanChange } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, UserText, accent, day, radius } from '@morrow/ui';
+import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, UserText, accent, day, radius, TopBar } from '@morrow/ui';
 import { analysesFor, useGoals, useMorrow } from '../src/store';
 
 const VERB: Record<ReplanChange['op'], string> = {
@@ -87,10 +87,7 @@ export default function Replan() {
   return (
     <Studio testID="screen-replan">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12 }}>
-          <TextButton testID="replan-back" label="← Back" onPress={back} />
-          <Label>Replan</Label>
-        </View>
+        <TopBar back={{ onPress: back, testID: 'replan-back' }} where="Replan" />
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18, gap: 16 }}>
           {changes.length === 0 ? (

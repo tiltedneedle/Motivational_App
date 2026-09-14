@@ -32,6 +32,7 @@ import {
   UserText,
   accent,
   night,
+  TopBar,
 } from '@morrow/ui';
 import { useGoals, useMorrow } from '../src/store';
 
@@ -114,10 +115,7 @@ export default function Envision() {
   return (
     <Studio dark testID="screen-envision">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12 }}>
-          <TextButton testID="envision-back" label="← Today" onPress={goBack} />
-          <Label style={{ color: night.ink3 }}>Envision</Label>
-        </View>
+        <TopBar back={{ label: 'Today', onPress: goBack, testID: 'envision-back' }} right={<Label style={{ color: night.ink3 }}>Envision</Label>} />
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18, gap: 22 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>

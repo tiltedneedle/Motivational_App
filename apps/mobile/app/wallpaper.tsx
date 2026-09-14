@@ -13,7 +13,7 @@ import { useRef, useState } from 'react';
 import { Platform, ScrollView, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatDay, sealedOn } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Statement, Stone, Studio, TextButton, UserText, fitLine, night } from '@morrow/ui';
+import { Body, Chip, InkButton, Label, Statement, Stone, Studio, UserText, fitLine, night, TopBar } from '@morrow/ui';
 import { WALLPAPER, saveWallpaper, shareWallpaper } from '../src/wallpaper';
 import { useGoals, useLatestBook, useMorrow } from '../src/store';
 
@@ -77,10 +77,7 @@ export default function Wallpaper() {
   return (
     <Studio dark testID="screen-wallpaper">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12 }}>
-          <Label style={{ color: night.ink3 }}>Lock screen</Label>
-          <TextButton testID="wallpaper-back" label="Back" onPress={back} />
-        </View>
+        <TopBar back={{ onPress: back, testID: 'wallpaper-back' }} right={<Label style={{ color: night.ink3 }}>Lock screen</Label>} />
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 16, gap: 16, alignItems: 'center' }}>
           {/*
             The print. Exactly what is captured: a plain View, so the capture

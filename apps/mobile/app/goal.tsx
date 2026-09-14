@@ -30,11 +30,11 @@ import {
   Statement,
   Stone,
   Studio,
-  TextButton,
   UserText,
   accent,
   day,
   useTwoColumn,
+  TopBar,
 } from '@morrow/ui';
 import { analysisPlan } from './stone';
 import { analysesFor, useGoals, useMorrow } from '../src/store';
@@ -105,10 +105,7 @@ export default function GoalScreen() {
   return (
     <Studio wide={twoColumn} testID="screen-goal">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12 }}>
-          <TextButton testID="goal-back" label="← Today" onPress={goBack} />
-          <Label>{goal.domainLabel ?? meta.label}</Label>
-        </View>
+        <TopBar back={{ label: 'Today', onPress: goBack, testID: 'goal-back' }} where={goal.domainLabel ?? meta.label} />
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 16, gap: 20 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
