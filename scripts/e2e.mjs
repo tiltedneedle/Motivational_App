@@ -723,6 +723,31 @@ async function main() {
     await page.waitForTimeout(700);
     check('and it does not come back the next time Today opens', !(await seen('screen-paywall')));
     check('and after the first sealed day the consistency score appears', await seen('today-consistency'));
+
+    // The countdown can be put away for the next sitting, from the doorway.
+    // The digits go; the minutes stay in the accessible name; the room still
+    // closes on time.
+    await page.goto(`${BASE}/write?kind=addition`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(400);
+    check('the doorway offers to hide the clock', await seen('write-hide-clock'));
+    if (await seen('write-hide-clock')) {
+      await tap('write-hide-clock');
+      check('Hide the clock is a checkbox that reads as on', (await page.locator('[data-testid="write-hide-clock"]').getAttribute('aria-checked')) === 'true');
+      await tap('write-begin');
+      await page.waitForTimeout(400);
+      if (await seen('write-remaining')) {
+        check('the room shows no digits', (await text('write-remaining')).toLowerCase() === 'clock hidden', await text('write-remaining'));
+        check('but a screen reader still hears the minutes', /left$/.test((await page.locator('[data-testid="write-remaining"]').getAttribute('aria-label')) ?? ''));
+      }
+      await page.goto(`${BASE}/write?kind=addition`, { waitUntil: 'networkidle' });
+      await page.clock.runFor(1200);
+      await page.waitForTimeout(400);
+      if (await seen('write-hide-clock')) await tap('write-hide-clock'); // back on, for the sittings that follow
+    }
+    await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(500);
     // Back to the Today that was there, not a second one on top of it. A
     // replace from a pushed screen left two Todays mounted, the hidden one
     // first in the DOM, so every later click on Today found the wrong one.

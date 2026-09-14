@@ -488,6 +488,13 @@ export const Profile = z.object({
    * three screens before anything exists; this is the one line after).
    */
   todayIntroSeen: z.boolean().default(false),
+  /**
+   * The room without its countdown. The ring still fills and a screen reader
+   * still hears the minutes; the digits and the fill are for whoever wants
+   * them (COGA: no time pressure on reflection; the clock is the person's
+   * to look at, not the room's to show).
+   */
+  hideClock: z.boolean().default(false),
 });
 export type Profile = z.infer<typeof Profile>;
 
@@ -511,6 +518,7 @@ export const DEFAULT_PROFILE: Profile = {
   notificationsAsked: false,
   paywallSeen: [],
   todayIntroSeen: false,
+  hideClock: false,
 };
 
 // ---------------------------------------------------------------- domain meta

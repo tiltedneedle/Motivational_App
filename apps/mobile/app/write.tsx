@@ -43,6 +43,8 @@ export default function Write() {
   const kind = (params.kind === 'shadow' ? 'shadow' : params.kind === 'addition' ? 'addition' : 'ideal') as WritingKind;
 
   const track = useMorrow((s) => s.profile.track);
+  const hideClock = useMorrow((s) => s.profile.hideClock);
+  const setProfile = useMorrow((s) => s.setProfile);
   const saveText = useMorrow((s) => s.saveText);
   const saveDraft = useMorrow((s) => s.saveDraft);
   const clearDraft = useMorrow((s) => s.clearDraft);
@@ -288,6 +290,21 @@ export default function Write() {
                 />
               ))}
             </View>
+            {/*
+              The countdown can be put away. It is still there for a screen
+              reader and the room still closes at the end; the digits were
+              the thing that made some people write for the clock.
+            */}
+            <View style={{ flexDirection: 'row', justifyContent: 'center' }}>
+              <Chip
+                testID="write-hide-clock"
+                label={hideClock ? 'Show the clock' : 'Hide the clock'}
+                role="checkbox"
+                selected={hideClock}
+                ghost
+                onPress={() => setProfile({ hideClock: !hideClock })}
+              />
+            </View>
           </View>
           <View style={{ paddingBottom: 18, gap: 6 }}>
             {resumable && draft && canResume(draft) ? (
@@ -468,8 +485,8 @@ export default function Write() {
             },
           }}
           right={
-            <Label testID="write-remaining" style={{ color: night.ink3 }}>
-              {formatRemaining(remaining(session))} left
+            <Label testID="write-remaining" style={{ color: night.ink3 }} accessibilityLabel={`${formatRemaining(remaining(session))} left`}>
+              {hideClock ? 'Clock hidden' : `${formatRemaining(remaining(session))} left`}
             </Label>
           }
           style={{ paddingTop: 6, minHeight: 44 }}
@@ -483,7 +500,7 @@ export default function Write() {
           */}
           <Ring
             size={92}
-            progress={ringFraction(session)}
+            progress={hideClock ? 0 : ringFraction(session)}
             color={accent.coral}
             track="rgba(255,255,255,0.12)"
             width={3}
