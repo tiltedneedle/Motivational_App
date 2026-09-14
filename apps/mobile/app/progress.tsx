@@ -92,7 +92,7 @@ export default function Progress() {
         <ScrollView {...keyboardScroll} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18, gap: 26 }}>
           {/* ---- the score */}
           <View style={{ gap: 6 }}>
-            <Label>Consistency</Label>
+            <Label accessibilityRole="header">Consistency</Label>
             <Readout testID="progress-score">{score.score}</Readout>
             <Body testID="progress-caption" style={{ color: day.ink }}>
               {consistencyCaption(score)}

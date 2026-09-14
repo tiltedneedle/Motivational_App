@@ -143,11 +143,11 @@ export default function BookScreen() {
               </Body>
             ) : null}
             {book.titleAuthored === false ? (
-              <Body testID="book-spine" style={{ fontSize: 26, lineHeight: 32, color: '#231F1A' }}>
+              <Body testID="book-spine" accessibilityRole="header" style={{ fontSize: 26, lineHeight: 32, color: '#231F1A' }}>
                 {book.title}
               </Body>
             ) : (
-              <UserText testID="book-spine" style={{ fontSize: 26, lineHeight: 32, color: '#231F1A' }}>
+              <UserText testID="book-spine" accessibilityRole="header" style={{ fontSize: 26, lineHeight: 32, color: '#231F1A' }}>
                 {book.title}
               </UserText>
             )}

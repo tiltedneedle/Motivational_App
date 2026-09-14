@@ -295,7 +295,7 @@ export function Question({ children, style, testID, accessibilityLabel, level = 
   );
 }
 
-export function Body({ children, style, numberOfLines, testID, accessibilityLabel, selectable }: TextProps) {
+export function Body({ children, style, numberOfLines, testID, accessibilityLabel, selectable, accessibilityRole, level }: TextProps) {
   const { p } = usePalette();
   return (
     <Text
@@ -303,6 +303,7 @@ export function Body({ children, style, numberOfLines, testID, accessibilityLabe
       testID={testID}
       selectable={selectable}
       numberOfLines={numberOfLines}
+      {...(accessibilityRole === 'header' ? { accessibilityRole: 'header' as const, 'aria-level': level ?? 1 } : {})}
       style={[{ fontFamily: fonts.sans, fontSize: size.body, lineHeight: 23, color: p.ink2 }, style]}
     >
       {children}
@@ -310,13 +311,14 @@ export function Body({ children, style, numberOfLines, testID, accessibilityLabe
   );
 }
 
-export function Label({ children, style, testID, accessibilityLabel, numberOfLines }: TextProps) {
+export function Label({ children, style, testID, accessibilityLabel, numberOfLines, accessibilityRole, level }: TextProps) {
   const { p } = usePalette();
   return (
     <Text
       accessibilityLabel={accessibilityLabel}
       testID={testID}
       numberOfLines={numberOfLines}
+      {...(accessibilityRole === 'header' ? { accessibilityRole: 'header' as const, 'aria-level': level ?? 1 } : {})}
       style={[
         {
           fontFamily: fonts.sansSemi,
@@ -344,6 +346,8 @@ export function UserText({
   numberOfLines,
   testID,
   accessibilityLabel,
+  accessibilityRole,
+  level,
   framing,
 }: TextProps & {
   italic?: boolean;
@@ -361,6 +365,7 @@ export function UserText({
       accessibilityLabel={accessibilityLabel}
       testID={testID}
       numberOfLines={numberOfLines}
+      {...(accessibilityRole === 'header' ? { accessibilityRole: 'header' as const, 'aria-level': level ?? 1 } : {})}
       style={[
         {
           fontFamily: italic ? fonts.serifItalic : fonts.serif,

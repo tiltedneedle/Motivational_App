@@ -73,7 +73,7 @@ const ROUTES = {
  * there are no landmarks or headings in a native app's sense, and RNW's
  * `<div role="button">` with a `tabindex` is how every Pressable is made.
  */
-const DISABLED = ['region', 'landmark-one-main', 'page-has-heading-one', 'bypass'];
+const DISABLED = ['region', 'landmark-one-main', 'bypass'];
 
 function serve() {
   return new Promise((resolve) => {
