@@ -1054,7 +1054,10 @@ The user handed over the Supabase project (`fxsaxganeyajxbcbignq`, Singapore). W
 - **The schema is on the project.** `0001_init.sql` applied in one transaction over the session pooler (`aws-0-ap-southeast-1`; the direct host is IPv6-only and this machine has no IPv6 route) — 18 tables, 18 policies, RLS on every one — and recorded in `supabase_migrations.schema_migrations` so the CLI's own `db push` finds nothing to do. Checked from outside with the publishable key: every table answers `[]`, an anonymous insert is refused with 42501.
 - **The app points at it.** `apps/mobile/.env` (gitignored) carries the URL and the publishable key; the configured bundle has them and nothing else — no secret, no service role, no password, checked by grep. The tests build with every key blanked (`pnpm build:web:offline`).
 - **The CLI is a dev dependency** (`pnpm exec supabase`, 2.117), with the six-digit-code email template in `config.toml` + `supabase/templates/` so `config push` sets it.
-- **Waiting on the owner's login:** `functions deploy`, `config push` and `secrets set`. This machine holds a CLI login for some other Supabase account (its projects are TZ-Wellness and LA-Tech), which cannot see this project; replacing a stored credential is the user's to do, not mine. Until the functions deploy the app runs on its device engines (`guarded()` falls back), so nothing is broken, only local.
+- **The functions are deployed and the auth config is on the project** (2026-09-14, with a personal access token the user generated; `pnpm sb` runs the CLI with it from `supabase/.env.local`, never touching the login stored on this machine for another account). `config push`: otp length 6, expiry 10 min, the deep-link URLs, Apple with the bundle id. The four functions answer; without provider keys they say so (`degraded: 'no provider configured'`) and the app falls back to its device engines. What `secrets set` still needs: Anthropic and fal keys.
+- **The email carries a link, not the code, for now.** The free tier on the default email provider refuses template changes ("Email template modification is not available for free tier projects using the default email provider"), so the two template tables in `config.toml` are commented out until Pro — which the PRD plans before the demo. The app signs in from the link as well: `signInFromUrl` in `supabase.ts`, wired to `Linking` in the root layout, takes the session from the `morrow://` URL's fragment (or verifies a `token_hash`) and lands on the account screen. The account screen's copy says what the email carries.
+- **A CORS bug the round trip found:** the functions' preflight allowed only `authorization, content-type`, and supabase-js also sends `apikey` and `x-client-info`, so from a browser every `functions.invoke` failed before it started (native has no preflight). All four allow the four headers now.
+- `pnpm test:account` is 36 checks: the link signs the app in, push, RLS from a stranger's side, wipe, pull, the same store back, **Close the account through the deployed function** (the profile stamped, the session revoked, the writing kept on the device), then the throwaway user removed.
 - The database password lives in `supabase/.env.local` (gitignored) for `pnpm db:push`; it was never on a command line and is in no tracked file.
 - **The account round trip, for real** (`pnpm test:account`, 30 checks): a throwaway user minted with the service role and a session verified with the publishable key — the six-digit code's own path — the built app opened signed in with the seeded store, Settings' "Copy it now" landing every table under RLS (a stranger with the publishable key sees nothing), the device wiped, the account screen's new signed-in state offering "Bring my Book back", the pull, and the store that came back compared field by field with the one that went up: goals, Book, chapters, moves, ledger, days, the Fifteen, the analyses, the persona. Then the user deleted and its rows gone with it. This was "Next steps 2"; the only part of it still open is the edge functions, which wait on the owner's CLI login.
 - **The account screen knows when you are already signed in** — a wiped device with a live session used to be shown the email form as though it were nobody; it offers "Bring my Book back" now.
@@ -1248,11 +1251,12 @@ needs either hardware or a credential.
    wins when set. Then: sign in on the built app, push, wipe, sign in on a
    second install, pull, and compare the two stores; close the account and
    confirm the sweep.
-3. ~~One `supabase db reset` against the real service~~ — done: the migration
-   is applied to the project itself and the account round-trips through it
-   ("The account service, live"). What remains here is the owner's CLI login
-   for `functions deploy` and `config push` (the six-digit-code template and the
-   Apple provider are in `config.toml`; README has the commands).
+3. ~~One `supabase db reset` against the real service~~ — done, and so are
+   `functions deploy` and `config push` ("The account service, live"). What
+   remains: `pnpm sb secrets set ANTHROPIC_API_KEY=… FAL_KEY=…` when the keys
+   exist, and the project on Pro (or custom SMTP) so the six-digit-code email
+   template can be pushed — until then the email carries a link, and the app
+   signs in from it.
 4. **The store keys.** `apps/mobile/src/billing.ts` is one function and one
    seam; the paywall, the gates and their tests all go through the `Billing`
    interface. Until then Continue says plainly that nothing was charged, which

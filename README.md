@@ -105,22 +105,21 @@ Everything runs on local fallbacks without one. To go beyond them:
    ```
 
    The region is the session pooler's (`aws-0-<region>.pooler.supabase.com`; the dashboard's *Connect* panel shows it, or `pnpm db:find` tries each one) — the direct `db.<ref>.supabase.co` host is IPv6-only, which is also why the CLI's own `db push` fails on an IPv4 network until `supabase link` has set the pooler up. The password is written nowhere by the scripts. `pnpm db:push -- --dry` lists without applying.
-2. The functions and the auth config need the CLI signed in **as the project's owner**. The CLI is a dev dependency (`pnpm exec supabase`); a machine may already hold a login for some other account, and `supabase login` replaces it:
+2. The functions and the auth config go through Supabase's Management API, which wants a **personal access token** from the owner's account (no project key opens it). Generate one at https://supabase.com/dashboard/account/tokens and put it in `supabase/.env.local` as `SUPABASE_ACCESS_TOKEN=sbp_…`; `pnpm sb` runs the CLI with that file's values, so a login stored on the machine for some other account is never touched:
 
    ```bash
-   pnpm exec supabase login
-   pnpm exec supabase link --project-ref <ref>
-   pnpm exec supabase functions deploy
-   pnpm exec supabase config diff --project-ref <ref>   # read it
-   pnpm exec supabase config push --project-ref <ref>   # the six-digit code template, otp length, Apple
-   pnpm exec supabase secrets set ANTHROPIC_API_KEY=… FAL_KEY=…
+   pnpm sb link --project-ref <ref>       # the database password comes from the same file
+   pnpm sb config diff                    # read it first
+   pnpm sb config push --yes              # otp length and expiry, the deep-link URLs, Apple
+   pnpm sb functions deploy               # readback, safety, scene, delete-account
+   pnpm sb secrets set ANTHROPIC_API_KEY=… FAL_KEY=…
    ```
 
    The service-role key and the anon key are already in the functions' environment; neither belongs in the app or this repo.
-4. The account, end to end, against the project: `pnpm build:web && pnpm test:account`. A throwaway user is made with the service role (from `supabase/.env.local`, never the browser), signed into the built app, the seeded store pushed, the device wiped, the Book brought back and compared, the user deleted. Not part of `verify` — it reaches the network.
-3. Authentication → Email: the app asks for a **six-digit code**, and `config.toml` carries the template (`supabase/templates/magic_link.html`, `{{ .Token }}`) so `config push` sets it; check the dashboard shows it after. Authentication → Providers → Apple: `config.toml` enables it with the bundle id `app.morrow.client` as the client id (native sign-in needs no secret).
-4. Put the project URL and the publishable (anon) key in the app's environment (`EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`) — `apps/mobile/.env` works for `expo start`, `expo run:*` and `pnpm build:web`. The tests build with `pnpm build:web:offline`, which blanks every `EXPO_PUBLIC_*` so `pnpm verify` never reaches the network.
-5. The hard delete: schedule a call to the `delete-account` sweep daily if you want it on the clock (it also runs on every call), e.g. a pg_cron job hitting the function, or leave it: every close of an account runs the sweep for the ones whose week is up.
+3. Authentication → Email. The app asks for a **six-digit code**, and `config.toml` carries the template for it (`supabase/templates/magic_link.html`, `{{ .Token }}`) — commented out, because a free-tier project on the default email provider refuses template changes. Until the project is on Pro (or has its own SMTP) the email carries Supabase's link, and the app signs in from the link too: tapped on the phone it opens `morrow://` with the session, which the root layout hands to the auth server. On Pro, uncomment the two template tables and `pnpm sb config push --yes`. Authentication → Providers → Apple: `config.toml` enables it with the bundle id `app.morrow.client` as the client id (native sign-in needs no secret).
+4. The account, end to end, against the project: `pnpm build:web && pnpm test:account`. A throwaway user is made with the service role (from `supabase/.env.local`, never the browser), signed into the built app **from a link**, the seeded store pushed, the device wiped, the Book brought back and compared, the account closed through the deployed function, the user removed. Not part of `verify` — it reaches the network.
+5. Put the project URL and the publishable (anon) key in the app's environment (`EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`) — `apps/mobile/.env` works for `expo start`, `expo run:*` and `pnpm build:web`. The tests build with `pnpm build:web:offline`, which blanks every `EXPO_PUBLIC_*` so `pnpm verify` never reaches the network.
+6. The hard delete: schedule a call to the `delete-account` sweep daily if you want it on the clock (it also runs on every call), e.g. a pg_cron job hitting the function, or leave it: every close of an account runs the sweep for the ones whose week is up.
 
 ## Layout
 
