@@ -164,7 +164,8 @@ export default function StoneScreen() {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 2 }}>
           <Stone size={30} domain={goal.domain} polish={1} />
           <View style={{ flex: 1 }}>
-            <Label testID="stone-goal">{goal.title}</Label>
+            {/* Where this goal sits among the others, so "stone 3 of 5" is not the whole count (OFR-06). */}
+            <Label testID="stone-goal">{goals.length > 1 ? `${goal.title} · goal ${goals.findIndex((g) => g.id === goalId) + 1} of ${goals.length}` : goal.title}</Label>
             <Label testID="stone-step" style={{ color: accent.coralText, marginTop: 2 }}>
               {ANALYSIS_TITLES[kind]} · stone {stepIndex + 1} of {plan.length}
             </Label>

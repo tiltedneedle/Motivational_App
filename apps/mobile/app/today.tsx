@@ -312,7 +312,8 @@ export default function Today() {
               <Body style={{ color: day.ink }}>Tap the stone when the move is done. “Not today” sets it aside.</Body>
               <Body style={{ color: day.ink }}>In the evening, the coral ✓ closes the day: a word, one line of proof, a hold.</Body>
               <Body style={{ color: day.ink }}>Your Book, the scenes and the coach are in the bar below.</Body>
-              <Chip testID="today-intro-done" label="Got it" onPress={() => setProfile({ todayIntroSeen: true })} />
+              {/* At the left, clear of the two floating buttons on the right: on a small phone they sat over a full-width chip. */}
+              <Chip testID="today-intro-done" label="Got it" onPress={() => setProfile({ todayIntroSeen: true })} style={{ alignSelf: 'flex-start', paddingHorizontal: 24 }} />
             </View>
           ) : null}
 
