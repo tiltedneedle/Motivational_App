@@ -1,28 +1,22 @@
 /**
- * Rank and title (PRD §7.2, Sitting 2). Order the stones, then name the plan.
- * The top three get all five analyses on the Starter track.
+ * The order (PRD §7.2, Sitting 2). One question: which goal matters most.
+ * The top three get all five analyses on the Starter track. The title has
+ * its own page after this one.
  */
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
 import { Pressable, ScrollView, View , Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Body, Chip, InkButton, Label, Ring, Statement, Stone, Studio, TopBar, UserField, accent, day , type as fonts } from '@morrow/ui';
+import { Body, InkButton, Label, Ring, Statement, Stone, Studio, TopBar, accent, day , type as fonts } from '@morrow/ui';
 
 
 import { useGoals, useMorrow } from '../src/store';
 import { useFirstRunStep } from '../src/analytics';
-
-const TITLE_FRAMINGS = ['A year of…', 'The one where I…', 'Back to…'];
 
 export default function Rank() {
   const router = useRouter();
   useFirstRunStep('order');
   const goals = useGoals();
   const rankGoals = useMorrow((s) => s.rankGoals);
-  const bookTitle = useMorrow((s) => s.bookTitle);
-  const setBookTitleFraming = useMorrow((s) => s.setBookTitleFraming);
-  const setBookTitle = useMorrow((s) => s.setBookTitle);
-  const [framing, setFraming] = useState<string | null>(null);
 
   const move = (id: string, dir: -1 | 1) => {
     const ids = goals.map((g) => g.id);
@@ -79,7 +73,8 @@ export default function Rank() {
                   accessibilityRole="button"
                   accessibilityLabel={`Move ${g.title} up`}
                   onPress={() => move(g.id, -1)}
-                  style={{ padding: 10 }}
+                  // 44 points each way, apart from each other (WCAG 2.5.8; Apple HIG).
+                  style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
                 >
                   <Text style={{ fontSize: 18, color: day.ink2 }}>↑</Text>
                 </Pressable>
@@ -88,7 +83,8 @@ export default function Rank() {
                   accessibilityRole="button"
                   accessibilityLabel={`Move ${g.title} down`}
                   onPress={() => move(g.id, 1)}
-                  style={{ padding: 10 }}
+                  // 44 points each way, apart from each other (WCAG 2.5.8; Apple HIG).
+                  style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
                 >
                   <Text style={{ fontSize: 18, color: day.ink2 }}>↓</Text>
                 </Pressable>
@@ -96,52 +92,10 @@ export default function Rank() {
             ))}
           </View>
 
-          <View style={{ gap: 10 }}>
-            <Label>If this plan were a book on your shelf, what is on the spine?</Label>
-            <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-              {TITLE_FRAMINGS.map((f) => (
-                <Chip
-                  key={f}
-                  testID={`title-framing-${f}`}
-                  label={f}
-                  selected={framing === f}
-                  // The chip is a way in, not an answer. It used to fill the
-                  // field, which meant a tap became the title printed on the
-                  // spine of their Book — a sentence fragment the app wrote,
-                  // counted as their prose. Now it only sets the opening words
-                  // shown in front of the field they type into.
-                  onPress={() => {
-                    const next = framing === f ? null : f;
-                    setFraming(next);
-                    // Kept, so the Book can print it in front of their words.
-                    // It was only ever a placeholder before, which meant the
-                    // opening the person chose vanished the moment they left
-                    // this screen.
-                    setBookTitleFraming(next ? next.replace(/…$/, '').trim() : null);
-                  }}
-                />
-              ))}
-            </View>
-            <UserField
-              testID="book-title"
-              label="The title on the spine of your Book"
-              value={bookTitle}
-              onChangeText={setBookTitle}
-              placeholder={framing ? `${framing.replace('…', '')} what?` : 'Your own words'}
-            />
-          </View>
         </ScrollView>
 
         <View style={{ paddingBottom: 18 }}>
-          <InkButton
-            testID="rank-continue"
-            label="Write five lines per goal"
-            disabled={goals.length === 0}
-            onPress={() => {
-              const first = goals[0];
-              if (first) router.push(`/stone?goal=${first.id}&kind=motives`);
-            }}
-          />
+          <InkButton testID="rank-continue" label="Name the Book" disabled={goals.length === 0} onPress={() => router.push('/title')} />
         </View>
       </SafeAreaView>
     </Studio>

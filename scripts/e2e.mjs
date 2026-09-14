@@ -335,11 +335,16 @@ async function main() {
     check('with the Fifteen written, Today points at the order', (await text('today-begin')) === 'Put the goals in order', await text('today-begin'));
     await tap('today-begin');
     check('rank screen', await seen('screen-rank'));
+    // One question per page: the order here, the name on its own page.
+    check('the order page asks one thing', !(await seen('book-title')));
+    await tap('rank-continue');
+    check('the name has a page of its own', await seen('screen-title'));
+    check('with a way back to the order', await seen('title-back'));
     await tap('title-framing-The one where I…');
     await page.waitForTimeout(200);
     await page.locator('[data-testid="book-title"]').fill('stopped negotiating with the alarm');
     await page.waitForTimeout(200);
-    await tap('rank-continue');
+    await tap('title-continue');
 
     // ---- the five stones
     check('stone screen', await seen('screen-stone'));

@@ -49,7 +49,7 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
       from the Book and from Envision
 - [x] 31. After the list: every non-root screen on TopBar (eleven hand-rolled
       rows converted), the clock can be hidden, orientation unlocked, the
-      doorway and the closed card scroll; e2e 195
+      doorway and the closed card scroll; the title on its own page; e2e 198
 - [x] 30. The research, and what it changed: four passes over current
       accessibility and first-run practice (WCAG 2.2, WCAG2Mobile, Apple HIG,
       Material, NN/g, GOV.UK, COGA, RN's own docs), each audited against the
@@ -1035,7 +1035,7 @@ The user asked, twice, for the flow to be looked at with a brand-new person in m
 - The safety card on the web took no focus and left the screen behind tabbable: focus to the title, Escape, the screen behind `inert`.
 - Orientation unlocked (`"orientation": "default"`, WCAG 1.3.4) after Today, the doorway and Seal the day were looked at at 844×390 in the web build: the column caps at 640 and everything scrolls, and the doorway and the closed card were made to scroll (Begin was off the bottom on a phone on its side, and would have been at 200% type). The device check stays on the list.
 
-**P2, done:** the admire question can be skipped; the stone's follow-up has its own field; "Two of them might be one" no longer implies a Merge; the specificity hint only where a time or place is the point; the order screen says what the top three means; the field underline reaches 3:1 (tested); the storage banner's name is its text; the paywall says what happens after the trial; heading levels (Statement 1, Question 2); the almanac speaks one row per month; first-run analytics (`first_run_step`, `first_value`); `eslint-plugin-react-native-a11y` in the lint (13 rules as errors; the hint-on-everything rule off, with the reason). **P2, not done:** the order/title split; native focus styles for hardware keyboards; the aria-* vocabulary migration (the lint plugin only reads the legacy spellings; decide after).
+**P2, done:** the admire question can be skipped; the stone's follow-up has its own field; "Two of them might be one" no longer implies a Merge; the specificity hint only where a time or place is the point; the order screen says what the top three means; the field underline reaches 3:1 (tested); the storage banner's name is its text; the paywall says what happens after the trial; heading levels (Statement 1, Question 2); the almanac speaks one row per month; first-run analytics (`first_run_step`, `first_value`); `eslint-plugin-react-native-a11y` in the lint (13 rules as errors; the hint-on-everything rule off, with the reason). The order/title split is done too: the order page asks one thing and the name has a page of its own (`/title`), with a Book that can stay Untitled for now. **P2, not done:** native focus styles for hardware keyboards; the aria-* vocabulary migration (the lint plugin only reads the legacy spellings; decide after).
 
 **What only a device can verify** (from the audit's verification list): VoiceOver and TalkBack through the whole first run; iOS keyboard on the Interview's custom field, a stone's "then I" and the account code; Dynamic Type at 200% on the room, Today and the seal; the one-time-code autofill from Mail; rotation. Written into "Next steps 1".
 

@@ -59,6 +59,8 @@ const ROUTES = {
   authoring: '/authoring',
   'write-doorway': '/write?kind=ideal',
   heard: '/heard',
+  rank: '/rank',
+  title: '/title',
   stone: '/stone?goal=goal_mtwbjf3sdpofma&kind=strategies',
   portrait: '/portrait?goal=goal_mtwbjf3sdpofma',
   'seal-book': '/seal-book',
