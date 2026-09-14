@@ -49,7 +49,10 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
       from the Book and from Envision
 - [x] 31. After the list: every non-root screen on TopBar (eleven hand-rolled
       rows converted), the clock can be hidden, orientation unlocked, the
-      doorway and the closed card scroll; the title on its own page; e2e 198
+      doorway and the closed card scroll; the title on its own page; the
+      Book and Progress have headings; the persisted drafts are checked before
+      they are trusted; looked at at 320×568, 844×390 and in the night studio;
+      e2e 198, axe 0 × 28
 - [x] 30. The research, and what it changed: four passes over current
       accessibility and first-run practice (WCAG 2.2, WCAG2Mobile, Apple HIG,
       Material, NN/g, GOV.UK, COGA, RN's own docs), each audited against the
