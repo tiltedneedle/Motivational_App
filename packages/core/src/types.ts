@@ -347,6 +347,52 @@ export const BookVersion = z.object({
   ideal: z.string(),
   shadow: z.string().nullable(),
   chapters: z.array(BookChapter),
+  /**
+   * The other two volumes, which are not goal-shaped and so cannot be
+   * chapters. Optional: a Book sealed before they existed has none, and one
+   * sealed by somebody who only did the Future volume has none either.
+   *
+   * What is stored is only what the person wrote. The card's sentence and the
+   * framing label are the app's words: they are printed as headings and are
+   * counted as neither their prose nor rival prose, here and in the server's
+   * own check (0005).
+   */
+  volumes: z
+    .object({
+      present: z
+        .object({
+          entries: z.array(
+            z.object({
+              half: z.enum(['faults', 'virtues']),
+              /** The app's sentence for the card. A heading, not their words. */
+              card: z.string(),
+              /** The app's framing, where one was tapped. */
+              framing: z.string().optional(),
+              /** Theirs. */
+              story: z.string(),
+              apply: z.string(),
+              goalName: z.string().optional(),
+            }),
+          ),
+        })
+        .optional(),
+      past: z
+        .object({
+          entries: z.array(
+            z.object({
+              /** The app's label for the period. */
+              period: z.string(),
+              /** Theirs, all four. */
+              title: z.string(),
+              whatHappened: z.string(),
+              shapedMe: z.string(),
+              stillBelieve: z.string(),
+            }),
+          ),
+        })
+        .optional(),
+    })
+    .optional(),
   iWill: z.string(),
   /** user characters ÷ all characters. Must be ≥ 0.95 (PRD §11.1). */
   authorshipRatio: z.number().min(0).max(1),

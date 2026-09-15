@@ -104,6 +104,36 @@ export function bookToHtml(book: BookVersion, boundaryHour = 3): string {
     })
     .join('');
 
+  // The other two volumes, printed the way the screen prints them: the app's
+  // sentence for a card is a heading in the sans, and everything the person
+  // wrote is theirs, in the serif.
+  const presentEntries = book.volumes?.present?.entries ?? [];
+  const pastEntries = book.volumes?.past?.entries ?? [];
+  const present = presentEntries.length
+    ? `<h2 class="chapter-name">What I am like</h2>${presentEntries
+        .map((e) => {
+          const label = `${e.half === 'faults' ? 'What gets in the way' : 'What I am good at'}${e.goalName ? ` · ${escapeHtml(e.goalName)}` : ''}`;
+          const framing = e.framing ? `<span class="framing">${escapeHtml(e.framing)}</span> ` : '';
+          return `<div class="line"><div class="label">${label}</div><p class="label" style="margin:0">${escapeHtml(e.card)}</p><p class="theirs">${escapeHtml(
+            e.story,
+          )}</p><p class="theirs then">${framing}${escapeHtml(e.apply)}</p></div>`;
+        })
+        .join('')}`
+    : '';
+  const past = pastEntries.length
+    ? `<h2 class="chapter-name">Where I came from</h2>${pastEntries
+        .map(
+          (e) =>
+            `<div class="line"><div class="label">${escapeHtml(e.period)}</div><p class="theirs">${escapeHtml(
+              e.title,
+            )}</p><p class="theirs">${escapeHtml(e.whatHappened)}</p><p class="theirs more">${escapeHtml(
+              e.shapedMe,
+            )}</p><p class="theirs then">${escapeHtml(e.stillBelieve)}</p></div>`,
+        )
+        .join('')}`
+    : '';
+  const volumes = present + past;
+
   const shadow = book.shadow
     ? `<hr class="rule" /><div class="label">The other road</div><p class="body theirs shadow">${escapeHtml(book.shadow)}</p>`
     : '';
@@ -136,6 +166,7 @@ export function bookToHtml(book: BookVersion, boundaryHour = 3): string {
   <ul class="contents">${contents}</ul>
 
   ${chapters}
+  ${volumes}
 
   <hr class="rule" />
   <div class="label">I will</div>

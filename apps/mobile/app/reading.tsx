@@ -163,6 +163,48 @@ export default function Reading() {
               </>
             ) : null}
 
+            {/*
+              The Present volume. The card's sentence is the app's words, so it
+              is set in the sans as a heading; the two lines under it are theirs
+              and are set in the serif, the same rule as everywhere else.
+            */}
+            {page.kind === 'present' ? (
+              <>
+                <Body style={{ fontSize: 21, color: paper.ink }}>What I am like</Body>
+                {page.entries.map((e, i) => (
+                  <View key={`present-${i}`} style={{ gap: 3 }}>
+                    <Label style={{ color: paper.ink3 }}>
+                      {e.half === 'faults' ? 'What gets in the way' : 'What I am good at'}
+                      {e.goalName ? ` · ${e.goalName}` : ''}
+                    </Label>
+                    <Body style={{ fontSize: 16, color: paper.ink2 }}>{e.card}</Body>
+                    <UserText style={{ fontSize: 17, lineHeight: 27, color: paper.ink }}>{e.story}</UserText>
+                    <UserText italic framing={e.framing ?? undefined} style={{ fontSize: 16, lineHeight: 25, color: paper.ink2 }}>
+                      {e.apply}
+                    </UserText>
+                  </View>
+                ))}
+              </>
+            ) : null}
+
+            {/* The Past volume: only what they chose to put in. */}
+            {page.kind === 'past' ? (
+              <>
+                <Body style={{ fontSize: 21, color: paper.ink }}>Where I came from</Body>
+                {page.entries.map((e, i) => (
+                  <View key={`past-${i}`} style={{ gap: 3 }}>
+                    <Label style={{ color: paper.ink3 }}>{e.period}</Label>
+                    <UserText style={{ fontSize: 18, lineHeight: 26, color: '#15181F' }}>{e.title}</UserText>
+                    <UserText style={{ fontSize: 17, lineHeight: 27, color: paper.ink }}>{e.whatHappened}</UserText>
+                    <UserText style={{ fontSize: 16, lineHeight: 25, color: paper.ink2 }}>{e.shapedMe}</UserText>
+                    <UserText italic style={{ fontSize: 17, lineHeight: 26, color: paper.ink }}>
+                      {e.stillBelieve}
+                    </UserText>
+                  </View>
+                ))}
+              </>
+            ) : null}
+
             {page.kind === 'i-will' ? (
               <>
                 <Label style={{ color: paper.ink3 }}>I will</Label>

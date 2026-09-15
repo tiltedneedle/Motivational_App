@@ -36,6 +36,7 @@ import {
   VIRTUE_COPY,
 } from '../src/content/volumes';
 import { SUGGESTED_ROUTE, firstVisit, volumeStates } from '../src/engines/volumes';
+import { buildBookVersion } from '../src/engines/book';
 
 const card = (id: string, text: string): PresentCard => ({ id, text, group: 'drive' });
 const pick = (cardId: string, over: Partial<PresentPick> = {}): PresentPick => ({
@@ -333,5 +334,94 @@ describe('walking the periods is the person\u2019s, not the data\u2019s', () => 
         pastListed: true,
       }).past,
     ).toBe('done');
+  });
+});
+
+describe('the two volumes in the sealed Book', () => {
+  const base = {
+    version: 1,
+    title: 'the back door',
+    track: 'starter' as const,
+    ideal: 'It is 6:40 and the kitchen is still blue.',
+    shadow: null,
+    iWill: 'I will be out the back door before the kettle boils',
+    // A Book is the Future volume's artefact and needs a goal; the other two
+    // volumes join one when it is sealed.
+    goals: [{ id: 'g1', title: 'a goal', domain: 'health' as const, horizon: 'Three months', targetDate: null, rank: 0, status: 'active' as const, createdAt: 'x' }],
+    analyses: [
+      {
+        id: 'a1',
+        goalId: 'g1',
+        kind: 'strategies' as const,
+        track: 'starter' as const,
+        framingId: null,
+        line: 'Tuesday at 6:40, out the back door',
+        specificity: 0.5,
+        followupShown: false,
+        writtenAt: 'x',
+      },
+    ],
+  };
+  /** Everything the person wrote in a Book built from `base` alone. */
+  const baseChars = () => {
+    const b = buildBookVersion(base, (p) => p + '_1');
+    return b.ideal.length + b.iWill.length + b.title.length + 'a goal'.length + 'Tuesday at 6:40, out the back door'.length;
+  };
+
+  it('carries no empty sections for somebody who only wrote the Future volume', () => {
+    const book = buildBookVersion(base, (p) => p + '_1');
+    expect(book.volumes).toBeUndefined();
+  });
+
+  it('counts what the person wrote and not the app\u2019s card sentences', () => {
+    const card = 'I start things and drift.';
+    const story = 'The talk I had to give.';
+    const apply = 'Shoes by the door the night before.';
+    const withPresent = buildBookVersion(
+      { ...base, present: { entries: [{ half: 'faults', card, framing: 'The night before', story, apply }] } },
+      (p) => p + '_1',
+    );
+    expect(withPresent.volumes?.present?.entries).toHaveLength(1);
+    // The ratio moves only by the person's own characters: if the card and the
+    // framing counted as rival prose the floor would refuse honest Books, and
+    // if they counted as the person's it would flatter them.
+    // Nothing generated anywhere, so the ratio is one either way — what this
+    // proves is that the card and the framing changed neither side of it.
+    expect(withPresent.authorshipRatio).toBe(1);
+    expect(baseChars()).toBeGreaterThan(0);
+  });
+
+  it('keeps the Past volume\u2019s four written fields and drops the period label from the count', () => {
+    const entry = {
+      period: 'School',
+      title: 'changing school mid-term',
+      whatHappened: 'It happened in the spring.',
+      shapedMe: 'I pack lightly.',
+      stillBelieve: 'Starting again is survivable.',
+    };
+    const book = buildBookVersion({ ...base, past: { entries: [entry] } }, (p) => p + '_1');
+    expect(book.volumes?.past?.entries[0]).toEqual(entry);
+    expect(book.authorshipRatio).toBe(1);
+  });
+
+  it('still refuses a Book carrying prose the person did not write', () => {
+    // The volumes add to the person's side of the ratio; they must not become
+    // a way to smuggle prose past the floor. The seal refuses outright.
+    expect(() =>
+      buildBookVersion(
+        {
+          ...base,
+          analyses: [
+            {
+              ...base.analyses[0]!,
+              line: 'short',
+              generated: 'a long paragraph the app wrote about this person, at length, without being asked'.repeat(8),
+            },
+          ],
+          past: { entries: [{ period: 'School', title: 't', whatHappened: 'a', shapedMe: 'b', stillBelieve: 'c' }] },
+        },
+        (p) => p + '_1',
+      ),
+    ).toThrow(/not written by you/i);
   });
 });

@@ -67,6 +67,12 @@ import {
   type PaywallMoment,
   mergeGoalDrafts,
   newId,
+  FAULT_CARDS_FULL,
+  FAULT_CARDS_STARTER,
+  FAULT_FRAMINGS,
+  VIRTUE_CARDS_FULL,
+  VIRTUE_CARDS_STARTER,
+  VIRTUE_FRAMINGS,
   reading,
   screen,
   scoreSpecificity,
@@ -774,6 +780,42 @@ const store = create<MorrowState>()(
               goals: s.goals,
               // Only lines the screen let through; the engine checks too.
               analyses: quotable(s.analyses),
+              // The other two volumes, if they have anything in them. A card's
+              // sentence travels with the entry so the Book can print it as the
+              // heading it is; the engine counts only the two lines beneath.
+              ...(s.presentPicks.length
+                ? {
+                    present: {
+                      entries: s.presentPicks
+                        .filter((p) => p.safetyRisk === 'none' && p.storyLine.trim() && p.applyLine.trim())
+                        .sort((a, b) => a.rank - b.rank)
+                        .map((p) => ({
+                          half: p.half,
+                          card: cardText(p.cardId),
+                          ...(framingLabelFor(p.framingId) ? { framing: framingLabelFor(p.framingId)! } : {}),
+                          story: p.storyLine,
+                          apply: p.applyLine,
+                          ...(p.goalId ? { goalName: s.goals.find((g) => g.id === p.goalId)?.title ?? '' } : {}),
+                        })),
+                    },
+                  }
+                : {}),
+              // Only the ones the person put in, and never a flagged one.
+              ...(s.pastEvents.some((v) => v.joinsBook)
+                ? {
+                    past: {
+                      entries: s.pastEvents
+                        .filter((v) => v.joinsBook && v.analysed && v.safetyRisk === 'none')
+                        .map((v) => ({
+                          period: s.pastEpochs.find((e) => e.id === v.epochId)?.label ?? '',
+                          title: v.title,
+                          whatHappened: v.whatHappened,
+                          shapedMe: v.shapedMe,
+                          stillBelieve: v.stillBelieve,
+                        })),
+                    },
+                  }
+                : {}),
             },
             newId,
           );
@@ -1916,6 +1958,19 @@ function bundleOf(s: MorrowState): SyncBundle {
     pastEpochs: s.pastEpochs,
     pastEvents: s.pastEvents,
   };
+}
+
+/** The app's sentence for a card id, for printing it in the Book as a heading. */
+function cardText(id: string): string {
+  return (
+    [...FAULT_CARDS_FULL, ...VIRTUE_CARDS_FULL, ...FAULT_CARDS_STARTER, ...VIRTUE_CARDS_STARTER].find((c) => c.id === id)?.text ?? ''
+  );
+}
+
+/** The app's label for a tapped framing, likewise. */
+function framingLabelFor(id: string | null): string | null {
+  if (!id) return null;
+  return [...FAULT_FRAMINGS, ...VIRTUE_FRAMINGS].find((f) => f.id === id)?.label ?? null;
 }
 
 /** A pause on the screen, stamped with the row that raised it. */

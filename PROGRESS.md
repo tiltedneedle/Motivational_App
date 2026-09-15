@@ -51,11 +51,12 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
       immutable asset caching, the SPA rewrite), the two EXPO_PUBLIC vars, and
       the auth allow-list note; `http://localhost:8790` added to the project
       redirect URLs and pushed
-- [ ] 35. **IN FLIGHT — the Past and Present volumes.** Steps 1–3 of the build
-      order are done and pushed (engines + decks + copy, migration 0004, store
-      and sync, all five screens, the doors wired in, e2e 233, axe 0 × 33).
-      What is left: the two new Book chapters (see "What is left" below), then
-      PROGRESS/README. Was: The client asked for all
+- [x] 35. **The Past and Present volumes, complete.** Named in the product
+      exactly Past, Present and Future, chosen from "Work on your:" with a
+      fourth door that explains all three; each path proceeds the way the
+      source's own program does. Engines, decks and copy, migration 0004 and
+      0005, store and sync, five screens, both volumes in the sealed Book on
+      both sides of the authorship guard, e2e 233, axe 0 × 33. Was: The client asked for all
       three, named plainly (Past / Present / Future, no "Authoring"), chosen from
       a four-door screen, each path proceeding the way the source program does.
       The researched flows and Morrow's versions are written down in
@@ -1073,7 +1074,8 @@ real Postgres, e2e, axe, the way-back guard, the a11y lint):
 3. ~~screens: `/choose`, `/explore`, `/present`, `/past`~~ — done, and reachable: consent
    leads to the three doors, a Bookless Today offers the other two, You keeps a way back
 4. ~~e2e through all three doors; axe~~ — done: 233 checks, axe 0 across 33 screens
-5. **What is left: the two new Book chapters.** A `BookChapter` is goal-shaped
+5. ~~the two new Book chapters~~ — done, and the interesting part was the
+   authorship guard. Was: A `BookChapter` is goal-shaped
    (`goalId`, `name`, `horizon`, `lines`, `memories`) and neither new volume is, so
    `BookVersion` needs a place for volume writing — and the authorship ratio is
    computed twice, in `engines/book.ts` and again in SQL
@@ -1081,8 +1083,14 @@ real Postgres, e2e, axe, the way-back guard, the a11y lint):
    the new prose identically or a sealed Book will disagree with its own row. Card
    text and framing labels are the app's words and must NOT count as the person's
    (the deck agent flagged this: a chapter made mostly of card text would fail the
-   0.95 floor). Plan: add `volumes?: { present?, past? }` to `BookVersion`, count it in
-   both places, print it in `book-html`, pass it from the seal screen, test both sides.
+   0.95 floor). Done exactly that: `BookVersion.volumes` holds the two, the ratio counts
+   only what the person wrote (the card's sentence and the framing label are printed as
+   headings and count as neither side, like a framing label in a chapter), migration 0005
+   teaches the SQL the same arithmetic, and it was checked against the live project — a
+   Book whose only "generated" text is a twenty-character card comes back at 1.0, not
+   0.33. The two new pages sit after the goals and before the "I will", in the reading and
+   in the export. A Book still needs a goal to exist, so somebody who does only Present or
+   Past keeps that writing until a Book is sealed, and it joins the first one.
 
 **Two bugs the walk-through found, both fixed and tested** — worth knowing about because
 the same shape could recur in any multi-step screen: the walk through the Past periods was

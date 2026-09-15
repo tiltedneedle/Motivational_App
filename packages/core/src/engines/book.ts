@@ -47,6 +47,10 @@ export interface BookInput {
   goals: Goal[];
   analyses: GoalAnalysis[];
   memories?: Record<string, string[]>;
+  /** The Present volume's picks, with the card sentences resolved by the caller. */
+  present?: NonNullable<BookVersion['volumes']>['present'];
+  /** The Past volume's analysed events, only the ones the person put in. */
+  past?: NonNullable<BookVersion['volumes']>['past'];
   sealedAt?: string;
   diff?: BookVersion['diff'];
 }
@@ -128,6 +132,15 @@ export function authorshipRatio(input: BookInput, chapters: BookChapter[]): numb
   // from a framing chip is a label like any other from the bank: no credit,
   // no penalty.
   if (input.titleAuthored !== false) user += input.title.length;
+  // The Present volume: the two lines under each pick. The card's sentence
+  // and the framing are the app's words, printed as headings — no credit, no
+  // penalty, exactly as a framing label in a chapter.
+  for (const e of input.present?.entries ?? []) user += e.story.length + e.apply.length;
+  // The Past volume: the title they gave it and the three boxes under it. The
+  // period's label is ours.
+  for (const e of input.past?.entries ?? []) {
+    user += e.title.length + e.whatHappened.length + e.shapedMe.length + e.stillBelieve.length;
+  }
   for (const ch of chapters) {
     // A goal named by tapping through the fixed bank is not the person's
     // writing, so it earns them no credit here. Nor is it counted against
@@ -175,6 +188,16 @@ export function buildBookVersion(input: BookInput, newId: (p: string) => string)
     ideal,
     shadow: input.shadow?.trim() || null,
     chapters,
+    // Only when there is something in them: a Book from somebody who did the
+    // Future volume alone carries no empty sections.
+    ...(input.present?.entries.length || input.past?.entries.length
+      ? {
+          volumes: {
+            ...(input.present?.entries.length ? { present: input.present } : {}),
+            ...(input.past?.entries.length ? { past: input.past } : {}),
+          },
+        }
+      : {}),
     iWill,
     authorshipRatio: ratio,
     diff: input.diff ?? null,
@@ -199,6 +222,10 @@ export type BookPage =
   | { kind: 'shadow'; text: string }
   | { kind: 'contents'; chapters: BookVersion['chapters'] }
   | { kind: 'chapter'; chapter: BookVersion['chapters'][number] }
+  /** The Present volume, if it was written: both halves on one page. */
+  | { kind: 'present'; entries: NonNullable<NonNullable<BookVersion['volumes']>['present']>['entries'] }
+  /** The Past volume: only the events the person chose to put in. */
+  | { kind: 'past'; entries: NonNullable<NonNullable<BookVersion['volumes']>['past']>['entries'] }
   | { kind: 'i-will'; text: string; sealedAt: string };
 
 export function bookPages(book: BookVersion): BookPage[] {
@@ -207,6 +234,13 @@ export function bookPages(book: BookVersion): BookPage[] {
   if (book.shadow) pages.push({ kind: 'shadow', text: book.shadow });
   pages.push({ kind: 'contents', chapters: book.chapters });
   for (const chapter of book.chapters) pages.push({ kind: 'chapter', chapter });
+  // The other two volumes sit after the goals and before the "I will": the
+  // Book reads forwards, and what a person is and where they came from belong
+  // behind the goals they lead to rather than in front of them.
+  const present = book.volumes?.present?.entries ?? [];
+  if (present.length) pages.push({ kind: 'present', entries: present });
+  const past = book.volumes?.past?.entries ?? [];
+  if (past.length) pages.push({ kind: 'past', entries: past });
   pages.push({ kind: 'i-will', text: book.iWill, sealedAt: book.sealedAt });
   return pages;
 }
