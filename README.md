@@ -171,6 +171,25 @@ and the accessibility pass run. It is not the product — the product is the pho
 web build has no notifications, no haptics, no Apple sign-in and no wallpaper export, and
 it says so where those appear.
 
+## The three volumes
+
+The app is three ways of writing about one life, named in the product exactly **Past**,
+**Present** and **Future**, chosen from a screen that reads "Work on your:" with a fourth
+door for somebody who does not yet know what those mean. Nothing is locked behind anything;
+the explainer offers the order the method's own authors suggest — the faults, then Future,
+then the virtues, then Past — and says plainly that any order works.
+
+| | What it asks | Starter | Where it lands |
+|---|---|---|---|
+| **Future** | fifteen minutes on life three to five years on, then the goals inside it, then five short lines each | three sittings | the Book, the Blueprint, Today |
+| **Present** | two decks of plain first-person sentences — what gets in your way, what you are good at — narrowed, then two short writes each | one or two sittings | a fault's answer becomes the if-then of that goal's Obstacles stone; a virtue is paired to a goal; both join the Book |
+| **Past** | your life in periods, the events in each that still matter, then what a few of them made of you | two or three sittings | only the ones you choose join the Book |
+
+No trait is ever named, no factor, no score: the cards are plain sentences of Morrow's own,
+and the five groups that section the long deck are internal and never rendered. The Past
+volume opens on a plain warning, keeps the helplines in the top bar of every step, lets you
+stop with everything kept, and defaults every memory *out* of the Book.
+
 ## Layout
 
 ```
