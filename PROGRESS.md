@@ -47,6 +47,12 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [ ] 35. **IN FLIGHT — the Past and Present volumes.** The client asked for all
+      three, named plainly (Past / Present / Future, no "Authoring"), chosen from
+      a four-door screen, each path proceeding the way the source program does.
+      The researched flows and Morrow's versions are written down in
+      "The three volumes" below; build order and state are there too. If this
+      session is cut off, read that section first.
 - [x] 34. The three AI functions speak to any OpenAI-compatible provider
       (LLM_BASE_URL / LLM_API_KEY / LLM_MODEL) or to Anthropic; the user is
       not using an Anthropic key, so none is required
@@ -1019,6 +1025,44 @@ With the rules met, the compiler itself: `babel-plugin-react-compiler` at Expo's
 ### The night splash (2026-09-12)
 
 A phone in dark mode opened on the day studio's splash for a moment before the night one drew. `make-icons.mjs` draws a night splash now — the pale stone on the night ground, the same ink the night studio's buttons wear — and `expo-splash-screen` gets it under `dark`. The day splash is byte-identical to before.
+
+### The three volumes: Past, Present, Future (2026-09-15, in flight)
+
+The client's decision: all three volumes ship, named in the product exactly **Past**,
+**Present** and **Future** with nothing appended, chosen from a screen that reads
+"Work on your:" with a fourth door, "Not sure? Let's explore." Each path proceeds the way
+the source program does. Read selfauthoring.com on 2026-09-15 for the real flows rather
+than working from memory; what it says, so that our differences are deliberate:
+
+- **Order.** Their FAQ: "You should do it in the order that you think will benefit you the
+  most." Suggested: faults, then Future, then virtues, then Past. Exception: if something
+  in the past is still causing trouble, start there. Their Past page: "the most difficult
+  and time-consuming of all the programs… complete it after the Present and Future
+  Authoring programs". Each program 4–5 hours over several sessions, and they cap the
+  length of every answer so nobody exhausts themselves.
+- **Present — faults.** Pick from lists clustered by factor; **narrow** to the ones that
+  affect you most; per fault write (a) a time it caused you trouble, (b) what you might
+  have done differently.
+- **Present — virtues.** Same shape; per virtue write (a) a time it helped you get
+  something you wanted, (b) how to use it more effectively.
+- **Past.** Divide your life into **seven epochs**; identify the most significant events in
+  each; describe how each shaped who you are today.
+
+Ours, and the differences on purpose: no trait names, no factor names, no scores — the
+cards are plain first-person sentences of our own ("I start things and drift"). The
+fault's second write is "what you would do instead", which becomes the If/then of that
+goal's Obstacles stone, so the Present volume feeds the plan the Future volume made. The
+virtue's second write names the goal that needs it. Past keeps the epoch structure
+(Starter 4 epochs, Full 7; Starter analyses 3 events, Full 10) behind a doorway with a
+plain warning, the helplines one tap away on every screen, an exit that keeps what was
+written, and a per-event choice about whether it joins the Book.
+
+**Build order** (each step gated the way Future is — core tests, store, migration against a
+real Postgres, e2e, axe, the way-back guard, the a11y lint):
+1. types + engines (`present.ts`, `past.ts`) with tests — IN FLIGHT
+2. store, migration, sync
+3. screens: `/choose`, `/explore`, `/present`, `/past`, and the two new Book chapters
+4. e2e through all three doors; axe; PROGRESS and README
 
 ### The research, and what it changed (2026-09-13)
 
