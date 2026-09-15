@@ -435,6 +435,13 @@ async function main() {
       await page.waitForTimeout(700);
     }
 
+    // ---- the account ask (only in a build with an account service) — never a gate
+    if (await seen('screen-account')) {
+      check('the account is offered after the Portrait, once, with a plain way past it', await seen('account-not-now'));
+      await tap('account-not-now');
+      await page.waitForTimeout(600);
+    }
+
     // ---- seal the Book
     check('seal screen', await seen('screen-seal-book'));
     await page.locator('[data-testid="i-will"]').fill('I will be out the back door before the kettle boils');
