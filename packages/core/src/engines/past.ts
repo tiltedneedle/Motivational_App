@@ -114,6 +114,33 @@ export function epochsFor(age: number, track: DepthTrack): Epoch[] {
   return [...early, ...later];
 }
 
+/**
+ * Where each event goes when the periods are cut again.
+ *
+ * An event follows its period's place in the order — the third period's
+ * events go to the new third period — so a changed age, or a track with a
+ * different count, never loses what was listed. Where the new cut has fewer
+ * periods the overflow lands on the last one rather than vanishing: the
+ * events screen tolerates a period over its cap (it refuses more, it does not
+ * trim), and nothing can move an event back once it is gone. The old periods
+ * are taken in their own order, by position, whatever order the array holds
+ * them in — a restore from the account arrives ordered by id.
+ */
+export function recutEvents<E extends { epochId: string }>(
+  oldEpochs: { id: string; position?: number; fromAge?: number }[],
+  newEpochs: { id: string }[],
+  events: E[],
+): E[] {
+  if (newEpochs.length === 0) return [];
+  const ordered = [...oldEpochs].sort((a, b) => (a.position ?? 0) - (b.position ?? 0) || (a.fromAge ?? 0) - (b.fromAge ?? 0));
+  const placeOf = new Map(ordered.map((e, i) => [e.id, i]));
+  return events.flatMap((v) => {
+    const at = placeOf.get(v.epochId);
+    const to = at === undefined ? newEpochs.find((e) => e.id === v.epochId) : newEpochs[Math.min(at, newEpochs.length - 1)];
+    return to ? [{ ...v, epochId: to.id }] : [];
+  });
+}
+
 /** Whether this event is finished: all three boxes, and a decision about the Book. */
 export function analysisComplete(a: Pick<PastAnalysis, 'whatHappened' | 'shapedMe' | 'stillBelieve'>): boolean {
   return a.whatHappened.trim().length > 0 && a.shapedMe.trim().length > 0 && a.stillBelieve.trim().length > 0;

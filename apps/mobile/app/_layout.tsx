@@ -1,4 +1,9 @@
 import { Stack, useRouter } from 'expo-router';
+// For its side effect, and it has to be from here: the browser's back is
+// intercepted by a listener that must be registered before the navigation
+// container below adds its own, and the screens that use the hook are lazy
+// chunks loaded long after that. See src/platform-back.ts.
+import '../src/platform-back';
 import { useEffect, useRef, useState } from 'react';
 import { AppState, Linking, Platform, View, Text, ActivityIndicator, useColorScheme } from 'react-native';
 import { useFonts as useOutfit, Outfit_400Regular, Outfit_500Medium, Outfit_600SemiBold, Outfit_700Bold } from '@expo-google-fonts/outfit';

@@ -2,7 +2,7 @@
  * The Interview (PRD §7.1). Tap-only. "Something else…" is the last pill and
  * the only place anyone types; a custom answer skips the follow-up.
  */
-import { useNavigation, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, View , Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -40,6 +40,7 @@ import {
   radius,
   type as fonts,
 } from '@morrow/ui';
+import { usePlatformBack } from '../src/platform-back';
 import { useMorrow } from '../src/store';
 import { track, useFirstRunStep } from '../src/analytics';
 
@@ -99,16 +100,7 @@ export default function Interview() {
   // The platform's back — the Android button, the iOS edge swipe, the
   // browser's arrow — is the same one-step undo as the screen's Back, and
   // only leaves once there is nothing left to undo (GOV.UK, Baymard).
-  const navigation = useNavigation();
-  useEffect(() => {
-    const off = navigation.addListener('beforeRemove', (e: { preventDefault: () => void }) => {
-      if (history.length === 0) return;
-      e.preventDefault();
-      stepBack();
-    });
-    return off;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigation, history.length, s]);
+  usePlatformBack(history.length > 0, stepBack);
   const addGoals = useMorrow((st) => st.addGoals);
 
   const q = question(s);

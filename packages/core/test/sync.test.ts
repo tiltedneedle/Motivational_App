@@ -440,6 +440,22 @@ describe('the Past and Present volumes on the wire', () => {
     expect(back.pastListed).toBe(true);
   });
 
+  it('brings the periods back in their order, whatever order the rows arrive in', () => {
+    const at = '2026-09-15T20:00:00.000Z';
+    const epochs = [
+      { id: 'ep-teens', label: 'The teenage years', fromAge: 13, toAge: 18, position: 2, createdAt: at },
+      { id: 'ep-19-40', label: '19 to now', fromAge: 19, toAge: 40, position: 3, createdAt: at },
+      { id: 'ep-early', label: 'Before school', fromAge: 0, toAge: 5, position: 0, createdAt: at },
+      { id: 'ep-school', label: 'School', fromAge: 6, toAge: 12, position: 1, createdAt: at },
+    ];
+    const tables = toRows({ ...bundle, pastEpochs: epochs, pastEvents: [] }, USER, 'UTC');
+    const byTable = Object.fromEntries(tables.map((t) => [t.table, t.rows]));
+    // As the account returns them: by id, digits before letters.
+    byTable.past_epochs = [...byTable.past_epochs!].sort((a, b) => String(a.id).localeCompare(String(b.id)));
+    const back = fromRows(byTable as Parameters<typeof fromRows>[0], bundle.profile);
+    expect(back.pastEpochs.map((e) => e.id)).toEqual(['ep-early', 'ep-school', 'ep-teens', 'ep-19-40']);
+  });
+
   it('brings a row back with nothing in the Book unless the person put it there', () => {
     const back = fromRows({ past_events: [{ id: 'e', epoch_id: 'ep', title: 't', weight: 'helped', created_at: 'x' }] }, bundle.profile);
     expect(back.pastEvents[0]!.joinsBook).toBe(false);

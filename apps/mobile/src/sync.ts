@@ -88,6 +88,9 @@ export async function pushAll(bundle: SyncBundle): Promise<SyncOutcome> {
 const CONFLICT: Partial<Record<string, string>> = {
   day_summaries: 'user_id,day',
   practice_logs: 'practice_id,day',
+  // A card let go and written about again is a new row with the same card:
+  // matched on the card, or the account's old row refuses every push after.
+  present_picks: 'user_id,half,card_id',
 };
 
 /** The column that names a row, where it is not the id. */

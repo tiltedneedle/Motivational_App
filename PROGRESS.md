@@ -1191,6 +1191,52 @@ replaced by ticking a card on the faults deck — the door routing makes that a 
 the fault's answer is not yet wired into the Obstacles stone and no virtue is offered for
 pairing at the read-back, so the copy claims neither.
 
+**The verify pass on that round (2026-09-16).** A second, smaller fan-out over only the
+changed files — one skeptic per finding — returned 8 confirmed and 2 refuted. Four were
+sync bugs the round had introduced or exposed; none of the local suites could have seen
+them, because none of them pull from the account:
+
+- **A restore scrambled the periods.** The account returns rows ordered by id, a period's
+  id carries its ages, and digits collate before letters — so a restored Full-track walk
+  read "19 to 24" as period one, and the ordinal remap then moved "Before school"'s events
+  under "25 to 30". `fromRows` now orders periods by position (then age) and events by
+  position (then time), and the remap (`recutEvents`, now in the engine with its own
+  tests) takes the old periods by their own position, never by array order.
+- **A second unique key the upsert missed.** `present_picks` is unique on
+  (user, half, card); a card let go and written about again is a new row with the same
+  card, and the account's old row refused every push after. The upsert matches on the card
+  now, and the account round-trip does exactly that sequence against the live project.
+- **The push gate counted only the Future.** A phone that had done only the Past volume
+  was told "Nothing to copy yet", and signing it in to an account with a Book replaced
+  that Past with the account's nothing. `hasWriting` counts all three volumes.
+- **A re-cut to fewer periods dropped the overflow.** It now lands on the last period
+  (the events screen tolerates a period over its cap), the age screen says so above the
+  button, and the label says "into N" when the count changes.
+
+And four on the screens: typed lines followed the person from card to card (un-tick the
+card you started and the next opened with your words in its boxes) — each card now holds
+its own, and the draft carries all of them; Back to the deck rewrote the draft with no
+writing, so a kill on the deck lost the half-typed lines — the draft keeps them whether the
+writing is open or not; the platform's back on Full's writing screen was swallowed by a
+stale listener; and a finished Past reopened on the picking screen, where one Back
+un-finished it — it opens finished now.
+
+**The platform back never worked on web, anywhere.** Chasing that "stale listener" with a
+probe (a Playwright script that pushes a screen from the chooser and presses the browser's
+back) showed the truth: `beforeRemove` never fires on web. expo-router's forked
+`useLinking` answers a popstate with `navigation.resetRoot(record.state)`, and a reset
+emits no `beforeRemove`, so the Interview's, Present's and Past's listeners were all native-
+only — the Interview's e2e check passed by accident of a reload. Now one hook,
+`usePlatformBack(canStepBack, stepBack)` in `src/platform-back.ts`, does both: `beforeRemove`
+for native, and on web a `popstate` listener that runs before the container's, steps the
+browser forward again and lets the screen step back itself. It is registered from the root
+layout, because listeners run in registration order and the route screens are lazy chunks
+loaded long after the container subscribes — registered from a screen it ran second and
+found the screen already unmounted. All three volumes use it; the e2e presses the browser's
+back on Full's writing screen, reached by the door.
+
+Gate after: 415 core / 48 ui / 8 storage, migration 53 checks, e2e **297/297** (was 286; the new checks press the browser's back on Full's writing screen reached by the door, re-cut the periods with events listed, un-tick a card mid-write, kill on the deck, and reopen a finished Past), the live account round-trip **45/45** (now the three volume tables, `past_listed`, and the let-go-and-rewrite push; run before the platform-back change, which touches no sync), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
+
 ### The research, and what it changed (2026-09-13)
 
 The user asked, twice, for the flow to be looked at with a brand-new person in mind — and to research what apps should do for accessibility first, then check ours. So: four research passes over primary, current sources (WCAG 2.2 and its 2.2-only criteria, the W3C mobile guidance, Apple HIG accessibility and onboarding, Material, the EAA; NN/g, Baymard, Growth.Design and Apple on onboarding and retention; React Native 0.8x / Expo / react-native-web accessibility; COGA, GOV.UK content design, plain language, trauma-informed design), each producing a checklist, each checklist audited against this codebase by a separate reader, the four audits merged and de-duplicated by a fifth. 73 findings before the merge, 36 after, in `design/audits/accessibility-first-run-2026-09-13.md` with the sources. What changed, in the order the list gave:
@@ -1471,6 +1517,13 @@ Worth keeping on the next resume, because each cost an hour to learn:
   `page.clock.runFor` does. Both are exercised in `scripts/e2e.mjs`.
 - **Look at the product, not only its tests.** `pnpm shots` renders every screen from a seeded store; `SEED=scripts/fixtures/<store>.json` for the empty, many-goals, long-lines, long-game and full-track stores (each is a `.mjs` that derives from the seed — regenerate the `.json` after editing); `FULL=1` for the whole screen however long it scrolls; `DARK=1`, `REDUCED=1`, `W= H=` for the other conditions. Most of what the fourth audit missed was found this way in an afternoon. `pnpm test:a11y` takes the same `SEED=` and `DARK=`.
 - **`sed -i` on this machine eats backslashes in replacement text** the same way heredocs do (a `.json` became `.json`). Regexes and escapes go through a Write-tool patch script.
+- **`Label` renders in small caps, so `innerText` comes back upper-cased.** An e2e
+  check that reads a Label compares case-blind (`.toLowerCase()`), or it fails on text
+  that is exactly right.
+- **`page.goBack()` can only be intercepted within one document.** `page.goto` makes a
+  new document; the browser's back then unloads it, and no `beforeRemove` in the app can
+  stop that. A platform-back check must reach the screen by an in-app tap (a door, a
+  push), never by `goto`, and the entry behind it must be a different route.
 - **After a fan-out, check `git status` and file mtimes before staging.** The
   first audit's subagents edited twelve product files they had been told not to
   touch.

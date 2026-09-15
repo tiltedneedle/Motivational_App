@@ -17,6 +17,7 @@ import {
   epochCount,
   epochsFor,
   pastStep,
+  recutEvents,
   quotableLines,
   type Epoch,
   type PastAnalysis,
@@ -320,6 +321,35 @@ describe('walking the periods is the person\u2019s, not the data\u2019s', () => 
       { id: 'e2', epochId: epochs[1]!.id, title: 'b', weight: 'hurt', analysed: false },
     ];
     expect(pastStep(epochs, two, [], track, true)).toMatchObject({ step: 'analyse', eventId: 'e1', total: 1 });
+  });
+
+  it('keeps every event on a re-cut, each following its period\u2019s place in the order', () => {
+    const before = epochsFor(40, 'full');
+    const after = epochsFor(30, 'full');
+    const events: PastEvent[] = before.map((e, i) => ({ id: `e${i}`, epochId: e.id, title: 't', weight: 'helped', analysed: false }));
+    const moved = recutEvents(before, after, events);
+    expect(moved).toHaveLength(events.length);
+    moved.forEach((v, i) => expect(v.epochId).toBe(after[i]!.id));
+  });
+
+  it('lands the overflow on the last period when the new cut has fewer, rather than losing it', () => {
+    const before = epochsFor(40, 'full');
+    const after = epochsFor(20, 'full');
+    expect(after.length).toBeLessThan(before.length);
+    const events: PastEvent[] = before.map((e, i) => ({ id: `e${i}`, epochId: e.id, title: 't', weight: 'helped', analysed: false }));
+    const moved = recutEvents(before, after, events);
+    expect(moved).toHaveLength(events.length);
+    const last = after[after.length - 1]!.id;
+    for (let i = after.length; i < before.length; i += 1) expect(moved[i]!.epochId).toBe(last);
+  });
+
+  it('takes the old periods in their own order, not the array\u2019s', () => {
+    const before = epochsFor(40, 'full');
+    const scrambled = [...before].map((e, i) => ({ ...e, position: i })).sort((a, b) => a.id.localeCompare(b.id));
+    const after = epochsFor(30, 'full');
+    const events: PastEvent[] = before.map((e, i) => ({ id: `e${i}`, epochId: e.id, title: 't', weight: 'helped', analysed: false }));
+    const moved = recutEvents(scrambled, after, events);
+    moved.forEach((v, i) => expect(v.epochId).toBe(after[i]!.id));
   });
 
   it('is not done with nothing in it, however the walk was left', () => {

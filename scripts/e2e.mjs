@@ -1645,6 +1645,32 @@ async function main() {
     check('a bare door resumes the sitting that was left', await seen('screen-present-write'));
     await tap('present-write-back');
     check('and Back from it is the deck, picks ticked', await seen('screen-present'));
+
+    // ---- lines are bound to their card, and Back to the deck keeps them
+    await tap('present-continue');
+    check('going on reopens the same card', await seen('screen-present-write'));
+    await page.locator('[data-testid="present-story"]').fill('Half a line about the second card.');
+    await page.waitForTimeout(300);
+    await tap('present-write-back');
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(700);
+    check('killed on the deck, it is the deck that comes back', await seen('screen-present'));
+    await tap('present-continue');
+    check('and the half-typed line is still there', (await page.locator('[data-testid="present-story"]').inputValue()).includes('Half a line'));
+    const typedCard = (await store()).presentDraft?.writing?.cardId ?? '';
+    await tap('present-write-back');
+    await tap(`present-card-${typedCard}`);
+    await tap('present-continue');
+    check(
+      'the next card opens with nothing of the other card in its boxes',
+      (await page.locator('[data-testid="present-story"]').inputValue()) === '',
+      await page.locator('[data-testid="present-story"]').inputValue(),
+    );
+    await tap('present-write-back');
+    await tap(`present-card-${typedCard}`);
+    const parked = (await store()).presentDraft?.lines?.[typedCard]?.story ?? '';
+    check('and the un-ticked card kept its own words for when it comes back', parked.includes('Half a line'), parked);
     const writtenCard = ((await store()).presentPicks ?? [])[0]?.cardId ?? '';
     await tap(`present-card-${writtenCard}`);
     check('taking a written card off says what going on will cost', await seen('present-let-go'));
@@ -1708,7 +1734,16 @@ async function main() {
 
     // ---- Full's deck takes everything, then narrows: the source's second move
     await patchStore(`s.profile.track = 'full'; s.presentPicks = (s.presentPicks ?? []).filter((q) => q.half === 'faults'); s.presentDraft = null;`);
-    await page.goto(`${BASE}/present?half=virtues`, { waitUntil: 'networkidle' });
+    // In by the chooser's door, not by URL: page.goto makes a new document,
+    // and the browser's back below then unloads it — nothing in the app can
+    // intercept that. A tap pushes within the document, which the platform
+    // back pops, which beforeRemove can catch.
+    await page.goto(`${BASE}/choose`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(600);
+    await tap('door-present');
+    await page.waitForTimeout(500);
+    check('the door opens the virtues on Full, the faults being written', await seen('screen-present'));
     await page.clock.runFor(1500);
     await page.waitForTimeout(600);
     const fullCards = await page.evaluate(() =>
@@ -1725,9 +1760,16 @@ async function main() {
     await tap(`present-narrow-card-${fullCards[3]}`);
     await tap('present-narrow-continue');
     check('nine go through to the writing', await seen('screen-present-write'));
+    await page.goBack({ waitUntil: 'commit' }).catch(() => {});
+    await page.waitForTimeout(600);
+    check(
+      "the platform's back there is one step back, to the deck",
+      await seen('screen-present'),
+      await page.evaluate(() => [...document.querySelectorAll('[data-testid^="screen-"]')].map((e) => e.getAttribute('data-testid')).join(',') + ' @ ' + location.pathname + location.search),
+    );
     const nineKept = (await store()).presentDraft?.selected?.length ?? 0;
     check('in the order they were kept', nineKept === 9, String(nineKept));
-    await patchStore(`s.profile.track = 'starter'; s.presentDraft = null;`);
+    await patchStore(`s.profile.track = 'starter';`);
 
     // ---- the Past walk again: the ways back and the ways on (and the client's own report —
     //      age entered, Back, Begin, and no way to enter the age again)
@@ -1759,6 +1801,19 @@ async function main() {
     check('Back from the first period is the periods, not the doorway', await seen('screen-past-age'));
     check('with the age still in the box', (await page.locator('[data-testid="past-age"]').inputValue()) === '40');
     check('and nothing to cut again', (await noticeText('past-age-continue')).includes('Keep'), await noticeText('past-age-continue'));
+    await page.locator('[data-testid="past-age"]').fill('50');
+    await page.waitForTimeout(200);
+    check('a changed age offers to cut again', (await noticeText('past-age-continue')).includes('Cut them again'), await noticeText('past-age-continue'));
+    await tap('past-age-continue');
+    const afterRecut = (await store()).pastEvents ?? [];
+    check(
+      'and what was listed follows its period through the new cut',
+      afterRecut.length === keptTitles.length && afterRecut.every((e) => e.epochId === 'ep-early'),
+      JSON.stringify(afterRecut.map((e) => e.epochId)),
+    );
+    await tap('past-events-back');
+    await page.locator('[data-testid="past-age"]').fill('40');
+    await page.waitForTimeout(200);
     await tap('past-age-continue');
     check('keeping them returns to the walk', await seen('screen-past-events'));
     await page.locator('[data-testid="past-event-title"]').fill('learning to swim');
@@ -1801,6 +1856,21 @@ async function main() {
     await page.waitForTimeout(500);
     check('coming back, the chooser says what has been written', await seen('choose-reentry'));
     check('and marks the volumes that were', await seen('door-past-mark'));
+
+    // ---- a finished Past reopens finished, and one Back does not un-finish it
+    await page.goto(`${BASE}/past`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(600);
+    if (await seen('screen-past-done')) await tap('past-finish');
+    await page.goto(`${BASE}/past`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(600);
+    check('a finished Past reopens on its closing screen, not the picking screen', await seen('screen-past-done'));
+    await tap('past-done-back');
+    await page.goto(`${BASE}/choose`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(500);
+    check('and one Back does not un-finish it', (await noticeText('door-past-mark')).toLowerCase() === 'written', await noticeText('door-past-mark'));
 
     check('no uncaught page errors', pageErrors.length === 0, pageErrors.join(' | '));
   } catch (err) {

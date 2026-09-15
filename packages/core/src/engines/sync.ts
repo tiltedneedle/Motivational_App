@@ -795,6 +795,13 @@ export function fromRows(tables: Partial<Record<(typeof TABLE_ORDER)[number], Ro
     createdAt: str(r.created_at),
   }));
 
+  // The account hands rows back ordered by id, and a period's id carries its
+  // ages, so digits collate before letters and "19 to 24" arrived first. The
+  // order is the person's own: by position, and by age where a build wrote
+  // no positions. Events likewise, so a period's list reads as it was made.
+  pastEpochs.sort((a, b) => a.position - b.position || a.fromAge - b.fromAge);
+  pastEvents.sort((a, b) => a.position - b.position || a.createdAt.localeCompare(b.createdAt));
+
   return {
     profile,
     goals,

@@ -58,6 +58,7 @@ import {
   draftOf,
   guarded,
   isQuotable,
+  recutEvents,
   isWorse,
   shouldOfferSupport,
   softenFrom,
@@ -139,7 +140,17 @@ export interface PresentDraft {
   half: 'faults' | 'virtues';
   /** The cards picked, before any of them is written about. */
   selected: string[];
-  /** The one being written about now, if any. */
+  /** Whether the writing was open, or the deck, when they left. */
+  open: boolean;
+  /**
+   * The lines typed under each card, by card. A card un-ticked and ticked
+   * again comes back with its own words, and never with another card's.
+   */
+  lines: Record<string, { story: string; apply: string; framingId: string | null; goalId: string | null }>;
+  /**
+   * The lines under the card up next, whether or not the writing was open:
+   * Back to the deck must not be the thing that loses them.
+   */
   writing: { cardId: string; story: string; apply: string; framingId: string | null; goalId: string | null } | null;
   updatedAt: string;
 }
@@ -1787,15 +1798,19 @@ const store = create<MorrowState>()(
               position: i,
               createdAt: known.get(e.id)?.createdAt ?? now,
             })),
-            // A period cut again from a different age keeps its place in the
-            // order, so the events in "19 to 26" follow it to "19 to 24" rather
-            // than vanishing. Only a period that is gone altogether takes its
-            // events with it, the way the database's cascade would.
-            pastEvents: s.pastEvents.flatMap((v) => {
-              const at = s.pastEpochs.findIndex((e) => e.id === v.epochId);
-              const to = at >= 0 ? epochs[at] : epochs.find((e) => e.id === v.epochId);
-              return to ? [{ ...v, epochId: to.id }] : [];
-            }),
+            // A period cut again keeps its place in the order, so the events in
+            // "19 to 26" follow it to "19 to 24" rather than vanishing, and a cut
+            // with fewer periods lands the overflow on the last. Then each
+            // period's list is numbered again in the order it now reads.
+            pastEvents: (() => {
+              const moved = recutEvents(s.pastEpochs, epochs, s.pastEvents);
+              const seen = new Map<string, number>();
+              return moved.map((v) => {
+                const position = seen.get(v.epochId) ?? 0;
+                seen.set(v.epochId, position + 1);
+                return { ...v, position };
+              });
+            })(),
           };
         }),
       setPastListed: (listed) => set({ pastListed: listed }),
@@ -1997,9 +2012,22 @@ export function entitlementOf(s: MorrowState, day: string): EntitlementContext {
   };
 }
 
-/** Whether there is anything of theirs on this device — the sync's one question. */
-function hasWriting(s: Pick<SyncBundle, 'texts' | 'goals' | 'analyses' | 'books'>): boolean {
-  return s.texts.length > 0 || s.goals.length > 0 || s.analyses.length > 0 || s.books.length > 0;
+/**
+ * Whether there is anything of theirs on this device — the sync's one
+ * question. All three volumes count: a phone that had done only the Past
+ * volume used to be told "Nothing to copy yet", and signing it in to an
+ * account with a Book on it replaced that Past with the account's nothing.
+ */
+function hasWriting(s: Pick<SyncBundle, 'texts' | 'goals' | 'analyses' | 'books' | 'presentPicks' | 'pastEpochs' | 'pastEvents'>): boolean {
+  return (
+    s.texts.length > 0 ||
+    s.goals.length > 0 ||
+    s.analyses.length > 0 ||
+    s.books.length > 0 ||
+    s.presentPicks.length > 0 ||
+    s.pastEpochs.length > 0 ||
+    s.pastEvents.length > 0
+  );
 }
 
 /** The store as the sync sees it: everything that is theirs, nothing that is the screen's. */

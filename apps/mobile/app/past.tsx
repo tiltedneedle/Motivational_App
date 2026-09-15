@@ -14,7 +14,7 @@
  * Book, and a line written in crisis is held out whatever they chose — which
  * the screen says, rather than overriding quietly.
  */
-import { useNavigation, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -30,6 +30,7 @@ import {
   type Epoch,
 } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Notice, Rule, Statement, Studio, TextButton, TopBar, UserField, accent, announce, day } from '@morrow/ui';
+import { usePlatformBack } from '../src/platform-back';
 import { useMorrow } from '../src/store';
 import { track, useFirstRunStep } from '../src/analytics';
 
@@ -74,7 +75,20 @@ export default function Past() {
    * jumped to the writing the instant the last one was tapped, so its own
    * button was unreachable and a pick could not be reconsidered.
    */
-  const [picked, setPicked] = useState(() => resumed?.picked ?? false);
+  const [picked, setPicked] = useState(
+    () =>
+      resumed?.picked ??
+      // A finished Past opens finished. Without this it reopened on the
+      // picking screen, and one Back there un-finished it: the chooser fell
+      // from "Written" to "Picked up" and the next visit demanded the walk.
+      pastStep(
+        epochs,
+        events.map((v) => ({ id: v.id, epochId: v.epochId, title: v.title, weight: v.weight, analysed: v.analysed })),
+        events.map((v) => ({ eventId: v.id, whatHappened: v.whatHappened, shapedMe: v.shapedMe, stillBelieve: v.stillBelieve, joinsBook: v.joinsBook })),
+        depth,
+        listed,
+      ).step === 'done',
+  );
   /**
    * The age screen, held open by the person rather than by the data. Once
    * the periods were cut the engine never showed it again, so Back from the
@@ -83,7 +97,7 @@ export default function Past() {
    */
   const [ageOpen, setAgeOpen] = useState(false);
   const [age, setAge] = useState(() =>
-    resumed?.age != null ? String(resumed.age) : epochs.length ? String(epochs[epochs.length - 1]!.toAge) : '',
+    resumed?.age != null ? String(resumed.age) : epochs.length ? String(Math.max(...epochs.map((e) => e.toAge))) : '',
   );
   /** Periods renamed on the age screen, by period id, until they are cut. */
   const [labels, setLabels] = useState<Record<string, string>>(() => resumed?.labels ?? {});
@@ -159,26 +173,19 @@ export default function Past() {
 
   // The Android button, the iOS edge swipe and the browser's arrow undo one
   // step, the same as the bar's, and only leave once there is nothing left.
-  const navigation = useNavigation();
-  useEffect(() => {
-    const off = navigation.addListener('beforeRemove', (e: { preventDefault: () => void }) => {
-      if (!canStepBack) {
-        // Leaving from the end is leaving finished: nothing to carry on.
-        if (showingDone) clearDraft();
-        return;
-      }
-      e.preventDefault();
-      stepBack();
-    });
-    return off;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigation, canStepBack, showingAge, showingDone, step.step, cursor, epochs.length, choosing, entered]);
+  usePlatformBack(canStepBack, stepBack);
 
   // Written as they go. The method these come from is explicit that its
   // programs are meant to take several sittings, so the walk, the age, the
   // picks and the three boxes all survive the app being killed mid-sentence.
   const analysingId = !showingAge && step.step === 'analyse' ? step.eventId : null;
   useEffect(() => {
+    // The closing screen is not a sitting to carry on: a finished Past opens
+    // finished on its own, and Today must not offer it.
+    if (showingDone) {
+      clearDraft();
+      return;
+    }
     if (!touched && !resumed) return;
     if (!entered && epochs.length === 0) return;
     saveDraft({
@@ -190,7 +197,7 @@ export default function Past() {
       writing: analysingId ? { eventId: analysingId, what, shaped, believe, framingId } : null,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [touched, entered, cursor, picked, age, title, labels, analysingId, what, shaped, believe, framingId]);
+  }, [showingDone, touched, entered, cursor, picked, age, title, labels, analysingId, what, shaped, believe, framingId]);
 
   // Moving to the next event empties the boxes, and a draft that belonged to
   // some other event never lands in them.
@@ -310,9 +317,25 @@ export default function Past() {
             ) : null}
           </ScrollView>
           <View style={{ paddingBottom: 18 }}>
+            {/* Fewer periods than before: nothing listed is lost, and it says where it goes. */}
+            {ok && epochs.length > preview.length && events.length > 0 ? (
+              <Body testID="past-recut-note" style={{ fontSize: 13, textAlign: 'center', paddingBottom: 8 }}>
+                {'Fewer periods than before. What was listed in the later ones moves to the last.'}
+              </Body>
+            ) : null}
             <InkButton
               testID="past-age-continue"
-              label={!ok ? 'Your age, in years' : epochs.length === 0 ? 'Cut my life into periods' : same ? 'Keep these periods' : 'Cut them again from this age'}
+              label={
+                !ok
+                  ? 'Your age, in years'
+                  : epochs.length === 0
+                    ? 'Cut my life into periods'
+                    : same
+                      ? 'Keep these periods'
+                      : preview.length !== epochs.length
+                        ? 'Cut them again, into ' + String(preview.length)
+                        : 'Cut them again from this age'
+              }
               disabled={!ok}
               onPress={() => {
                 touch();

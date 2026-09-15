@@ -13,7 +13,7 @@
  * What is not here, deliberately: any trait name, any factor, any score, any
  * tally per group. The moment a deck counts you it stops being a deck.
  */
-import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -36,8 +36,18 @@ import {
   type PresentHalf,
 } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Notice, Statement, Studio, TextButton, TopBar, UserField, announce, day } from '@morrow/ui';
+import { usePlatformBack } from '../src/platform-back';
 import { useGoals, useMorrow } from '../src/store';
 import { track, useFirstRunStep } from '../src/analytics';
+
+/** The two lines and the two taps under one card. */
+interface Lines {
+  story: string;
+  apply: string;
+  framingId: string | null;
+  goalId: string | null;
+}
+const NO_LINES: Lines = { story: '', apply: '', framingId: null, goalId: null };
 
 export default function PresentRoute() {
   const params = useLocalSearchParams<{ half?: string }>();
@@ -105,10 +115,20 @@ function Present({ half }: { half: PresentHalf }) {
   const [resumedWriting] = useState(() => (resumed?.writing && inDeck(resumed.writing.cardId) ? resumed.writing : null));
 
   const [selected, setSelected] = useState<string[]>(() => (resumed?.selected ?? mine.map((p) => p.cardId)).filter(inDeck));
-  const [story, setStory] = useState(() => resumedWriting?.story ?? '');
-  const [apply, setApply] = useState(() => resumedWriting?.apply ?? '');
-  const [framingId, setFramingId] = useState<string | null>(() => resumedWriting?.framingId ?? null);
-  const [goalId, setGoalId] = useState<string | null>(() => resumedWriting?.goalId ?? null);
+  /**
+   * What has been typed, by card. Four loose fields used to follow the
+   * person from card to card: un-tick the card you had started, and the next
+   * one opened with your words already in its boxes, and Keep filed them
+   * under it. Each card holds its own, and a card ticked again has its own.
+   */
+  const [texts, setTexts] = useState<Record<string, Lines>>(() => {
+    const kept = Object.fromEntries(Object.entries(resumed?.lines ?? {}).filter(([id]) => inDeck(id)));
+    if (resumedWriting && !kept[resumedWriting.cardId]) {
+      const { cardId, ...lines } = resumedWriting;
+      kept[cardId] = lines;
+    }
+    return kept;
+  });
   const [problem, setProblem] = useState<string | null>(null);
   const [narrowing, setNarrowing] = useState(false);
   /**
@@ -116,7 +136,9 @@ function Present({ half }: { half: PresentHalf }) {
    * is already finished, so a door opened on a written half lands on its
    * closing screen rather than on a deck of inked cards with nothing to say.
    */
-  const [writingOpen, setWritingOpen] = useState(() => Boolean(resumedWriting) || (!resumed && halfComplete(picks, half, depth)));
+  const [writingOpen, setWritingOpen] = useState(() =>
+    resumed ? Boolean(resumedWriting) && Boolean(resumed.open) : halfComplete(picks, half, depth),
+  );
 
   // The card being written about: the first chosen one with nothing written yet.
   const writingId = useMemo(() => {
@@ -124,6 +146,12 @@ function Present({ half }: { half: PresentHalf }) {
     return selected.find((id) => !written.has(id)) ?? null;
   }, [selected, mine]);
   const writing: PresentCard | null = writingId ? (deck.find((c) => c.id === writingId) ?? null) : null;
+  const cur: Lines = (writingId && texts[writingId]) || NO_LINES;
+  const setLine = (patch: Partial<Lines>) => {
+    if (!writingId) return;
+    const id = writingId;
+    setTexts((t) => ({ ...t, [id]: { ...(t[id] ?? NO_LINES), ...patch } }));
+  };
 
   // Written as they type, the way the Future volume's writing room is. The
   // method these come from says plainly that its programs are meant to be
@@ -136,23 +164,27 @@ function Present({ half }: { half: PresentHalf }) {
       if (!draft || draft.half === half) clearDraft();
       return;
     }
+    // The lines travel whether the writing is open or not: Back to the deck
+    // must not be the thing that loses them.
     saveDraft({
       half,
       selected,
-      writing: writingOpen ? { cardId: writingId, story, apply, framingId, goalId } : null,
+      open: writingOpen,
+      lines: texts,
+      writing: { cardId: writingId, ...cur },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [half, selected, writingOpen, writingId, story, apply, framingId, goalId]);
+  }, [half, selected, writingOpen, writingId, texts]);
 
   const toggle = (id: string) => {
     setProblem(null);
-    setSelected((cur) => {
-      if (cur.includes(id)) return cur.filter((x) => x !== id);
-      if (cur.length >= deckCap) {
+    setSelected((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      if (prev.length >= deckCap) {
         setProblem('That is ' + deckCap + ' already. Take one off to add another.');
-        return cur;
+        return prev;
       }
-      return [...cur, id];
+      return [...prev, id];
     });
   };
 
@@ -179,21 +211,22 @@ function Present({ half }: { half: PresentHalf }) {
     // The store screens the same text. The screen asks first so it can say
     // the true thing: a line written in crisis is kept, and kept out of the
     // Book, which is not "Kept."
-    const held = screen(story + ' ' + apply).risk === 'crisis';
+    const held = screen(cur.story + ' ' + cur.apply).risk === 'crisis';
     savePick({
       half,
       cardId: writing.id,
-      storyLine: story,
-      applyLine: apply,
-      framingId,
-      goalId,
+      storyLine: cur.story,
+      applyLine: cur.apply,
+      framingId: cur.framingId,
+      goalId: cur.goalId,
       rank: selected.indexOf(writing.id),
     });
     announce(held ? 'Kept on your phone, and out of the Book.' : 'Kept.');
-    setStory('');
-    setApply('');
-    setFramingId(null);
-    setGoalId(null);
+    const id = writing.id;
+    setTexts((t) => {
+      const { [id]: _kept, ...rest } = t;
+      return rest;
+    });
   };
 
   const finished = writingOpen && selected.length > 0 && writingId === null;
@@ -213,17 +246,8 @@ function Present({ half }: { half: PresentHalf }) {
 
   // The Android button, the iOS edge swipe and the browser's arrow are the
   // same one step back as the bar's, and only leave once there is nothing
-  // left to step back through (GOV.UK, Baymard).
-  const navigation = useNavigation();
-  useEffect(() => {
-    const off = navigation.addListener('beforeRemove', (e: { preventDefault: () => void }) => {
-      if (!canStepBack) return;
-      e.preventDefault();
-      stepBack();
-    });
-    return off;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigation, canStepBack]);
+  // left to step back through.
+  usePlatformBack(canStepBack, stepBack);
 
   // Each screen says itself once, the way the Interview says each question.
   useEffect(() => {
@@ -314,7 +338,7 @@ function Present({ half }: { half: PresentHalf }) {
 
   // ---- the two writes
   if (writingOpen && writing) {
-    const ready = story.trim().length > 0 && apply.trim().length > 0;
+    const ready = cur.story.trim().length > 0 && cur.apply.trim().length > 0;
     // With no goals yet there is nothing to pick, so the prompt must not ask.
     const secondPrompt = half === 'virtues' && goals.length === 0 ? (copy.writeTwoPromptNoGoal ?? copy.writeTwoPrompt) : copy.writeTwoPrompt;
     return (
@@ -339,8 +363,8 @@ function Present({ half }: { half: PresentHalf }) {
                 testID="present-story"
                 label={copy.writeOnePrompt ?? ''}
                 labelHidden
-                value={story}
-                onChangeText={(t) => setStory(t.slice(0, PRESENT_WRITE_CEILING))}
+                value={cur.story}
+                onChangeText={(t) => setLine({ story: t.slice(0, PRESENT_WRITE_CEILING) })}
                 placeholder={copy.writeOneHint}
                 multiline
               />
@@ -355,8 +379,8 @@ function Present({ half }: { half: PresentHalf }) {
                       key={f.id}
                       testID={'present-framing-' + f.id}
                       label={f.label}
-                      selected={framingId === f.id}
-                      onPress={() => setFramingId(framingId === f.id ? null : f.id)}
+                      selected={cur.framingId === f.id}
+                      onPress={() => setLine({ framingId: cur.framingId === f.id ? null : f.id })}
                     />
                   ))}
                 </View>
@@ -367,8 +391,8 @@ function Present({ half }: { half: PresentHalf }) {
                       key={g.id}
                       testID={'present-goal-' + g.id}
                       label={g.title}
-                      selected={goalId === g.id}
-                      onPress={() => setGoalId(goalId === g.id ? null : g.id)}
+                      selected={cur.goalId === g.id}
+                      onPress={() => setLine({ goalId: cur.goalId === g.id ? null : g.id })}
                     />
                   ))}
                 </View>
@@ -377,8 +401,8 @@ function Present({ half }: { half: PresentHalf }) {
                 testID="present-apply"
                 label={secondPrompt ?? ''}
                 labelHidden
-                value={apply}
-                onChangeText={(t) => setApply(t.slice(0, PRESENT_WRITE_CEILING))}
+                value={cur.apply}
+                onChangeText={(t) => setLine({ apply: t.slice(0, PRESENT_WRITE_CEILING) })}
                 placeholder={copy.writeTwoHint}
                 multiline
               />

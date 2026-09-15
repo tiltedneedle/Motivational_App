@@ -131,6 +131,25 @@ try {
   // ---- 2. the built app, signed in, with the seeded store
   const seed = JSON.parse(await readFile(join(ROOT, 'scripts', 'fixtures', 'seeded-state.json'), 'utf8'));
   const up = seed.state;
+  // The seed predates the other two volumes; they travel too, and the Past
+  // walk's end with them. Added here so the fixture stays the Future's.
+  {
+    const at = '2026-09-15T20:00:00.000Z';
+    up.presentPicks = [
+      { id: 'pp_e2e_1', half: 'faults', cardId: 'f-next-idea-better', storyLine: 'The talk I had to give, written at midnight.', applyLine: 'Twenty minutes in the calendar the night before.', framingId: null, goalId: null, rank: 0, safetyRisk: 'none', writtenAt: at },
+      { id: 'pp_e2e_2', half: 'virtues', cardId: 'v-dr-after', storyLine: 'The winter I got up for it every day.', applyLine: 'On Tuesday I use this to start before I am ready.', framingId: null, goalId: up.goals[0].id, rank: 0, safetyRisk: 'none', writtenAt: at },
+    ];
+    up.pastEpochs = [
+      { id: 'ep-early', label: 'Before school', fromAge: 0, toAge: 5, position: 0, createdAt: at },
+      { id: 'ep-school', label: 'School', fromAge: 6, toAge: 12, position: 1, createdAt: at },
+      { id: 'ep-teens', label: 'The teenage years', fromAge: 13, toAge: 18, position: 2, createdAt: at },
+      { id: 'ep-19-34', label: '19 to now', fromAge: 19, toAge: 34, position: 3, createdAt: at },
+    ];
+    up.pastEvents = [
+      { id: 'pe_e2e_1', epochId: 'ep-school', title: 'the move', weight: 'hurt', analysed: true, whatHappened: 'We moved in the middle of a term.', shapedMe: 'I make friends slowly and keep them.', stillBelieve: 'Starting again is survivable.', joinsBook: true, safetyRisk: 'none', position: 0, createdAt: at },
+    ];
+    up.pastListed = true;
+  }
   browser = await chromium.launch({
     executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH ?? 'C:/Users/HP/AppData/Local/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-win64/chrome-headless-shell.exe',
   });
@@ -184,7 +203,7 @@ try {
   check('Copy it now reports the copy landed', landed, (await page.locator('body').innerText()).match(/Copied[^\n]*|Not signed in[^\n]*|Nothing to copy[^\n]*|could not[^\n]*/i)?.[0] ?? 'no note');
 
   const counts = {};
-  for (const table of ['profiles', 'goals', 'authoring_texts', 'goal_analyses', 'books', 'book_versions', 'plans', 'milestones', 'moves', 'evidence', 'day_summaries', 'practices', 'letters', 'briefs']) {
+  for (const table of ['profiles', 'goals', 'authoring_texts', 'goal_analyses', 'books', 'book_versions', 'plans', 'milestones', 'moves', 'evidence', 'day_summaries', 'practices', 'letters', 'briefs', 'present_picks', 'past_epochs', 'past_events']) {
     const r = await rest(`/${table}?select=*`, session.access_token);
     counts[table] = Number(r.headers.get('content-range')?.split('/')[1] ?? -1);
   }
@@ -195,6 +214,32 @@ try {
   check('the days are on the account', counts.day_summaries === Object.keys(up.days).length, `${counts.day_summaries}`);
   check('the practice is on the account', counts.practices === up.practices.length, `${counts.practices}`);
   check('the profile row exists', counts.profiles === 1, `${counts.profiles}`);
+  check('the Present picks are on the account', counts.present_picks === up.presentPicks.length, `${counts.present_picks} vs ${up.presentPicks.length}`);
+  check('the Past periods and events are on the account', counts.past_epochs === up.pastEpochs.length && counts.past_events === up.pastEvents.length, `${counts.past_epochs} periods, ${counts.past_events} events`);
+  const profileRow = await (await rest('/profiles?select=past_listed', session.access_token)).json();
+  check("the Past walk's end is on the account", Array.isArray(profileRow) && profileRow[0]?.past_listed === true, JSON.stringify(profileRow).slice(0, 80));
+
+  // A card let go and written about again is a new row with the same card.
+  // present_picks has a second unique key, so the upsert has to match on it —
+  // or the account's old row refuses this push and every push after it.
+  await page.evaluate(() => {
+    const k = 'morrow-v1';
+    const st = JSON.parse(localStorage.getItem(k) ?? '{}');
+    st.state.presentPicks = st.state.presentPicks.map((q) => (q.id === 'pp_e2e_1' ? { ...q, id: 'pp_e2e_1b', storyLine: 'The second time I wrote about it.' } : q));
+    localStorage.setItem(k, JSON.stringify(st));
+  });
+  await page.goto(`${BASE}/settings`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(2500);
+  await tap('settings-account-push');
+  const landedAgain = await settle(async () => (await page.locator('body').innerText()).includes('Copied. The Book has a second home.'), 20_000);
+  check('a card let go and written again still pushes', landedAgain, (await page.locator('body').innerText()).match(/Copied[^\n]*|could not[^\n]*|duplicate[^\n]*/i)?.[0] ?? 'no note');
+  const rewritten = await (await rest('/present_picks?select=id,card_id&half=eq.faults', session.access_token)).json();
+  check(
+    'and the account holds one row for that card, the new one',
+    Array.isArray(rewritten) && rewritten.length === 1 && rewritten[0]?.id === 'pp_e2e_1b',
+    JSON.stringify(rewritten).slice(0, 120),
+  );
+  up.presentPicks = up.presentPicks.map((q) => (q.id === 'pp_e2e_1' ? { ...q, id: 'pp_e2e_1b', storyLine: 'The second time I wrote about it.' } : q));
 
   // Nobody else can see any of it.
   const stranger = await rest('/goals?select=id', ANON);
@@ -227,6 +272,10 @@ try {
     same('Fifteen', up.texts.map((t) => [t.kind, t.body.length]), down.texts.map((t) => [t.kind, t.body.length]));
     same('analyses', up.analyses.map((a) => [a.id, a.kind, a.line]), down.analyses.map((a) => [a.id, a.kind, a.line]));
     same('persona', up.profile.persona, down.profile.persona);
+    same('Present picks', up.presentPicks.map((q) => [q.id, q.half, q.cardId, q.rank, q.goalId]), (down.presentPicks ?? []).map((q) => [q.id, q.half, q.cardId, q.rank, q.goalId]));
+    same('Past periods, in their order', up.pastEpochs.map((e) => e.id), (down.pastEpochs ?? []).map((e) => e.id));
+    same('Past events', up.pastEvents.map((v) => [v.id, v.epochId, v.analysed, v.joinsBook]), (down.pastEvents ?? []).map((v) => [v.id, v.epochId, v.analysed, v.joinsBook]));
+    same("the Past walk's end", up.pastListed, down.pastListed);
   }
   await tap('account-continue');
   await page.waitForTimeout(1500);
