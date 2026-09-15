@@ -256,6 +256,39 @@ const bundle: SyncBundle = {
       createdAt: '2026-09-15T07:00:00.000Z',
     },
   ],
+  presentPicks: [
+    {
+      id: 'pp1',
+      half: 'faults',
+      cardId: 'f-start-and-drift',
+      storyLine: 'the week I said I would and did not',
+      applyLine: 'put the shoes by the door',
+      framingId: 'fs-night-before',
+      goalId: 'g1',
+      rank: 0,
+      safetyRisk: 'none',
+      writtenAt: '2026-09-15T20:00:00.000Z',
+    },
+  ],
+  pastEpochs: [
+    { id: 'ep1', label: 'School', fromAge: 6, toAge: 12, position: 1, createdAt: '2026-09-15T20:00:00.000Z' },
+  ],
+  pastEvents: [
+    {
+      id: 'ev1',
+      epochId: 'ep1',
+      title: 'the move',
+      weight: 'hurt',
+      analysed: true,
+      whatHappened: 'we moved in the middle of a term',
+      shapedMe: 'I make friends slowly and keep them',
+      stillBelieve: 'starting again is survivable',
+      joinsBook: true,
+      safetyRisk: 'none',
+      position: 0,
+      createdAt: '2026-09-15T20:00:00.000Z',
+    },
+  ],
 };
 
 describe('the store as rows', () => {
@@ -376,5 +409,37 @@ describe('and back', () => {
   it('starts from the defaults when there is no profile row at all', () => {
     expect(fromRows({}, DEFAULT_PROFILE).profile).toEqual(DEFAULT_PROFILE);
     expect(fromRows({}, DEFAULT_PROFILE).goals).toEqual([]);
+  });
+});
+
+describe('the Past and Present volumes on the wire', () => {
+  it('round-trips a pick, a period and an event without losing a field', () => {
+    const tables = toRows(bundle, USER, 'UTC');
+    const byTable = Object.fromEntries(tables.map((t) => [t.table, t.rows]));
+    // The tables exist, carry the owner, and are written after the goals they
+    // point at — a pick may name a goal.
+    expect(byTable.present_picks).toHaveLength(1);
+    expect(byTable.past_epochs).toHaveLength(1);
+    expect(byTable.past_events).toHaveLength(1);
+    expect(tables.findIndex((t) => t.table === 'present_picks')).toBeGreaterThan(tables.findIndex((t) => t.table === 'goals'));
+    expect(tables.findIndex((t) => t.table === 'past_events')).toBeGreaterThan(tables.findIndex((t) => t.table === 'past_epochs'));
+    for (const table of ['present_picks', 'past_epochs', 'past_events']) {
+      for (const row of byTable[table]!) expect(row.user_id).toBe(USER);
+    }
+
+    const back = fromRows(
+      Object.fromEntries(tables.map((t) => [t.table, t.rows])) as Parameters<typeof fromRows>[0],
+      bundle.profile,
+    );
+    expect(back.presentPicks).toEqual(bundle.presentPicks);
+    expect(back.pastEpochs).toEqual(bundle.pastEpochs);
+    expect(back.pastEvents).toEqual(bundle.pastEvents);
+  });
+
+  it('brings a row back with nothing in the Book unless the person put it there', () => {
+    const back = fromRows({ past_events: [{ id: 'e', epoch_id: 'ep', title: 't', weight: 'helped', created_at: 'x' }] }, bundle.profile);
+    expect(back.pastEvents[0]!.joinsBook).toBe(false);
+    expect(back.pastEvents[0]!.analysed).toBe(false);
+    expect(back.pastEvents[0]!.safetyRisk).toBe('none');
   });
 });

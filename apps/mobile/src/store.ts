@@ -94,6 +94,9 @@ import {
   type WritingSessionState,
   type InterviewState,
   type Span,
+  type PresentPickRow,
+  type PastEpochRow,
+  type PastEventRow,
 } from '@morrow/core';
 
 /**
@@ -109,7 +112,7 @@ import {
 export interface SafetyPause {
   risk: SafetyRisk;
   at: string;
-  source?: { kind: 'text' | 'analysis' | 'evidence' | 'day'; id: string } | null;
+  source?: { kind: 'text' | 'analysis' | 'evidence' | 'day' | 'present' | 'past'; id: string } | null;
   /** Asked for by the person ("Need someone?"), not raised by the screen. */
   voluntary?: boolean;
 }
@@ -178,6 +181,11 @@ export interface MorrowState {
   days: Record<string, DaySummary>;
   scenes: Scene[];
   briefs: Brief[];
+  /** The Present volume: what they picked from the two decks, and what they wrote about each. */
+  presentPicks: PresentPickRow[];
+  /** The Past volume: the periods of a life, and the events hanging on them. */
+  pastEpochs: PastEpochRow[];
+  pastEvents: PastEventRow[];
   /**
    * Letters from the future self, and to it (PRD §7.8).
    *
@@ -406,6 +414,33 @@ export interface MorrowState {
   deleteAccountAndCopy: () => Promise<{ ok: true } | { ok: false; error: string }>;
 
   // ui
+  /**
+   * The Present volume. A pick is written in one go — the card, the story and
+   * the answer — so a half-written one never reaches the Book; the screen keeps
+   * its own draft until then.
+   */
+  savePresentPick: (pick: {
+    half: 'faults' | 'virtues';
+    cardId: string;
+    storyLine: string;
+    applyLine: string;
+    framingId: string | null;
+    goalId: string | null;
+    rank: number;
+  }) => void;
+  dropPresentPick: (cardId: string, half: 'faults' | 'virtues') => void;
+
+  /** The Past volume's three moves. */
+  setPastEpochs: (epochs: { id: string; label: string; fromAge: number; toAge: number }[]) => void;
+  addPastEvent: (epochId: string, title: string, weight: 'helped' | 'hurt') => void;
+  dropPastEvent: (id: string) => void;
+  choosePastEvent: (id: string, analysed: boolean) => void;
+  savePastAnalysis: (
+    id: string,
+    fields: { whatHappened: string; shapedMe: string; stillBelieve: string },
+  ) => void;
+  setPastJoinsBook: (id: string, joins: boolean) => void;
+
   setToast: (t: ToastState | null) => void;
   clearSafety: () => void;
   /** The helplines card, asked for. No pause, no "not about me". */
@@ -488,6 +523,9 @@ const EMPTY = {
   days: {} as Record<string, DaySummary>,
   scenes: [] as Scene[],
   briefs: [],
+  presentPicks: [],
+  pastEpochs: [],
+  pastEvents: [],
   letters: [],
   account: null,
   accountAsked: false,
@@ -1574,6 +1612,9 @@ const store = create<MorrowState>()(
           scenes: b.scenes,
           letters: b.letters,
           briefs: b.briefs,
+          presentPicks: b.presentPicks,
+          pastEpochs: b.pastEpochs,
+          pastEvents: b.pastEvents,
         });
         return { ok: true, pulled: true };
       },
@@ -1602,6 +1643,102 @@ const store = create<MorrowState>()(
         set({ account: null });
         return { ok: true };
       },
+
+      savePresentPick: (pick) =>
+        set((s) => {
+          const now = new Date().toISOString();
+          const existing = s.presentPicks.find((p) => p.cardId === pick.cardId && p.half === pick.half);
+          // The same screen that reads a sitting reads these: they are sentences
+          // about a person's own life, and a flagged one never reaches the Book.
+          const risk = screen(`${pick.storyLine} ${pick.applyLine}`).risk;
+          const row: PresentPickRow = {
+            id: existing?.id ?? newId('pp'),
+            half: pick.half,
+            cardId: pick.cardId,
+            storyLine: pick.storyLine.trim(),
+            applyLine: pick.applyLine.trim(),
+            framingId: pick.framingId,
+            goalId: pick.goalId,
+            rank: pick.rank,
+            safetyRisk: risk,
+            writtenAt: existing?.writtenAt ?? now,
+          };
+          return {
+            presentPicks: existing
+              ? s.presentPicks.map((p) => (p.id === existing.id ? row : p))
+              : [...s.presentPicks, row],
+            safetyPause: risk === 'crisis' ? pauseOn(risk, 'present', row.id) : s.safetyPause,
+          };
+        }),
+      dropPresentPick: (cardId, half) =>
+        set((s) => ({ presentPicks: s.presentPicks.filter((p) => !(p.cardId === cardId && p.half === half)) })),
+
+      setPastEpochs: (epochs) =>
+        set((s) => {
+          const now = new Date().toISOString();
+          const known = new Map(s.pastEpochs.map((e) => [e.id, e]));
+          return {
+            pastEpochs: epochs.map((e, i) => ({
+              id: e.id,
+              label: e.label.trim(),
+              fromAge: e.fromAge,
+              toAge: e.toAge,
+              position: i,
+              createdAt: known.get(e.id)?.createdAt ?? now,
+            })),
+            // A period that is gone takes its events with it, the way the
+            // database's cascade would.
+            pastEvents: s.pastEvents.filter((v) => epochs.some((e) => e.id === v.epochId)),
+          };
+        }),
+      addPastEvent: (epochId, title, weight) =>
+        set((s) => ({
+          pastEvents: [
+            ...s.pastEvents,
+            {
+              id: newId('pe'),
+              epochId,
+              title: title.trim(),
+              weight,
+              analysed: false,
+              whatHappened: '',
+              shapedMe: '',
+              stillBelieve: '',
+              joinsBook: false,
+              safetyRisk: 'none',
+              position: s.pastEvents.filter((v) => v.epochId === epochId).length,
+              createdAt: new Date().toISOString(),
+            },
+          ],
+        })),
+      dropPastEvent: (id) => set((s) => ({ pastEvents: s.pastEvents.filter((v) => v.id !== id) })),
+      choosePastEvent: (id, analysed) =>
+        set((s) => ({ pastEvents: s.pastEvents.map((v) => (v.id === id ? { ...v, analysed } : v)) })),
+      savePastAnalysis: (id, fields) =>
+        set((s) => {
+          const risk = screen(`${fields.whatHappened} ${fields.shapedMe} ${fields.stillBelieve}`).risk;
+          return {
+            pastEvents: s.pastEvents.map((v) =>
+              v.id === id
+                ? {
+                    ...v,
+                    whatHappened: fields.whatHappened.trim(),
+                    shapedMe: fields.shapedMe.trim(),
+                    stillBelieve: fields.stillBelieve.trim(),
+                    safetyRisk: risk,
+                    // A flagged line never reaches the Book, whatever was chosen
+                    // before. The screen says so rather than overriding quietly.
+                    joinsBook: risk === 'none' ? v.joinsBook : false,
+                  }
+                : v,
+            ),
+            safetyPause: risk === 'crisis' ? pauseOn(risk, 'past', id) : s.safetyPause,
+          };
+        }),
+      setPastJoinsBook: (id, joins) =>
+        set((s) => ({
+          pastEvents: s.pastEvents.map((v) => (v.id === id ? { ...v, joinsBook: joins && v.safetyRisk === 'none' } : v)),
+        })),
 
       setToast: (t) => set({ toast: t }),
       showResources: () => set({ safetyPause: { risk: 'none', at: new Date().toISOString(), source: null, voluntary: true } }),
@@ -1633,6 +1770,12 @@ const store = create<MorrowState>()(
                 safetyPause: null,
               };
             }
+            case 'present':
+              return { presentPicks: st.presentPicks.map((p) => (p.id === source.id ? clear(p) : p)), safetyPause: null };
+            case 'past':
+              // Clearing the flag does not put the event in the Book: that is
+              // still the person's separate choice, made on its own screen.
+              return { pastEvents: st.pastEvents.map((v) => (v.id === source.id ? clear(v) : v)), safetyPause: null };
           }
         }),
 
@@ -1761,6 +1904,9 @@ function bundleOf(s: MorrowState): SyncBundle {
     scenes: s.scenes,
     letters: s.letters,
     briefs: s.briefs,
+    presentPicks: s.presentPicks,
+    pastEpochs: s.pastEpochs,
+    pastEvents: s.pastEvents,
   };
 }
 

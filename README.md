@@ -134,6 +134,12 @@ browser. Asset URLs are absolute, so a deep link like `/book` loads correctly.
 
 1. Import the repository on Vercel. Leave the root directory as the repo root; the
    settings in `vercel.json` win over the dashboard.
+
+   Or from here, with a token in `supabase/.env.local` as `VERCEL_TOKEN=…`:
+   `pnpm vc link`, `pnpm vc env add`, `pnpm vc deploy --prod`. Linking the project to
+   GitHub so a push deploys itself is the one part a token cannot do — the Vercel GitHub
+   App has to be installed on the account once, by hand, before the API will attach a
+   repo to a project.
 2. Set these environment variables for **Production and Preview**, before the first
    build — `EXPO_PUBLIC_*` values are inlined at build time, so a variable added later
    does nothing until the next build:

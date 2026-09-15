@@ -20,6 +20,7 @@
     "db:find": "node scripts/db-find.mjs",
     "test:account": "node scripts/account-e2e.mjs",
     "sb": "node scripts/supabase-cli.mjs",
+    "vc": "node scripts/vercel-cli.mjs",
     "test:e2e": "node scripts/e2e.mjs",
     "test:a11y": "node scripts/a11y.mjs",
     "shots": "node scripts/shots.mjs",
@@ -38,6 +39,7 @@
     "react-native": "0.86.3",
     "react-native-svg": "15.15.4",
     "supabase": "^2.117.0",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vercel": "^59.16.0"
   }
 }

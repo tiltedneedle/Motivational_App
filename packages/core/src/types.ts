@@ -44,6 +44,60 @@ export type WritingMode = z.infer<typeof WritingMode>;
 export const SafetyRisk = z.enum(['none', 'concern', 'crisis']);
 export type SafetyRisk = z.infer<typeof SafetyRisk>;
 
+/**
+ * A pick from one of the Present decks, and the two lines written about it.
+ * The card is referenced by id: the sentence itself lives in the app, and is
+ * the app's words, not the person's.
+ */
+export const PresentPickRow = z.object({
+  id: z.string(),
+  half: z.enum(['faults', 'virtues']),
+  cardId: z.string(),
+  /** A time it cost, or a time it mattered. Required: nothing counts without it. */
+  storyLine: z.string(),
+  /** The fault's answer, or where the virtue gets used next week. */
+  applyLine: z.string().default(''),
+  framingId: z.string().nullable().default(null),
+  goalId: z.string().nullable().default(null),
+  rank: z.number().int().default(0),
+  safetyRisk: SafetyRisk.default('none'),
+  writtenAt: z.string(),
+});
+export type PresentPickRow = z.infer<typeof PresentPickRow>;
+
+/** A period of a life, cut from the person's age and renameable by them. */
+export const PastEpochRow = z.object({
+  id: z.string(),
+  label: z.string(),
+  fromAge: z.number().int(),
+  toAge: z.number().int(),
+  position: z.number().int().default(0),
+  createdAt: z.string(),
+});
+export type PastEpochRow = z.infer<typeof PastEpochRow>;
+
+/**
+ * An event inside a period, and — once chosen — what it made of them.
+ * `joinsBook` defaults to false: nothing from here is quoted anywhere else
+ * until the person says so.
+ */
+export const PastEventRow = z.object({
+  id: z.string(),
+  epochId: z.string(),
+  title: z.string(),
+  weight: z.enum(['helped', 'hurt']),
+  analysed: z.boolean().default(false),
+  whatHappened: z.string().default(''),
+  shapedMe: z.string().default(''),
+  stillBelieve: z.string().default(''),
+  joinsBook: z.boolean().default(false),
+  safetyRisk: SafetyRisk.default('none'),
+  position: z.number().int().default(0),
+  createdAt: z.string(),
+});
+export type PastEventRow = z.infer<typeof PastEventRow>;
+
+
 export const MoveStatus = z.enum(['todo', 'done', 'skip']);
 export type MoveStatus = z.infer<typeof MoveStatus>;
 

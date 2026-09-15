@@ -29,6 +29,9 @@ import type {
   Practice,
   Profile,
   Scene,
+  PresentPickRow,
+  PastEpochRow,
+  PastEventRow,
 } from '../types';
 import type { PracticeLog } from './practices';
 
@@ -47,6 +50,9 @@ export interface SyncBundle {
   scenes: Scene[];
   letters: Letter[];
   briefs: Brief[];
+  presentPicks: PresentPickRow[];
+  pastEpochs: PastEpochRow[];
+  pastEvents: PastEventRow[];
 }
 
 export type Row = Record<string, unknown>;
@@ -79,6 +85,9 @@ export const TABLE_ORDER = [
   'scenes',
   'letters',
   'briefs',
+  'present_picks',
+  'past_epochs',
+  'past_events',
 ] as const;
 
 /** One person has one Book with many editions; the row above the editions. */
@@ -379,6 +388,52 @@ export function toRows(bundle: SyncBundle, userId: string, timezone: string): Ta
         steps_total: l.stepsTotal,
         minimal: l.minimal,
         completed_at: l.completedAt,
+      })),
+    },
+    {
+      table: 'present_picks',
+      rows: bundle.presentPicks.map((p) => ({
+        id: p.id,
+        user_id: userId,
+        half: p.half,
+        card_id: p.cardId,
+        story_line: p.storyLine,
+        apply_line: p.applyLine,
+        framing_id: p.framingId,
+        goal_id: p.goalId,
+        rank: p.rank,
+        safety_risk: p.safetyRisk,
+        written_at: p.writtenAt,
+      })),
+    },
+    {
+      table: 'past_epochs',
+      rows: bundle.pastEpochs.map((e) => ({
+        id: e.id,
+        user_id: userId,
+        label: e.label,
+        from_age: e.fromAge,
+        to_age: e.toAge,
+        position: e.position,
+        created_at: e.createdAt,
+      })),
+    },
+    {
+      table: 'past_events',
+      rows: bundle.pastEvents.map((e) => ({
+        id: e.id,
+        user_id: userId,
+        epoch_id: e.epochId,
+        title: e.title,
+        weight: e.weight,
+        analysed: e.analysed,
+        what_happened: e.whatHappened,
+        shaped_me: e.shapedMe,
+        still_believe: e.stillBelieve,
+        joins_book: e.joinsBook,
+        safety_risk: e.safetyRisk,
+        position: e.position,
+        created_at: e.createdAt,
       })),
     },
     {
@@ -696,7 +751,61 @@ export function fromRows(tables: Partial<Record<(typeof TABLE_ORDER)[number], Ro
     createdAt: str(r.created_at),
   }));
 
-  return { profile, goals, texts, analyses, books, plans, evidence, days, practices, practiceLogs, scenes, letters, briefs };
+  const presentPicks: PresentPickRow[] = t('present_picks').map((r) => ({
+    id: str(r.id),
+    half: r.half === 'virtues' ? 'virtues' : 'faults',
+    cardId: str(r.card_id),
+    storyLine: str(r.story_line),
+    applyLine: str(r.apply_line),
+    framingId: strOrNull(r.framing_id),
+    goalId: strOrNull(r.goal_id),
+    rank: Number(r.rank ?? 0),
+    safetyRisk: (r.safety_risk as PresentPickRow['safetyRisk']) ?? 'none',
+    writtenAt: str(r.written_at),
+  }));
+
+  const pastEpochs: PastEpochRow[] = t('past_epochs').map((r) => ({
+    id: str(r.id),
+    label: str(r.label),
+    fromAge: Number(r.from_age ?? 0),
+    toAge: Number(r.to_age ?? 0),
+    position: Number(r.position ?? 0),
+    createdAt: str(r.created_at),
+  }));
+
+  const pastEvents: PastEventRow[] = t('past_events').map((r) => ({
+    id: str(r.id),
+    epochId: str(r.epoch_id),
+    title: str(r.title),
+    weight: r.weight === 'hurt' ? 'hurt' : 'helped',
+    analysed: r.analysed === true,
+    whatHappened: str(r.what_happened),
+    shapedMe: str(r.shaped_me),
+    stillBelieve: str(r.still_believe),
+    joinsBook: r.joins_book === true,
+    safetyRisk: (r.safety_risk as PastEventRow['safetyRisk']) ?? 'none',
+    position: Number(r.position ?? 0),
+    createdAt: str(r.created_at),
+  }));
+
+  return {
+    profile,
+    goals,
+    texts,
+    analyses,
+    books,
+    plans,
+    evidence,
+    days,
+    practices,
+    practiceLogs,
+    scenes,
+    letters,
+    briefs,
+    presentPicks,
+    pastEpochs,
+    pastEvents,
+  };
 }
 
 function groupBy<T>(items: T[], key: (t: T) => string): Map<string, T[]> {
