@@ -586,19 +586,14 @@ ${one}`;
     `insert into public.past_epochs (id, user_id, label, from_age, to_age) values ($1, $2, 'School', 6, 12)`,
     ['ep-a', ALICE],
   );
+  const theirs = await as(BOB, 'select * from public.past_epochs where id = $1', ['ep-a']);
+  check('nobody can read another person’s past', theirs.rows.length === 0, `${theirs.rows.length} rows`);
   await asRejects(
-    'nobody can read another person’s past',
-    BOB,
-    'select * from public.past_epochs where id = $1',
-    ['ep-a'],
-    'empty',
-  );
-  await asRejects(
-    'nor hang an event on it',
+    'nor hang an event on a period that is not theirs',
     BOB,
     `insert into public.past_events (id, user_id, epoch_id, title, weight) values ('ev-x', $1, 'ep-a', 'x', 'helped')`,
     [BOB],
-    'not yours',
+    'belongs to another person',
   );
   await db.exec('reset role');
   await mustReject(

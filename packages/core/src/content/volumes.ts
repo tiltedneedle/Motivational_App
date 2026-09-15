@@ -18,25 +18,25 @@ export const CHOOSER_COPY: Record<string, string> = {
   "past.line": "Your life in periods, the events that still matter, and what they made of you.",
   "past.time": "Two or three sittings. The longest of the three.",
   "present.line": "What gets in your way, and what you're good at, in plain words.",
-  "present.time": "One sitting, about twenty minutes.",
+  "present.time": "One or two sittings, about twenty minutes a deck.",
   "future.line": "Three to five years out, then the goals, then the plan you live by.",
-  "future.time": "Three evenings, twenty to thirty-five minutes each.",
+  "future.time": "Three sittings over two days. Twenty-five minutes, then fifteen, then twenty.",
   "future.badge": "Today comes from here",
   "explore.label": "Not sure? Let's explore.",
   "footer": "Start anywhere. The other two stay open when you're done.",
-  "reentry": "You've written one. The others are here when you want them, and nothing you wrote changes.",
+  "reentry": "You've written one. The other two are here when you want them, and what you wrote stays as it is.",
 };
 
 export const EXPLAINER_COPY: Record<string, string> = {
   "heading": "What each one is, and how long it takes.",
   "past.para": "Past cuts your life into a few periods and asks what happened in each that still matters. You choose a handful to go into properly: what happened, what it made of you, and one line you still believe. You decide which join your Book. It is the longest of the three, and the one most people leave until last.",
-  "present.para": "Present is two decks of plain statements about how you work. One deck is what gets in your way, the other what you are good at. You pick what sounds like you, then write twice about each pick. The faults feed your plan's answer to what stops you; the strengths get paired with a goal. About fifteen minutes a deck.",
-  "future.para": "Future is fifteen minutes of writing about life three to five years on, if things went well. Then you name the goals that are already in what you wrote, and answer five short questions about each one. Out of that comes a plan and a Book you seal. Three sittings across two days, under half an hour each.",
+  "present.para": "Present is two decks of plain statements about how you work. One deck is what gets in your way, the other what you are good at. You pick what sounds like you, then write twice about each pick. About twenty minutes a deck.",
+  "future.para": "Future is fifteen minutes of writing about life three to five years on, if things went well. Then you name the goals that are already in what you wrote, and answer five short questions about each one. Out of that comes a plan and a Book you seal. Three sittings over two days.",
   "order.title": "One way through, not the only one.",
   "order.steps": "Present · the faults → Future → Present · the virtues → Past",
-  "order.why": "You get sharper about what stops you, then make the plan while that is fresh. Your strengths then have a plan to bring them to, and by the time you go back there is somewhere to stand.",
-  "order.exception": "If something from the past is still causing trouble now, it is reasonable to start there instead.",
-  "anyorder": "Any order works. Nothing locks behind anything else, and doing one is a complete thing on its own.",
+  "order.why": "You get sharper about what stops you, then make the plan while that is fresh. Your strengths then have a plan to bring them to.",
+  "order.exception": "If the past is what is on your mind, start there.",
+  "anyorder": "Any order works. Nothing is locked, and doing one on its own is a whole thing.",
   "choose.title": "Start with whichever one you want.",
 };
 
@@ -59,7 +59,7 @@ export const FAULT_CARDS_STARTER: PresentCard[] = [
 
 export const FAULT_CARDS_FULL: PresentCard[] = [
   { id: "f-wait-to-be-asked", text: "I wait to be asked.", group: "drive" },
-  { id: "f-leave-without-saying", text: "I leave the room without saying the thing.", group: "drive" },
+  { id: "f-leave-without-saying", text: "I stop as soon as it stops being urgent.", group: "drive" },
   { id: "f-aim-low", text: "I aim low so I can't miss.", group: "drive" },
   { id: "f-only-when-watched", text: "I only move when someone is waiting on me.", group: "drive" },
   { id: "f-flat-by-midweek", text: "I run out of steam by Wednesday.", group: "drive" },
@@ -90,10 +90,10 @@ export const FAULT_CARDS_FULL: PresentCard[] = [
   { id: "f-rather-do-it-alone", text: "I'd rather do it alone than ask for help.", group: "people" },
   { id: "f-go-cold", text: "I go cold instead of saying what's wrong.", group: "people" },
   { id: "f-take-over", text: "I take over instead of letting someone else learn.", group: "people" },
-  { id: "f-next-idea-better", text: "The next idea always looks better than this one.", group: "openness" },
+  { id: "f-next-idea-better", text: "I daydream through the part I am supposed to be doing.", group: "openness" },
   { id: "f-bored-by-routine", text: "I get bored the moment it becomes routine.", group: "openness" },
   { id: "f-read-instead-of-do", text: "I read about it instead of doing it.", group: "openness" },
-  { id: "f-stay-with-known", text: "I stay with what I already know how to do.", group: "openness" },
+  { id: "f-stay-with-known", text: "I pick the job I have already done before.", group: "openness" },
   { id: "f-finish-in-my-head", text: "I finish it in my head and never start it.", group: "openness" },
   { id: "f-no-to-untried", text: "I say no to things before I have tried them.", group: "openness" },
   { id: "f-lost-in-detail", text: "I get lost in the part nobody will notice.", group: "openness" },
@@ -103,10 +103,7 @@ export const FAULT_CARDS_FULL: PresentCard[] = [
 /** The earliest sign, tapped before the writing: this becomes the If of the if-then. */
 export const FAULT_FRAMINGS: PresentFraming[] = [
   { id: "fs-night-before", label: "The night before" },
-  { id: "fs-not-interesting", label: "The moment it stops being interesting" },
-  { id: "fs-move-to-tomorrow", label: "The first time I move it to tomorrow" },
   { id: "fs-someone-asks", label: "The moment someone else needs something" },
-  { id: "fs-open-the-phone", label: "The first time I pick up my phone instead" },
   { id: "fs-time-of-day", label: "The time of day it usually goes" },
   { id: "fs-the-room", label: "The room I am in when it starts" },
 ];
@@ -128,7 +125,7 @@ export const VIRTUE_CARDS_STARTER: PresentCard[] = [
 
 export const VIRTUE_CARDS_FULL: PresentCard[] = [
   { id: "v-dr-boring", text: "I can do boring things for a long time.", group: "drive" },
-  { id: "v-dr-after", text: "I keep working after the interesting part is over.", group: "drive" },
+  { id: "v-dr-after", text: "I get up early for it when I have to.", group: "drive" },
   { id: "v-dr-unwatched", text: "I work the same when nobody is checking.", group: "drive" },
   { id: "v-dr-finish", text: "I finish things nobody is waiting for.", group: "drive" },
   { id: "v-dr-daily", text: "I would rather do a little every day than a lot at once.", group: "drive" },
@@ -136,7 +133,7 @@ export const VIRTUE_CARDS_FULL: PresentCard[] = [
   { id: "v-dr-worst", text: "I do the worst job on the list first.", group: "drive" },
   { id: "v-dr-return", text: "I come back the day after it goes badly.", group: "drive" },
   { id: "v-or-when", text: "If I say a day, it is done by that day.", group: "order" },
-  { id: "v-or-early", text: "I am early, and I would rather wait than rush.", group: "order" },
+  { id: "v-or-early", text: "I would rather be early and wait.", group: "order" },
   { id: "v-or-small", text: "I keep track of small things other people forget.", group: "order" },
   { id: "v-or-night", text: "I set things out the night before.", group: "order" },
   { id: "v-or-tidy", text: "I leave a place tidier than I found it.", group: "order" },
@@ -146,7 +143,7 @@ export const VIRTUE_CARDS_FULL: PresentCard[] = [
   { id: "v-nv-quiet", text: "When something goes wrong, I get quieter, not louder.", group: "nerve" },
   { id: "v-nv-next", text: "In an emergency I do the next thing instead of freezing.", group: "nerve" },
   { id: "v-nv-wrong", text: "I can be told I am wrong without it ruining the day.", group: "nerve" },
-  { id: "v-nv-sleep", text: "I sleep the night before a big day.", group: "nerve" },
+  { id: "v-nv-sleep", text: "I can wait until morning to worry about it.", group: "nerve" },
   { id: "v-nv-wait", text: "I can wait for an answer without checking every hour.", group: "nerve" },
   { id: "v-nv-stupid", text: "I can look stupid in front of people and carry on.", group: "nerve" },
   { id: "v-nv-no", text: "I can say no and let someone be annoyed with me.", group: "nerve" },
@@ -173,26 +170,24 @@ export const VIRTUE_FRAMINGS: PresentFraming[] = [
   { id: "vs-quit", label: "A time I nearly quit and didn't" },
   { id: "vs-nobody", label: "A day nobody saw it" },
   { id: "vs-someone", label: "When it was for someone else" },
-  { id: "vs-wrong", label: "The week everything went wrong" },
-  { id: "vs-first", label: "The first time, in front of people" },
   { id: "vs-small", label: "A small thing that mattered later" },
 ];
 
 export const FAULT_COPY: Record<string, string> = {
   "deckQuestion": "What gets in your way?",
-  "deckNote": "Pick up to three. Nothing here is a diagnosis — they are habits, and a habit can be caught early.",
+  "deckNote": "Pick up to three. These are habits, not a verdict on you. A habit shows itself before it costs you.",
   "writeOnePrompt": "Tell me the time this cost you most. What happened, and what it cost.",
-  "writeOneHint": "Two lines. What happened, and what it cost.",
+  "writeOneHint": "The day it cost you something",
   "writeTwoPrompt": "Tap the earliest sign you could catch. Then write what you do instead.",
   "writeTwoHint": "The sign, then the answer to it",
 };
 
 export const VIRTUE_COPY: Record<string, string> = {
   "deckQuestion": "Which of these are true about you?",
-  "deckNote": "This is the harder deck for most people. Picking a card is not a boast; it is naming something you can use. Take the ones that are plainly true, not the ones that sound good.",
+  "deckNote": "Pick up to three. Take the ones that are plainly true, not the ones that sound good.",
   "writeOnePrompt": "One time this was true and it mattered. Where you were, what was at stake, and what you did.",
   "writeOneHint": "Two lines: where you were, and what you did",
-  "writeTwoPrompt": "Pick the goal that needs exactly this. Then write what it looks like used on purpose next week.",
+  "writeTwoPrompt": "Pick the goal that needs this. Then write where you will use it next week.",
   "writeTwoHint": "On ___ I use this to ___",
 };
 
@@ -200,11 +195,12 @@ export const VIRTUE_COPY: Record<string, string> = {
 
 export const PAST_COPY: Record<string, string> = {
   "door.title": "Past",
+  "join.crisisNote": "This one stays on your phone and out of the Book. It is still yours, and it still exports.",
   "door.body": "Your life in periods, the events in each that still matter, and what each one made of you.",
   "door.time": "Two or three sittings. The longest of the three.",
-  "doorway.title": "This one asks about a real life.",
+  "doorway.title": "This one asks about things that happened.",
   "doorway.body": "You will cut your life into a few periods, name the events in each that still matter, and write about what a few of them made of you. Some of it may be hard to be near. You choose afterwards which of them join your Book. You can stop at any point, and nothing you have written is lost.",
-  "doorway.note": "Morrow is not therapy, and nothing here is an assessment of you. On every screen, Need someone? is one tap from lines that are free and answered by people.",
+  "doorway.note": "Morrow is not therapy. Need someone? sits on every screen here. The lines behind it are free and answered by people.",
   "doorway.begin": "Begin",
   "doorway.later": "Another time",
   "age.prompt": "How old are you?",
@@ -225,7 +221,7 @@ export const PAST_COPY: Record<string, string> = {
   "analyse.two.hint": "How you are different now because that happened. Good and bad both count.",
   "analyse.three.prompt": "One line to close it. What you took from that and still believe, or what you would say to the version of you who was there.",
   "analyse.three.hint": "One sentence, in your own words — it does not have to be tidy.",
-  "analyse.framings": "What that moment taught me | What I decided about myself that day | What I would tell the person I was | What I have carried since and would keep | What I know now that would have helped then",
+  "analyse.framings": "What that moment taught me | What I decided about myself that day | What I would tell the person I was | What I know now that would have helped then",
   "join.question": "Does this one join your Book? It stays yours either way, and you can change this before the Book is sealed.",
   "join.yes": "Let it join the Book",
   "join.no": "Keep this one to myself",

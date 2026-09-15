@@ -26,6 +26,8 @@ import {
   FAULT_CARDS_FULL,
   FAULT_CARDS_STARTER,
   FAULT_COPY,
+  FAULT_FRAMINGS,
+  VIRTUE_FRAMINGS,
   PAST_COPY,
   PAST_FRAMINGS,
   VIRTUE_CARDS_FULL,
@@ -204,6 +206,16 @@ describe('the decks as written', () => {
     }
   });
 
+  it('offers three or four ways in, never a menu of them', () => {
+    // PRD 11.3's schema is 3..4, and every framing set the app already ships
+    // is four. A longer list stops being a hand on the shoulder.
+    for (const set of [FAULT_FRAMINGS, VIRTUE_FRAMINGS, PAST_FRAMINGS]) {
+      expect(set.length).toBeGreaterThanOrEqual(3);
+      expect(set.length).toBeLessThanOrEqual(4);
+      expect(new Set(set.map((f) => f.id)).size).toBe(set.length);
+    }
+  });
+
   it('keeps the chooser and the explainer agreeing about the doors', () => {
     for (const key of ['heading', 'past.line', 'present.line', 'future.line', 'explore.label', 'footer']) {
       expect(CHOOSER_COPY[key]).toBeTruthy();
@@ -224,6 +236,6 @@ describe('the decks as written', () => {
     expect(PAST_COPY['doorway.note']).toMatch(/Need someone/i);
     expect(PAST_COPY['doorway.note']).toMatch(/not therapy/i);
     expect(PAST_COPY['join.question']).toMatch(/Book/);
-    expect(PAST_FRAMINGS.length).toBeGreaterThanOrEqual(5);
+    expect(PAST_COPY['join.crisisNote']).toMatch(/out of the Book/);
   });
 });
