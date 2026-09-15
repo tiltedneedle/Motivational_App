@@ -7,7 +7,7 @@
  *
  * It never returns the user's words, only a verdict and a category.
  */
-import Anthropic from 'npm:@anthropic-ai/sdk@0.68.0';
+import { askJson, provider } from '../_shared/llm.ts';
 import { allow, callerOf, tooMany } from '../_shared/limit.ts';
 
 const MODEL = 'claude-haiku-4-5-20251001';
@@ -54,41 +54,31 @@ Deno.serve(async (req) => {
   }
   if (!text.trim()) return json({ risk: 'none', category: null, action: 'continue' });
 
-  const key = Deno.env.get('ANTHROPIC_API_KEY');
-  // Without a provider the device's own screen is the whole answer, and it is
+  // Whichever model the secrets name (see _shared/llm.ts). Without a
+  // provider the device's own screen is the whole answer, and it is
   // deliberately the over-sensitive one. Failing open here is safe; failing
   // open on the device would not be.
+  const key = provider(MODEL);
   if (!key) return json({ risk: 'none', category: null, action: 'continue', degraded: true });
 
   try {
-    const client = new Anthropic({ apiKey: key });
-    const res = await client.messages.create({
-      model: MODEL,
-      max_tokens: 200,
-      system: [{ type: 'text', text: SYSTEM, cache_control: { type: 'ephemeral' } }],
-      messages: [{ role: 'user', content: text.slice(0, 6000) }],
-      tools: [
-        {
-          name: 'verdict',
-          description: 'Return the verdict.',
-          input_schema: {
-            type: 'object',
-            properties: {
-              risk: { type: 'string', enum: ['none', 'concern', 'crisis'] },
-              category: {
-                type: ['string', 'null'],
-                enum: ['self-harm', 'despair', 'disordered-eating', 'substance', null],
-              },
-            },
-            required: ['risk'],
+    const input = (await askJson(key, {
+      name: 'verdict',
+      system: SYSTEM,
+      user: text.slice(0, 6000),
+      maxTokens: 200,
+      schema: {
+        type: 'object',
+        properties: {
+          risk: { type: 'string', enum: ['none', 'concern', 'crisis'] },
+          category: {
+            type: ['string', 'null'],
+            enum: ['self-harm', 'despair', 'disordered-eating', 'substance', null],
           },
         },
-      ],
-      tool_choice: { type: 'tool', name: 'verdict' },
-    });
-
-    const block = res.content.find((c) => c.type === 'tool_use');
-    const input = (block as { input?: { risk?: string; category?: string | null } } | undefined)?.input;
+        required: ['risk'],
+      },
+    })) as { risk?: string; category?: string | null } | null;
     const risk = input?.risk === 'crisis' ? 'crisis' : input?.risk === 'concern' ? 'concern' : 'none';
     return json({
       risk,

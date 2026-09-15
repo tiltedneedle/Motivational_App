@@ -5,7 +5,7 @@
  * that is checked here and again on the device. A scene that could belong to
  * anyone is not this person's future; it is stock footage.
  */
-import Anthropic from 'npm:@anthropic-ai/sdk@0.68.0';
+import { askJson, provider } from '../_shared/llm.ts';
 import { allow, callerOf, tooMany } from '../_shared/limit.ts';
 
 const MODEL = 'claude-sonnet-5';
@@ -83,40 +83,25 @@ Deno.serve(async (req) => {
   const type = String(body.type ?? 'practice');
   const tone = body.tone ?? null;
 
-  const key = Deno.env.get('ANTHROPIC_API_KEY');
+  // Whichever model the secrets name (see _shared/llm.ts).
+  const key = provider(MODEL);
   if (!key) return json({ degraded: 'no provider configured' }, 503);
 
   try {
-    const client = new Anthropic({ apiKey: key });
-    const res = await client.messages.create({
-      model: MODEL,
-      max_tokens: 600,
-      system: [{ type: 'text', text: SYSTEM, cache_control: { type: 'ephemeral' } }],
-      messages: [
-        {
-          role: 'user',
-          content: `Goal: ${goalTitle}\nType: ${type}\nWho else it changes: ${impactLine}\n\nTheir writing:\n${idealExcerpt}`,
+    const input = (await askJson(key, {
+      name: 'scene',
+      system: SYSTEM,
+      user: `Goal: ${goalTitle}\nType: ${type}\nWho else it changes: ${impactLine}\n\nTheir writing:\n${idealExcerpt}`,
+      maxTokens: 600,
+      schema: {
+        type: 'object',
+        properties: {
+          narrative: { type: 'string' },
+          sourced_detail: { type: 'string' },
         },
-      ],
-      tools: [
-        {
-          name: 'scene',
-          description: 'Return the scene.',
-          input_schema: {
-            type: 'object',
-            properties: {
-              narrative: { type: 'string' },
-              sourced_detail: { type: 'string' },
-            },
-            required: ['narrative', 'sourced_detail'],
-          },
-        },
-      ],
-      tool_choice: { type: 'tool', name: 'scene' },
-    });
-
-    const block = res.content.find((c) => c.type === 'tool_use');
-    const input = (block as { input?: { narrative?: string; sourced_detail?: string } } | undefined)?.input;
+        required: ['narrative', 'sourced_detail'],
+      },
+    })) as { narrative?: string; sourced_detail?: string } | null;
     const narrative = (input?.narrative ?? '').trim();
     const detail = (input?.sourced_detail ?? '').trim();
 

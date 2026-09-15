@@ -6,7 +6,7 @@
  * on the device by `guarded()`. Two independent checks, because this is the one
  * place a model could put words in someone's mouth.
  */
-import Anthropic from 'npm:@anthropic-ai/sdk@0.68.0';
+import { askJson, provider } from '../_shared/llm.ts';
 import { allow, callerOf, tooMany } from '../_shared/limit.ts';
 
 const MODEL = 'claude-sonnet-5';
@@ -103,49 +103,39 @@ Deno.serve(async (req) => {
   }
   if (text.trim().length < 40) return json({ spans: [] });
 
-  const key = Deno.env.get('ANTHROPIC_API_KEY');
-  // No key, no network, no model: the device falls back to its local extractor,
-  // which chooses from the same text. The feature degrades, it never breaks.
+  // Whichever model the secrets name (see _shared/llm.ts). No key, no
+  // network, no model: the device falls back to its local extractor, which
+  // chooses from the same text. The feature degrades, it never breaks.
+  const key = provider(MODEL);
   if (!key) return json({ spans: [], degraded: 'no provider configured' });
 
   try {
-    const client = new Anthropic({ apiKey: key });
-    const res = await client.messages.create({
-      model: MODEL,
-      max_tokens: 1200,
-      system: [{ type: 'text', text: SYSTEM, cache_control: { type: 'ephemeral' } }],
-      messages: [{ role: 'user', content: `Writing:\n\n${text}\n\nChoose up to ${limit} phrases.` }],
-      tools: [
-        {
-          name: 'report_spans',
-          description: 'Report the phrases you chose, copied exactly.',
-          input_schema: {
-            type: 'object',
-            properties: {
-              spans: {
-                type: 'array',
-                maxItems: 9,
-                items: {
-                  type: 'object',
-                  properties: {
-                    text: { type: 'string' },
-                    domain: { type: 'string', enum: [...DOMAINS] },
-                    merge_with: { type: 'integer' },
-                  },
-                  required: ['text', 'domain'],
-                },
+    const input = (await askJson(key, {
+      name: 'report_spans',
+      system: SYSTEM,
+      user: `Writing:\n\n${text}\n\nChoose up to ${limit} phrases.`,
+      maxTokens: 1200,
+      schema: {
+        type: 'object',
+        properties: {
+          spans: {
+            type: 'array',
+            maxItems: 9,
+            items: {
+              type: 'object',
+              properties: {
+                text: { type: 'string' },
+                domain: { type: 'string', enum: [...DOMAINS] },
+                merge_with: { type: 'integer' },
               },
-              left_out_question: { type: 'string' },
+              required: ['text', 'domain'],
             },
-            required: ['spans'],
           },
+          left_out_question: { type: 'string' },
         },
-      ],
-      tool_choice: { type: 'tool', name: 'report_spans' },
-    });
-
-    const block = res.content.find((c) => c.type === 'tool_use');
-    const input = (block as { input?: { spans?: unknown[]; left_out_question?: string } } | undefined)?.input;
+        required: ['spans'],
+      },
+    })) as { spans?: unknown[]; left_out_question?: string } | null;
     const spans = verify(text, Array.isArray(input?.spans) ? (input!.spans as []) : []);
 
     return json({

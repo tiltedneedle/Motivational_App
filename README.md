@@ -112,8 +112,11 @@ Everything runs on local fallbacks without one. To go beyond them:
    pnpm sb config diff                    # read it first
    pnpm sb config push --yes              # otp length and expiry, the deep-link URLs, Apple
    pnpm sb functions deploy               # readback, safety, scene, delete-account
-   pnpm sb secrets set ANTHROPIC_API_KEY=… FAL_KEY=…
+   pnpm sb secrets set LLM_BASE_URL=https://api.groq.com/openai/v1 LLM_API_KEY=… LLM_MODEL=llama-3.3-70b-versatile
+   # or: pnpm sb secrets set ANTHROPIC_API_KEY=…
    ```
+
+   The three AI functions speak to any OpenAI-compatible endpoint (OpenAI, Groq, Gemini's compatible URL, OpenRouter, Mistral, an Ollama of your own) through those three secrets, or to Anthropic through its one; with none set they say so and the app runs on its device engines. What a model adds, and what stands in for it without one: the **read-back** after the Fifteen (the model picks the person's own phrases as goal candidates; without it a local extractor picks), the **safety second opinion** on a sitting (the device's pattern screen is the first opinion and runs regardless), and the **scene** narrative in Envision (without it, the typeset scene). The coach, the Blueprint, the Portrait, the Book and everything else never leave the device.
 
    The service-role key and the anon key are already in the functions' environment; neither belongs in the app or this repo.
 3. Authentication → Email. The app asks for a **six-digit code**, and `config.toml` carries the template for it (`supabase/templates/magic_link.html`, `{{ .Token }}`) — commented out, because a free-tier project on the default email provider refuses template changes. Until the project is on Pro (or has its own SMTP) the email carries Supabase's link, and the app signs in from the link too: tapped on the phone it opens `morrow://` with the session, which the root layout hands to the auth server. On Pro, uncomment the two template tables and `pnpm sb config push --yes`. Authentication → Providers → Apple: `config.toml` enables it with the bundle id `app.morrow.client` as the client id (native sign-in needs no secret).
