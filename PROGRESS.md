@@ -47,6 +47,10 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 36. The web build is ready for Vercel: `vercel.json` (build, output,
+      immutable asset caching, the SPA rewrite), the two EXPO_PUBLIC vars, and
+      the auth allow-list note; `http://localhost:8790` added to the project
+      redirect URLs and pushed
 - [ ] 35. **IN FLIGHT — the Past and Present volumes.** The client asked for all
       three, named plainly (Past / Present / Future, no "Authoring"), chosen from
       a four-door screen, each path proceeding the way the source program does.

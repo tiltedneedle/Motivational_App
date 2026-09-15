@@ -15,7 +15,13 @@ major_version = 17
 [auth]
 enabled = true
 site_url = "morrow://"
-additional_redirect_urls = ["morrow://", "http://localhost:8081"]
+# Where a sign-in link may land. The scheme is the installed app; the two
+# localhost ports are the dev server and `pnpm serve` over the built bundle.
+# Add the deployed web origin here after the first deploy — the exact origin,
+# e.g. "https://morrow.vercel.app/**". Never a bare "https://*.vercel.app/**":
+# anyone can host on that domain, and a redirect allow-list that wide hands
+# them a session.
+additional_redirect_urls = ["morrow://", "http://localhost:8081", "http://localhost:8790"]
 jwt_expiry = 3600
 enable_signup = true
 

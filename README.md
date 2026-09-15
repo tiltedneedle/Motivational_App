@@ -124,6 +124,47 @@ Everything runs on local fallbacks without one. To go beyond them:
 5. Put the project URL and the publishable (anon) key in the app's environment (`EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`) — `apps/mobile/.env` works for `expo start`, `expo run:*` and `pnpm build:web`. The tests build with `pnpm build:web:offline`, which blanks every `EXPO_PUBLIC_*` so `pnpm verify` never reaches the network.
 6. The hard delete is on the clock already: migration 0002 schedules a nightly pg_cron job that removes the auth users past their seven days (and the function sweeps on every call as well). Was: schedule a call to the `delete-account` sweep daily if you want it on the clock, e.g. a pg_cron job hitting the function, or leave it: every close of an account runs the sweep for the ones whose week is up.
 
+### Putting the web build on Vercel
+
+The web export is a single-page bundle (`web.output: "single"`), so Vercel needs no
+adapter — `vercel.json` in the repo root already carries the build command, the output
+directory, immutable caching for the hashed assets, and the one rewrite that matters:
+every path falls back to `index.html`, because expo-router does the routing in the
+browser. Asset URLs are absolute, so a deep link like `/book` loads correctly.
+
+1. Import the repository on Vercel. Leave the root directory as the repo root; the
+   settings in `vercel.json` win over the dashboard.
+2. Set these environment variables for **Production and Preview**, before the first
+   build — `EXPO_PUBLIC_*` values are inlined at build time, so a variable added later
+   does nothing until the next build:
+
+   ```
+   EXPO_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
+   EXPO_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_…
+   ```
+
+   The publishable key is public by design — it is in every shipped app bundle — and RLS
+   is what protects the data. The secret key, the service role and the database password
+   never go near Vercel.
+3. After the first deploy, add the origin to the auth allow-list: put the exact origin in
+   `additional_redirect_urls` in `supabase/config.toml` (e.g. `"https://morrow.vercel.app/**"`)
+   and `pnpm sb config push --yes`. Without it the sign-in link refuses to land. Do not
+   use a bare `https://*.vercel.app/**`: anyone can host on that domain, and an
+   allow-list that wide hands them a session.
+4. If the site is a client preview rather than a public launch, turn on Vercel's
+   deployment protection. The app talks to the live project, so a public URL is a public
+   sign-up — the edge functions are rate-limited per caller (migration 0003), but the
+   quota is still real.
+
+The build takes a few minutes, mostly `pnpm install`. `pnpm install --frozen-lockfile
+--filter mobile...` skips the root-only dev dependencies and is faster, at the cost of
+being one more thing that can drift; the committed default installs everything.
+
+What the web build is and is not: it is the whole app, and it is how the end-to-end suite
+and the accessibility pass run. It is not the product — the product is the phone app. The
+web build has no notifications, no haptics, no Apple sign-in and no wallpaper export, and
+it says so where those appear.
+
 ## Layout
 
 ```

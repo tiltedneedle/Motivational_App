@@ -580,6 +580,63 @@ ${one}`;
     'check',
   );
 
+  // ---- the two new volumes (0004): one person's past is not another's
+  await db.exec('reset role');
+  await db.query(
+    `insert into public.past_epochs (id, user_id, label, from_age, to_age) values ($1, $2, 'School', 6, 12)`,
+    ['ep-a', ALICE],
+  );
+  await asRejects(
+    'nobody can read another person’s past',
+    BOB,
+    'select * from public.past_epochs where id = $1',
+    ['ep-a'],
+    'empty',
+  );
+  await asRejects(
+    'nor hang an event on it',
+    BOB,
+    `insert into public.past_events (id, user_id, epoch_id, title, weight) values ('ev-x', $1, 'ep-a', 'x', 'helped')`,
+    [BOB],
+    'not yours',
+  );
+  await db.exec('reset role');
+  await mustReject(
+    db,
+    'an event must be one that helped or one that hurt, never a third thing',
+    `insert into public.past_events (id, user_id, epoch_id, title, weight) values ('ev-y', $1, 'ep-a', 'x', 'neutral')`,
+    [ALICE],
+    'check',
+  );
+  await mustReject(
+    db,
+    'a pick must say which half of the Present it belongs to',
+    `insert into public.present_picks (id, user_id, half, card_id, story_line) values ('pp-x', $1, 'both', 'f-a', 'a line')`,
+    [ALICE],
+    'check',
+  );
+  await mustReject(
+    db,
+    'a pick cannot be stored without the line they wrote',
+    `insert into public.present_picks (id, user_id, half, card_id, story_line) values ('pp-y', $1, 'faults', 'f-a', '   ')`,
+    [ALICE],
+    'check',
+  );
+  {
+    await db.query(
+      `insert into public.present_picks (id, user_id, half, card_id, story_line) values ('pp-ok', $1, 'faults', 'f-a', 'the week it cost me')`,
+      [ALICE],
+    );
+    const row = await db.query(`select joins_book from public.past_events where id = 'ev-a'`).catch(() => null);
+    void row;
+    await db.query(
+      `insert into public.past_events (id, user_id, epoch_id, title, weight) values ('ev-a', $1, 'ep-a', 'the move', 'hurt')`,
+      [ALICE],
+    );
+    const kept = await db.query(`select joins_book from public.past_events where id = 'ev-a'`);
+    check('an event stays out of the Book until the person says otherwise', kept.rows[0].joins_book === false);
+  }
+
   // ---- the ceiling on the AI functions (0003): counted here, not in a worker's memory
   await db.exec('reset role');
   const hits = [];
