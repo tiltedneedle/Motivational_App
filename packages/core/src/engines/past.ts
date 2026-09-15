@@ -138,10 +138,18 @@ export function pastStep(
   events: PastEvent[],
   analyses: PastAnalysis[],
   track: DepthTrack,
+  /**
+   * Whether the person has walked all the periods and said they are done
+   * listing. Without this the walk ended at the first period that happened to
+   * have an event in it, so a second event could never be added to it — and a
+   * period a person deliberately left empty pulled them back to it forever.
+   */
+  listed = false,
 ): PastStep {
   if (epochs.length === 0) return { step: 'age' };
-  const empty = epochs.find((e) => !events.some((v) => v.epochId === e.id));
+  const empty = listed ? undefined : epochs.find((e) => !events.some((v) => v.epochId === e.id));
   if (empty) return { step: 'events', epochId: empty.id, listed: events.length };
+  if (!listed && events.length === 0) return { step: 'events', epochId: epochs[0]!.id, listed: 0 };
   const target = Math.min(analyseTarget(track), events.length);
   const chosen = events.filter((e) => e.analysed);
   if (chosen.length < target) return { step: 'choose', listed: events.length, target };

@@ -189,6 +189,8 @@ export interface MorrowState {
   /** The Past volume: the periods of a life, and the events hanging on them. */
   pastEpochs: PastEpochRow[];
   pastEvents: PastEventRow[];
+  /** True once the person has walked every period and said they are done listing. */
+  pastListed: boolean;
   /**
    * Letters from the future self, and to it (PRD §7.8).
    *
@@ -435,6 +437,7 @@ export interface MorrowState {
 
   /** The Past volume's three moves. */
   setPastEpochs: (epochs: { id: string; label: string; fromAge: number; toAge: number }[]) => void;
+  setPastListed: (listed: boolean) => void;
   addPastEvent: (epochId: string, title: string, weight: 'helped' | 'hurt') => void;
   dropPastEvent: (id: string) => void;
   choosePastEvent: (id: string, analysed: boolean) => void;
@@ -529,6 +532,7 @@ const EMPTY = {
   presentPicks: [],
   pastEpochs: [],
   pastEvents: [],
+  pastListed: false,
   letters: [],
   account: null,
   accountAsked: false,
@@ -1694,6 +1698,7 @@ const store = create<MorrowState>()(
             pastEvents: s.pastEvents.filter((v) => epochs.some((e) => e.id === v.epochId)),
           };
         }),
+      setPastListed: (listed) => set({ pastListed: listed }),
       addPastEvent: (epochId, title, weight) =>
         set((s) => ({
           pastEvents: [
@@ -2198,6 +2203,7 @@ export function volumesOf(s: MorrowState): Record<VolumeName, VolumeState> {
     })),
     pastEpochs: s.pastEpochs.map((e) => ({ id: e.id, label: e.label, fromAge: e.fromAge, toAge: e.toAge })),
     pastEvents: s.pastEvents.map((v) => ({ id: v.id, epochId: v.epochId, title: v.title, weight: v.weight, analysed: v.analysed })),
+    pastListed: s.pastListed,
     pastAnalyses: s.pastEvents.map((v) => ({
       eventId: v.id,
       whatHappened: v.whatHappened,

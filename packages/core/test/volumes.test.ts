@@ -291,3 +291,47 @@ describe('where each door stands', () => {
     ]);
   });
 });
+
+describe('walking the periods is the person\u2019s, not the data\u2019s', () => {
+  const track = 'starter' as const;
+  const epochs = epochsFor(30, track);
+
+  it('stays on the walk until the person says they are done listing', () => {
+    // One event in the first period must not end the listing: on the long
+    // track a period holds six, and a second could never be added otherwise.
+    const one: PastEvent[] = [{ id: 'e1', epochId: epochs[0]!.id, title: 't', weight: 'helped', analysed: false }];
+    expect(pastStep(epochs, one, [], track, false).step).toBe('events');
+    expect(pastStep(epochs, one, [], track, true).step).toBe('choose');
+  });
+
+  it('lets a period be left empty without pulling the person back to it', () => {
+    const some: PastEvent[] = [
+      { id: 'e1', epochId: epochs[0]!.id, title: 'a', weight: 'helped', analysed: true },
+      { id: 'e2', epochId: epochs[1]!.id, title: 'b', weight: 'hurt', analysed: true },
+      { id: 'e3', epochId: epochs[1]!.id, title: 'c', weight: 'helped', analysed: true },
+    ];
+    // Periods three and four are empty on purpose; once listed, they are past.
+    const step = pastStep(epochs, some, [], track, true);
+    expect(step.step).toBe('analyse');
+  });
+
+  it('counts the volume done on the listed walk, not on every period being filled', () => {
+    const some: PastEvent[] = [{ id: 'e1', epochId: epochs[0]!.id, title: 'a', weight: 'helped', analysed: true }];
+    const analyses: PastAnalysis[] = [
+      { eventId: 'e1', whatHappened: 'a', shapedMe: 'b', stillBelieve: 'c', joinsBook: false },
+    ];
+    expect(
+      volumeStates({
+        track,
+        goals: 0,
+        hasIdeal: false,
+        books: 0,
+        presentPicks: [],
+        pastEpochs: epochs,
+        pastEvents: some,
+        pastAnalyses: analyses,
+        pastListed: true,
+      }).past,
+    ).toBe('done');
+  });
+});

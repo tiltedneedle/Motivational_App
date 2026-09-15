@@ -27,6 +27,8 @@ export interface VolumesInput {
   pastEpochs: Epoch[];
   pastEvents: PastEvent[];
   pastAnalyses: PastAnalysis[];
+  /** Whether the periods have been walked to the end. */
+  pastListed?: boolean;
 }
 
 export interface VolumeStanding {
@@ -40,7 +42,7 @@ export function volumeStates(input: VolumesInput): Record<VolumeName, VolumeStat
   const bothHalves = halfComplete(input.presentPicks, 'faults', input.track) && halfComplete(input.presentPicks, 'virtues', input.track);
   const present: VolumeState = bothHalves ? 'done' : input.presentPicks.length > 0 ? 'started' : 'untouched';
 
-  const step = pastStep(input.pastEpochs, input.pastEvents, input.pastAnalyses, input.track);
+  const step = pastStep(input.pastEpochs, input.pastEvents, input.pastAnalyses, input.track, input.pastListed ?? false);
   const past: VolumeState = step.step === 'done' ? 'done' : input.pastEpochs.length > 0 || input.pastEvents.length > 0 ? 'started' : 'untouched';
 
   return { past, present, future };
