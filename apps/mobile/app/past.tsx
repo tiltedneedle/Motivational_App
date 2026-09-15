@@ -14,8 +14,8 @@
  * Book, and a line the safety screen flags is held out whatever they chose —
  * which the screen says, rather than overriding quietly.
  */
-import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useNavigation, useRouter } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -28,7 +28,7 @@ import {
   eventsPerEpoch,
   pastStep,
 } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Notice, Rule, Statement, Studio, TextButton, TopBar, UserField, accent, day } from '@morrow/ui';
+import { Body, Chip, InkButton, Label, Notice, Rule, Statement, Studio, TextButton, TopBar, UserField, accent, announce, day } from '@morrow/ui';
 import { useMorrow } from '../src/store';
 import { track, useFirstRunStep } from '../src/analytics';
 
@@ -46,6 +46,9 @@ export default function Past() {
   const saveAnalysis = useMorrow((s) => s.savePastAnalysis);
   const setJoins = useMorrow((s) => s.setPastJoinsBook);
   const showResources = useMorrow((s) => s.showResources);
+  const draft = useMorrow((s) => s.pastDraft);
+  const saveDraft = useMorrow((s) => s.savePastDraft);
+  const clearDraft = useMorrow((s) => s.clearPastDraft);
   useFirstRunStep('past_doorway');
 
   const [entered, setEntered] = useState(() => epochs.length > 0);
@@ -55,21 +58,29 @@ export default function Past() {
    * event impossible to add, and pulled anyone back to a period they had
    * deliberately left blank.
    */
-  const [cursor, setCursor] = useState(0);
+  /**
+   * The sitting they left, read once at mount. This is the longest of the
+   * three volumes and the one people are likeliest to put down part-way, so
+   * putting it down has to cost nothing.
+   */
+  const [resumed] = useState(() => draft);
+  const [cursor, setCursor] = useState(() => resumed?.cursor ?? 0);
   /**
    * The picking screen stays until the person presses on. Without this it
    * jumped to the writing the instant the last one was tapped, so its own
    * button was unreachable and a pick could not be reconsidered.
    */
-  const [picked, setPicked] = useState(false);
-  const [age, setAge] = useState('');
-  const [title, setTitle] = useState('');
+  const [picked, setPicked] = useState(() => resumed?.picked ?? false);
+  const [age, setAge] = useState(() => (resumed?.age != null ? String(resumed.age) : ''));
+  const [title, setTitle] = useState(() => resumed?.title ?? '');
   const [weight, setWeight] = useState<'helped' | 'hurt'>('helped');
-  const [what, setWhat] = useState('');
-  const [shaped, setShaped] = useState('');
-  const [believe, setBelieve] = useState('');
-  const [framingId, setFramingId] = useState<string | null>(null);
+  const [what, setWhat] = useState(() => resumed?.writing?.what ?? '');
+  const [shaped, setShaped] = useState(() => resumed?.writing?.shaped ?? '');
+  const [believe, setBelieve] = useState(() => resumed?.writing?.believe ?? '');
+  const [framingId, setFramingId] = useState<string | null>(() => resumed?.writing?.framingId ?? null);
   const [problem, setProblem] = useState<string | null>(null);
+  /** Which event the three boxes hold, so a resumed draft cannot land on the wrong one. */
+  const [writingFor, setWritingFor] = useState<string | null>(() => resumed?.writing?.eventId ?? null);
 
   const analyses = useMemo(
     () =>
@@ -89,6 +100,94 @@ export default function Past() {
     depth,
     listed,
   );
+
+  /**
+   * The picking screen also stands in front of the two steps after it until
+   * they press on, so "which step is showing" is not quite `step.step`.
+   */
+  const choosing = step.step === 'choose' || (!picked && (step.step === 'analyse' || step.step === 'done') && listed);
+  const canStepBack = entered && (choosing || step.step === 'age' || step.step === 'events' || step.step === 'analyse');
+
+  /** One step back, wherever they are. The bar and the platform share it. */
+  const stepBack = () => {
+    setProblem(null);
+    if (step.step === 'age') {
+      setEntered(false);
+      return;
+    }
+    if (step.step === 'events') {
+      const index = Math.min(cursor, Math.max(0, epochs.length - 1));
+      if (index > 0) setCursor(index - 1);
+      else setEntered(false);
+      return;
+    }
+    if (choosing) {
+      setListed(false);
+      setCursor(Math.max(0, epochs.length - 1));
+      return;
+    }
+    if (step.step === 'analyse') setPicked(false);
+  };
+
+  // The Android button, the iOS edge swipe and the browser's arrow undo one
+  // step, the same as the bar's, and only leave once there is nothing left.
+  const navigation = useNavigation();
+  useEffect(() => {
+    const off = navigation.addListener('beforeRemove', (e: { preventDefault: () => void }) => {
+      if (!canStepBack) return;
+      e.preventDefault();
+      stepBack();
+    });
+    return off;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigation, canStepBack, step.step, cursor, epochs.length, choosing, entered]);
+
+  // Written as they go. The method these come from is explicit that its
+  // programs are meant to take several sittings, so the walk, the age, the
+  // picks and the three boxes all survive the app being killed mid-sentence.
+  const analysingId = step.step === 'analyse' ? step.eventId : null;
+  useEffect(() => {
+    if (!entered && epochs.length === 0) return;
+    saveDraft({
+      age: Number.isFinite(Number(age)) && age !== '' ? Number(age) : null,
+      cursor,
+      picked,
+      title,
+      writing: analysingId ? { eventId: analysingId, what, shaped, believe, framingId } : null,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entered, cursor, picked, age, title, analysingId, what, shaped, believe, framingId]);
+
+  // Moving to the next event empties the boxes, and a draft that belonged to
+  // some other event never lands in them.
+  useEffect(() => {
+    if (!analysingId || writingFor === analysingId) return;
+    setWritingFor(analysingId);
+    setWhat('');
+    setShaped('');
+    setBelieve('');
+    setFramingId(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [analysingId]);
+
+  // Each step says itself once, the way the Interview says each question.
+  const said = step.step === 'events' ? String(Math.min(cursor, Math.max(0, epochs.length - 1))) : '';
+  useEffect(() => {
+    if (!entered) {
+      announce(PAST_COPY['doorway.title'] ?? '');
+      return;
+    }
+    if (step.step === 'age') announce(PAST_COPY['age.prompt'] ?? '');
+    else if (step.step === 'events') {
+      const epoch = epochs[Math.min(cursor, Math.max(0, epochs.length - 1))];
+      announce((epoch?.label ? epoch.label + '. ' : '') + (PAST_COPY['events.prompt'] ?? ''));
+    } else if (choosing) announce(PAST_COPY['choose.prompt'] ?? '');
+    else if (step.step === 'analyse') {
+      const ev = events.find((v) => v.id === step.eventId);
+      announce((ev?.title ?? '') + '. ' + String(step.done + 1) + ' of ' + String(step.total) + '.');
+    } else announce(PAST_COPY['join.question'] ?? '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entered, step.step, choosing, analysingId, said]);
 
   const top = (where: string, onBack: () => void, testID = 'past-back') => (
     <TopBar back={{ onPress: onBack, testID }} where={where} help={{ onPress: showResources }} />
@@ -132,7 +231,7 @@ export default function Past() {
     return (
       <Studio testID="screen-past-age">
         <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-          {top('Past · the periods', () => setEntered(false), 'past-age-back')}
+          {top('Past · the periods', stepBack, 'past-age-back')}
           <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 16 }}>
             <Statement>{PAST_COPY['age.prompt']}</Statement>
             <UserField
@@ -170,11 +269,7 @@ export default function Past() {
     return (
       <Studio testID="screen-past-events">
         <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-          {top(
-            String(position) + ' of ' + String(epochs.length),
-            () => (index > 0 ? setCursor(index - 1) : setEntered(false)),
-            'past-events-back',
-          )}
+          {top(String(position) + ' of ' + String(epochs.length), stepBack, 'past-events-back')}
           <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 16 }}>
             <View style={{ gap: 4 }}>
               <Label style={{ color: accent.coralText }}>{epoch.label}</Label>
@@ -246,10 +341,7 @@ export default function Past() {
     return (
       <Studio testID="screen-past-choose">
         <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-          {top('Past · which ones', () => {
-            setListed(false);
-            setCursor(Math.max(0, epochs.length - 1));
-          }, 'past-choose-back')}
+          {top('Past · which ones', stepBack, 'past-choose-back')}
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 12 }}>
             <Statement testID="past-choose-prompt">{PAST_COPY['choose.prompt']}</Statement>
             <Body style={{ fontSize: 14 }}>{PAST_COPY['choose.note']}</Body>
@@ -312,7 +404,7 @@ export default function Past() {
     return (
       <Studio testID="screen-past-analyse">
         <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-          {top(String(step.done + 1) + ' of ' + String(step.total), () => setPicked(false), 'past-analyse-back')}
+          {top(String(step.done + 1) + ' of ' + String(step.total), stepBack, 'past-analyse-back')}
           <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 18 }}>
             <Statement testID="past-analyse-title">{event.title}</Statement>
 
@@ -368,6 +460,7 @@ export default function Past() {
               disabled={!ready}
               onPress={() => {
                 saveAnalysis(event.id, { whatHappened: what, shapedMe: shaped, stillBelieve: believe });
+                announce('Kept.');
                 setWhat('');
                 setShaped('');
                 setBelieve('');
@@ -415,6 +508,7 @@ export default function Past() {
             onPress={() => {
               track({ name: 'volume_finished', volume: 'past' });
               track({ name: 'first_value', kind: 'past_written' });
+              clearDraft();
               leave();
             }}
           />

@@ -1035,7 +1035,7 @@ With the rules met, the compiler itself: `babel-plugin-react-compiler` at Expo's
 
 A phone in dark mode opened on the day studio's splash for a moment before the night one drew. `make-icons.mjs` draws a night splash now — the pale stone on the night ground, the same ink the night studio's buttons wear — and `expo-splash-screen` gets it under `dark`. The day splash is byte-identical to before.
 
-### The three volumes: Past, Present, Future (2026-09-15, in flight)
+### The three volumes: Past, Present, Future (2026-09-15)
 
 The client's decision: all three volumes ship, named in the product exactly **Past**,
 **Present** and **Future** with nothing appended, chosen from a screen that reads
@@ -1099,6 +1099,34 @@ second could never be added) and a period left empty on purpose pulled the perso
 it forever; and the picking screen jumped to the writing the instant the last event was
 tapped, leaving its own button unreachable and a pick impossible to reconsider. Both are
 now the person's to advance (`pastListed` in the store, `picked` on the screen).
+
+**Parity with Future, closed (2026-09-15).** The audit that followed compared the two new
+volumes line by line against the reference path and found four things Future had that they
+did not — one of them a data-loss bug:
+
+- **No draft.** Present and Past held twenty pieces of state on the screen and persisted
+  none of it; a phone call mid-sentence lost the sentence. Future's writing room has
+  always autosaved. The source is explicit that its programs are meant to be done across
+  several sittings, so this was a fidelity break as much as a parity one. Now
+  `presentDraft` / `pastDraft` in the store, written as they type (the picks, the card
+  being written, both lines and the sign; the age, the period the walk is on, the events
+  picked, and all three boxes). A reload lands on the same card with the words still in
+  the box; the e2e kills each volume mid-write and checks exactly that.
+- **No announce().** Future says each question and each stone to VoiceOver; the new
+  volumes said nothing. Each step now announces itself once, and "Kept." on a save.
+- **No platform back.** The Android button, iOS edge swipe and browser arrow left the
+  volume instead of undoing one step. `beforeRemove` now mirrors the bar's Back in both.
+- **No way back in from Today.** Today's path card knew only the Future volume. A single
+  "Carry on with …" row now offers whichever volume was touched last — one, never a list.
+
+Two bugs found on the way: Back from a Present write *dropped the card* (a delete dressed
+as an undo); it now returns to the deck with the picks and the half-typed text intact. And
+`router.replace('/present?half=…')` did not remount, so the faults just finished stayed
+ticked on the virtues deck; the screen is now keyed on the half.
+
+Gate after: 407 core / 48 ui / 8 storage, e2e 245/245 (was 233), axe 0 across 33 screens,
+way-back 30 screens, typecheck clean, lint 0 errors (the 38 "ref during render" warnings
+the first cut introduced are gone — lazy `useState` captures, not `useRef().current`).
 
 ### The research, and what it changed (2026-09-13)
 

@@ -126,6 +126,37 @@ export interface SafetyPause {
   voluntary?: boolean;
 }
 
+/**
+ * A volume mid-sitting, so leaving is never losing.
+ *
+ * The Future volume has had this from the start: the writing room writes a
+ * draft to disk as it goes and offers it back. The other two volumes held
+ * everything in screen state, so a phone call in the middle of writing about
+ * a fault took the writing with it — and the method these come from is
+ * explicit that its programs are meant to be done across several sittings.
+ */
+export interface PresentDraft {
+  half: 'faults' | 'virtues';
+  /** The cards picked, before any of them is written about. */
+  selected: string[];
+  /** The one being written about now, if any. */
+  writing: { cardId: string; story: string; apply: string; framingId: string | null; goalId: string | null } | null;
+  updatedAt: string;
+}
+
+export interface PastDraft {
+  /** Their age, kept only until the periods are cut from it. */
+  age: number | null;
+  /** Which period the walk is on. */
+  cursor: number;
+  /** Whether they have pressed on from the picking screen. */
+  picked: boolean;
+  /** An event named but not yet added, on whichever period is open. */
+  title: string;
+  writing: { eventId: string; what: string; shaped: string; believe: string; framingId: string | null } | null;
+  updatedAt: string;
+}
+
 /** The Interview mid-way: its state and the steps behind it, so a kill is not a restart. */
 export interface InterviewDraft {
   s: InterviewState;
@@ -240,6 +271,8 @@ export interface MorrowState {
    * A phone call, a kill or the OS back gesture mid-Interview restarted it
    * from the first question (NN/g: save state so the process can resume).
    */
+  presentDraft: PresentDraft | null;
+  pastDraft: PastDraft | null;
   interviewDraft: InterviewDraft | null;
   readBackDraft: { rows: ReadBackRow[]; leftOut?: string; source: string; updatedAt: string } | null;
   /** The coach's single invitation to the Full track, once ever. */
@@ -457,6 +490,11 @@ export interface MorrowState {
   clearSafety: () => void;
   /** The helplines card, asked for. No pause, no "not about me". */
   showResources: () => void;
+  /** Written as the person types, the way the writing room's draft is. */
+  savePresentDraft: (draft: Omit<PresentDraft, 'updatedAt'>) => void;
+  clearPresentDraft: () => void;
+  savePastDraft: (draft: Omit<PastDraft, 'updatedAt'>) => void;
+  clearPastDraft: () => void;
   saveInterviewDraft: (s: InterviewState, history: InterviewState[]) => void;
   clearInterviewDraft: () => void;
   saveReadBackDraft: (rows: ReadBackRow[], source: string, leftOut?: string) => void;
@@ -546,6 +584,8 @@ const EMPTY = {
   concernAt: null,
   coachTurns: {},
   toast: null,
+  presentDraft: null,
+  pastDraft: null,
   interviewDraft: null,
   readBackDraft: null,
   fullTrackInvited: false,
@@ -1792,6 +1832,10 @@ const store = create<MorrowState>()(
 
       setToast: (t) => set({ toast: t }),
       showResources: () => set({ safetyPause: { risk: 'none', at: new Date().toISOString(), source: null, voluntary: true } }),
+      savePresentDraft: (draft) => set({ presentDraft: { ...draft, updatedAt: new Date().toISOString() } }),
+      clearPresentDraft: () => set({ presentDraft: null }),
+      savePastDraft: (draft) => set({ pastDraft: { ...draft, updatedAt: new Date().toISOString() } }),
+      clearPastDraft: () => set({ pastDraft: null }),
       saveInterviewDraft: (s, history) => set({ interviewDraft: { s, history, updatedAt: new Date().toISOString() } }),
       clearInterviewDraft: () => set({ interviewDraft: null }),
       saveReadBackDraft: (rows, source, leftOut) => set({ readBackDraft: { rows, source, ...(leftOut ? { leftOut } : {}), updatedAt: new Date().toISOString() } }),

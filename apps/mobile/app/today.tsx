@@ -100,6 +100,34 @@ export default function Today() {
     };
   }, []);
   const firstRun = useFirstRun();
+  const presentDraft = useMorrow((s) => s.presentDraft);
+  const pastDraft = useMorrow((s) => s.pastDraft);
+
+  /**
+   * A volume put down part-way. The Future volume has always had this — its
+   * writing room keeps a draft and the path card leads back to it — and the
+   * other two now do too, so Today can offer all three the same way.
+   *
+   * Only one is offered at a time, the one touched last: a screen that lists
+   * every unfinished thing is a to-do list, and this is not one.
+   */
+  const carryOn = useMemo(() => {
+    const open = [
+      presentDraft
+        ? {
+            at: presentDraft.updatedAt,
+            route: '/present?half=' + presentDraft.half,
+            label: presentDraft.half === 'faults' ? 'Carry on with what stops you' : 'Carry on with what you are good at',
+          }
+        : null,
+      pastDraft ? { at: pastDraft.updatedAt, route: '/past' as const, label: 'Carry on with your past' } : null,
+    ].filter((x): x is { at: string; route: string; label: string } => x !== null);
+    return open.sort((a, b) => b.at.localeCompare(a.at))[0] ?? null;
+  }, [presentDraft, pastDraft]);
+
+  const carryOnRow = carryOn ? (
+    <TextButton testID="today-carry-on" label={carryOn.label} onPress={() => router.push(carryOn.route as never)} />
+  ) : null;
   // Progressive disclosure, keyed on state that already exists: a person on
   // their first Today has a Now card, a check and five tabs to learn. The
   // practices invitation and the consistency score wait for the first sealed
@@ -195,6 +223,7 @@ export default function Today() {
               : firstRunCaption(firstRun, goals.length)}
           </Body>
           <InkButton testID="today-begin" label={firstRun.label} onPress={() => router.push(firstRun.route)} />
+          {carryOnRow}
           {/* Today comes from the Future volume, but it is not the only door. */}
           <TextButton testID="today-other-volumes" label="Or start with your past or present" onPress={() => router.push('/choose')} />
           {hasSupabase && !state.account ? (
@@ -261,6 +290,9 @@ export default function Today() {
               <Label style={{ marginTop: 4 }}>You, in the Book</Label>
             </Pressable>
           ) : null}
+
+          {/* A volume left part-way, offered once and never counted. */}
+          {carryOnRow ? <View style={{ marginTop: 10, alignItems: 'flex-start' }}>{carryOnRow}</View> : null}
 
           {/*
             A letter that has arrived (PRD §7.8). Offered once, on the day it

@@ -1500,8 +1500,41 @@ async function main() {
       document.querySelector('[data-testid^="present-framing-"]')?.getAttribute('data-testid')?.replace('present-framing-', '') ?? null,
     );
     if (framingId) await tap(`present-framing-${framingId}`);
+
+    // Put it down mid-sentence and pick it up again. The method these volumes
+    // come from says outright that its programs are meant to take several
+    // sittings, so this is fidelity, not a nicety — and before this the two
+    // newer volumes held every keystroke in screen state and lost the lot.
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(700);
+    check('killed mid-sentence, the Present volume comes back to the writing', await seen('screen-present-write'));
+    check(
+      'with the words still in the box',
+      (await page.locator('[data-testid="present-story"]').inputValue()).includes('midnight'),
+      await page.locator('[data-testid="present-story"]').inputValue(),
+    );
+    if (framingId) {
+      const keptSign = await page.evaluate(
+        () => JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.presentDraft?.writing?.framingId ?? null,
+      );
+      check('and the sign they had tapped', keptSign === framingId, String(keptSign));
+    }
+
     await page.locator('[data-testid="present-apply"]').fill('Put the first twenty minutes in the calendar the morning it lands.');
     await page.waitForTimeout(300);
+
+    // Back is an undo, not a delete: it returns to the deck with the picks
+    // intact. It used to drop the card being written about.
+    await tap('present-write-back');
+    check('back from the writing returns to the deck', await seen('screen-present'));
+    const stillPicked = await page.evaluate(
+      () => JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.presentDraft?.selected?.length ?? 0,
+    );
+    check('with every pick still ticked', stillPicked === 3, String(stillPicked));
+    await tap('present-continue');
+    check('and going on lands back on the same card', await seen('screen-present-write'));
+
     await tap('present-keep');
     const kept = await page.evaluate(() => JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.presentPicks ?? []);
     check('the pick is stored with both lines and the sign they tapped', kept.length === 1 && kept[0].storyLine && kept[0].applyLine && kept[0].framingId === framingId, JSON.stringify(kept[0] ?? {}).slice(0, 120));
@@ -1560,17 +1593,45 @@ async function main() {
       if (!(await seen('screen-past-analyse'))) break;
       await page.locator('[data-testid="past-what"]').fill('It happened in the spring and nobody explained it.');
       await page.locator('[data-testid="past-shaped"]').fill('I pack lightly and I keep the people I find.');
+      if (i === 0) {
+        // Same test on the heaviest volume, and on more state: the walk it is
+        // on, the events picked, and two of the three boxes.
+        await page.waitForTimeout(300);
+        await page.reload({ waitUntil: 'networkidle' });
+        await page.clock.runFor(1500);
+        await page.waitForTimeout(700);
+        check('killed part-way, the Past volume comes back to the same event', await seen('screen-past-analyse'));
+        check(
+          'with what was written still there',
+          (await page.locator('[data-testid="past-shaped"]').inputValue()).includes('pack lightly'),
+          await page.locator('[data-testid="past-shaped"]').inputValue(),
+        );
+        check(
+          'and it did not send them back through the periods again',
+          (await page.evaluate(() => JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.pastDraft?.picked)) === true,
+        );
+      }
       await page.locator('[data-testid="past-believe"]').fill('Starting again is survivable.');
       await page.waitForTimeout(250);
       await tap('past-keep');
     }
     check('the three moves end on the Book question', await seen('screen-past-done'));
+    const noDraftLeft = await page.evaluate(
+      () => JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.pastDraft?.writing ?? null,
+    );
+    check('and nothing is left half-written behind them', noDraftLeft === null, JSON.stringify(noDraftLeft));
     const written = await page.evaluate(() => (JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.pastEvents ?? []).filter((e) => e.analysed));
     check('all three are written, with what it made of them', written.length === 3 && written.every((e) => e.shapedMe && e.stillBelieve));
     check('and not one of them is in the Book until they say so', written.every((e) => e.joinsBook === false));
     await tap(`past-join-yes-${written[0].id}`);
     const joined = await page.evaluate(() => (JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.pastEvents ?? []).filter((e) => e.joinsBook).length);
     check('one tap puts one in, and only that one', joined === 1, String(joined));
+
+    // ---- Today leads back to whatever was left part-way
+    await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(600);
+    check('Today offers the volume left part-way', await seen('today-carry-on'));
 
     // ---- the doors stay open afterwards
     await page.goto(`${BASE}/choose`, { waitUntil: 'networkidle' });
