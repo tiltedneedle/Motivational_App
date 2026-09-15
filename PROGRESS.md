@@ -1128,6 +1128,69 @@ Gate after: 407 core / 48 ui / 8 storage, e2e 245/245 (was 233), axe 0 across 33
 way-back 30 screens, typecheck clean, lint 0 errors (the 38 "ref during render" warnings
 the first cut introduced are gone — lazy `useState` captures, not `useRef().current`).
 
+**The second audit, and the flow the client walked (2026-09-16).** A four-lens fan-out
+(Future parity, source fidelity, hardening, a brand-new user) with one skeptic per finding
+returned 19 confirmed and 0 refuted; they fold into thirteen changes. The client's own
+report the same evening — age entered in Past, Back, Begin, and no way to enter the age
+again — was one of them. What changed, and the two product calls taken:
+
+- **Two product calls.** The Full track's floor drops from six picks to one
+  (`narrowTo('full')` is now `{ min: 1, max: 9 }`): a floor of six made a person with four
+  true faults tick two false ones, and left an honestly finished half counted as unfinished
+  on the chooser. And **crisis is the only verdict that holds a line out of the Book** —
+  Present and Past used `safetyRisk === 'none'`, so a concern-band line was excluded
+  silently with no way to reconsider, while the same line as a Future stone sealed. Both
+  volumes now use `isQuotable`, the same rule as everything else.
+- **The source's narrow move exists on Full.** The deck takes everything that is plainly
+  true (forty cards, no cap), and past nine the button reads "Narrow these N" and opens a
+  step of only the ticked cards, down to nine. Starter's deck still stops at three: there,
+  three is the narrowing. The deck note says which it is doing.
+- **An un-tick is a real un-tick.** A written card taken off the deck stayed in the store
+  and printed in the Book. Now the deck's picks become the half's picks at the commit
+  ("Write about these N"), with a line above the button saying what going on lets go of;
+  until then it is reversible, the way Back is an undo everywhere else. Ranks are
+  recomputed from the deck's order at the same moment.
+- **A bare door goes to the right half.** `/present` with no half opened the faults deck
+  even when the faults were written; it now opens the sitting that was left, else the half
+  not yet finished — decided once, when the door opens, because deriving it live swapped the
+  closing screen out from under the person the moment the faults finished. A finished half
+  opened by name lands on its closing screen, not on a deck of inked cards. The chooser's
+  door says which half is written.
+- **Past's Back was dead** once every period held an event: the engine derived the walk's
+  end from the data. Now `pastStep` stays on the walk until `listed`, and Back from the
+  picking screen is the last period with the picks intact.
+- **The age screen is the periods screen** (the client's report). Begin lands on it every
+  time with the age in the box if known; the periods it cuts are listed under it and can be
+  renamed (`epochs.title`/`epochs.note` were shipped copy with no screen); Back from the
+  first period returns to it, not the doorway; changing the age re-cuts the periods and the
+  events follow their period's place in the order rather than vanishing.
+- **Nothing typed is thrown away.** "Next period" keeps a title typed and not yet added
+  (the button says so: "Keep it, then next period"); an empty Add says "Give it a few words
+  first"; a full period says "That is 2 for this period" instead of hiding the field; the
+  last period refuses to go on with nothing listed anywhere. The choose step's floor is one
+  ("Go into this one"), the ceiling stays the dose.
+- **Held lines are said.** A Present line written in crisis announces "Kept on your phone,
+  and out of the Book" rather than "Kept.", and the closing screen lists each held card.
+  The closing copy no longer claims things the app does not do (the coach does not read
+  these; nothing pairs a fault with a goal yet). Virtues with no goals ask "Where will you
+  use this next week?" instead of "Pick the goal".
+- **`pastListed` travels with the account** (migration 0006, a boolean on the profile row,
+  pushed to the live project). A restore used to reopen a finished Past on the walk.
+- Smaller: the Present closing screen scrolls at large type; a resumed selection is
+  filtered against the deck, so a Full-only card cannot strand a Starter deck; a Past
+  reopened to reread and backed out of leaves no "Carry on" behind it; the other half's
+  draft is never overwritten by opening a door.
+
+Gate after: 411 core / 48 ui / 8 storage, migration 53 checks with 0006, e2e **286/286**
+(was 245; the new checks walk the un-tick, the finished-half door, the crisis hold, Full's
+narrowing and the whole Past walk including the age report), axe 0 across 33 screens,
+way-back 30 screens, typecheck clean, lint 0 errors.
+
+Still open from the audit, deliberately: one Present draft slot (a live virtues draft is
+replaced by ticking a card on the faults deck — the door routing makes that a chosen act);
+the fault's answer is not yet wired into the Obstacles stone and no virtue is offered for
+pairing at the read-back, so the copy claims neither.
+
 ### The research, and what it changed (2026-09-13)
 
 The user asked, twice, for the flow to be looked at with a brand-new person in mind — and to research what apps should do for accessibility first, then check ours. So: four research passes over primary, current sources (WCAG 2.2 and its 2.2-only criteria, the W3C mobile guidance, Apple HIG accessibility and onboarding, Material, the EAA; NN/g, Baymard, Growth.Design and Apple on onboarding and retention; React Native 0.8x / Expo / react-native-web accessibility; COGA, GOV.UK content design, plain language, trauma-informed design), each producing a checklist, each checklist audited against this codebase by a separate reader, the four audits merged and de-duplicated by a fifth. 73 findings before the merge, 36 after, in `design/audits/accessibility-first-run-2026-09-13.md` with the sources. What changed, in the order the list gave:

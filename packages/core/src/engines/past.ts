@@ -10,9 +10,10 @@
  * Two things we do differently, on purpose.
  *
  * The first is dose. The source calls this the hardest and longest of its
- * programs and recommends leaving it until last. Starter is four periods and
- * three events analysed — an evening, not a weekend — and Full is their seven
- * and ten. The app suggests the same order they do, and never forces it.
+ * programs and recommends leaving it until last. Starter is four periods, up
+ * to two events in each and three of them analysed — an evening, not a
+ * weekend — and Full is their seven, up to six in each, and ten. The app
+ * suggests the same order they do, and never forces it.
  *
  * The second is consent, everywhere. Each analysed event is the person's to
  * keep out of the Book, the helplines are one tap from every screen, and
@@ -58,7 +59,12 @@ export function epochCount(track: DepthTrack): number {
   return track === 'full' ? 7 : 4;
 }
 
-/** How many events to analyse. The source's ten, or three. */
+/**
+ * How many events to analyse, at most: the source's ten, or three. The floor
+ * is one. The copy asks for "the ones that still have weight", and one can
+ * be all of them; a floor of three made a person write at length about two
+ * they did not want to go into.
+ */
 export function analyseTarget(track: DepthTrack): number {
   return track === 'full' ? 10 : 3;
 }
@@ -147,12 +153,17 @@ export function pastStep(
   listed = false,
 ): PastStep {
   if (epochs.length === 0) return { step: 'age' };
-  const empty = listed ? undefined : epochs.find((e) => !events.some((v) => v.epochId === e.id));
-  if (empty) return { step: 'events', epochId: empty.id, listed: events.length };
-  if (!listed && events.length === 0) return { step: 'events', epochId: epochs[0]!.id, listed: 0 };
+  // Until the person says they are done listing, this is the walk, whatever
+  // the periods hold. Deriving the walk's end from the data made Back from
+  // the picking screen dead once every period had something in it. And a
+  // walk with nothing in it is not done, however it was left.
+  if (!listed || events.length === 0) {
+    const empty = epochs.find((e) => !events.some((v) => v.epochId === e.id));
+    return { step: 'events', epochId: (empty ?? epochs[0]!).id, listed: events.length };
+  }
   const target = Math.min(analyseTarget(track), events.length);
   const chosen = events.filter((e) => e.analysed);
-  if (chosen.length < target) return { step: 'choose', listed: events.length, target };
+  if (chosen.length === 0) return { step: 'choose', listed: events.length, target };
   const byId = new Map(analyses.map((a) => [a.eventId, a]));
   const next = chosen.find((e) => {
     const a = byId.get(e.id);

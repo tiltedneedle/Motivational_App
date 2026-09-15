@@ -180,6 +180,11 @@ export const FAULT_COPY: Record<string, string> = {
   "writeOneHint": "The day it cost you something",
   "writeTwoPrompt": "Tap the earliest sign you could catch. Then write what you do instead.",
   "writeTwoHint": "The sign, then the answer to it",
+  "deckNoteFull": "Tick everything that is plainly true; you narrow it to the nine that matter most next. These are habits, not a verdict on you.",
+  "narrowPrompt": "Which of these matter most?",
+  "narrowNote": "Keep up to nine. Take one off to let another through.",
+  "done": "Each one has a sign to watch for and an answer to it now. They join your Book.",
+  "heldNote": "This one stays on your phone and out of the Book. It is still yours, and it still exports.",
 };
 
 export const VIRTUE_COPY: Record<string, string> = {
@@ -189,6 +194,13 @@ export const VIRTUE_COPY: Record<string, string> = {
   "writeOneHint": "Two lines: where you were, and what you did",
   "writeTwoPrompt": "Pick the goal that needs this. Then write where you will use it next week.",
   "writeTwoHint": "On ___ I use this to ___",
+  "deckNoteFull": "Tick everything that is plainly true, not what sounds good; you narrow it to the nine that matter most next.",
+  "narrowPrompt": "Which of these matter most?",
+  "narrowNote": "Keep up to nine. Take one off to let another through.",
+  "done": "Each one has a time it mattered and a place to use it next week. They join your Book.",
+  "doneNoGoal": "When you name your goals in Future, each of these can be paired with the one that needs it.",
+  "writeTwoPromptNoGoal": "Where will you use this next week?",
+  "heldNote": "This one stays on your phone and out of the Book. It is still yours, and it still exports.",
 };
 
 // ---------------------------------------------------------------- Past
@@ -213,6 +225,8 @@ export const PAST_COPY: Record<string, string> = {
   "events.hurt": "It hurt",
   "events.add": "Add an event",
   "events.empty": "Nothing from this period is fine. Leave it and move on.",
+  "events.needOne": "Name at least one event before going on, or leave this for another time.",
+  "events.needWords": "Give it a few words first.",
   "choose.prompt": "Which of these do you want to go into?",
   "choose.note": "Pick the ones that still have weight. You write about these; the rest stay as titles.",
   "analyse.one.prompt": "What happened?",

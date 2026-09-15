@@ -289,6 +289,7 @@ const bundle: SyncBundle = {
       createdAt: '2026-09-15T20:00:00.000Z',
     },
   ],
+  pastListed: true,
 };
 
 describe('the store as rows', () => {
@@ -434,6 +435,9 @@ describe('the Past and Present volumes on the wire', () => {
     expect(back.presentPicks).toEqual(bundle.presentPicks);
     expect(back.pastEpochs).toEqual(bundle.pastEpochs);
     expect(back.pastEvents).toEqual(bundle.pastEvents);
+    // The walk's end travels too, or a new phone reopens a finished Past.
+    expect(byTable.profiles![0]!.past_listed).toBe(true);
+    expect(back.pastListed).toBe(true);
   });
 
   it('brings a row back with nothing in the Book unless the person put it there', () => {

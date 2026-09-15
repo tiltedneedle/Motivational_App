@@ -11,8 +11,8 @@
  * was written, and a per-event choice about the Book whose default is out.
  *
  * Nothing written here is quoted anywhere else unless the person put it in the
- * Book, and a line the safety screen flags is held out whatever they chose —
- * which the screen says, rather than overriding quietly.
+ * Book, and a line written in crisis is held out whatever they chose — which
+ * the screen says, rather than overriding quietly.
  */
 import { useNavigation, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
@@ -27,10 +27,14 @@ import {
   epochsFor,
   eventsPerEpoch,
   pastStep,
+  type Epoch,
 } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Notice, Rule, Statement, Studio, TextButton, TopBar, UserField, accent, announce, day } from '@morrow/ui';
 import { useMorrow } from '../src/store';
 import { track, useFirstRunStep } from '../src/analytics';
+
+/** How long a period's own name may be. A label, not a line. */
+const PERIOD_LABEL_CEILING = 60;
 
 export default function Past() {
   const router = useRouter();
@@ -53,17 +57,17 @@ export default function Past() {
 
   const [entered, setEntered] = useState(() => epochs.length > 0);
   /**
-   * Which period is on screen. The person walks them; the app does not decide
-   * for them by looking at which one happens to be empty — that made a second
-   * event impossible to add, and pulled anyone back to a period they had
-   * deliberately left blank.
-   */
-  /**
    * The sitting they left, read once at mount. This is the longest of the
    * three volumes and the one people are likeliest to put down part-way, so
    * putting it down has to cost nothing.
    */
   const [resumed] = useState(() => draft);
+  /**
+   * Which period is on screen. The person walks them; the app does not decide
+   * for them by looking at which one happens to be empty — that made a second
+   * event impossible to add, and pulled anyone back to a period they had
+   * deliberately left blank.
+   */
   const [cursor, setCursor] = useState(() => resumed?.cursor ?? 0);
   /**
    * The picking screen stays until the person presses on. Without this it
@@ -71,7 +75,18 @@ export default function Past() {
    * button was unreachable and a pick could not be reconsidered.
    */
   const [picked, setPicked] = useState(() => resumed?.picked ?? false);
-  const [age, setAge] = useState(() => (resumed?.age != null ? String(resumed.age) : ''));
+  /**
+   * The age screen, held open by the person rather than by the data. Once
+   * the periods were cut the engine never showed it again, so Back from the
+   * first period went to the doorway and Begin skipped straight past the
+   * age — exactly what somebody who wanted to change it could not do.
+   */
+  const [ageOpen, setAgeOpen] = useState(false);
+  const [age, setAge] = useState(() =>
+    resumed?.age != null ? String(resumed.age) : epochs.length ? String(epochs[epochs.length - 1]!.toAge) : '',
+  );
+  /** Periods renamed on the age screen, by period id, until they are cut. */
+  const [labels, setLabels] = useState<Record<string, string>>(() => resumed?.labels ?? {});
   const [title, setTitle] = useState(() => resumed?.title ?? '');
   const [weight, setWeight] = useState<'helped' | 'hurt'>('helped');
   const [what, setWhat] = useState(() => resumed?.writing?.what ?? '');
@@ -81,6 +96,12 @@ export default function Past() {
   const [problem, setProblem] = useState<string | null>(null);
   /** Which event the three boxes hold, so a resumed draft cannot land on the wrong one. */
   const [writingFor, setWritingFor] = useState<string | null>(() => resumed?.writing?.eventId ?? null);
+  /**
+   * Whether this sitting has done anything. A Past opened only to reread, and
+   * backed out of, must not leave a "Carry on" on Today behind it.
+   */
+  const [touched, setTouched] = useState(false);
+  const touch = () => setTouched(true);
 
   const analyses = useMemo(
     () =>
@@ -102,27 +123,34 @@ export default function Past() {
   );
 
   /**
-   * The picking screen also stands in front of the two steps after it until
-   * they press on, so "which step is showing" is not quite `step.step`.
+   * Which screen is showing is not quite `step.step`: the age screen can be
+   * held open over the walk, and the picking screen stands in front of the
+   * two steps after it until they press on.
    */
-  const choosing = step.step === 'choose' || (!picked && (step.step === 'analyse' || step.step === 'done') && listed);
-  const canStepBack = entered && (choosing || step.step === 'age' || step.step === 'events' || step.step === 'analyse');
+  const showingAge = entered && (step.step === 'age' || ageOpen);
+  const choosing = !showingAge && (step.step === 'choose' || (!picked && (step.step === 'analyse' || step.step === 'done') && listed));
+  const showingDone = entered && !showingAge && !choosing && step.step === 'done';
+  const canStepBack = entered && (showingAge || choosing || step.step === 'events' || step.step === 'analyse');
 
   /** One step back, wherever they are. The bar and the platform share it. */
   const stepBack = () => {
     setProblem(null);
-    if (step.step === 'age') {
+    if (showingAge) {
+      setAgeOpen(false);
       setEntered(false);
       return;
     }
     if (step.step === 'events') {
       const index = Math.min(cursor, Math.max(0, epochs.length - 1));
+      // Back from the first period is the periods themselves, with the age
+      // still in the box — not the doorway.
       if (index > 0) setCursor(index - 1);
-      else setEntered(false);
+      else setAgeOpen(true);
       return;
     }
     if (choosing) {
       setListed(false);
+      setPicked(false);
       setCursor(Math.max(0, epochs.length - 1));
       return;
     }
@@ -134,29 +162,35 @@ export default function Past() {
   const navigation = useNavigation();
   useEffect(() => {
     const off = navigation.addListener('beforeRemove', (e: { preventDefault: () => void }) => {
-      if (!canStepBack) return;
+      if (!canStepBack) {
+        // Leaving from the end is leaving finished: nothing to carry on.
+        if (showingDone) clearDraft();
+        return;
+      }
       e.preventDefault();
       stepBack();
     });
     return off;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigation, canStepBack, step.step, cursor, epochs.length, choosing, entered]);
+  }, [navigation, canStepBack, showingAge, showingDone, step.step, cursor, epochs.length, choosing, entered]);
 
   // Written as they go. The method these come from is explicit that its
   // programs are meant to take several sittings, so the walk, the age, the
   // picks and the three boxes all survive the app being killed mid-sentence.
-  const analysingId = step.step === 'analyse' ? step.eventId : null;
+  const analysingId = !showingAge && step.step === 'analyse' ? step.eventId : null;
   useEffect(() => {
+    if (!touched && !resumed) return;
     if (!entered && epochs.length === 0) return;
     saveDraft({
       age: Number.isFinite(Number(age)) && age !== '' ? Number(age) : null,
       cursor,
       picked,
       title,
+      labels,
       writing: analysingId ? { eventId: analysingId, what, shaped, believe, framingId } : null,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entered, cursor, picked, age, title, analysingId, what, shaped, believe, framingId]);
+  }, [touched, entered, cursor, picked, age, title, labels, analysingId, what, shaped, believe, framingId]);
 
   // Moving to the next event empties the boxes, and a draft that belonged to
   // some other event never lands in them.
@@ -177,7 +211,7 @@ export default function Past() {
       announce(PAST_COPY['doorway.title'] ?? '');
       return;
     }
-    if (step.step === 'age') announce(PAST_COPY['age.prompt'] ?? '');
+    if (showingAge) announce(PAST_COPY['age.prompt'] ?? '');
     else if (step.step === 'events') {
       const epoch = epochs[Math.min(cursor, Math.max(0, epochs.length - 1))];
       announce((epoch?.label ? epoch.label + '. ' : '') + (PAST_COPY['events.prompt'] ?? ''));
@@ -187,7 +221,7 @@ export default function Past() {
       announce((ev?.title ?? '') + '. ' + String(step.done + 1) + ' of ' + String(step.total) + '.');
     } else announce(PAST_COPY['join.question'] ?? '');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entered, step.step, choosing, analysingId, said]);
+  }, [entered, showingAge, step.step, choosing, analysingId, said]);
 
   const top = (where: string, onBack: () => void, testID = 'past-back') => (
     <TopBar back={{ onPress: onBack, testID }} where={where} help={{ onPress: showResources }} />
@@ -214,7 +248,11 @@ export default function Past() {
               label={PAST_COPY['doorway.begin'] ?? 'Begin'}
               onPress={() => {
                 track({ name: 'volume_opened', volume: 'past', first: epochs.length === 0 });
+                touch();
                 setEntered(true);
+                // Begin is the periods, every time: with the age in the box
+                // if it is known, and the periods under it to keep or change.
+                setAgeOpen(true);
               }}
             />
             <TextButton testID="past-later" label={PAST_COPY['doorway.later'] ?? 'Another time'} onPress={leave} />
@@ -224,10 +262,13 @@ export default function Past() {
     );
   }
 
-  // ---- move one: the periods, cut from their age
-  if (step.step === 'age') {
+  // ---- move one: the periods, cut from their age, and named by them
+  if (showingAge) {
     const n = Number(age);
     const ok = Number.isFinite(n) && n >= 10 && n <= 110;
+    const preview: Epoch[] = ok ? epochsFor(n, depth) : [];
+    const same = epochs.length > 0 && preview.length === epochs.length && preview.every((e, i) => e.id === epochs[i]!.id);
+    const labelOf = (e: Epoch) => labels[e.id] ?? epochs.find((x) => x.id === e.id)?.label ?? e.label;
     return (
       <Studio testID="screen-past-age">
         <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
@@ -239,18 +280,46 @@ export default function Past() {
               label={PAST_COPY['age.prompt'] ?? ''}
               labelHidden
               value={age}
-              onChangeText={(t) => setAge(t.replace(/\D/g, '').slice(0, 3))}
+              onChangeText={(t) => {
+                touch();
+                setAge(t.replace(/\D/g, '').slice(0, 3));
+              }}
               placeholder="30"
               keyboardType="number-pad"
             />
             <Body style={{ fontSize: 13 }}>{PAST_COPY['age.note']}</Body>
+
+            {preview.length ? (
+              <View testID="past-periods" style={{ gap: 10 }}>
+                <Rule />
+                <Label style={{ color: accent.coralText, marginTop: 8 }}>{PAST_COPY['epochs.title']}</Label>
+                <Body style={{ fontSize: 14 }}>{PAST_COPY['epochs.note']}</Body>
+                {preview.map((e, i) => (
+                  <UserField
+                    key={e.id}
+                    testID={'past-period-' + e.id}
+                    label={'Ages ' + String(e.fromAge) + ' to ' + (i === preview.length - 1 ? 'now' : String(e.toAge))}
+                    value={labelOf(e)}
+                    onChangeText={(t) => {
+                      touch();
+                      setLabels((cur) => ({ ...cur, [e.id]: t.slice(0, PERIOD_LABEL_CEILING) }));
+                    }}
+                  />
+                ))}
+              </View>
+            ) : null}
           </ScrollView>
           <View style={{ paddingBottom: 18 }}>
             <InkButton
               testID="past-age-continue"
-              label={ok ? 'Cut my life into periods' : 'Your age, in years'}
+              label={!ok ? 'Your age, in years' : epochs.length === 0 ? 'Cut my life into periods' : same ? 'Keep these periods' : 'Cut them again from this age'}
               disabled={!ok}
-              onPress={() => setEpochs(epochsFor(n, depth))}
+              onPress={() => {
+                touch();
+                setEpochs(preview.map((e) => ({ ...e, label: labelOf(e).trim() || e.label })));
+                if (!same) setCursor(0);
+                setAgeOpen(false);
+              }}
             />
           </View>
         </SafeAreaView>
@@ -264,64 +333,104 @@ export default function Past() {
     const epoch = epochs[index]!;
     const here = events.filter((v) => v.epochId === epoch.id);
     const room = eventsPerEpoch(depth);
+    const full = here.length >= room;
     const position = index + 1;
     const last = position >= epochs.length;
+    const pending = title.trim();
+    const add = () => {
+      if (!pending) {
+        setProblem(PAST_COPY['events.needWords'] ?? 'Give it a few words first.');
+        return;
+      }
+      touch();
+      setProblem(null);
+      addEvent(epoch.id, pending, weight);
+      setTitle('');
+    };
     return (
       <Studio testID="screen-past-events">
         <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
           {top(String(position) + ' of ' + String(epochs.length), stepBack, 'past-events-back')}
           <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 16 }}>
             <View style={{ gap: 4 }}>
-              <Label style={{ color: accent.coralText }}>{epoch.label}</Label>
+              <Label testID="past-period-label" style={{ color: accent.coralText }}>
+                {epoch.label}
+              </Label>
               <Statement testID="past-events-prompt">{PAST_COPY['events.prompt']}</Statement>
-              <Body style={{ fontSize: 14 }}>{PAST_COPY['events.note']}</Body>
+              <Body style={{ fontSize: 14 }}>{PAST_COPY['events.note'] + ' Up to ' + String(room) + ' from this period.'}</Body>
             </View>
 
             {here.map((v) => (
               <View key={v.id} testID={'past-event-' + v.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, borderTopWidth: 1, borderTopColor: day.line, paddingTop: 10 }}>
                 <Body style={{ flex: 1, color: day.ink }}>{v.title}</Body>
                 <Label>{v.weight === 'helped' ? PAST_COPY['events.helped'] : PAST_COPY['events.hurt']}</Label>
-                <TextButton testID={'past-drop-' + v.id} label="Remove" accessibilityLabel={'Remove ' + v.title} onPress={() => dropEvent(v.id)} />
+                <TextButton
+                  testID={'past-drop-' + v.id}
+                  label="Remove"
+                  accessibilityLabel={'Remove ' + v.title}
+                  onPress={() => {
+                    touch();
+                    dropEvent(v.id);
+                  }}
+                />
               </View>
             ))}
 
-            {here.length < room ? (
+            <Notice testID="past-events-problem" text={problem} />
+
+            {full ? (
+              // The cap, said, rather than the field quietly disappearing.
+              <Notice testID="past-events-full" text={'That is ' + String(room) + ' for this period. Remove one to add another.'} />
+            ) : (
               <View style={{ gap: 8 }}>
                 <UserField
                   testID="past-event-title"
                   label={PAST_COPY['events.prompt'] ?? ''}
                   labelHidden
                   value={title}
-                  onChangeText={(t) => setTitle(t.slice(0, PAST_LINE_CEILING))}
+                  onChangeText={(t) => {
+                    touch();
+                    setProblem(null);
+                    setTitle(t.slice(0, PAST_LINE_CEILING));
+                  }}
                   placeholder="In a few words"
                 />
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                   <Chip testID="past-weight-helped" label={PAST_COPY['events.helped'] ?? 'It helped'} selected={weight === 'helped'} onPress={() => setWeight('helped')} />
                   <Chip testID="past-weight-hurt" label={PAST_COPY['events.hurt'] ?? 'It hurt'} selected={weight === 'hurt'} onPress={() => setWeight('hurt')} />
                 </View>
-                <Chip
-                  testID="past-event-add"
-                  label={PAST_COPY['events.add'] ?? 'Add an event'}
-                  ghost
-                  onPress={() => {
-                    if (!title.trim()) return;
-                    addEvent(epoch.id, title, weight);
-                    setTitle('');
-                  }}
-                />
+                <Chip testID="past-event-add" label={PAST_COPY['events.add'] ?? 'Add an event'} ghost onPress={add} />
               </View>
-            ) : null}
+            )}
 
-            <Body style={{ fontSize: 13 }}>{PAST_COPY['events.empty']}</Body>
+            {full ? null : <Body style={{ fontSize: 13 }}>{PAST_COPY['events.empty']}</Body>}
           </ScrollView>
 
           <View style={{ paddingBottom: 18 }}>
             <InkButton
               testID="past-events-continue"
-              label={last ? 'On to the ones that still have weight' : 'Next period'}
+              label={
+                pending && !full
+                  ? last
+                    ? 'Keep it, then on to the ones that still have weight'
+                    : 'Keep it, then next period'
+                  : last
+                    ? 'On to the ones that still have weight'
+                    : 'Next period'
+              }
               onPress={() => {
+                touch();
+                setProblem(null);
+                // A title typed and not yet added goes in, rather than out:
+                // the big button was the natural next tap, and it lost it.
+                if (pending && !full) addEvent(epoch.id, pending, weight);
                 // An empty period is a real answer, and nothing is written to
-                // stand in for one.
+                // stand in for one. An empty walk is not: say so here rather
+                // than sending them on to a Book question with nothing in it.
+                if (last && events.length === 0 && !(pending && !full)) {
+                  setProblem(PAST_COPY['events.needOne'] ?? '');
+                  return;
+                }
                 setTitle('');
                 if (last) setListed(true);
                 else setCursor(index + 1);
@@ -334,7 +443,7 @@ export default function Past() {
   }
 
   // ---- between two and three: which ones to go into
-  if (step.step === 'choose' || (!picked && (step.step === 'analyse' || step.step === 'done') && listed)) {
+  if (choosing) {
     const real = events;
     const chosen = events.filter((v) => v.analysed).length;
     const target = Math.min(analyseTarget(depth), real.length);
@@ -361,6 +470,7 @@ export default function Past() {
                       setProblem('That is ' + target + ' already. Take one off to add another.');
                       return;
                     }
+                    touch();
                     chooseEvent(v.id, !v.analysed);
                   }}
                   style={{
@@ -381,12 +491,16 @@ export default function Past() {
             })}
           </ScrollView>
           <View style={{ paddingBottom: 18 }}>
-            <Label style={{ textAlign: 'center', paddingBottom: 6 }}>{String(chosen) + ' of ' + String(target)}</Label>
+            {/* A ceiling, not a quota: one that still has weight is enough. */}
+            <Label testID="past-choose-count" style={{ textAlign: 'center', paddingBottom: 6 }}>
+              {String(chosen) + ' of up to ' + String(target)}
+            </Label>
             <InkButton
               testID="past-choose-continue"
-              label={chosen >= target ? 'Go into these' : 'Pick ' + String(target - chosen) + ' more'}
-              disabled={chosen < target}
+              label={chosen === 0 ? 'Pick at least one' : chosen === 1 ? 'Go into this one' : 'Go into these ' + String(chosen)}
+              disabled={chosen === 0}
               onPress={() => {
+                touch();
                 setProblem(null);
                 setPicked(true);
               }}
@@ -415,7 +529,10 @@ export default function Past() {
                 label={PAST_COPY['analyse.one.prompt'] ?? ''}
                 labelHidden
                 value={what}
-                onChangeText={(t) => setWhat(t.slice(0, PAST_WRITE_CEILING))}
+                onChangeText={(t) => {
+                  touch();
+                  setWhat(t.slice(0, PAST_WRITE_CEILING));
+                }}
                 placeholder={PAST_COPY['analyse.one.hint']}
                 multiline
               />
@@ -428,7 +545,10 @@ export default function Past() {
                 label={PAST_COPY['analyse.two.prompt'] ?? ''}
                 labelHidden
                 value={shaped}
-                onChangeText={(t) => setShaped(t.slice(0, PAST_WRITE_CEILING))}
+                onChangeText={(t) => {
+                  touch();
+                  setShaped(t.slice(0, PAST_WRITE_CEILING));
+                }}
                 placeholder={PAST_COPY['analyse.two.hint']}
                 multiline
               />
@@ -438,7 +558,16 @@ export default function Past() {
               <Label>{PAST_COPY['analyse.three.prompt']}</Label>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                 {PAST_FRAMINGS.map((f) => (
-                  <Chip key={f.id} testID={'past-framing-' + f.id} label={f.label} selected={framingId === f.id} onPress={() => setFramingId(framingId === f.id ? null : f.id)} />
+                  <Chip
+                    key={f.id}
+                    testID={'past-framing-' + f.id}
+                    label={f.label}
+                    selected={framingId === f.id}
+                    onPress={() => {
+                      touch();
+                      setFramingId(framingId === f.id ? null : f.id);
+                    }}
+                  />
                 ))}
               </View>
               <UserField
@@ -446,7 +575,10 @@ export default function Past() {
                 label={PAST_COPY['analyse.three.prompt'] ?? ''}
                 labelHidden
                 value={believe}
-                onChangeText={(t) => setBelieve(t.slice(0, PAST_LINE_CEILING))}
+                onChangeText={(t) => {
+                  touch();
+                  setBelieve(t.slice(0, PAST_LINE_CEILING));
+                }}
                 placeholder={PAST_COPY['analyse.three.hint']}
                 multiline
               />
@@ -476,17 +608,21 @@ export default function Past() {
 
   // ---- done: the Book, event by event
   const written = events.filter((v) => v.analysed && v.stillBelieve.trim());
+  const finish = () => {
+    clearDraft();
+    leave();
+  };
   return (
     <Studio testID="screen-past-done">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        {top('Past', leave, 'past-done-back')}
+        {top('Past', finish, 'past-done-back')}
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 16 }}>
           <Statement testID="past-done">{PAST_COPY['join.question']}</Statement>
           {written.map((v) => (
             <View key={v.id} testID={'past-join-' + v.id} style={{ gap: 8, borderTopWidth: 1, borderTopColor: day.line, paddingTop: 14 }}>
               <Label>{v.title}</Label>
               <Body style={{ color: day.ink }}>{v.stillBelieve}</Body>
-              {v.safetyRisk === 'none' ? (
+              {v.safetyRisk !== 'crisis' ? (
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                   <Chip testID={'past-join-yes-' + v.id} label={PAST_COPY['join.yes'] ?? 'Let it join the Book'} selected={v.joinsBook} onPress={() => setJoins(v.id, true)} />
                   <Chip testID={'past-join-no-' + v.id} label={PAST_COPY['join.no'] ?? 'Keep this one to myself'} selected={!v.joinsBook} ghost onPress={() => setJoins(v.id, false)} />
@@ -508,8 +644,7 @@ export default function Past() {
             onPress={() => {
               track({ name: 'volume_finished', volume: 'past' });
               track({ name: 'first_value', kind: 'past_written' });
-              clearDraft();
-              leave();
+              finish();
             }}
           />
         </View>

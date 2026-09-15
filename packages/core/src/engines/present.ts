@@ -57,11 +57,25 @@ export interface PresentPick {
  * How many survive the narrowing.
  *
  * Starter is an evening: three is enough to change a plan and few enough to
- * write properly about. Full keeps the source's range, where narrowing is
- * itself part of the work.
+ * write properly about, so the deck itself stops at three and that is the
+ * whole move. Full keeps the source's ceiling of nine; its deck takes
+ * everything that is plainly true, and the narrowing is a step of its own.
+ *
+ * The floor is one on both. A floor of six made a person with four true
+ * faults tick two false ones, which is the opposite of what a deck is for —
+ * and it left a half that was honestly finished counted as unfinished.
  */
 export function narrowTo(track: DepthTrack): { min: number; max: number } {
-  return track === 'full' ? { min: 6, max: 9 } : { min: 1, max: 3 };
+  return track === 'full' ? { min: 1, max: 9 } : { min: 1, max: 3 };
+}
+
+/**
+ * Which half a bare door opens: the sitting is the screen's to resume, and
+ * failing that the half not yet finished — faults first, the source's own
+ * order for these two, with the Future volume between them.
+ */
+export function nextHalf(picks: PresentPick[], track: DepthTrack): PresentHalf {
+  return halfComplete(picks, 'faults', track) && !halfComplete(picks, 'virtues', track) ? 'virtues' : 'faults';
 }
 
 /** How many cards the deck shows. The long deck is sectioned by group. */

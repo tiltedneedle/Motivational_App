@@ -1627,6 +1627,168 @@ async function main() {
     const joined = await page.evaluate(() => (JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.pastEvents ?? []).filter((e) => e.joinsBook).length);
     check('one tap puts one in, and only that one', joined === 1, String(joined));
 
+    // ---- the deck's un-tick is a real un-tick (audit: a written card taken off still reached the Book)
+    const store = async () => page.evaluate(() => JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state ?? {});
+    const patchStore = async (fn) =>
+      page.evaluate((src) => {
+        const k = 'morrow-v1';
+        const s = JSON.parse(localStorage.getItem(k) ?? '{}');
+        // eslint-disable-next-line no-new-func
+        new Function('s', src)(s.state);
+        localStorage.setItem(k, JSON.stringify(s));
+      }, fn);
+    const noticeText = async (id) => ((await seen(id)) ? await text(id) : '');
+
+    await page.goto(`${BASE}/present`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(600);
+    check('a bare door resumes the sitting that was left', await seen('screen-present-write'));
+    await tap('present-write-back');
+    check('and Back from it is the deck, picks ticked', await seen('screen-present'));
+    const writtenCard = ((await store()).presentPicks ?? [])[0]?.cardId ?? '';
+    await tap(`present-card-${writtenCard}`);
+    check('taking a written card off says what going on will cost', await seen('present-let-go'));
+    await tap(`present-card-${writtenCard}`);
+    check('and ticking it again costs nothing', !(await seen('present-let-go')));
+    await tap(`present-card-${writtenCard}`);
+    await tap('present-continue');
+    const afterDrop = ((await store()).presentPicks ?? []).length;
+    check('going on lets the written card go, so it cannot reach the Book', afterDrop === 0, String(afterDrop));
+    check('and opens the writing for the next one', await seen('screen-present-write'));
+
+    // ---- a finished half, and where its door leads
+    for (let i = 0; i < 2; i += 1) {
+      if (!(await seen('screen-present-write'))) break;
+      await page.locator('[data-testid="present-story"]').fill('The Tuesday it cost me the whole afternoon.');
+      await page.locator('[data-testid="present-apply"]').fill('Put the first twenty minutes in the calendar the night before.');
+      await page.waitForTimeout(250);
+      await tap('present-keep');
+    }
+    check('the half closes on its own screen', await seen('screen-present-done'));
+    const doneWords = await page.locator('body').innerText();
+    check('and claims nothing the app does not do', !/coach has them|sit with the goal/i.test(doneWords));
+    await tap('present-later');
+    await page.goto(`${BASE}/choose`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(500);
+    check('the Present door names the half that is written', (await noticeText('door-present-mark')).toLowerCase().includes('faults'), await noticeText('door-present-mark'));
+    await tap('door-present');
+    await page.waitForTimeout(500);
+    check('and opens the other half, not the finished deck', (await seen('screen-present')) && (await noticeText('present-deck-note')).includes('sound good'), await noticeText('present-deck-note'));
+    await page.goto(`${BASE}/present?half=faults`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(500);
+    check('a finished half opened by name lands on its closing screen', await seen('screen-present-done'));
+
+    // ---- the virtues: a goal to pair, and a line the screen holds out of the Book
+    await page.goto(`${BASE}/present?half=virtues`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(500);
+    const vCards = await page.evaluate(() =>
+      [...document.querySelectorAll('[data-testid^="present-card-"]')].map((e) => e.getAttribute('data-testid').replace('present-card-', '')),
+    );
+    await tap(`present-card-${vCards[0]}`);
+    await tap('present-continue');
+    check("the virtue's second write offers the goals to pair it with", (await page.locator('[data-testid^="present-goal-"]').count()) > 0);
+    await page.locator('[data-testid="present-story"]').fill("I don't want to be here any more");
+    await page.locator('[data-testid="present-apply"]').fill('On Tuesday I use this to get the first draft out.');
+    await page.waitForTimeout(250);
+    await tap('present-keep');
+    await page.waitForTimeout(400);
+    check('a line written in crisis raises the resources card here too', await seen('safety-card'));
+    if (await seen('safety-card')) {
+      await page.waitForTimeout(1100);
+      await tap('safety-continue');
+      await page.waitForTimeout(300);
+    }
+    check('the half closes', await seen('screen-present-done'));
+    check('and says, per card, that the line stays out of the Book', await seen(`present-held-${vCards[0]}`));
+    const heldRow = ((await store()).presentPicks ?? []).find((q) => q.half === 'virtues');
+    check('kept on the phone, flagged, never sealed', heldRow?.safetyRisk === 'crisis', JSON.stringify(heldRow ?? {}).slice(0, 100));
+
+    // ---- Full's deck takes everything, then narrows: the source's second move
+    await patchStore(`s.profile.track = 'full'; s.presentPicks = (s.presentPicks ?? []).filter((q) => q.half === 'faults'); s.presentDraft = null;`);
+    await page.goto(`${BASE}/present?half=virtues`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(600);
+    const fullCards = await page.evaluate(() =>
+      [...document.querySelectorAll('[data-testid^="present-card-"]')].map((e) => e.getAttribute('data-testid').replace('present-card-', '')),
+    );
+    check('the long deck is forty cards', fullCards.length === 40, String(fullCards.length));
+    check('and its note says the narrowing comes next', (await noticeText('present-deck-note')).includes('nine'), await noticeText('present-deck-note'));
+    for (const id of fullCards.slice(0, 10)) await tap(`present-card-${id}`);
+    check('ten ticks are taken without a refusal', !(await noticeText('present-problem')).includes('already'), await noticeText('present-problem'));
+    await tap('present-continue');
+    check('so the narrowing is its own step', await seen('screen-present-narrow'));
+    check('which shows only the ticked cards', (await page.locator('[data-testid^="present-narrow-card-"]').count()) === 10);
+    check('and will not go on with ten', (await noticeText('present-narrow-count')).toLowerCase().includes('keep up to 9'), await noticeText('present-narrow-count'));
+    await tap(`present-narrow-card-${fullCards[3]}`);
+    await tap('present-narrow-continue');
+    check('nine go through to the writing', await seen('screen-present-write'));
+    const nineKept = (await store()).presentDraft?.selected?.length ?? 0;
+    check('in the order they were kept', nineKept === 9, String(nineKept));
+    await patchStore(`s.profile.track = 'starter'; s.presentDraft = null;`);
+
+    // ---- the Past walk again: the ways back and the ways on (and the client's own report —
+    //      age entered, Back, Begin, and no way to enter the age again)
+    await patchStore(`s.pastEpochs = []; s.pastEvents = []; s.pastListed = false; s.pastDraft = null;`);
+    await page.goto(`${BASE}/past`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(600);
+    await tap('past-begin');
+    await page.locator('[data-testid="past-age"]').fill('40');
+    await page.waitForTimeout(250);
+    check('the age cuts the periods on the same screen, to keep or rename', await seen('past-periods'));
+    const firstPeriod = await page.evaluate(
+      () => document.querySelector('[data-testid^="past-period-"]')?.getAttribute('data-testid')?.replace('past-period-', '') ?? '',
+    );
+    await page.locator(`[data-testid="past-period-${firstPeriod}"]`).fill('The farm');
+    await page.waitForTimeout(200);
+    await tap('past-age-continue');
+    check('a renamed period is called that on its own screen', (await noticeText('past-period-label')).toLowerCase() === 'the farm', await noticeText('past-period-label'));
+    await tap('past-event-add');
+    check('adding nothing says so', (await noticeText('past-events-problem')).includes('few words'), await noticeText('past-events-problem'));
+    await page.locator('[data-testid="past-event-title"]').fill('the pond');
+    await page.waitForTimeout(150);
+    check('and the big button says it will keep what is typed', (await noticeText('past-events-continue')).startsWith('Keep it'), await noticeText('past-events-continue'));
+    await tap('past-events-continue');
+    await tap('past-events-back');
+    const keptTitles = ((await store()).pastEvents ?? []).map((e) => e.title);
+    check('a title typed and not added went in, not out', keptTitles.includes('the pond'), keptTitles.join(' / '));
+    await tap('past-events-back');
+    check('Back from the first period is the periods, not the doorway', await seen('screen-past-age'));
+    check('with the age still in the box', (await page.locator('[data-testid="past-age"]').inputValue()) === '40');
+    check('and nothing to cut again', (await noticeText('past-age-continue')).includes('Keep'), await noticeText('past-age-continue'));
+    await tap('past-age-continue');
+    check('keeping them returns to the walk', await seen('screen-past-events'));
+    await page.locator('[data-testid="past-event-title"]').fill('learning to swim');
+    await page.waitForTimeout(150);
+    await tap('past-event-add');
+    check('a full period says so rather than hiding the field', await seen('past-events-full'));
+    await tap('past-events-continue');
+    for (const t of ['changing school', 'the first job', 'moving cities']) {
+      await page.locator('[data-testid="past-event-title"]').fill(t);
+      await page.waitForTimeout(150);
+      await tap('past-events-continue');
+    }
+    check('the walk ends on the picking screen', await seen('screen-past-choose'));
+    const evs = ((await store()).pastEvents ?? []).map((e) => e.id);
+    check('with every period holding something', evs.length === 5, String(evs.length));
+    await tap(`past-choose-${evs[0]}`);
+    check('one that still has weight is enough', (await noticeText('past-choose-continue')).includes('this one'), await noticeText('past-choose-continue'));
+    await tap('past-choose-back');
+    check('Back from the picking screen is the last period, even with every period listed', await seen('screen-past-events'));
+    await tap('past-events-continue');
+    check('and the pick survived the detour', (await noticeText('past-choose-count')).toLowerCase().startsWith('1 of'), await noticeText('past-choose-count'));
+    await tap('past-choose-continue');
+    check('one pick goes straight into the writing', await seen('screen-past-analyse'));
+    await page.locator('[data-testid="past-what"]').fill('We kept ducks and I fell in twice.');
+    await page.locator('[data-testid="past-shaped"]').fill('I do not mind cold water or looking foolish.');
+    await page.locator('[data-testid="past-believe"]').fill('Getting out matters more than not falling in.');
+    await page.waitForTimeout(250);
+    await tap('past-keep');
+    check('and closes on the Book question', await seen('screen-past-done'));
+
     // ---- Today leads back to whatever was left part-way
     await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
     await page.clock.runFor(1500);

@@ -53,6 +53,12 @@ export interface SyncBundle {
   presentPicks: PresentPickRow[];
   pastEpochs: PastEpochRow[];
   pastEvents: PastEventRow[];
+  /**
+   * Whether the Past volume's periods have been walked to the end. One fact
+   * per person, so it rides on the profile row. Without it a restore reopened
+   * a finished Past on the walk and the chooser called it "Picked up".
+   */
+  pastListed: boolean;
 }
 
 export type Row = Record<string, unknown>;
@@ -131,6 +137,7 @@ export function toRows(bundle: SyncBundle, userId: string, timezone: string): Ta
           display_name: p.displayName,
           persona: p.persona,
           track: p.track,
+          past_listed: bundle.pastListed,
           wake_time: p.wakeTime,
           evening_time: p.eveningTime,
           day_boundary_hour: p.dayBoundaryHour,
@@ -805,6 +812,9 @@ export function fromRows(tables: Partial<Record<(typeof TABLE_ORDER)[number], Ro
     presentPicks,
     pastEpochs,
     pastEvents,
+    // A missing column is the zero value: a profile row from before 0006
+    // reads as not yet listed, which is one Back away from right.
+    pastListed: bool(pr?.past_listed),
   };
 }
 

@@ -153,6 +153,8 @@ export interface PastDraft {
   picked: boolean;
   /** An event named but not yet added, on whichever period is open. */
   title: string;
+  /** Periods renamed on the age screen, by period id, until they are cut. */
+  labels: Record<string, string>;
   writing: { eventId: string; what: string; shaped: string; believe: string; framingId: string | null } | null;
   updatedAt: string;
 }
@@ -473,6 +475,8 @@ export interface MorrowState {
     rank: number;
   }) => void;
   dropPresentPick: (cardId: string, half: 'faults' | 'virtues') => void;
+  /** The deck's order becomes the half's order, so "2 of 3" and the Book's page agree. */
+  rankPresentPicks: (half: 'faults' | 'virtues', order: string[]) => void;
 
   /** The Past volume's three moves. */
   setPastEpochs: (epochs: { id: string; label: string; fromAge: number; toAge: number }[]) => void;
@@ -827,7 +831,7 @@ const store = create<MorrowState>()(
                 ? {
                     present: {
                       entries: s.presentPicks
-                        .filter((p) => p.safetyRisk === 'none' && p.storyLine.trim() && p.applyLine.trim())
+                        .filter((p) => isQuotable(p) && p.storyLine.trim() && p.applyLine.trim())
                         .sort((a, b) => a.rank - b.rank)
                         .map((p) => ({
                           half: p.half,
@@ -840,12 +844,13 @@ const store = create<MorrowState>()(
                     },
                   }
                 : {}),
-              // Only the ones the person put in, and never a flagged one.
+              // Only the ones the person put in, and never one written in crisis
+              // — the same rule as every other line in the Book.
               ...(s.pastEvents.some((v) => v.joinsBook)
                 ? {
                     past: {
                       entries: s.pastEvents
-                        .filter((v) => v.joinsBook && v.analysed && v.safetyRisk === 'none')
+                        .filter((v) => v.joinsBook && v.analysed && isQuotable(v))
                         .map((v) => ({
                           period: s.pastEpochs.find((e) => e.id === v.epochId)?.label ?? '',
                           title: v.title,
@@ -1704,6 +1709,7 @@ const store = create<MorrowState>()(
           presentPicks: b.presentPicks,
           pastEpochs: b.pastEpochs,
           pastEvents: b.pastEvents,
+          pastListed: b.pastListed,
         });
         return { ok: true, pulled: true };
       },
@@ -1761,6 +1767,12 @@ const store = create<MorrowState>()(
         }),
       dropPresentPick: (cardId, half) =>
         set((s) => ({ presentPicks: s.presentPicks.filter((p) => !(p.cardId === cardId && p.half === half)) })),
+      rankPresentPicks: (half, order) =>
+        set((s) => ({
+          presentPicks: s.presentPicks.map((p) =>
+            p.half === half && order.includes(p.cardId) && p.rank !== order.indexOf(p.cardId) ? { ...p, rank: order.indexOf(p.cardId) } : p,
+          ),
+        })),
 
       setPastEpochs: (epochs) =>
         set((s) => {
@@ -1775,9 +1787,15 @@ const store = create<MorrowState>()(
               position: i,
               createdAt: known.get(e.id)?.createdAt ?? now,
             })),
-            // A period that is gone takes its events with it, the way the
-            // database's cascade would.
-            pastEvents: s.pastEvents.filter((v) => epochs.some((e) => e.id === v.epochId)),
+            // A period cut again from a different age keeps its place in the
+            // order, so the events in "19 to 26" follow it to "19 to 24" rather
+            // than vanishing. Only a period that is gone altogether takes its
+            // events with it, the way the database's cascade would.
+            pastEvents: s.pastEvents.flatMap((v) => {
+              const at = s.pastEpochs.findIndex((e) => e.id === v.epochId);
+              const to = at >= 0 ? epochs[at] : epochs.find((e) => e.id === v.epochId);
+              return to ? [{ ...v, epochId: to.id }] : [];
+            }),
           };
         }),
       setPastListed: (listed) => set({ pastListed: listed }),
@@ -1816,9 +1834,11 @@ const store = create<MorrowState>()(
                     shapedMe: fields.shapedMe.trim(),
                     stillBelieve: fields.stillBelieve.trim(),
                     safetyRisk: risk,
-                    // A flagged line never reaches the Book, whatever was chosen
-                    // before. The screen says so rather than overriding quietly.
-                    joinsBook: risk === 'none' ? v.joinsBook : false,
+                    // A line written in crisis never reaches the Book, whatever
+                    // was chosen before, and the screen says so rather than
+                    // overriding quietly. A concern-band line is theirs to place,
+                    // as it is everywhere else in the app.
+                    joinsBook: risk === 'crisis' ? false : v.joinsBook,
                   }
                 : v,
             ),
@@ -1827,7 +1847,7 @@ const store = create<MorrowState>()(
         }),
       setPastJoinsBook: (id, joins) =>
         set((s) => ({
-          pastEvents: s.pastEvents.map((v) => (v.id === id ? { ...v, joinsBook: joins && v.safetyRisk === 'none' } : v)),
+          pastEvents: s.pastEvents.map((v) => (v.id === id ? { ...v, joinsBook: joins && v.safetyRisk !== 'crisis' } : v)),
         })),
 
       setToast: (t) => set({ toast: t }),
@@ -2001,6 +2021,7 @@ function bundleOf(s: MorrowState): SyncBundle {
     presentPicks: s.presentPicks,
     pastEpochs: s.pastEpochs,
     pastEvents: s.pastEvents,
+    pastListed: s.pastListed,
   };
 }
 

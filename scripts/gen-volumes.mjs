@@ -42,6 +42,8 @@ const PAST = {
   'events.hurt': 'It hurt',
   'events.add': 'Add an event',
   'events.empty': 'Nothing from this period is fine. Leave it and move on.',
+  'events.needOne': 'Name at least one event before going on, or leave this for another time.',
+  'events.needWords': 'Give it a few words first.',
   'choose.prompt': 'Which of these do you want to go into?',
   'choose.note': 'Pick the ones that still have weight. You write about these; the rest stay as titles.',
   'analyse.one.prompt': 'What happened?',
@@ -123,6 +125,29 @@ faults.prompts.writeTwoHint = 'What you do instead';
 virtues.prompts.deckNote = 'Pick up to three. Take the ones that are plainly true, not the ones that sound good.';
 virtues.prompts.writeTwoPrompt = 'Pick the goal that needs this. Then write where you will use it next week.';
 virtues.prompts.writeTwoHint = 'On ___ I use this to ___';
+
+// Full's deck takes everything that is plainly true and the narrowing is its
+// own step, as the source has it; Starter's deck stops at three, and that is
+// the narrowing. The note has to say which it is doing.
+faults.prompts.deckNoteFull = 'Tick everything that is plainly true; you narrow it to the nine that matter most next. These are habits, not a verdict on you.';
+virtues.prompts.deckNoteFull = 'Tick everything that is plainly true, not what sounds good; you narrow it to the nine that matter most next.';
+faults.prompts.narrowPrompt = 'Which of these matter most?';
+virtues.prompts.narrowPrompt = 'Which of these matter most?';
+faults.prompts.narrowNote = 'Keep up to nine. Take one off to let another through.';
+virtues.prompts.narrowNote = 'Keep up to nine. Take one off to let another through.';
+
+// The closing lines say only what is true today: the picks join the Book.
+// Nothing yet pairs a fault's answer with a goal, and the coach does not read
+// these — the old lines claimed both.
+faults.prompts.done = 'Each one has a sign to watch for and an answer to it now. They join your Book.';
+virtues.prompts.done = 'Each one has a time it mattered and a place to use it next week. They join your Book.';
+virtues.prompts.doneNoGoal = 'When you name your goals in Future, each of these can be paired with the one that needs it.';
+// With no goals yet there is nothing to pick, so the prompt must not ask.
+virtues.prompts.writeTwoPromptNoGoal = 'Where will you use this next week?';
+// A line written in crisis is kept, and kept out of the Book, and the screen
+// says so rather than announcing "Kept." as if nothing had happened.
+faults.prompts.heldNote = 'This one stays on your phone and out of the Book. It is still yours, and it still exports.';
+virtues.prompts.heldNote = faults.prompts.heldNote;
 
 const q = (s) => JSON.stringify(s);
 const cards = (list) => list.map((c) => `  { id: ${q(c.id)}, text: ${q(c.text)}, group: ${q(c.group)} },`).join('\n');

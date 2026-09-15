@@ -4,6 +4,7 @@ import {
   halfComplete,
   ifThenFromFault,
   narrowTo,
+  nextHalf,
   presentStep,
   sections,
   virtuesForGoal,
@@ -53,7 +54,7 @@ const pick = (cardId: string, over: Partial<PresentPick> = {}): PresentPick => (
 describe('the Present volume', () => {
   it('narrows to three on an evening and to the source\u2019s range on the long track', () => {
     expect(narrowTo('starter')).toEqual({ min: 1, max: 3 });
-    expect(narrowTo('full')).toEqual({ min: 6, max: 9 });
+    expect(narrowTo('full')).toEqual({ min: 1, max: 9 });
   });
 
   it('makes an if-then out of the sign they tapped and the action they wrote', () => {
@@ -128,14 +129,14 @@ describe('the Past volume', () => {
     const epochs = epochsFor(30, track);
     expect(pastStep(epochs, [], [], track).step).toBe('events');
     const events: PastEvent[] = epochs.map((e, i) => ({ id: `ev${i}`, epochId: e.id, title: 't', weight: 'helped', analysed: false }));
-    expect(pastStep(epochs, events, [], track)).toEqual({ step: 'choose', listed: events.length, target: 3 });
+    expect(pastStep(epochs, events, [], track, true)).toEqual({ step: 'choose', listed: events.length, target: 3 });
     const chosen = events.map((e, i) => ({ ...e, analysed: i < 3 }));
-    const step = pastStep(epochs, chosen, [], track);
+    const step = pastStep(epochs, chosen, [], track, true);
     expect(step).toMatchObject({ step: 'analyse', done: 0, total: 3 });
     const analyses: PastAnalysis[] = chosen
       .filter((e) => e.analysed)
       .map((e) => ({ eventId: e.id, whatHappened: 'a', shapedMe: 'b', stillBelieve: 'c', joinsBook: true }));
-    expect(pastStep(epochs, chosen, analyses, track)).toEqual({ step: 'done' });
+    expect(pastStep(epochs, chosen, analyses, track, true)).toEqual({ step: 'done' });
   });
 
   it('counts an analysis finished only when all three boxes are written', () => {
@@ -280,7 +281,7 @@ describe('where each door stands', () => {
     const analyses: PastAnalysis[] = events
       .filter((e) => e.analysed)
       .map((e) => ({ eventId: e.id, whatHappened: 'a', shapedMe: 'b', stillBelieve: 'c', joinsBook: false }));
-    expect(volumeStates({ ...base, pastEpochs: epochs, pastEvents: events, pastAnalyses: analyses }).past).toBe('done');
+    expect(volumeStates({ ...base, pastEpochs: epochs, pastEvents: events, pastAnalyses: analyses, pastListed: true }).past).toBe('done');
   });
 
   it('offers the source\u2019s route: faults, Future, virtues, Past', () => {
@@ -303,6 +304,26 @@ describe('walking the periods is the person\u2019s, not the data\u2019s', () => 
     const one: PastEvent[] = [{ id: 'e1', epochId: epochs[0]!.id, title: 't', weight: 'helped', analysed: false }];
     expect(pastStep(epochs, one, [], track, false).step).toBe('events');
     expect(pastStep(epochs, one, [], track, true).step).toBe('choose');
+  });
+
+  it('keeps the walk open until they say so, even once every period holds something', () => {
+    // Back from the picking screen used to be dead here: with nothing empty
+    // to return to, the engine skipped straight past the walk.
+    const full: PastEvent[] = epochs.map((e, i) => ({ id: `e${i}`, epochId: e.id, title: 't', weight: 'helped', analysed: false }));
+    expect(pastStep(epochs, full, [], track, false).step).toBe('events');
+    expect(pastStep(epochs, full, [], track, true).step).toBe('choose');
+  });
+
+  it('goes into one event when one is all that still has weight', () => {
+    const two: PastEvent[] = [
+      { id: 'e1', epochId: epochs[0]!.id, title: 'a', weight: 'helped', analysed: true },
+      { id: 'e2', epochId: epochs[1]!.id, title: 'b', weight: 'hurt', analysed: false },
+    ];
+    expect(pastStep(epochs, two, [], track, true)).toMatchObject({ step: 'analyse', eventId: 'e1', total: 1 });
+  });
+
+  it('is not done with nothing in it, however the walk was left', () => {
+    expect(pastStep(epochs, [], [], track, true).step).toBe('events');
   });
 
   it('lets a period be left empty without pulling the person back to it', () => {
@@ -423,5 +444,22 @@ describe('the two volumes in the sealed Book', () => {
         (p) => p + '_1',
       ),
     ).toThrow(/not written by you/i);
+  });
+});
+
+describe('which half a bare door opens', () => {
+  const done = (half: 'faults' | 'virtues', cardId: string) => ({
+    cardId,
+    half,
+    storyLine: 'a time',
+    applyLine: 'what instead',
+    framingId: null,
+    goalId: null,
+    rank: 0,
+  });
+  it('is the faults first, then the virtues once the faults are written, then the faults again', () => {
+    expect(nextHalf([], 'starter')).toBe('faults');
+    expect(nextHalf([done('faults', 'f1')], 'starter')).toBe('virtues');
+    expect(nextHalf([done('faults', 'f1'), done('virtues', 'v1')], 'starter')).toBe('faults');
   });
 });
