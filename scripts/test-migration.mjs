@@ -19,11 +19,12 @@
  *
  * Run: node scripts/test-migration.mjs
  */
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
 
-const MIGRATION = 'supabase/migrations/0001_init.sql';
+// Every migration, in order — the same files `pnpm db:push` applies.
+const MIGRATIONS_DIR = 'supabase/migrations';
 
 const ALICE = '11111111-1111-1111-1111-111111111111';
 const BOB = '22222222-2222-2222-2222-222222222222';
@@ -44,6 +45,9 @@ language sql stable as $$
 $$;
 
 create role authenticated nologin;
+-- The other two API roles a migration may name in a grant or a revoke.
+create role anon nologin;
+create role service_role nologin;
 grant usage on schema public, auth to authenticated;
 grant select on auth.users to authenticated;
 `;
@@ -121,13 +125,21 @@ try {
     'bob@example.com',
   ]);
 
-  const sql = await readFile(MIGRATION, 'utf8');
-  try {
-    await db.exec(sql);
-    check('the migration runs against a real Postgres', true);
-  } catch (err) {
-    check('the migration runs against a real Postgres', false, reason(err));
-    throw new Error('migration failed');
+  const files = (await readdir(MIGRATIONS_DIR)).filter((f) => /^\d+_.*\.sql$/.test(f)).sort();
+  // Every file, concatenated, is what the checks below read for the declared
+  // tables and policies.
+  let sql = '';
+  for (const file of files) {
+    const one = await readFile(`${MIGRATIONS_DIR}/${file}`, 'utf8');
+    sql += `
+${one}`;
+    try {
+      await db.exec(one);
+      check(`${file} runs against a real Postgres`, true);
+    } catch (err) {
+      check(`${file} runs against a real Postgres`, false, reason(err));
+      throw new Error('migration failed');
+    }
   }
   await db.exec(GRANTS);
 
@@ -567,6 +579,26 @@ try {
     [ALICE, goalId],
     'check',
   );
+
+  // ---- the ceiling on the AI functions (0003): counted here, not in a worker's memory
+  await db.exec('reset role');
+  const hits = [];
+  for (let i = 0; i < 4; i += 1) {
+    const r = await db.query('select public.rate_limit_hit($1, 3, 600) as ok', ['ip:test']);
+    hits.push(r.rows[0].ok);
+  }
+  check('three calls pass and the fourth is refused', hits.join(',') === 'true,true,true,false', hits.join(','));
+  // A window that has run out starts again: the row is aged by hand.
+  await db.query(`update public.rate_limits set window_start = now() - interval '11 minutes' where key = $1`, ['ip:test']);
+  const again = await db.query('select public.rate_limit_hit($1, 3, 600) as ok', ['ip:test']);
+  check('and a new window opens once the old one has run out', again.rows[0].ok === true);
+  check('another caller has its own count', (await db.query('select public.rate_limit_hit($1, 3, 600) as ok', ['user:someone'])).rows[0].ok === true);
+  // Nobody reaches the table or the function through the API roles.
+  // The API roles are granted the table like every other (Supabase's default
+  // privileges do the same); RLS with no policy is what keeps it empty for them.
+  const peek = await as(ALICE, 'select * from public.rate_limits', []);
+  check('a signed-in person reads no counts', peek.rows.length === 0, `${peek.rows.length} rows`);
+  await asRejects('nor call the counter', ALICE, "select public.rate_limit_hit('x', 1, 1)", [], 'permission denied');
 } catch (err) {
   fatal = reason(err);
 } finally {

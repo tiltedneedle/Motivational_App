@@ -7,6 +7,7 @@
  * place a model could put words in someone's mouth.
  */
 import Anthropic from 'npm:@anthropic-ai/sdk@0.68.0';
+import { allow, callerOf, tooMany } from '../_shared/limit.ts';
 
 const MODEL = 'claude-sonnet-5';
 
@@ -88,6 +89,8 @@ Deno.serve(async (req) => {
     });
   }
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405);
+  // A ceiling per caller (see _shared/limit.ts): the key ships in the app.
+  if (!(await allow('readback', callerOf(req), { calls: 30, seconds: 600 }))) return tooMany();
 
   let text = '';
   let limit = 7;

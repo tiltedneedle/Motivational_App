@@ -8,6 +8,7 @@
  * It never returns the user's words, only a verdict and a category.
  */
 import Anthropic from 'npm:@anthropic-ai/sdk@0.68.0';
+import { allow, callerOf, tooMany } from '../_shared/limit.ts';
 
 const MODEL = 'claude-haiku-4-5-20251001';
 
@@ -42,6 +43,8 @@ Deno.serve(async (req) => {
     });
   }
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405);
+  // A ceiling per caller (see _shared/limit.ts): the key ships in the app.
+  if (!(await allow('safety', callerOf(req), { calls: 60, seconds: 600 }))) return tooMany();
 
   let text = '';
   try {
