@@ -51,7 +51,11 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
       immutable asset caching, the SPA rewrite), the two EXPO_PUBLIC vars, and
       the auth allow-list note; `http://localhost:8790` added to the project
       redirect URLs and pushed
-- [ ] 35. **IN FLIGHT — the Past and Present volumes.** The client asked for all
+- [ ] 35. **IN FLIGHT — the Past and Present volumes.** Steps 1–3 of the build
+      order are done and pushed (engines + decks + copy, migration 0004, store
+      and sync, all five screens, the doors wired in, e2e 233, axe 0 × 33).
+      What is left: the two new Book chapters (see "What is left" below), then
+      PROGRESS/README. Was: The client asked for all
       three, named plainly (Past / Present / Future, no "Authoring"), chosen from
       a four-door screen, each path proceeding the way the source program does.
       The researched flows and Morrow's versions are written down in
@@ -1063,10 +1067,30 @@ written, and a per-event choice about whether it joins the Book.
 
 **Build order** (each step gated the way Future is — core tests, store, migration against a
 real Postgres, e2e, axe, the way-back guard, the a11y lint):
-1. types + engines (`present.ts`, `past.ts`) with tests — IN FLIGHT
-2. store, migration, sync
-3. screens: `/choose`, `/explore`, `/present`, `/past`, and the two new Book chapters
-4. e2e through all three doors; axe; PROGRESS and README
+1. ~~types + engines (`present.ts`, `past.ts`) with tests~~ — done, 403 core tests
+2. ~~store, migration (0004), sync~~ — done; `present_picks`, `past_epochs`, `past_events`,
+   RLS written out per table, owner checked by trigger, round-tripped in a test
+3. ~~screens: `/choose`, `/explore`, `/present`, `/past`~~ — done, and reachable: consent
+   leads to the three doors, a Bookless Today offers the other two, You keeps a way back
+4. ~~e2e through all three doors; axe~~ — done: 233 checks, axe 0 across 33 screens
+5. **What is left: the two new Book chapters.** A `BookChapter` is goal-shaped
+   (`goalId`, `name`, `horizon`, `lines`, `memories`) and neither new volume is, so
+   `BookVersion` needs a place for volume writing — and the authorship ratio is
+   computed twice, in `engines/book.ts` and again in SQL
+   (`0001_init.sql`, the `contents` jsonb walk near line 650). Both sides must count
+   the new prose identically or a sealed Book will disagree with its own row. Card
+   text and framing labels are the app's words and must NOT count as the person's
+   (the deck agent flagged this: a chapter made mostly of card text would fail the
+   0.95 floor). Plan: add `volumes?: { present?, past? }` to `BookVersion`, count it in
+   both places, print it in `book-html`, pass it from the seal screen, test both sides.
+
+**Two bugs the walk-through found, both fixed and tested** — worth knowing about because
+the same shape could recur in any multi-step screen: the walk through the Past periods was
+derived from "the first period with no events", so adding one event ended the period (a
+second could never be added) and a period left empty on purpose pulled the person back to
+it forever; and the picking screen jumped to the writing the instant the last event was
+tapped, leaving its own button unreachable and a pick impossible to reconsider. Both are
+now the person's to advance (`pastListed` in the store, `picked` on the screen).
 
 ### The research, and what it changed (2026-09-13)
 
