@@ -241,6 +241,14 @@ export default function Settings() {
           </View>
 
           <Rule />
+          {/* The other two volumes, for whoever started with one of them. */}
+          <View style={{ gap: 6 }}>
+            <Label>Past, present and future</Label>
+            <Body style={{ fontSize: 14 }}>Three ways to write about the same life. Any of them can be picked up at any time, and doing one does not change another.</Body>
+            <Chip testID="settings-volumes" label="See the three" ghost onPress={() => router.push('/choose')} />
+          </View>
+
+          <Rule />
           {/* Welcome, again. It never comes back on its own once it has been seen. */}
           <View style={{ gap: 6 }}>
             <Label>The introduction</Label>

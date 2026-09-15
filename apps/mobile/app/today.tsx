@@ -195,6 +195,8 @@ export default function Today() {
               : firstRunCaption(firstRun, goals.length)}
           </Body>
           <InkButton testID="today-begin" label={firstRun.label} onPress={() => router.push(firstRun.route)} />
+          {/* Today comes from the Future volume, but it is not the only door. */}
+          <TextButton testID="today-other-volumes" label="Or start with your past or present" onPress={() => router.push('/choose')} />
           {hasSupabase && !state.account ? (
             <TextButton testID="today-bring-back" label="Bring my Book back from my account" onPress={() => router.push('/account')} />
           ) : null}

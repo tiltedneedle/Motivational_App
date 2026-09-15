@@ -69,7 +69,9 @@ export default function Consent() {
             label="I understand, continue"
             onPress={() => {
               consent();
-              router.push('/interview');
+              // The three doors, not straight into one of them: the source
+              // sells its programs separately and tells people to choose.
+              router.push('/choose');
             }}
           />
           <TextButton label="Not now" onPress={() => router.back()} />

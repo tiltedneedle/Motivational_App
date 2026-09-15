@@ -170,6 +170,30 @@ async function main() {
     check('consent has a way back to Welcome', await seen('screen-welcome'));
     await tap('welcome-begin');
     await tap('consent-continue');
+
+    // ---- the three doors (client decision, 2026-09-15)
+    //
+    // Consent leads to a choice, not into one volume: the source sells its
+    // programs separately and tells people to pick. Every door is reachable,
+    // in any order, and the fourth explains all three.
+    check('consent leads to the three doors', await seen('screen-choose'));
+    check('the heading is the client’s own', (await text('choose-heading')) === 'Work on your:', await text('choose-heading'));
+    for (const door of ['past', 'present', 'future']) {
+      check(`the ${door} door is there`, await seen(`door-${door}`));
+    }
+    check('and Future is marked as the one Today comes from', await seen('door-future-badge'));
+    await tap('choose-explore');
+    check('door four explains all three', await seen('screen-explore'));
+    for (const v of ['past', 'present', 'future']) check(`it says what ${v} is`, await seen(`explore-${v}`));
+    const route = await text('explore-order-steps');
+    check(
+      'and offers the source’s order, with both halves of Present named',
+      route.indexOf('faults') < route.indexOf('Future') && route.indexOf('Future') < route.indexOf('virtues') && route.indexOf('virtues') < route.indexOf('Past'),
+      route,
+    );
+    check('and lets you choose from that screen', await seen('explore-pick-future'));
+    await tap('explore-pick-future');
+
     check('interview screen', await seen('screen-interview'));
     check('the name given on Welcome is kept', await page.evaluate(() => {
       const key = Object.keys(localStorage).find((k) => k.includes('morrow'));
@@ -1445,6 +1469,115 @@ async function main() {
       await tap('safety-continue');
       check('the card can be dismissed once it has settled', !(await seen('safety-card')));
     }
+
+    // ---- the Present volume (PRD 7.15): pick, narrow, write twice
+    //
+    // The source's three moves with the personality model dropped. What is
+    // checked here is what must never regress: no trait or factor is ever
+    // named, the deck caps the picks with a reason, and the tapped sign plus
+    // the written answer make one if-then.
+    await page.goto(`${BASE}/present`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(600);
+    check('the Present deck opens', await seen('screen-present'));
+    const deckWords = await page.locator('body').innerText();
+    check(
+      'and names no trait, factor or diagnosis',
+      !/extraversion|neurotic|agreeableness|conscientious|big five|personality type|diagnos/i.test(deckWords),
+    );
+    const cards = await page.locator('[data-testid^="present-card-"]').count();
+    check('the evening deck is twelve cards', cards === 12, String(cards));
+    const cardIds = await page.evaluate(() =>
+      [...document.querySelectorAll('[data-testid^="present-card-"]')].map((e) => e.getAttribute('data-testid').replace('present-card-', '')),
+    );
+    for (const id of cardIds.slice(0, 4)) await tap(`present-card-${id}`);
+    check('a fourth pick is refused, with a reason', (await text('present-problem')).includes('3 already'), await text('present-problem'));
+    await tap('present-continue');
+    check('the first pick opens its two writes', await seen('screen-present-write'));
+    await page.locator('[data-testid="present-story"]').fill('The talk I had to give. I wrote it at midnight and it showed.');
+    await page.waitForTimeout(200);
+    const framingId = await page.evaluate(() =>
+      document.querySelector('[data-testid^="present-framing-"]')?.getAttribute('data-testid')?.replace('present-framing-', '') ?? null,
+    );
+    if (framingId) await tap(`present-framing-${framingId}`);
+    await page.locator('[data-testid="present-apply"]').fill('Put the first twenty minutes in the calendar the morning it lands.');
+    await page.waitForTimeout(300);
+    await tap('present-keep');
+    const kept = await page.evaluate(() => JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.presentPicks ?? []);
+    check('the pick is stored with both lines and the sign they tapped', kept.length === 1 && kept[0].storyLine && kept[0].applyLine && kept[0].framingId === framingId, JSON.stringify(kept[0] ?? {}).slice(0, 120));
+    check('and screened, like every other thing a person writes here', kept[0]?.safetyRisk === 'none');
+
+    // ---- the Past volume (PRD 7.16): periods, events, what they made of you
+    //
+    // The source's epoch structure. The two properties that matter most: a
+    // period can hold more than one event and can be left empty, and nothing
+    // reaches the Book unless the person puts it there.
+    await page.goto(`${BASE}/past`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(600);
+    check('the Past volume warns before it asks anything', await seen('screen-past-doorway'));
+    check('and says plainly what it is not', (await text('past-doorway-note')).includes('not therapy'));
+    check('with the helplines on that screen', await seen('top-help'));
+    await tap('past-begin');
+    await page.locator('[data-testid="past-age"]').fill('34');
+    await page.waitForTimeout(200);
+    await tap('past-age-continue');
+    check('the periods are cut from their age', await seen('screen-past-events'));
+    const periods = await page.evaluate(() => (JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.pastEpochs ?? []).map((e) => e.label));
+    check('four of them on an evening, the last running to now', periods.length === 4 && periods[3].includes('now'), periods.join(' / '));
+
+    // two in the first period: one event must not end it
+    await page.locator('[data-testid="past-event-title"]').fill('the house with the green door');
+    await page.waitForTimeout(150);
+    await tap('past-event-add');
+    check('adding one event does not end the period', await seen('past-event-title'));
+    await page.locator('[data-testid="past-event-title"]').fill('my grandmother teaching me to swim');
+    await page.waitForTimeout(150);
+    await tap('past-event-add');
+    const inFirst = await page.evaluate(() => (JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.pastEvents ?? []).length);
+    check('so a period can hold more than one', inFirst === 2, String(inFirst));
+
+    await tap('past-events-continue');
+    await page.locator('[data-testid="past-event-title"]').fill('changing school mid-term');
+    await page.waitForTimeout(150);
+    await tap('past-weight-hurt');
+    await tap('past-event-add');
+    await tap('past-events-continue');
+    await tap('past-events-continue'); // a period left empty on purpose
+    await page.locator('[data-testid="past-event-title"]').fill('the year I moved cities');
+    await page.waitForTimeout(150);
+    await tap('past-event-add');
+    await tap('past-events-continue');
+    check('an empty period is allowed, and the walk ends when they say so', await seen('screen-past-choose'));
+
+    const evIds = await page.evaluate(() => (JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.pastEvents ?? []).map((e) => e.id));
+    for (const id of evIds.slice(0, 3)) await tap(`past-choose-${id}`);
+    check('the picking screen holds until they press on', await seen('screen-past-choose'));
+    await tap(`past-choose-${evIds[3]}`);
+    check('a fourth is refused, with a reason', (await text('past-problem')).includes('3 already'), await text('past-problem'));
+    await tap('past-choose-continue');
+    for (let i = 0; i < 3; i += 1) {
+      if (!(await seen('screen-past-analyse'))) break;
+      await page.locator('[data-testid="past-what"]').fill('It happened in the spring and nobody explained it.');
+      await page.locator('[data-testid="past-shaped"]').fill('I pack lightly and I keep the people I find.');
+      await page.locator('[data-testid="past-believe"]').fill('Starting again is survivable.');
+      await page.waitForTimeout(250);
+      await tap('past-keep');
+    }
+    check('the three moves end on the Book question', await seen('screen-past-done'));
+    const written = await page.evaluate(() => (JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.pastEvents ?? []).filter((e) => e.analysed));
+    check('all three are written, with what it made of them', written.length === 3 && written.every((e) => e.shapedMe && e.stillBelieve));
+    check('and not one of them is in the Book until they say so', written.every((e) => e.joinsBook === false));
+    await tap(`past-join-yes-${written[0].id}`);
+    const joined = await page.evaluate(() => (JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.pastEvents ?? []).filter((e) => e.joinsBook).length);
+    check('one tap puts one in, and only that one', joined === 1, String(joined));
+
+    // ---- the doors stay open afterwards
+    await page.goto(`${BASE}/choose`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(500);
+    check('coming back, the chooser says what has been written', await seen('choose-reentry'));
+    check('and marks the volumes that were', await seen('door-past-mark'));
 
     check('no uncaught page errors', pageErrors.length === 0, pageErrors.join(' | '));
   } catch (err) {
