@@ -47,8 +47,31 @@ export type Event =
   | { name: 'notification_opened'; route: string }
   | { name: 'account_signed_in'; method: 'email' | 'apple' | 'google'; pulled: boolean }
   | { name: 'safety_card_shown'; source: string }
-  | { name: 'first_run_step'; step: 'welcome' | 'consent' | 'interview' | 'doorway' | 'fifteen' | 'read_back' | 'order' | 'stone' | 'portrait' | 'seal' }
-  | { name: 'first_value'; kind: 'goals_named' | 'fifteen_closed' | 'book_sealed' | 'first_move_done' | 'first_day_sealed' };
+  | {
+      name: 'first_run_step';
+      step:
+        | 'welcome'
+        | 'choose'
+        | 'explore'
+        | 'consent'
+        | 'interview'
+        | 'doorway'
+        | 'fifteen'
+        | 'read_back'
+        | 'order'
+        | 'stone'
+        | 'portrait'
+        | 'seal'
+        | 'present_deck'
+        | 'present_write'
+        | 'past_doorway'
+        | 'past_events'
+        | 'past_analyse';
+    }
+  /** Which door was taken from the chooser, and whether it was a first visit. */
+  | { name: 'volume_opened'; volume: 'past' | 'present' | 'future'; first: boolean }
+  | { name: 'volume_finished'; volume: 'past' | 'present' | 'future' }
+  | { name: 'first_value'; kind: 'goals_named' | 'fifteen_closed' | 'book_sealed' | 'first_move_done' | 'first_day_sealed' | 'present_written' | 'past_written' };
 
 const ID_KEY = 'morrow-analytics-id';
 let id: string | null = null;

@@ -47,7 +47,10 @@ import {
   movesOpenOn,
   orderForToday,
   firstRunStep,
+  volumeStates,
   type FirstRunStep,
+  type VolumeName,
+  type VolumeState,
   practiceValue,
   dayOf,
   sealedOn,
@@ -2173,6 +2176,38 @@ export function firstRunOf(s: MorrowState): FirstRunStep {
   });
 }
 export const useFirstRun = () => useMorrow(useShallow(firstRunOf));
+
+/**
+ * Where each of the three volumes stands, for the chooser and for You. The
+ * engine holds the rules; this only feeds it what the store keeps.
+ */
+export function volumesOf(s: MorrowState): Record<VolumeName, VolumeState> {
+  return volumeStates({
+    track: s.profile.track,
+    goals: s.goals.length,
+    hasIdeal: latestText(s.texts, 'ideal') !== null,
+    books: s.books.length,
+    presentPicks: s.presentPicks.map((p) => ({
+      cardId: p.cardId,
+      half: p.half,
+      storyLine: p.storyLine,
+      applyLine: p.applyLine,
+      framingId: p.framingId,
+      goalId: p.goalId,
+      rank: p.rank,
+    })),
+    pastEpochs: s.pastEpochs.map((e) => ({ id: e.id, label: e.label, fromAge: e.fromAge, toAge: e.toAge })),
+    pastEvents: s.pastEvents.map((v) => ({ id: v.id, epochId: v.epochId, title: v.title, weight: v.weight, analysed: v.analysed })),
+    pastAnalyses: s.pastEvents.map((v) => ({
+      eventId: v.id,
+      whatHappened: v.whatHappened,
+      shapedMe: v.shapedMe,
+      stillBelieve: v.stillBelieve,
+      joinsBook: v.joinsBook,
+    })),
+  });
+}
+export const useVolumeStates = () => useMorrow(useShallow(volumesOf));
 
 export const useTodaysMoves = () => useMorrow(useShallow(todaysMoves));
 export const useConsistency = () => useMorrow(useShallow(consistency));

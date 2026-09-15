@@ -17,6 +17,7 @@ import {
   epochsFor,
   pastStep,
   quotableLines,
+  type Epoch,
   type PastAnalysis,
   type PastEvent,
 } from '../src/engines/past';
@@ -34,6 +35,7 @@ import {
   VIRTUE_CARDS_STARTER,
   VIRTUE_COPY,
 } from '../src/content/volumes';
+import { SUGGESTED_ROUTE, firstVisit, volumeStates } from '../src/engines/volumes';
 
 const card = (id: string, text: string): PresentCard => ({ id, text, group: 'drive' });
 const pick = (cardId: string, over: Partial<PresentPick> = {}): PresentPick => ({
@@ -237,5 +239,55 @@ describe('the decks as written', () => {
     expect(PAST_COPY['doorway.note']).toMatch(/not therapy/i);
     expect(PAST_COPY['join.question']).toMatch(/Book/);
     expect(PAST_COPY['join.crisisNote']).toMatch(/out of the Book/);
+  });
+});
+
+describe('where each door stands', () => {
+  const base = {
+    track: 'starter' as const,
+    goals: 0,
+    hasIdeal: false,
+    books: 0,
+    presentPicks: [] as PresentPick[],
+    pastEpochs: [] as Epoch[],
+    pastEvents: [] as PastEvent[],
+    pastAnalyses: [] as PastAnalysis[],
+  };
+
+  it('starts with all three untouched, and says so', () => {
+    const states = volumeStates(base);
+    expect(states).toEqual({ past: 'untouched', present: 'untouched', future: 'untouched' });
+    expect(firstVisit(states)).toBe(true);
+  });
+
+  it('counts Future started at the first goal and done at the sealed Book', () => {
+    expect(volumeStates({ ...base, goals: 2 }).future).toBe('started');
+    expect(volumeStates({ ...base, goals: 2, books: 1 }).future).toBe('done');
+  });
+
+  it('counts Present done only when both halves are', () => {
+    const faults = [pick('f-a')];
+    expect(volumeStates({ ...base, presentPicks: faults }).present).toBe('started');
+    const both = [...faults, pick('v-a', { half: 'virtues' })];
+    expect(volumeStates({ ...base, presentPicks: both }).present).toBe('done');
+  });
+
+  it('counts Past started at the first period and done when every chosen event is written', () => {
+    const epochs = epochsFor(30, 'starter');
+    expect(volumeStates({ ...base, pastEpochs: epochs }).past).toBe('started');
+    const events: PastEvent[] = epochs.map((e, i) => ({ id: `e${i}`, epochId: e.id, title: 't', weight: 'helped', analysed: i < 3 }));
+    const analyses: PastAnalysis[] = events
+      .filter((e) => e.analysed)
+      .map((e) => ({ eventId: e.id, whatHappened: 'a', shapedMe: 'b', stillBelieve: 'c', joinsBook: false }));
+    expect(volumeStates({ ...base, pastEpochs: epochs, pastEvents: events, pastAnalyses: analyses }).past).toBe('done');
+  });
+
+  it('offers the source\u2019s route: faults, Future, virtues, Past', () => {
+    expect(SUGGESTED_ROUTE.map((s) => `${s.volume}${s.half ? `:${s.half}` : ''}`)).toEqual([
+      'present:faults',
+      'future',
+      'present:virtues',
+      'past',
+    ]);
   });
 });
