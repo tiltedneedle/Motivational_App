@@ -20,6 +20,9 @@ import {
   scheduleLabel,
   sourceLineFor,
   firstRunCaption,
+  firstVisit,
+  halfComplete,
+  presentStanding,
 } from '@morrow/core';
 import {
   Body,
@@ -58,6 +61,7 @@ import {
   useMorrow,
   useTodaysMoves,
   useTodaysPractices,
+  useVolumeStates,
 } from '../src/store';
 import { scheduler } from '../src/notify';
 
@@ -128,6 +132,27 @@ export default function Today() {
   const carryOnRow = carryOn ? (
     <TextButton testID="today-carry-on" label={carryOn.label} onPress={() => router.push(carryOn.route as never)} />
   ) : null;
+
+  /**
+   * What is there, when the Future path has not begun but something has. A
+   * person who did Present or Past first used to be told "Nothing here yet"
+   * over the very row that carried on their sitting. The words come from the
+   * same place as the chooser's door marks, so the two screens agree.
+   */
+  const volumes = useVolumeStates();
+  const picksAll = useMorrow((s) => s.presentPicks);
+  const faultsDone = halfComplete(picksAll, 'faults', state.profile.track);
+  const virtuesDone = halfComplete(picksAll, 'virtues', state.profile.track);
+  const elsewhere = !firstVisit(volumes) || Boolean(presentDraft) || Boolean(pastDraft);
+  const whatIsThere = (): string => {
+    if (volumes.past === 'done' && volumes.present === 'done') return 'Your past and your Present are written.';
+    if (volumes.past === 'done') return 'Your past is written.';
+    if (volumes.present === 'done') return 'Your Present is written.';
+    const half = presentStanding(volumes.present, faultsDone, virtuesDone);
+    if (half === 'The faults written') return 'The faults are written.';
+    if (half === 'The virtues written') return 'The virtues are written.';
+    return 'A sitting is kept.';
+  };
   // Progressive disclosure, keyed on state that already exists: a person on
   // their first Today has a Now card, a check and five tabs to learn. The
   // practices invitation and the consistency score wait for the first sealed
@@ -216,16 +241,27 @@ export default function Today() {
         <SafeAreaView style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 22, justifyContent: 'center', gap: 14 }} showsVerticalScrollIndicator={false}>
           <Stone size={96} domain={goals[0]?.domain ?? 'health'} polish={firstRun.step === 'interview' ? 0.4 : 0.7} sweep={!reduced && focused} style={{ alignSelf: 'center', marginBottom: 10 }} />
-          <Statement testID="today-path">{firstRun.step === 'interview' ? 'Nothing here yet, and that is the right starting point.' : 'Your Book is not finished yet.'}</Statement>
+          <Statement testID="today-path">
+            {firstRun.step !== 'interview' ? 'Your Book is not finished yet.' : elsewhere ? whatIsThere() : 'Nothing here yet, and that is the right starting point.'}
+          </Statement>
           <Body>
-            {firstRun.step === 'interview'
-              ? 'Three evenings from now there will be a Book, a plan, and a first move for the morning.'
-              : firstRunCaption(firstRun, goals.length)}
+            {firstRun.step !== 'interview'
+              ? firstRunCaption(firstRun, goals.length)
+              : elsewhere
+                ? 'It joins your Book when the Book is sealed, at the end of Future. Today itself comes from Future, so the Interview is next.'
+                : 'Three evenings from now there will be a Book, a plan, and a first move for the morning.'}
           </Body>
           <InkButton testID="today-begin" label={firstRun.label} onPress={() => router.push(firstRun.route)} />
           {carryOnRow}
+          {/* A finished volume is one tap away, not two taps and a door mark away. */}
+          {volumes.past === 'done' ? <TextButton testID="today-reread-past" label="Reread your past" onPress={() => router.push('/past')} /> : null}
+          {volumes.present === 'done' ? <TextButton testID="today-reread-present" label="Reread your Present" onPress={() => router.push('/present')} /> : null}
           {/* Today comes from the Future volume, but it is not the only door. */}
-          <TextButton testID="today-other-volumes" label="Or start with your past or present" onPress={() => router.push('/choose')} />
+          <TextButton
+            testID="today-other-volumes"
+            label={elsewhere ? 'The three volumes' : 'Or start with your past or present'}
+            onPress={() => router.push('/choose')}
+          />
           {hasSupabase && !state.account ? (
             <TextButton testID="today-bring-back" label="Bring my Book back from my account" onPress={() => router.push('/account')} />
           ) : null}

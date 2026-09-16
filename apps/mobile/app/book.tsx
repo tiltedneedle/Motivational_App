@@ -216,6 +216,43 @@ export default function BookScreen() {
                   ))}
                 </View>
               ))}
+              {/* The other two volumes, as the reading prints them: after the goals, before the last line. The top bar counts their pages; the paper used to skip them. */}
+              {book.volumes?.present?.entries?.length ? (
+                <>
+                  <Rule style={{ backgroundColor: 'rgba(21,24,31,0.12)' }} />
+                  <Body testID="book-present" style={{ fontSize: 21, color: paper.ink }}>What I am like</Body>
+                  {book.volumes.present.entries.map((e, k) => (
+                    <View key={'present-' + String(k)} style={{ gap: 3 }}>
+                      <Label style={{ color: paper.ink3 }}>
+                        {e.half === 'faults' ? 'What gets in the way' : 'What I am good at'}
+                        {e.goalName ? ' · ' + e.goalName : ''}
+                      </Label>
+                      <Body style={{ fontSize: 16, color: paper.ink2 }}>{e.card}</Body>
+                      <UserText style={{ fontSize: 17, lineHeight: 27, color: paper.ink }}>{e.story}</UserText>
+                      <UserText italic framing={e.framing ?? undefined} style={{ fontSize: 16, lineHeight: 25, color: paper.ink2 }}>
+                        {e.apply}
+                      </UserText>
+                    </View>
+                  ))}
+                </>
+              ) : null}
+              {book.volumes?.past?.entries?.length ? (
+                <>
+                  <Rule style={{ backgroundColor: 'rgba(21,24,31,0.12)' }} />
+                  <Body testID="book-past" style={{ fontSize: 21, color: paper.ink }}>Where I came from</Body>
+                  {book.volumes.past.entries.map((e, k) => (
+                    <View key={'past-' + String(k)} style={{ gap: 3 }}>
+                      <Label style={{ color: paper.ink3 }}>{e.period}</Label>
+                      <UserText style={{ fontSize: 18, lineHeight: 26, color: '#15181F' }}>{e.title}</UserText>
+                      <UserText style={{ fontSize: 17, lineHeight: 27, color: paper.ink }}>{e.whatHappened}</UserText>
+                      <UserText style={{ fontSize: 16, lineHeight: 25, color: paper.ink2 }}>{e.shapedMe}</UserText>
+                      <UserText italic style={{ fontSize: 17, lineHeight: 26, color: paper.ink }}>
+                        {e.stillBelieve}
+                      </UserText>
+                    </View>
+                  ))}
+                </>
+              ) : null}
               <Rule style={{ backgroundColor: 'rgba(21,24,31,0.12)' }} />
               <Label style={{ color: paper.ink3 }}>I will</Label>
               <UserText testID="book-i-will" style={{ fontSize: 24, lineHeight: 32, color: '#15181F' }}>
@@ -277,6 +314,43 @@ export default function BookScreen() {
               ))}
             </View>
           ))}
+          {/* The other two volumes, as the reading prints them: after the goals, before the last line. The top bar counts their pages; the paper used to skip them. */}
+          {book.volumes?.present?.entries?.length ? (
+            <>
+              <Rule style={{ backgroundColor: 'rgba(21,24,31,0.12)' }} />
+              <Body testID="book-present" style={{ fontSize: 21, color: paper.ink }}>What I am like</Body>
+              {book.volumes.present.entries.map((e, k) => (
+                <View key={'present-' + String(k)} style={{ gap: 3 }}>
+                  <Label style={{ color: paper.ink3 }}>
+                    {e.half === 'faults' ? 'What gets in the way' : 'What I am good at'}
+                    {e.goalName ? ' · ' + e.goalName : ''}
+                  </Label>
+                  <Body style={{ fontSize: 16, color: paper.ink2 }}>{e.card}</Body>
+                  <UserText style={{ fontSize: 17, lineHeight: 27, color: paper.ink }}>{e.story}</UserText>
+                  <UserText italic framing={e.framing ?? undefined} style={{ fontSize: 16, lineHeight: 25, color: paper.ink2 }}>
+                    {e.apply}
+                  </UserText>
+                </View>
+              ))}
+            </>
+          ) : null}
+          {book.volumes?.past?.entries?.length ? (
+            <>
+              <Rule style={{ backgroundColor: 'rgba(21,24,31,0.12)' }} />
+              <Body testID="book-past" style={{ fontSize: 21, color: paper.ink }}>Where I came from</Body>
+              {book.volumes.past.entries.map((e, k) => (
+                <View key={'past-' + String(k)} style={{ gap: 3 }}>
+                  <Label style={{ color: paper.ink3 }}>{e.period}</Label>
+                  <UserText style={{ fontSize: 18, lineHeight: 26, color: '#15181F' }}>{e.title}</UserText>
+                  <UserText style={{ fontSize: 17, lineHeight: 27, color: paper.ink }}>{e.whatHappened}</UserText>
+                  <UserText style={{ fontSize: 16, lineHeight: 25, color: paper.ink2 }}>{e.shapedMe}</UserText>
+                  <UserText italic style={{ fontSize: 17, lineHeight: 26, color: paper.ink }}>
+                    {e.stillBelieve}
+                  </UserText>
+                </View>
+              ))}
+            </>
+          ) : null}
           <Rule style={{ backgroundColor: 'rgba(21,24,31,0.12)' }} />
           <Label style={{ color: paper.ink3 }}>I will</Label>
           <UserText testID="book-i-will" style={{ fontSize: 24, lineHeight: 32, color: '#15181F' }}>

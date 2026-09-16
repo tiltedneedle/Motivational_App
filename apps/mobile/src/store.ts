@@ -2331,6 +2331,20 @@ export function firstRunOf(s: MorrowState): FirstRunStep {
 export const useFirstRun = () => useMorrow(useShallow(firstRunOf));
 
 /**
+ * Whether anything has begun, anywhere — the gate between Welcome and Today.
+ * The Future path alone used to decide it, so a person who had done only
+ * Present or Past opened the app the next day on Welcome page one, with a
+ * "Begin tonight" that went into the Interview and no way to last night's
+ * lines. A draft counts: on the deck a tick lives only in the draft until the
+ * commit.
+ */
+export function hasBegunOf(s: MorrowState): boolean {
+  const v = volumesOf(s);
+  return firstRunOf(s).step !== 'interview' || v.present !== 'untouched' || v.past !== 'untouched' || s.presentDraft !== null || s.pastDraft !== null;
+}
+export const useHasBegun = () => useMorrow(hasBegunOf);
+
+/**
  * Where each of the three volumes stands, for the chooser and for You. The
  * engine holds the rules; this only feeds it what the store keeps.
  */

@@ -1235,6 +1235,44 @@ loaded long after the container subscribes — registered from a screen it ran s
 found the screen already unmounted. All three volumes use it; the e2e presses the browser's
 back on Full's writing screen, reached by the door.
 
+**The newcomer walk (2026-09-16).** Three walks as three different people — a first
+evening with twenty minutes, someone who came for the past, someone with a Book from last
+week — with one skeptic per finding: 8 confirmed, 0 refuted. Every one of them is the
+client's stated case, a brand-new person doing a volume and losing their footing:
+
+- **A cold launch after a Present- or Past-only sitting showed Welcome page one again**,
+  with a "Begin tonight" that went into the Interview and no way to last night's lines.
+  The gate between Welcome and Today counted only the Future path. Now `hasBegunOf` in
+  the store counts all three volumes and both drafts (a tick on the deck lives only in the
+  draft until the commit), and Welcome reads it.
+- **Today, with no Book, said "Nothing here yet"** over the very row that carried on the
+  sitting. It now says what is there — "Your past is written.", "The faults are written.",
+  "A sitting is kept." — using the same words as the chooser's door marks
+  (`presentStanding` / `doorStanding`, now in the engine), explains that it joins the Book
+  when one is sealed at the end of Future, offers "Reread your past" / "Reread your
+  Present", and names the door "The three volumes" once anything exists.
+- **"They join your Book" meant two different things and said neither.** With no Book the
+  closing screens now say one is sealed at the end of Future; with a Book already sealed
+  they say the writing waits for the next edition and offer **"Seal a new edition now"**,
+  which goes straight to the seal — there was no way to seal again except by writing a
+  whole new goal.
+- **The Book tab never printed the two volumes** it counted pages for, and neither did the
+  plain-text export; "Export everything" carried no Present or Past rows at all, which made
+  the held line's "it still exports" untrue. The paper now prints "What I am like" and
+  "Where I came from" in both layouts, `bookToText` prints them before "I will" (pinned by
+  a core test), and the export carries the three volumes' rows, the listed flag and both
+  drafts. "What Morrow knows about you" counts the cards and the events.
+- **The Past's Book question decided on paragraphs it did not show.** It now prints the
+  period, the title and all three parts of each event, says "All three parts go in as they
+  are written here", and offers **"Change this"** per event — the analyse screen reopens on
+  it with the boxes filled, Keep lands back on the question, Back abandons the change, and
+  a kill mid-change resumes on it.
+- Consent's top bar said "Before the Interview" while its button led to the three doors;
+  it says "Before you write", and the on-device row names the decks, the periods and the
+  events. The unrendered `stop.*` copy is gone.
+
+Gate after: 416 core / 48 ui / 8 storage, e2e **311/311** (was 297; the new checks relaunch cold with only the two volumes in the store, change an event from the Book question, seal a second edition from the Past's closing screen and find it on the Book's paper), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors, copy check clean.
+
 Gate after: 415 core / 48 ui / 8 storage, migration 53 checks, e2e **297/297** (was 286; the new checks press the browser's back on Full's writing screen reached by the door, re-cut the periods with events listed, un-tick a card mid-write, kill on the deck, and reopen a finished Past), the live account round-trip **45/45** (now the three volume tables, `past_listed`, and the let-go-and-rewrite push; run before the platform-back change, which touches no sync), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
 
 ### The research, and what it changed (2026-09-13)

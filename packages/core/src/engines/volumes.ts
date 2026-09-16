@@ -48,6 +48,25 @@ export function volumeStates(input: VolumesInput): Record<VolumeName, VolumeStat
   return { past, present, future };
 }
 
+/**
+ * What a door says about itself on the way back. Never a tick, never a
+ * score. Present is two halves, so it names the half that is done — the next
+ * tap should not be a surprise. Shared by the chooser and Today, so the two
+ * screens print the same words.
+ */
+export function doorStanding(state: VolumeState): string | null {
+  if (state === 'done') return 'Written';
+  if (state === 'started') return 'Picked up';
+  return null;
+}
+
+export function presentStanding(state: VolumeState, faultsDone: boolean, virtuesDone: boolean): string | null {
+  if (state !== 'started') return doorStanding(state);
+  if (faultsDone) return 'The faults written';
+  if (virtuesDone) return 'The virtues written';
+  return 'Picked up';
+}
+
 /** True the first time the chooser is seen: nothing anywhere has been written. */
 export function firstVisit(states: Record<VolumeName, VolumeState>): boolean {
   return (['past', 'present', 'future'] as VolumeName[]).every((v) => states[v] === 'untouched');

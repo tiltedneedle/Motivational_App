@@ -86,6 +86,7 @@ function Present({ half }: { half: PresentHalf }) {
   const clearDraft = useMorrow((s) => s.clearPresentDraft);
   const showResources = useMorrow((s) => s.showResources);
   const goals = useGoals();
+  const editions = useMorrow((s) => s.books.length);
   useFirstRunStep('present_deck');
 
   const copy = half === 'faults' ? FAULT_COPY : VIRTUE_COPY;
@@ -301,6 +302,10 @@ function Present({ half }: { half: PresentHalf }) {
               {half === 'faults' ? 'That is what gets in your way, in your words.' : 'That is what you are good at, in your words.'}
             </Statement>
             <Body>{copy.done}</Body>
+            {/* "They join your Book" is one of two very different things, and this says which. */}
+            <Body testID="present-done-book" style={{ fontSize: 14 }}>
+              {editions ? copy.doneNextEdition : copy.doneNoBook}
+            </Body>
             {half === 'virtues' && goals.length === 0 ? <Body testID="present-done-no-goal">{copy.doneNoGoal}</Body> : null}
             {held.map((p) => (
               <Body key={p.id} testID={'present-held-' + p.cardId} style={{ fontSize: 13 }}>
@@ -320,6 +325,7 @@ function Present({ half }: { half: PresentHalf }) {
                 router.replace('/present?half=' + other);
               }}
             />
+            {editions ? <TextButton testID="present-seal" label="Seal a new edition now" onPress={() => router.push('/seal-book')} /> : null}
             {otherDone ? null : (
               <TextButton
                 testID="present-later"

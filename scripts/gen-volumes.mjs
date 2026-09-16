@@ -58,9 +58,12 @@ const PAST = {
   'join.question': past['join.question'].replace('Does this memory join', 'Does this one join'),
   'join.yes': past['join.yes'],
   'join.no': past['join.no'],
-  'stop.title': past['stop.title'],
-  'stop.body': past['stop.body'],
-  'stop.button': past['stop.button'],
+  // The Book question decides on all three parts, so all three are printed.
+  'join.parts': 'All three parts go in as they are written here.',
+  'join.change': 'Change this',
+  // Whether there is a Book for it to join, said plainly either way.
+  'join.noBook': 'There is no Book yet. One is sealed at the end of Future, and what you let join goes into the first one.',
+  'join.nextEdition': 'Your Book is sealed already, so what you let join waits for the next edition — one hold away.',
 };
 
 // the chooser's Past lines, for the epoch flow, and the client's own wording for door four
@@ -139,8 +142,13 @@ virtues.prompts.narrowNote = 'Keep up to nine. Take one off to let another throu
 // The closing lines say only what is true today: the picks join the Book.
 // Nothing yet pairs a fault's answer with a goal, and the coach does not read
 // these — the old lines claimed both.
-faults.prompts.done = 'Each one has a sign to watch for and an answer to it now. They join your Book.';
-virtues.prompts.done = 'Each one has a time it mattered and a place to use it next week. They join your Book.';
+faults.prompts.done = 'Each one has a sign to watch for and an answer to it now. They join your Book when it is next sealed.';
+virtues.prompts.done = 'Each one has a time it mattered and a place to use it next week. They join your Book when it is next sealed.';
+// Which is one of two very different things, and the screen says which.
+faults.prompts.doneNoBook = 'There is no Book yet. One is sealed at the end of Future, and these go into it.';
+virtues.prompts.doneNoBook = faults.prompts.doneNoBook;
+faults.prompts.doneNextEdition = 'Your Book is sealed already, so these wait for the next edition — one hold away.';
+virtues.prompts.doneNextEdition = faults.prompts.doneNextEdition;
 virtues.prompts.doneNoGoal = 'When you name your goals in Future, each of these can be paired with the one that needs it.';
 // With no goals yet there is nothing to pick, so the prompt must not ask.
 virtues.prompts.writeTwoPromptNoGoal = 'Where will you use this next week?';

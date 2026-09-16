@@ -1843,6 +1843,34 @@ async function main() {
     await page.waitForTimeout(250);
     await tap('past-keep');
     check('and closes on the Book question', await seen('screen-past-done'));
+    const ducks = ((await store()).pastEvents ?? []).find((e) => e.analysed && e.whatHappened.includes('ducks'));
+    check('which shows every part it decides on, not only the last line', Boolean(ducks) && (await noticeText(`past-join-what-${ducks?.id}`)).includes('ducks'));
+    check('and says which Book it is: there is one, so the next edition', (await noticeText('past-done-book')).toLowerCase().includes('next edition'), await noticeText('past-done-book'));
+    await tap(`past-change-${ducks?.id}`);
+    check('a part can be changed from there', (await seen('screen-past-analyse')) && (await page.locator('[data-testid="past-what"]').inputValue()).includes('ducks'));
+    await page.locator('[data-testid="past-shaped"]').fill('I do not mind cold water, or looking foolish, or ducks.');
+    await page.waitForTimeout(250);
+    await tap('past-keep');
+    check('and the change lands back on the Book question', await seen('screen-past-done'));
+    const changed = ((await store()).pastEvents ?? []).find((e) => e.id === ducks?.id)?.shapedMe ?? '';
+    check('with the change kept', changed.includes('or ducks'), changed);
+
+    // ---- a second edition, sealed from here, carries the Past into the Book itself
+    await tap(`past-join-yes-${ducks?.id}`);
+    await tap('past-seal');
+    check('the closing screen can seal a new edition when a Book exists', await seen('screen-seal-book'));
+    await page.locator('[data-testid="seal-hold"]').first().focus().catch(() => {});
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(600);
+    if (await seen('seal-open-book')) {
+      await tap('seal-open-book');
+      await page.waitForTimeout(900);
+    }
+    check('and the new edition opens', await seen('screen-book'));
+    const bookWords = await page.locator('body').innerText();
+    check('with the Past printed on the paper, not only counted in its pages', bookWords.includes('Where I came from') && bookWords.includes('We kept ducks'));
+    const editions = ((await store()).books ?? []).length;
+    check('as a second edition', editions === 2, String(editions));
 
     // ---- Today leads back to whatever was left part-way
     await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
@@ -1871,6 +1899,32 @@ async function main() {
     await page.clock.runFor(1200);
     await page.waitForTimeout(500);
     check('and one Back does not un-finish it', (await noticeText('door-past-mark')).toLowerCase() === 'written', await noticeText('door-past-mark'));
+
+    // ---- a cold launch with nothing but the two volumes: Today, not Welcome page one
+    await page.evaluate(() => {
+      const k = 'morrow-v1';
+      const st = JSON.parse(localStorage.getItem(k) ?? '{}');
+      const keep = {
+        profile: st.state.profile,
+        presentPicks: st.state.presentPicks,
+        presentDraft: st.state.presentDraft,
+        pastEpochs: st.state.pastEpochs,
+        pastEvents: st.state.pastEvents,
+        pastListed: st.state.pastListed,
+      };
+      localStorage.setItem(k, JSON.stringify({ ...st, state: keep }));
+    });
+    await page.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(700);
+    check('a person who did only Present and Past opens on Today, not on Welcome again', (await seen('screen-today')) && !(await seen('screen-welcome')));
+    check('and Today says what is there rather than "Nothing here yet"', !(await noticeText('today-path')).includes('Nothing here yet'), await noticeText('today-path'));
+    check('with a way back into the finished volume', await seen('today-reread-past'));
+    check('and the door is named as the three volumes', (await noticeText('today-other-volumes')).toLowerCase().includes('three volumes'), await noticeText('today-other-volumes'));
+    await page.goto(`${BASE}/?intro=1`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(500);
+    check('the introduction can still be seen again on request', await seen('screen-welcome'));
 
     check('no uncaught page errors', pageErrors.length === 0, pageErrors.join(' | '));
   } catch (err) {

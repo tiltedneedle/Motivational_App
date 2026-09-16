@@ -116,6 +116,17 @@ export default function Past() {
    */
   const [touched, setTouched] = useState(false);
   const touch = () => setTouched(true);
+  const editions = useMorrow((s) => s.books.length);
+  /**
+   * An event being changed from the closing screen. The engine never returns
+   * 'analyse' for a finished event, so the screen holds this itself; a kill
+   * mid-change resumes on it, because the draft's writing names the event.
+   */
+  const [editingId, setEditingId] = useState<string | null>(() => {
+    const id = resumed?.writing?.eventId ?? null;
+    return id && events.some((v) => v.id === id && v.analysed && v.stillBelieve.trim()) ? id : null;
+  });
+  const editing = editingId ? (events.find((v) => v.id === editingId) ?? null) : null;
 
   const analyses = useMemo(
     () =>
@@ -142,13 +153,22 @@ export default function Past() {
    * two steps after it until they press on.
    */
   const showingAge = entered && (step.step === 'age' || ageOpen);
-  const choosing = !showingAge && (step.step === 'choose' || (!picked && (step.step === 'analyse' || step.step === 'done') && listed));
-  const showingDone = entered && !showingAge && !choosing && step.step === 'done';
-  const canStepBack = entered && (showingAge || choosing || step.step === 'events' || step.step === 'analyse');
+  const choosing = !showingAge && !editing && (step.step === 'choose' || (!picked && (step.step === 'analyse' || step.step === 'done') && listed));
+  const showingDone = entered && !showingAge && !choosing && !editing && step.step === 'done';
+  const canStepBack = entered && (showingAge || choosing || Boolean(editing) || step.step === 'events' || step.step === 'analyse');
 
   /** One step back, wherever they are. The bar and the platform share it. */
   const stepBack = () => {
     setProblem(null);
+    if (editing) {
+      // Back from a change is the closing screen, the change not kept.
+      setEditingId(null);
+      setWhat('');
+      setShaped('');
+      setBelieve('');
+      setFramingId(null);
+      return;
+    }
     if (showingAge) {
       setAgeOpen(false);
       setEntered(false);
@@ -178,7 +198,7 @@ export default function Past() {
   // Written as they go. The method these come from is explicit that its
   // programs are meant to take several sittings, so the walk, the age, the
   // picks and the three boxes all survive the app being killed mid-sentence.
-  const analysingId = !showingAge && step.step === 'analyse' ? step.eventId : null;
+  const analysingId = editing ? editing.id : !showingAge && step.step === 'analyse' ? step.eventId : null;
   useEffect(() => {
     // The closing screen is not a sitting to carry on: a finished Past opens
     // finished on its own, and Today must not offer it.
@@ -535,13 +555,14 @@ export default function Past() {
   }
 
   // ---- move three: what it made of you
-  if (step.step === 'analyse') {
-    const event = events.find((v) => v.id === step.eventId)!;
+  if (editing || step.step === 'analyse') {
+    const event = editing ?? events.find((v) => step.step === 'analyse' && v.id === step.eventId)!;
     const ready = what.trim().length > 0 && shaped.trim().length > 0 && believe.trim().length > 0;
+    const where = step.step === 'analyse' && !editing ? String(step.done + 1) + ' of ' + String(step.total) : 'Past · a change';
     return (
       <Studio testID="screen-past-analyse">
         <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-          {top(String(step.done + 1) + ' of ' + String(step.total), stepBack, 'past-analyse-back')}
+          {top(where, stepBack, 'past-analyse-back')}
           <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 18 }}>
             <Statement testID="past-analyse-title">{event.title}</Statement>
 
@@ -620,6 +641,7 @@ export default function Past() {
                 setShaped('');
                 setBelieve('');
                 setFramingId(null);
+                setEditingId(null);
               }}
             />
             <TextButton testID="past-stop" label="Stop here" onPress={leave} />
@@ -641,10 +663,32 @@ export default function Past() {
         {top('Past', finish, 'past-done-back')}
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 16 }}>
           <Statement testID="past-done">{PAST_COPY['join.question']}</Statement>
+          {/* The question decides on all three parts, so all three are here; and which Book, said plainly. */}
+          <Body style={{ fontSize: 14 }}>{PAST_COPY['join.parts']}</Body>
+          <Body testID="past-done-book" style={{ fontSize: 14 }}>
+            {editions ? PAST_COPY['join.nextEdition'] : PAST_COPY['join.noBook']}
+          </Body>
           {written.map((v) => (
             <View key={v.id} testID={'past-join-' + v.id} style={{ gap: 8, borderTopWidth: 1, borderTopColor: day.line, paddingTop: 14 }}>
-              <Label>{v.title}</Label>
+              <Label>{(epochs.find((e) => e.id === v.epochId)?.label ?? '') + ' · ' + v.title}</Label>
+              <Body testID={'past-join-what-' + v.id} style={{ color: day.ink }}>
+                {v.whatHappened}
+              </Body>
+              <Body style={{ color: day.ink2 }}>{v.shapedMe}</Body>
               <Body style={{ color: day.ink }}>{v.stillBelieve}</Body>
+              <TextButton
+                testID={'past-change-' + v.id}
+                label={PAST_COPY['join.change'] ?? 'Change this'}
+                onPress={() => {
+                  touch();
+                  setWhat(v.whatHappened);
+                  setShaped(v.shapedMe);
+                  setBelieve(v.stillBelieve);
+                  setFramingId(null);
+                  setWritingFor(v.id);
+                  setEditingId(v.id);
+                }}
+              />
               {v.safetyRisk !== 'crisis' ? (
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                   <Chip testID={'past-join-yes-' + v.id} label={PAST_COPY['join.yes'] ?? 'Let it join the Book'} selected={v.joinsBook} onPress={() => setJoins(v.id, true)} />
@@ -670,6 +714,7 @@ export default function Past() {
               finish();
             }}
           />
+          {editions ? <TextButton testID="past-seal" label="Seal a new edition now" onPress={() => router.push('/seal-book')} /> : null}
         </View>
       </SafeAreaView>
     </Studio>

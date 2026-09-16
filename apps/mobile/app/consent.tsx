@@ -12,7 +12,7 @@ import { useFirstRunStep } from '../src/analytics';
 const ROWS: { label: string; body: string; items?: string[] }[] = [
   {
     label: 'What stays on this device',
-    body: 'Everything you write: the Interview (a few taps), the Fifteen (fifteen minutes of writing), your lines, the Book. Writing works with the network off.',
+    body: 'Everything you write: the Interview and the Fifteen, the decks of Present, the periods and events of Past, your lines, the Book. Writing works with the network off.',
   },
   {
     label: 'What is sent to an AI service, and when',
@@ -46,7 +46,7 @@ export default function Consent() {
   return (
     <Studio testID="screen-consent">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <TopBar back={{ onPress: () => router.back(), testID: 'consent-back' }} where="Before the Interview" />
+        <TopBar back={{ onPress: () => router.back(), testID: 'consent-back' }} where="Before you write" />
         <ScrollView {...keyboardScroll} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 12, gap: 18 }}>
           <Statement>Before you write anything.</Statement>
           {ROWS.map((r) => (

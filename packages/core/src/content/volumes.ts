@@ -183,7 +183,9 @@ export const FAULT_COPY: Record<string, string> = {
   "deckNoteFull": "Tick everything that is plainly true; you narrow it to the nine that matter most next. These are habits, not a verdict on you.",
   "narrowPrompt": "Which of these matter most?",
   "narrowNote": "Keep up to nine. Take one off to let another through.",
-  "done": "Each one has a sign to watch for and an answer to it now. They join your Book.",
+  "done": "Each one has a sign to watch for and an answer to it now. They join your Book when it is next sealed.",
+  "doneNoBook": "There is no Book yet. One is sealed at the end of Future, and these go into it.",
+  "doneNextEdition": "Your Book is sealed already, so these wait for the next edition — one hold away.",
   "heldNote": "This one stays on your phone and out of the Book. It is still yours, and it still exports.",
 };
 
@@ -197,7 +199,9 @@ export const VIRTUE_COPY: Record<string, string> = {
   "deckNoteFull": "Tick everything that is plainly true, not what sounds good; you narrow it to the nine that matter most next.",
   "narrowPrompt": "Which of these matter most?",
   "narrowNote": "Keep up to nine. Take one off to let another through.",
-  "done": "Each one has a time it mattered and a place to use it next week. They join your Book.",
+  "done": "Each one has a time it mattered and a place to use it next week. They join your Book when it is next sealed.",
+  "doneNoBook": "There is no Book yet. One is sealed at the end of Future, and these go into it.",
+  "doneNextEdition": "Your Book is sealed already, so these wait for the next edition — one hold away.",
   "doneNoGoal": "When you name your goals in Future, each of these can be paired with the one that needs it.",
   "writeTwoPromptNoGoal": "Where will you use this next week?",
   "heldNote": "This one stays on your phone and out of the Book. It is still yours, and it still exports.",
@@ -239,9 +243,10 @@ export const PAST_COPY: Record<string, string> = {
   "join.question": "Does this one join your Book? It stays yours either way, and you can change this before the Book is sealed.",
   "join.yes": "Let it join the Book",
   "join.no": "Keep this one to myself",
-  "stop.title": "Enough for now.",
-  "stop.body": "What you wrote is kept exactly as you left it. Nothing joins your Book unless you choose it. Come back to this when you want, or leave it where it is. Need someone? stays one tap away.",
-  "stop.button": "Back to Today",
+  "join.parts": "All three parts go in as they are written here.",
+  "join.change": "Change this",
+  "join.noBook": "There is no Book yet. One is sealed at the end of Future, and what you let join goes into the first one.",
+  "join.nextEdition": "Your Book is sealed already, so what you let join waits for the next edition — one hold away.",
 };
 
 /** The ways in to the last line of an analysed event. */

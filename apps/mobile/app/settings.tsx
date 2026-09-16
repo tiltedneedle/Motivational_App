@@ -115,6 +115,15 @@ export default function Settings() {
       // the ones written to them out of their own lines. Neither was in here.
       letters: state.letters,
       briefs: state.briefs,
+      // The other two volumes, and their sittings in progress. The Past
+      // volume's copy promises a held line "still exports"; without these it
+      // did not, and a person who did Past first had no Book to carry it.
+      presentPicks: state.presentPicks,
+      pastEpochs: state.pastEpochs,
+      pastEvents: state.pastEvents,
+      pastListed: state.pastListed,
+      presentDraft: state.presentDraft,
+      pastDraft: state.pastDraft,
     };
     const message = book ? `${bookToText(book)}\n\n---\n${JSON.stringify(payload, null, 2)}` : JSON.stringify(payload, null, 2);
     try {
@@ -138,8 +147,9 @@ export default function Settings() {
           <Statement>What Morrow knows about you.</Statement>
           <Body>
             {plural(state.texts.length, 'piece')} of writing, {plural(state.goals.length, 'goal')},{' '}
-            {plural(state.analyses.length, 'line')}, {plural(state.books.length, 'edition')} of the Book. All of it on
-            this device.
+            {plural(state.analyses.length, 'line')}, {plural(state.presentPicks.length, 'card')} of Present,{' '}
+            {plural(state.pastEvents.length, 'event')} of Past, {plural(state.books.length, 'edition')} of the Book. All of it
+            on this device.
           </Body>
 
           <View style={{ gap: 10 }}>

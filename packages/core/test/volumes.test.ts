@@ -38,7 +38,7 @@ import {
   VIRTUE_COPY,
 } from '../src/content/volumes';
 import { SUGGESTED_ROUTE, firstVisit, volumeStates } from '../src/engines/volumes';
-import { buildBookVersion } from '../src/engines/book';
+import { buildBookVersion, bookToText } from '../src/engines/book';
 
 const card = (id: string, text: string): PresentCard => ({ id, text, group: 'drive' });
 const pick = (cardId: string, over: Partial<PresentPick> = {}): PresentPick => ({
@@ -418,6 +418,28 @@ describe('the two volumes in the sealed Book', () => {
     const b = buildBookVersion(base, (p) => p + '_1');
     return b.ideal.length + b.iWill.length + b.title.length + 'a goal'.length + 'Tuesday at 6:40, out the back door'.length;
   };
+
+  it('prints both volumes in the plain-text export, after the goals and before the last line', () => {
+    const book = buildBookVersion(
+      {
+        ...base,
+        present: { entries: [{ half: 'faults', card: 'I start things and drift.', story: 'The talk I had to give.', apply: 'Shoes by the door.' }] },
+        past: {
+          entries: [
+            { period: 'School', title: 'changing school', whatHappened: 'It happened in spring.', shapedMe: 'I pack lightly.', stillBelieve: 'Starting again is survivable.' },
+          ],
+        },
+      },
+      (p) => p + '_1',
+    );
+    const text = bookToText(book);
+    expect(text).toContain('WHAT I AM LIKE');
+    expect(text).toContain('The talk I had to give.');
+    expect(text).toContain('WHERE I CAME FROM');
+    expect(text).toContain('Starting again is survivable.');
+    expect(text.indexOf('WHERE I CAME FROM')).toBeLessThan(text.indexOf('I WILL'));
+    expect(text.indexOf('WHAT I AM LIKE')).toBeGreaterThan(text.indexOf('A GOAL'));
+  });
 
   it('carries no empty sections for somebody who only wrote the Future volume', () => {
     const book = buildBookVersion(base, (p) => p + '_1');

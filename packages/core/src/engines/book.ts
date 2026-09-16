@@ -306,6 +306,32 @@ export function bookToText(book: BookVersion, boundaryHour = 3): string {
     for (const m of c.memories) out.push(`  from before: ${m}`);
     out.push('');
   }
+  // The other two volumes, in the order the pages have them: after the goals,
+  // before the last line. The headings are the app's; every line under them
+  // is theirs, so the plain text is as complete as the reading.
+  const present = book.volumes?.present?.entries ?? [];
+  if (present.length) {
+    out.push('WHAT I AM LIKE');
+    for (const e of present) {
+      out.push('  ' + (e.half === 'faults' ? 'What gets in the way' : 'What I am good at') + (e.goalName ? ' · ' + e.goalName : ''));
+      out.push('  ' + e.card);
+      out.push('  ' + e.story);
+      out.push('  ' + (e.framing ? e.framing + ' ' : '') + e.apply);
+    }
+    out.push('');
+  }
+  const past = book.volumes?.past?.entries ?? [];
+  if (past.length) {
+    out.push('WHERE I CAME FROM');
+    for (const e of past) {
+      out.push('  ' + e.period);
+      out.push('  ' + e.title);
+      out.push('  ' + e.whatHappened);
+      out.push('  ' + e.shapedMe);
+      out.push('  ' + e.stillBelieve);
+    }
+    out.push('');
+  }
   out.push('I WILL');
   out.push(book.iWill);
   return out.join('\n');

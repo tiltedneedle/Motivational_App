@@ -13,7 +13,7 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Body, Chip, InkButton, Label, Rise, Statement, Stone, Studio, TextButton, UserField, announce, day, useReducedMotion } from '@morrow/ui';
-import { useFirstRun, useLatestBook, useMorrow } from '../src/store';
+import { useFirstRun, useLatestBook, useMorrow, useHasBegun } from '../src/store';
 import { useFirstRunStep } from '../src/analytics';
 import { hasSupabase } from '../src/supabase';
 
@@ -49,7 +49,9 @@ export default function Welcome() {
   const step = useFirstRun();
   // "See the introduction again", from You: the pages, not the redirect.
   const { intro } = useLocalSearchParams<{ intro?: string }>();
-  const begun = step.step !== 'interview';
+  // Begun anywhere, not only on the Future path: the store decides, so this
+  // gate and Today agree about what "begun" means.
+  const begun = useHasBegun();
   const [page, setPage] = useState(0);
   const [name, setName] = useState(profile.displayName);
 

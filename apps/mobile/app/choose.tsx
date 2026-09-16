@@ -13,7 +13,7 @@
 import { useRouter } from 'expo-router';
 import { Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { CHOOSER_COPY, firstVisit, halfComplete, type VolumeName, type VolumeState } from '@morrow/core';
+import { CHOOSER_COPY, doorStanding, firstVisit, halfComplete, presentStanding, type VolumeName } from '@morrow/core';
 import { Body, Card, InkButton, Label, Rise, Statement, Studio, TextButton, TopBar, accent, day, useReducedMotion } from '@morrow/ui';
 import { useMorrow, useVolumeStates } from '../src/store';
 import { useFirstRunStep } from '../src/analytics';
@@ -24,24 +24,6 @@ const DOORS: { name: VolumeName; title: string; route: string }[] = [
   { name: 'future', title: 'Future', route: '/consent' },
 ];
 
-/** What a door says about itself on the way back. Never a tick, never a score. */
-function standing(state: VolumeState): string | null {
-  if (state === 'done') return 'Written';
-  if (state === 'started') return 'Picked up';
-  return null;
-}
-
-/**
- * Present is two halves, and a person who has written one of them deserves
- * more than "Picked up": the door names the half that is done, so the next
- * tap is not a surprise.
- */
-function presentStanding(state: VolumeState, faultsDone: boolean, virtuesDone: boolean): string | null {
-  if (state !== 'started') return standing(state);
-  if (faultsDone) return 'The faults written';
-  if (virtuesDone) return 'The virtues written';
-  return 'Picked up';
-}
 
 export default function Choose() {
   const router = useRouter();
@@ -69,7 +51,7 @@ export default function Choose() {
           </Rise>
 
           {DOORS.map((door, i) => {
-            const mark = door.name === 'present' ? presentStanding(states.present, faultsDone, virtuesDone) : standing(states[door.name]);
+            const mark = door.name === 'present' ? presentStanding(states.present, faultsDone, virtuesDone) : doorStanding(states[door.name]);
             return (
               <Rise key={door.name} index={i + 1} reducedMotion={reduced}>
                 <Pressable
