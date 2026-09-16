@@ -15,7 +15,9 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 1. packages/core: domain model, stores (zustand + persist), engines
 - [x] 2. packages/ui: Studio tokens, Stone/Socket/Ring, HoldBar, Chip, Field, Sheet, text primitives
 - [x] 3. apps/mobile screens (all 16 routes)
-- [x] 4. Tests: 352 core + 43 ui + 8 storage unit tests, 37 real-Postgres checks, 144 Playwright e2e checks, all green
+- [x] 4. Tests, as of 2026-09-16: 421 core + 48 ui + 8 storage unit tests, 53 real-Postgres
+      checks, **339 Playwright e2e checks**, 70 cold-open checks, axe 0 across 34 screens,
+      the account round-trip 45/45 against the live project — all green, all in `pnpm verify`
 - [x] 5. supabase/: migrations with RLS and three structural authorship guards, edge functions
 - [x] 6. Hardening: the eight-lens audit's findings, worst first (see below) — 95 of 95
 - [x] 7. Research pass: libraries/versions; the migration against a real Postgres; prebuild
@@ -47,6 +49,24 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 38. **The volumes verified the way a person uses them (2026-09-16).** Twelve
+      rounds after the three volumes shipped — seven adversarial passes while the
+      account allowed them, then by hand — each a new class of check, each finding
+      real defects: a data-loss draft gap in both new volumes; the platform back
+      that never fired on web; four sync bugs a restore would have shown; "Written"
+      meaning the first card; the stones and the evening seal keeping nothing typed;
+      four screens crashing into the error boundary on a fresh install; the chooser's
+      footer under "Not now". All fixed and pinned. New gate steps: `test:cold`
+      (every route on an empty store and with ids pointing at nothing) and the
+      screenshot pass read by eye at 320 × 568. Both loose threads tied: a fault is
+      offered on its goal's Obstacles stone, a paired virtue sits on its goal's page.
+      `pnpm demo` serves the verified build; `scripts/fixtures/filled.mjs` builds the
+      store with all three volumes written for progress screenshots. The full
+      account is under "The three volumes" and the paragraphs after it.
+- [x] 37. **Every screen keeps what is typed, and every Back goes somewhere.**
+      Present, Past, the stones, the evening seal, the Interview's ticks; consent's
+      dead Back; the closing screens that wiped the other half's sitting. See the
+      same section.
 - [x] 36. The web build is ready for Vercel: `vercel.json` (build, output,
       immutable asset caching, the SPA rewrite), the two EXPO_PUBLIC vars, and
       the auth allow-list note; `http://localhost:8790` added to the project
