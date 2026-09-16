@@ -68,7 +68,7 @@ export default function Consent() {
             </View>
           ))}
         </ScrollView>
-        <View style={{ paddingBottom: 18, gap: 4 }}>
+        <View style={{ paddingTop: 10, paddingBottom: 18, gap: 4 }}>
           <InkButton
             testID="consent-continue"
             label="I understand, continue"

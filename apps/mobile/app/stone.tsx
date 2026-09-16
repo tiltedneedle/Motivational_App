@@ -318,7 +318,7 @@ export default function StoneScreen() {
           ) : null}
         </ScrollView>
 
-        <View style={{ paddingBottom: 18, gap: 4 }}>
+        <View style={{ paddingTop: 10, paddingBottom: 18, gap: 4 }}>
           <InkButton
             testID="stone-seat"
             label={ready ? (stepIndex + 1 < plan.length ? 'Keep this line · next' : 'Keep this line') : kind === 'obstacles' ? 'Write both lines' : 'Write your line'}

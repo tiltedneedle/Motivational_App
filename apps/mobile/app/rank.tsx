@@ -94,7 +94,7 @@ export default function Rank() {
 
         </ScrollView>
 
-        <View style={{ paddingBottom: 18 }}>
+        <View style={{ paddingTop: 10, paddingBottom: 18 }}>
           <InkButton testID="rank-continue" label="Name the Book" disabled={goals.length === 0} onPress={() => router.push('/title')} />
         </View>
       </SafeAreaView>

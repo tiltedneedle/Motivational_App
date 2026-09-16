@@ -305,7 +305,7 @@ export default function PracticeBuilder() {
           ) : null}
         </ScrollView>
 
-        <View style={{ paddingBottom: 18 }}>
+        <View style={{ paddingTop: 10, paddingBottom: 18 }}>
           <InkButton
             testID="practice-save"
             label="Keep it"

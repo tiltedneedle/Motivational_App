@@ -320,7 +320,7 @@ export default function Interview() {
               ) : null}
             </ScrollView>
 
-            <View style={{ paddingBottom: 18, gap: 10 }}>
+            <View style={{ paddingTop: 10, paddingBottom: 18, gap: 10 }}>
               {q.stage === 'areas' ? (
                 <InkButton
                   testID="interview-continue"
@@ -435,7 +435,7 @@ function Summary({
           <Body style={{ color: day.ink2 }}>Add another goal</Body>
         </Pressable>
       </ScrollView>
-      <View style={{ paddingBottom: 18 }}>
+      <View style={{ paddingTop: 10, paddingBottom: 18 }}>
         <InkButton
           testID="interview-finish"
           label={s.drafts.length ? 'Begin the Fifteen' : 'Add a goal first'}

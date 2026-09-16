@@ -96,7 +96,7 @@ export default function Explore() {
           </View>
         </ScrollView>
 
-        <View style={{ paddingBottom: 18 }}>
+        <View style={{ paddingTop: 10, paddingBottom: 18 }}>
           <InkButton testID="explore-back-to-doors" label="Back to the three" onPress={() => (router.canGoBack() ? router.back() : router.replace('/choose'))} />
         </View>
       </SafeAreaView>

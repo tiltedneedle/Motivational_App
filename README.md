@@ -41,6 +41,28 @@ npx expo run:ios --device
 Xcode will ask you to sign in with an Apple ID the first time. A free one
 installs for seven days; a developer account makes it permanent.
 
+## Show it in a browser (the web demo)
+
+The whole app runs as a web build, and it is the build every check runs
+against — 330 end-to-end checks, every route opened cold, the axe pass.
+
+```bash
+pnpm build:web && pnpm demo
+```
+
+Then open the address it prints — `http://localhost:8790` on this machine, or
+the Wi-Fi address it also prints in a phone's browser, which is the closest
+thing to the real product without a native build. A fresh visitor lands on
+Welcome; to start over, clear the site's storage in the browser.
+
+What a web demo shows honestly and what it does not: every screen and every
+flow, the three volumes, the account sign-in against the live project, the
+export and the PDF. The AI-assisted read-back and scenes run on the device's
+own fallbacks until a model key is set (the screens say so); the paywall's
+Continue says plainly that nothing was charged; and the platform's back is the
+browser's arrow, which the app intercepts as one step back — on a phone that
+is the hardware button, which only a native build can show.
+
 ## Run it anywhere, without a build
 
 Install **Expo Go** on the phone, then:

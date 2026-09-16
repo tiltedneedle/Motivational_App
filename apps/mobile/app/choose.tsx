@@ -11,7 +11,7 @@
  * Reachable again from You, so it is a door and not a fork.
  */
 import { useRouter } from 'expo-router';
-import { Pressable, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CHOOSER_COPY, doorStanding, firstVisit, halfDone, presentStanding, type VolumeName } from '@morrow/core';
 import { Body, Card, InkButton, Label, Rise, Statement, Studio, TextButton, TopBar, accent, day, useReducedMotion } from '@morrow/ui';
@@ -46,7 +46,8 @@ export default function Choose() {
           back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'choose-back' }}
           where={first ? 'Where to start' : 'The three volumes'}
         />
-        <View style={{ flex: 1, gap: 14, paddingTop: 4 }}>
+        {/* Scrolls: three doors, the explore button and the footer overran the bar at phone height, and the footer ran under "Not now". */}
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 14, paddingTop: 4, paddingBottom: 8 }}>
           <Rise index={0} reducedMotion={reduced} style={{ gap: 6 }}>
             <Statement testID="choose-heading">{CHOOSER_COPY.heading}</Statement>
             {first ? null : <Body testID="choose-reentry">{CHOOSER_COPY.reentry}</Body>}
@@ -95,9 +96,9 @@ export default function Choose() {
             />
             <Body style={{ fontSize: 13, textAlign: 'center' }}>{CHOOSER_COPY.footer}</Body>
           </Rise>
-        </View>
+        </ScrollView>
 
-        <View style={{ paddingBottom: 18 }}>
+        <View style={{ paddingTop: 10, paddingBottom: 18 }}>
           <TextButton testID="choose-later" label="Not now" onPress={() => router.dismissTo('/today')} />
         </View>
       </SafeAreaView>

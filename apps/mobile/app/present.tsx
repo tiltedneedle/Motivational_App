@@ -447,7 +447,7 @@ function Present({ half }: { half: PresentHalf }) {
             </View>
           </ScrollView>
 
-          <View style={{ paddingBottom: 18, gap: 4 }}>
+          <View style={{ paddingTop: 10, paddingBottom: 18, gap: 4 }}>
             <InkButton testID="present-keep" label={ready ? 'Keep this one' : 'Write both lines'} disabled={!ready} onPress={keep} />
           </View>
         </SafeAreaView>
@@ -469,7 +469,7 @@ function Present({ half }: { half: PresentHalf }) {
             <Notice testID="present-problem" text={problem} />
             {shown.map((c) => cardRow(c, 'present-narrow-card-'))}
           </ScrollView>
-          <View style={{ paddingBottom: 18, gap: 4 }}>
+          <View style={{ paddingTop: 10, paddingBottom: 18, gap: 4 }}>
             <Label testID="present-narrow-count" style={{ textAlign: 'center', paddingBottom: 6 }}>
               {String(selected.length) + ' ticked · keep up to ' + String(max)}
             </Label>
@@ -522,7 +522,7 @@ function Present({ half }: { half: PresentHalf }) {
             : deck.map((c) => cardRow(c, 'present-card-'))}
         </ScrollView>
 
-        <View style={{ paddingBottom: 18, gap: 4 }}>
+        <View style={{ paddingTop: 10, paddingBottom: 18, gap: 4 }}>
           {/* Two lines of theirs go with a written card taken off: said before the commit, not after. */}
           {letGo.length ? (
             <Label testID="present-let-go" style={{ textAlign: 'center', paddingBottom: 6 }}>

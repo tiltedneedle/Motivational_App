@@ -156,7 +156,7 @@ export default function Welcome() {
         </View>
 
         {/* The dots, and the one button. */}
-        <View style={{ paddingBottom: 18, gap: 12 }}>
+        <View style={{ paddingTop: 10, paddingBottom: 18, gap: 12 }}>
           {/*
             The dots are for the eye; Next and Back are the controls. Three
             Pressables inside an accessible group were one node to VoiceOver,

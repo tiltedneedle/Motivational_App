@@ -82,7 +82,7 @@ export default function Authoring() {
           <Rule />
         </ScrollView>
 
-        <View style={{ paddingBottom: 18, gap: 4 }}>
+        <View style={{ paddingTop: 10, paddingBottom: 18, gap: 4 }}>
           <InkButton testID="authoring-begin" label="Begin" onPress={() => router.push('/write?kind=ideal')} />
           <TextButton testID="authoring-later" label="Not tonight" onPress={() => router.push('/today')} />
         </View>

@@ -70,7 +70,7 @@ export default function Title() {
           </View>
         </ScrollView>
 
-        <View style={{ paddingBottom: 18 }}>
+        <View style={{ paddingTop: 10, paddingBottom: 18 }}>
           <InkButton
             testID="title-continue"
             label={bookTitle.trim() ? 'Write five lines per goal' : 'Leave it for now · write five lines per goal'}

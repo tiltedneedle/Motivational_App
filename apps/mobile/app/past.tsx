@@ -277,7 +277,7 @@ export default function Past() {
               {PAST_COPY['doorway.note']}
             </Body>
           </ScrollView>
-          <View style={{ paddingBottom: 18, gap: 4 }}>
+          <View style={{ paddingTop: 10, paddingBottom: 18, gap: 4 }}>
             <InkButton
               testID="past-begin"
               label={PAST_COPY['doorway.begin'] ?? 'Begin'}
@@ -344,7 +344,7 @@ export default function Past() {
               </View>
             ) : null}
           </ScrollView>
-          <View style={{ paddingBottom: 18 }}>
+          <View style={{ paddingTop: 10, paddingBottom: 18 }}>
             {/* Fewer periods than before: nothing listed is lost, and it says where it goes. */}
             {ok && epochs.length > preview.length && events.length > 0 ? (
               <Body testID="past-recut-note" style={{ fontSize: 13, textAlign: 'center', paddingBottom: 8 }}>
@@ -457,7 +457,7 @@ export default function Past() {
             {full ? null : <Body style={{ fontSize: 13 }}>{PAST_COPY['events.empty']}</Body>}
           </ScrollView>
 
-          <View style={{ paddingBottom: 18 }}>
+          <View style={{ paddingTop: 10, paddingBottom: 18 }}>
             <InkButton
               testID="past-events-continue"
               label={
@@ -541,7 +541,7 @@ export default function Past() {
               );
             })}
           </ScrollView>
-          <View style={{ paddingBottom: 18 }}>
+          <View style={{ paddingTop: 10, paddingBottom: 18 }}>
             {/* A ceiling, not a quota: one that still has weight is enough. */}
             <Label testID="past-choose-count" style={{ textAlign: 'center', paddingBottom: 6 }}>
               {String(chosen) + ' of up to ' + String(target)}
@@ -637,7 +637,7 @@ export default function Past() {
             </View>
           </ScrollView>
 
-          <View style={{ paddingBottom: 18, gap: 4 }}>
+          <View style={{ paddingTop: 10, paddingBottom: 18, gap: 4 }}>
             <InkButton
               testID="past-keep"
               label={ready ? 'Keep this one' : 'All three, in your words'}
@@ -712,7 +712,7 @@ export default function Past() {
             </View>
           ))}
         </ScrollView>
-        <View style={{ paddingBottom: 18, gap: 4 }}>
+        <View style={{ paddingTop: 10, paddingBottom: 18, gap: 4 }}>
           <InkButton
             testID="past-finish"
             label="Done"

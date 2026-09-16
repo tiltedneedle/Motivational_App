@@ -1405,6 +1405,29 @@ already given; it goes to the next step of the path now) and the Portrait's "Not
 
 Gate after: 421 core / 48 ui / 8 storage, e2e **330/330**, cold **68/68** (34 routes × two stores), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors. `pnpm verify` now ends with `test:cold`.
 
+**Looking at it (2026-09-16).** Every check to this point ran in headless Chromium and read
+the DOM; nothing had looked at a screen since the volumes were built. `pnpm shots` over the
+changed screens, then all thirty-three at 320 × 568 — the smallest phone still in use —
+tiled into one sheet and read. Two things the DOM checks cannot see:
+
+- **The chooser's footer ran under "Not now"** at phone height: the doors column did not
+  scroll, so its last line overlapped the bar. On the client's most important screen. The
+  column is a scroll now, and it was confirmed at 375 × 667.
+- **Content cut flush against a bottom bar reads as covered.** Twenty-three bars across
+  fifteen screens sat with no gap above them, so on a small phone the authoring doorway's
+  Starter/Full choice looked hidden behind Begin and consent's AI list looked hidden behind
+  Continue. Both scroll; neither said so. Every bar has a top gap now, so a cut edge reads
+  as an edge.
+
+The other thirty-one were clean at the smallest size. And two things a web demo needs that
+did not exist: `pnpm demo` serves the built bundle — the same server every check runs
+against, so the demo is exactly the build that passed, with the SPA fallback so a reload
+on /present opens Present, and every LAN address printed so a phone's browser can open it —
+and the README has a section on what a web demo shows honestly and what it cannot. There is
+no live URL: no Vercel token is configured; `pnpm vc deploy --prebuilt --prod` needs one.
+
+Gate after: e2e **330/330**, cold **68/68**, axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors, copy check clean; all 33 screens read by eye at 320 × 568.
+
 Gate after: 416 core / 48 ui / 8 storage, e2e **326/326** (was 317; the new checks seed a live virtues sitting and press both closing-screen buttons on the faults, write a Past line in crisis and change it without the card returning, and read the Interview-only caption), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
 
 Gate after: 416 core / 48 ui / 8 storage, e2e **317/317** (was 311; the new checks relaunch cold mid-Interview and resume, press Begin then Back on the Past doorway and find no sitting behind it, and reread a written Present from Today), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.

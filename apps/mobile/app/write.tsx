@@ -308,7 +308,7 @@ export default function Write() {
               />
             </View>
           </View>
-          <View style={{ paddingBottom: 18, gap: 6 }}>
+          <View style={{ paddingTop: 10, paddingBottom: 18, gap: 6 }}>
             {resumable && draft && canResume(draft) ? (
               <>
                 <InkButton

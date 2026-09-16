@@ -202,7 +202,7 @@ export default function Heard() {
           </ScrollView>
         )}
 
-        <View style={{ paddingBottom: 18, gap: 8 }}>
+        <View style={{ paddingTop: 10, paddingBottom: 18, gap: 8 }}>
           {/*
             A kept line with no name is not a goal, because the app does not
             get to name it. Said out loud, because otherwise pressing "go on"

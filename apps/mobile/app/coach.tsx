@@ -359,7 +359,7 @@ export default function Coach() {
           ))}
         </ScrollView>
 
-        <View style={{ paddingBottom: 18, gap: 10 }}>
+        <View style={{ paddingTop: 10, paddingBottom: 18, gap: 10 }}>
           {/*
             The daily cap, offered rather than enforced in silence. The coach
             has already said what happened in the thread; this is the way on for
