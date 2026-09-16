@@ -1474,6 +1474,27 @@ async function main() {
       check('and they can all be turned back on', (await text('notify-state')).includes('morning'));
     }
 
+    // ---- your day (PRD 7.12): the times are the person's to change, and Today follows
+    check('Settings has the day’s times', (await seen('day-times')) && (await seen('day-type-lark')) && (await seen('day-morning-05:30')));
+    check('and the default day is the one in between', await page.locator('[data-testid="day-type-middle"]').getAttribute('aria-checked').then((v) => v === 'true'));
+    await tap('day-type-lark');
+    await page.waitForTimeout(300);
+    check('Lark moves the morning, the evening and the Sunday together', (await text('day-times')).includes('5:30') && (await text('day-times')).includes('20:30') && (await text('day-times')).includes('at 8'), await text('day-times'));
+    await tap('day-evening-22:00');
+    await page.waitForTimeout(300);
+    check('one time moved on its own leaves the preset', (await page.locator('[data-testid="day-type-lark"]').getAttribute('aria-checked')) !== 'true' && (await text('day-times')).includes('22:00'));
+    await tap('day-ends-4');
+    await page.waitForTimeout(300);
+    const savedTimes = await page.evaluate(() => {
+      const p = JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.profile ?? {};
+      return [p.wakeTime, p.eveningTime, p.sundayHour, p.dayBoundaryHour].join(' ');
+    });
+    check('and every one of them is kept', savedTimes === '05:30 22:00 8 4', savedTimes);
+    await tap('day-type-middle');
+    await page.waitForTimeout(300);
+    await tap('day-ends-3');
+    await page.waitForTimeout(300);
+
     // ---- the safety gate, on its own path
     await page.goto(`${BASE}/coach`, { waitUntil: 'networkidle' });
     await page.clock.runFor(2000);

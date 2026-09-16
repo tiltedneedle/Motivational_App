@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Linking, Platform, Pressable, ScrollView, Share, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { HELPLINES, bookToText, formatDay, plural, sealedOn, type Moment } from '@morrow/core';
+import { HELPLINES, bookToText, formatDay, plural, sealedOn, type Moment, CHRONOTYPES, DAY_ENDS, EVENING_TIMES, MORNING_TIMES, SUNDAY_HOURS, chronotypeOf, clockLabel, type Profile } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, accent, day, TopBar } from '@morrow/ui';
 import { manageSubscriptionUrl } from '../src/billing';
 import { useLatestBook, useMorrow } from '../src/store';
@@ -37,6 +37,12 @@ export default function Settings() {
   const fewerNotifications = useMorrow((s) => s.fewerNotifications);
   const account = useMorrow((s) => s.account);
   const restore = useMorrow((s) => s.restore);
+  const syncNotifications = useMorrow((s) => s.syncNotifications);
+  /** A time changed is a schedule changed; the notices move with it. */
+  const setTimes = (patch: Partial<Pick<Profile, 'wakeTime' | 'eveningTime' | 'sundayHour' | 'dayBoundaryHour'>>) => {
+    setProfile(patch);
+    void syncNotifications();
+  };
   const pushToAccount = useMorrow((s) => s.pushToAccount);
   const allowNotifications = useMorrow((s) => s.allowNotifications);
   const signOutAccount = useMorrow((s) => s.signOutAccount);
@@ -232,6 +238,67 @@ export default function Settings() {
                 selected={state.profile.hapticsOn === false}
                 onPress={() => setProfile({ hapticsOn: false })}
               />
+            </View>
+          </View>
+
+          <Rule />
+          {/*
+            PRD §7.12: wake and evening times, the Sunday hour, the day boundary,
+            and the chronotype as a preset over them. Chips, not pickers: the
+            app's other choices are all taps, and a time to the half hour is
+            what a morning line needs. Quiet hours follow these (§7.11), so
+            the morning line comes at the morning and not at seven regardless.
+            Today promised "the times are yours to change under You" before
+            there was anywhere to change them.
+          */}
+          <View style={{ gap: 12 }}>
+            <Label>Your day</Label>
+            <Body testID="day-times" style={{ fontSize: 14 }}>
+              {`The morning line at ${clockLabel(state.profile.wakeTime)}, the evening line at ${clockLabel(state.profile.eveningTime)}, the Sunday reading at ${state.profile.sundayHour}. Quiet from an hour after the evening line until the morning one.`}
+            </Body>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {CHRONOTYPES.map((c) => (
+                <Chip
+                  key={c.id}
+                  testID={`day-type-${c.id}`}
+                  label={c.label}
+                  selected={chronotypeOf(state.profile) === c.id}
+                  onPress={() => setTimes({ wakeTime: c.wakeTime, eveningTime: c.eveningTime, sundayHour: c.sundayHour })}
+                />
+              ))}
+            </View>
+            <View style={{ gap: 6 }}>
+              <Label style={{ fontSize: 11 }}>Morning</Label>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {MORNING_TIMES.map((t) => (
+                  <Chip key={t} testID={`day-morning-${t}`} label={clockLabel(t)} selected={state.profile.wakeTime === t} minHeight={40} onPress={() => setTimes({ wakeTime: t })} />
+                ))}
+              </View>
+            </View>
+            <View style={{ gap: 6 }}>
+              <Label style={{ fontSize: 11 }}>Evening</Label>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {EVENING_TIMES.map((t) => (
+                  <Chip key={t} testID={`day-evening-${t}`} label={clockLabel(t)} selected={state.profile.eveningTime === t} minHeight={40} onPress={() => setTimes({ eveningTime: t })} />
+                ))}
+              </View>
+            </View>
+            <View style={{ gap: 6 }}>
+              <Label style={{ fontSize: 11 }}>Sunday</Label>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {SUNDAY_HOURS.map((h) => (
+                  <Chip key={h} testID={`day-sunday-${h}`} label={`${h}:00`} selected={state.profile.sundayHour === h} minHeight={40} onPress={() => setTimes({ sundayHour: h })} />
+                ))}
+              </View>
+            </View>
+            <View style={{ gap: 6 }}>
+              <Label style={{ fontSize: 11 }}>A day ends at</Label>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {DAY_ENDS.map((h) => (
+                  <Chip key={h} testID={`day-ends-${h}`} label={`${h} in the morning`} selected={state.profile.dayBoundaryHour === h} minHeight={40} onPress={() => setTimes({ dayBoundaryHour: h })} />
+                ))}
+              </View>
+              <Body style={{ fontSize: 13 }}>A night that runs past midnight still belongs to the evening before, until then.</Body>
             </View>
           </View>
 

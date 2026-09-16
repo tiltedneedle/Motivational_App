@@ -49,6 +49,57 @@ export interface QuietHours {
 
 export const DEFAULT_QUIET: QuietHours = { from: 22, to: 7 };
 
+/**
+ * Quiet hours for a person's own day (PRD §7.11, §7.12): from the hour after
+ * their evening line to the hour of their morning line. With the defaults
+ * (21:30 and 07:00) that is the PRD's 22:00–07:00 exactly; a lark who moves
+ * the morning to 05:30 hears the morning line at 05:30 rather than at seven,
+ * and an owl's 22:30 evening line is not pushed to the next morning.
+ */
+export function quietFor(times: { wakeTime: string; eveningTime: string }): QuietHours {
+  const wake = hourOf(times.wakeTime);
+  const evening = hourOf(times.eveningTime);
+  if (wake === null || evening === null) return DEFAULT_QUIET;
+  const from = (evening + 1) % 24;
+  // A day with no room for quiet (evening line after midnight, morning right
+  // behind it) keeps the default rather than a window that swallows the clock.
+  return from === wake ? DEFAULT_QUIET : { from, to: wake };
+}
+
+function hourOf(hhmm: string): number | null {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm.trim());
+  if (!m) return null;
+  const h = Number(m[1]);
+  return h > 23 ? null : h;
+}
+
+/**
+ * The three chronotypes (PRD §7.12) as the times they stand for. A preset,
+ * not a rule: the rows under it move each time on its own.
+ */
+export const CHRONOTYPES = [
+  { id: 'lark', label: 'Lark', wakeTime: '05:30', eveningTime: '20:30', sundayHour: 8 },
+  { id: 'middle', label: 'In between', wakeTime: '07:00', eveningTime: '21:30', sundayHour: 10 },
+  { id: 'owl', label: 'Owl', wakeTime: '08:30', eveningTime: '22:30', sundayHour: 11 },
+] as const;
+export type ChronotypeId = (typeof CHRONOTYPES)[number]['id'];
+
+/** Which chronotype the times match exactly, if any. */
+export function chronotypeOf(times: { wakeTime: string; eveningTime: string; sundayHour: number }): ChronotypeId | null {
+  return CHRONOTYPES.find((c) => c.wakeTime === times.wakeTime && c.eveningTime === times.eveningTime && c.sundayHour === times.sundayHour)?.id ?? null;
+}
+
+export const MORNING_TIMES = ['05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00'] as const;
+export const EVENING_TIMES = ['20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00'] as const;
+export const SUNDAY_HOURS = [8, 9, 10, 11, 12] as const;
+export const DAY_ENDS = [1, 2, 3, 4, 5] as const;
+
+/** "7:00", "21:30": the app's clock, without a leading zero. */
+export function clockLabel(hhmm: string): string {
+  const [h, m] = hhmm.split(':');
+  return `${Number(h)}:${m ?? '00'}`;
+}
+
 /** The day a gap becomes worth one gentle word, and the only one there is. */
 export const RETURN_NUDGE_DAY = 3;
 

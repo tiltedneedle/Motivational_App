@@ -49,6 +49,14 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 43. **Your day (§7.12), 2026-09-17.** Wake and evening times, the Sunday hour,
+      the day boundary, and the chronotype as a preset over them (Lark, In
+      between, Owl), as chips under You. Quiet hours follow the person's own
+      times — an hour after the evening line until the morning one, which is
+      the PRD's 22:00–07:00 exactly on the defaults — so a lark's 05:30 line is
+      no longer moved to seven and an owl's 22:30 line is not pushed to the next
+      morning. Today had promised "the times are yours to change under You"
+      before there was anywhere to change them. The shift calendar is not built.
 - [x] 42. **Deep links (§9.3) and a link to nowhere, 2026-09-17.** The PRD's link
       shapes (`morrow://goal/{id}`, `/goals/[id]/stone/[kind]`, `/book/sunday`,
       `/practice/{id}/run`, `/settings/memory`, and the rest of the inventory)
@@ -1687,6 +1695,26 @@ root layout's to read. `app/+native-intent.tsx` applies it to system paths on na
 never shown. The way-back check knows both files are not screens.
 
 Gate after: e2e **422/422** (was 417; a stone by its inventory path with the goal behind it, `/book/sunday` on the reading, `/settings/memory` on the memory screen, a link to nowhere on Today, and never the unmatched page), cold **84/84** (four link shapes on both stores), axe 0 across 37 screens, way-back 33 screens, 457 core / 48 ui / 8 storage, typecheck clean, lint 0 errors.
+
+**Your day (2026-09-17).** §7.12 lists "wake and evening times, day boundary, chronotype,
+shift calendar" among the settings. The profile carried all four times, the notifications
+were planned from them, Today's primer printed them and said "the times are yours to change
+under You" — and nothing let anyone change them. Worse, the planner's quiet hours were the
+default's 22:00–07:00 whatever the times were, so a 06:30 morning line was moved to seven
+and a 22:30 evening line would have been moved to the next morning.
+
+Now, under You: **Your day** — the three chronotypes as presets (Lark 05:30 / 20:30 /
+Sunday 8; In between 07:00 / 21:30 / 10; Owl 08:30 / 22:30 / 11), and beneath them the
+morning to the half hour, the evening, the Sunday hour and the hour a day ends at, each a
+row of chips like every other choice in the app. A preset is named only while every time
+still matches it. `quietFor` (core) makes quiet hours the person's own: from the hour after
+their evening line to the hour of their morning line, which on the defaults is the PRD's
+window exactly; a day with no room for quiet keeps the default rather than a window over
+the whole clock. The store plans notices with it, and a time changed reschedules them on
+the spot. The **shift calendar** is not built: per-day times are a feature of their own,
+and a half of one is worse than the chips.
+
+Gate after: e2e **427/427** (was 422; the day's chips, the default preset marked, Lark moving all three, one time moved on its own leaving the preset, every value kept), cold 84/84, axe 0 across 37 screens, 459 core / 48 ui / 8 storage, typecheck clean, lint 0 errors, copy and authorship clean.
 
 Gate after: 416 core / 48 ui / 8 storage, e2e **326/326** (was 317; the new checks seed a live virtues sitting and press both closing-screen buttons on the faults, write a Past line in crisis and change it without the card returning, and read the Interview-only caption), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
 

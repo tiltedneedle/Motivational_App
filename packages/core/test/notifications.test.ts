@@ -12,8 +12,12 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
+  CHRONOTYPES,
   DEFAULT_QUIET,
+  chronotypeOf,
+  clockLabel,
   fewer,
+  quietFor,
   isQuiet,
   outOfQuiet,
   planNotices,
@@ -64,6 +68,32 @@ const base: NoticeInput = {
 };
 
 describe('quiet hours', () => {
+  it('follow the person’s own day (PRD §7.12): an hour after the evening line until the morning one', () => {
+    // The defaults are the PRD's 22:00–07:00 exactly.
+    expect(quietFor({ wakeTime: '07:00', eveningTime: '21:30' })).toEqual(DEFAULT_QUIET);
+    // A lark hears the morning line at 05:30, not at seven.
+    const lark = quietFor({ wakeTime: '05:30', eveningTime: '20:30' });
+    expect(lark).toEqual({ from: 21, to: 5 });
+    expect(outOfQuiet('05:30', lark)).toBe('05:30');
+    // An owl's 22:30 evening line is not pushed to the next morning.
+    const owl = quietFor({ wakeTime: '08:30', eveningTime: '22:30' });
+    expect(owl).toEqual({ from: 23, to: 8 });
+    expect(outOfQuiet('22:30', owl)).toBe('22:30');
+    expect(outOfQuiet('08:30', owl)).toBe('08:30');
+    // No room for quiet at all: the default, never a window over the whole clock.
+    expect(quietFor({ wakeTime: '01:00', eveningTime: '00:15' })).toEqual(DEFAULT_QUIET);
+    // Rubbish falls back too.
+    expect(quietFor({ wakeTime: 'dawn', eveningTime: '21:30' })).toEqual(DEFAULT_QUIET);
+  });
+
+  it('names the chronotype only when every time matches it', () => {
+    for (const c of CHRONOTYPES) expect(chronotypeOf(c)).toBe(c.id);
+    expect(chronotypeOf({ wakeTime: '07:00', eveningTime: '21:30', sundayHour: 10 })).toBe('middle');
+    expect(chronotypeOf({ wakeTime: '07:30', eveningTime: '21:30', sundayHour: 10 })).toBeNull();
+    expect(clockLabel('07:00')).toBe('7:00');
+    expect(clockLabel('21:30')).toBe('21:30');
+  });
+
   it('wraps midnight', () => {
     expect(isQuiet(23)).toBe(true);
     expect(isQuiet(2)).toBe(true);

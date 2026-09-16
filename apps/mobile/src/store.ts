@@ -19,6 +19,7 @@ import {
   AnthropicProvider,
   LocalProvider,
   buildBookVersion,
+  quietFor,
   diffBooks,
   applyMemoryEdits,
   buildMemory,
@@ -1577,6 +1578,9 @@ const store = create<MorrowState>()(
           wakeTime: s.profile.wakeTime,
           eveningTime: s.profile.eveningTime,
           sundayHour: s.profile.sundayHour,
+          // Quiet hours are the person's own, not the default's: a lark's
+          // morning line at 05:30 used to be moved to seven.
+          quiet: quietFor(s.profile),
           persona: s.profile.persona,
           book: s.books[s.books.length - 1] ?? null,
           moves: todaysMoves(s),
