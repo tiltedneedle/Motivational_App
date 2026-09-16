@@ -1970,6 +1970,63 @@ async function main() {
     await page.waitForTimeout(500);
     check('and one Back does not un-finish it', (await noticeText('door-past-mark')).toLowerCase() === 'written', await noticeText('door-past-mark'));
 
+
+    // ---- the evening, half written, comes back to what was written
+    await page.goto(`${BASE}/seal-day`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(600);
+    check('the evening seal opens', await seen('seal-proof'));
+    if (await seen('seal-proof')) {
+      await page.locator('[data-testid="seal-proof"]').fill('I did the twenty minutes before the kettle boiled.');
+      await page.waitForTimeout(400);
+      await page.reload({ waitUntil: 'networkidle' });
+      await page.clock.runFor(1500);
+      await page.waitForTimeout(700);
+      check('the evening, half written, comes back to it', (await page.locator('[data-testid="seal-proof"]').inputValue()).includes('before the kettle boiled'), await page.locator('[data-testid="seal-proof"]').inputValue());
+    }
+
+    // ---- a stone, killed mid-line, comes back to the line
+    // Every other room in the app keeps what is typed; the stones held theirs
+    // on the screen alone until the line was seated.
+    const stoneGoal = await page.evaluate(() => JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.goals?.[0]?.id ?? '');
+    await page.goto(`${BASE}/stone?goal=${stoneGoal}&kind=obstacles`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(600);
+    check('the Obstacles stone opens with a goal behind it', await seen('stone-line'));
+    if (await seen('stone-line')) {
+      await page.locator('[data-testid="stone-line"]').fill('The alarm goes and the room is cold.');
+      await page.waitForTimeout(400);
+      await page.reload({ waitUntil: 'networkidle' });
+      await page.clock.runFor(1500);
+      await page.waitForTimeout(700);
+      check('a stone killed mid-line comes back to the line', (await page.locator('[data-testid="stone-line"]').inputValue()).includes('the room is cold'), await page.locator('[data-testid="stone-line"]').inputValue());
+      const stoneDraft = await page.evaluate(() => JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.stoneDraft ?? null);
+      check('and the sitting names the stone it belongs to', stoneDraft?.kind === 'obstacles' && stoneDraft?.goalId === stoneGoal, JSON.stringify(stoneDraft ?? {}).slice(0, 100));
+
+      // The Present volume feeds the plan: the faults written are offered here.
+      const faultsWritten = await page.evaluate(() => (JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.presentPicks ?? []).filter((q) => q.half === 'faults' && q.storyLine && q.applyLine));
+      check('the Obstacles stone offers the faults written in Present', faultsWritten.length > 0 && (await seen('stone-faults')));
+      if (faultsWritten.length) {
+        await page.locator('[data-testid="stone-line"]').fill('');
+        await tap(`stone-fault-${faultsWritten[0].cardId}`);
+        const then = await page.locator('[data-testid="stone-line2"]').inputValue();
+        const ifLine = await page.locator('[data-testid="stone-line"]').inputValue();
+        check('a tap puts their own answer under the goal', then === faultsWritten[0].applyLine, then);
+        check('and nothing of the app\u2019s into the If, which stays theirs to write', ifLine === '');
+        const hint = await page.locator('[data-testid="stone-line"]').getAttribute('placeholder');
+        check('with the sign they tapped as the hint', (hint ?? '').startsWith('If '), hint ?? '');
+      }
+    }
+
+    // Consent reached by its own URL has nothing behind it; Back did nothing
+    // at all, on the one screen a person can land on before anything exists.
+    await page.goto(`${BASE}/consent`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(500);
+    await tap('consent-back');
+    await page.waitForTimeout(600);
+    check('Back on a consent screen opened by its own link goes somewhere', !(await seen('screen-consent')));
+
     // ---- a cold launch with nothing but the two volumes: Today, not Welcome page one
     await page.evaluate(() => {
       const k = 'morrow-v1';
@@ -2005,46 +2062,6 @@ async function main() {
     await page.clock.runFor(1200);
     await page.waitForTimeout(500);
     check('the introduction can still be seen again on request', await seen('screen-welcome'));
-
-    // ---- the evening, half written, comes back to what was written
-    await page.goto(`${BASE}/seal-day`, { waitUntil: 'networkidle' });
-    await page.clock.runFor(1500);
-    await page.waitForTimeout(600);
-    if (await seen('seal-proof')) {
-      await page.locator('[data-testid="seal-proof"]').fill('I did the twenty minutes before the kettle boiled.');
-      await page.waitForTimeout(400);
-      await page.reload({ waitUntil: 'networkidle' });
-      await page.clock.runFor(1500);
-      await page.waitForTimeout(700);
-      check('the evening, half written, comes back to it', (await page.locator('[data-testid="seal-proof"]').inputValue()).includes('before the kettle boiled'), await page.locator('[data-testid="seal-proof"]').inputValue());
-    }
-
-    // ---- a stone, killed mid-line, comes back to the line
-    // Every other room in the app keeps what is typed; the stones held theirs
-    // on the screen alone until the line was seated.
-    const stoneGoal = await page.evaluate(() => JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.goals?.[0]?.id ?? '');
-    await page.goto(`${BASE}/stone?goal=${stoneGoal}&kind=obstacles`, { waitUntil: 'networkidle' });
-    await page.clock.runFor(1500);
-    await page.waitForTimeout(600);
-    if (await seen('stone-line')) {
-      await page.locator('[data-testid="stone-line"]').fill('The alarm goes and the room is cold.');
-      await page.waitForTimeout(400);
-      await page.reload({ waitUntil: 'networkidle' });
-      await page.clock.runFor(1500);
-      await page.waitForTimeout(700);
-      check('a stone killed mid-line comes back to the line', (await page.locator('[data-testid="stone-line"]').inputValue()).includes('the room is cold'), await page.locator('[data-testid="stone-line"]').inputValue());
-      const stoneDraft = await page.evaluate(() => JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.stoneDraft ?? null);
-      check('and the sitting names the stone it belongs to', stoneDraft?.kind === 'obstacles' && stoneDraft?.goalId === stoneGoal, JSON.stringify(stoneDraft ?? {}).slice(0, 100));
-    }
-
-    // Consent reached by its own URL has nothing behind it; Back did nothing
-    // at all, on the one screen a person can land on before anything exists.
-    await page.goto(`${BASE}/consent`, { waitUntil: 'networkidle' });
-    await page.clock.runFor(1200);
-    await page.waitForTimeout(500);
-    await tap('consent-back');
-    await page.waitForTimeout(600);
-    check('Back on a consent screen opened by its own link goes somewhere', !(await seen('screen-consent')));
 
     check('no uncaught page errors', pageErrors.length === 0, pageErrors.join(' | '));
   } catch (err) {

@@ -54,6 +54,7 @@ const ROUTES = {
   rank: '/rank',
   title: '/title',
   stone: '/stone?goal=goal_mtwbjf3sdpofma&kind=strategies',
+  'stone-obstacles': '/stone?goal=goal_mtwbjf3sdpofma&kind=obstacles',
   portrait: '/portrait?goal=goal_mtwbjf3sdpofma',
   'seal-book': '/seal-book',
   book: '/book',

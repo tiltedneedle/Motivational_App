@@ -142,7 +142,7 @@ virtues.prompts.narrowNote = 'Keep up to nine. Take one off to let another throu
 // The closing lines say only what is true today: the picks join the Book.
 // Nothing yet pairs a fault's answer with a goal, and the coach does not read
 // these — the old lines claimed both.
-faults.prompts.done = 'Each one has a sign to watch for and an answer to it now. They join your Book when it is next sealed.';
+faults.prompts.done = 'Each one has a sign to watch for and an answer to it now. They join your Book when it is next sealed, and each answer is offered on a goal\u2019s Obstacles stone, for you to put under the goal it belongs to.';
 virtues.prompts.done = 'Each one has a time it mattered and a place to use it next week. They join your Book when it is next sealed.';
 // Which is one of two very different things, and the screen says which.
 faults.prompts.doneNoBook = 'There is no Book yet. One is sealed at the end of Future, and these go into it.';

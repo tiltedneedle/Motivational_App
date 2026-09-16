@@ -1428,6 +1428,19 @@ no live URL: no Vercel token is configured; `pnpm vc deploy --prebuilt --prod` n
 
 Gate after: e2e **330/330**, cold **68/68**, axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors, copy check clean; all 33 screens read by eye at 320 × 568.
 
+**The Present feeds the plan (2026-09-16).** The one designed-but-unwired connection that
+needed no key or device. PRD §7.15 and the engine's own docblock say a fault's second write
+becomes the If/then of that goal's Obstacles stone; `ifThenFromFault` had existed since the
+volume shipped with no consumer, and the closing copy claimed nothing. Now the Obstacles
+stone — that stone only — offers each written fault as a chip, "From what gets in your way".
+A tap puts the person's own "what I do instead" into the then-line, and the sign they tapped
+becomes the If field's *hint* for them to phrase; nothing of the app's lands in a field that
+counts as theirs, which is the same line the framing chips have always walked. The faults'
+closing copy says so now. The other loose thread — a virtue offered for pairing at the
+read-back — stays open; it needs a place in the read-back's flow that does not yet exist.
+
+Gate after: e2e **338/338** (was 330 — the reorder surfaced eight checks a silent `if` had skipped since the stone draft landed: the store is wiped for the cold-launch check at the very end now, and the two guards are checks), cold **70/70**, axe 0 across 34 screens, way-back 30 screens, lint 0 errors. Also: `scripts/fixtures/filled.mjs` builds the store with all three volumes written and a second edition carrying them, for the progress screenshots; `stone-obstacles` joins the three route lists.
+
 Gate after: 416 core / 48 ui / 8 storage, e2e **326/326** (was 317; the new checks seed a live virtues sitting and press both closing-screen buttons on the faults, write a Past line in crisis and change it without the card returning, and read the Interview-only caption), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
 
 Gate after: 416 core / 48 ui / 8 storage, e2e **317/317** (was 311; the new checks relaunch cold mid-Interview and resume, press Begin then Back on the Past doorway and find no sitting behind it, and reread a written Present from Today), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
@@ -1713,15 +1726,13 @@ credential, or a product call.
    line is on the Book and the lock screen.
 7. **Counsel's read of the prompts** against the program's real text, with a
    licensed copy (see "The stones, renamed").
-8. **Two threads the volumes left deliberately loose**, each a product call
-   rather than a bug: the fault's second write ("what I do instead") is stored
-   with the sign the person tapped and could become the If/then of that
-   goal's Obstacles stone (`ifThenFromFault` exists and has no consumer); and
-   a virtue could be offered for pairing at the read-back, where goals are
-   first named (`virtuesForGoal` likewise). Until either is built the closing
-   copy claims neither. And one Present draft slot: ticking a card on one
-   deck replaces a live draft of the other half, which the door routing makes
-   a chosen act.
+8. **One thread the volumes left deliberately loose**: a virtue could be
+   offered for pairing at the read-back, where goals are first named
+   (`virtuesForGoal` exists and has no consumer); the virtues' closing copy
+   claims nothing until it is. The fault → Obstacles stone connection is
+   built (2026-09-16). And one Present draft slot: ticking a card on one deck
+   replaces a live draft of the other half, which the door routing makes a
+   chosen act.
 9. Then loop: implement, test, harden, research, repeat.
 
 ## Where the walkthrough habits are written down

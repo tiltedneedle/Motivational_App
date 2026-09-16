@@ -18,9 +18,11 @@ import {
   scoreSpecificity,
   specificityCaption,
   type AnalysisKind,
+  FAULT_FRAMINGS,
+  ifThenFromFault,
 } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Question, Statement, Stone, Studio, TextButton, TopBar, UserField, accent, announce, day } from '@morrow/ui';
-import { analysesFor, useGoals, useMorrow } from '../src/store';
+import { analysesFor, useGoals, useMorrow, cardText } from '../src/store';
 import { useFirstRunStep } from '../src/analytics';
 
 // The plan of analyses per goal lives in core now (`firstRunStep` needs it
@@ -63,6 +65,30 @@ export default function StoneScreen() {
   // the line when it is kept. Bound to the same state as the line, the
   // same text used to appear in two fields at once.
   const [whenWhere, setWhenWhere] = useState(resumed?.whenWhere ?? '');
+
+  /**
+   * The Present volume feeds the plan (PRD §7.15). Each fault the person wrote
+   * about carries a sign they tapped and an answer in their own words, and an
+   * answer plus its sign is an if-then — which is what this stone holds. So
+   * the written faults are offered here, on the Obstacles stone only, as
+   * chips: a tap puts their own "what I do instead" into the then-line, and
+   * the sign they tapped becomes the If field's hint for them to phrase.
+   * Nothing of the app's lands in a field that counts as theirs.
+   */
+  const faults = useMemo(
+    () => (kind === 'obstacles' ? state.presentPicks.filter((p) => p.half === 'faults' && p.storyLine.trim() && p.applyLine.trim()).sort((a, b) => a.rank - b.rank) : []),
+    [kind, state.presentPicks],
+  );
+  const [faultHint, setFaultHint] = useState<string | null>(null);
+  const takeFault = (p: (typeof faults)[number]) => {
+    const card = { id: p.cardId, text: cardText(p.cardId), group: 'drive' as const };
+    const made = ifThenFromFault(card, p, FAULT_FRAMINGS);
+    if (!made) return;
+    setLine2(made.line2);
+    setFaultHint('If ' + made.line.charAt(0).toLowerCase() + made.line.slice(1) + '…');
+    setFramingId(null);
+    announce('Your answer from Present, under this goal. Now the If, in your words.');
+  };
 
   const set = useMemo(() => framingSet(kind, goal?.domain ?? 'custom'), [kind, goal?.domain]);
   const plan = goal ? analysisPlan(goal.rank, track) : ANALYSIS_ORDER;
@@ -233,6 +259,18 @@ export default function StoneScreen() {
             ))}
           </View>
 
+          {faults.length ? (
+            <View testID="stone-faults" style={{ gap: 8, backgroundColor: day.surface2, borderRadius: 18, padding: 14 }}>
+              <Label>From what gets in your way</Label>
+              <Body style={{ fontSize: 13 }}>You wrote these in Present. Tap one and your answer to it goes under this goal.</Body>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {faults.map((p) => (
+                  <Chip key={p.id} testID={'stone-fault-' + p.cardId} label={cardText(p.cardId).replace(/\.$/, '')} ghost onPress={() => takeFault(p)} />
+                ))}
+              </View>
+            </View>
+          ) : null}
+
           <View style={{ gap: 6 }}>
             <Label>In your words</Label>
             <UserField
@@ -241,7 +279,7 @@ export default function StoneScreen() {
               label="Your line for this stone"
               value={line}
               onChangeText={setLine}
-              placeholder={set.hint}
+              placeholder={faultHint ?? set.hint}
               multiline={kind !== 'obstacles'}
             />
             {kind === 'obstacles' ? (

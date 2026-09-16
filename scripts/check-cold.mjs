@@ -43,6 +43,7 @@ const ROUTES = {
   rank: '/rank',
   title: '/title',
   stone: '/stone?goal=no-such-goal&kind=strategies',
+  'stone-obstacles': '/stone?goal=no-such-goal&kind=obstacles',
   'stone-bare': '/stone',
   portrait: '/portrait?goal=no-such-goal',
   'seal-book': '/seal-book',
