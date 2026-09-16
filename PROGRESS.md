@@ -49,6 +49,14 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 41. **What Morrow knows about me (§7.9, §7.12), 2026-09-17.** The memory
+      profile, screen 27 of the inventory and the product's answer to the
+      companion-chatbot row of §3.5: every line built from something the person
+      wrote or did, none inferred; theirs to change (locked against the rebuild)
+      or forget — and a forgotten stone leaves the coach's hands, so the brief
+      and the chips stop quoting it. One row per person on `memory_profiles`
+      (migration 0009, applied live), carrying the edits and the document a
+      model coach would be handed. See "What Morrow knows" below.
 - [x] 40. **Day-90 re-authoring (§7.3), 2026-09-17.** The calendar is Morrow's:
       ninety days after the latest seal, and every ninety after, Today carries a
       card for a week. Two Books side by side — every sealed line printed as it
@@ -965,6 +973,20 @@ fixed anyway). All 47 are closed. The ones that mattered most:
   untrue with a remote screen; the consent screen now names the safety
   screening and the scene.
 
+## What Morrow knows (2026-09-17)
+Built and verified; see the dated entry above. The pieces:
+- **Core** — `engines/memory.ts`: `buildMemory`, `applyMemoryEdits`, `memoryEditOf`,
+  `forgottenLineIds`, `memoryDocument` (`MEMORY_DOCUMENT_CHARS`), `MEMORY_ABOUT_ORDER`.
+  `types.ts`: `MemoryEdit`. `sync.ts`: `memory_profiles` (second in `TABLE_ORDER`),
+  `memoryEdits` and `memoryDocument` on the bundle.
+- **Store** — `memoryEdits`; `editMemory`, `forgetMemory`, `restoreMemory`; `memoryLines(s)`
+  and `coachAnalyses(s)` — the brief and the coach screen read the latter.
+- **Screens** — `app/memory.tsx`; the door on `app/settings.tsx` (`settings-memory`).
+- **Sync** — `src/sync.ts`: the row's conflict target and key are `user_id`.
+- **Schema** — `0009_memory_profiles.sql`, applied live.
+- **Checks** — `test/memory.test.ts`; the sync round-trip; the migration test; the e2e block
+  after the day-90 one; `/memory` in the cold and a11y sweeps; the account round-trip's row.
+
 ## Day-90 re-authoring (2026-09-17)
 Built and verified; see the dated entry above. The pieces, for whoever opens it next:
 - **Core** — `engines/reauthor.ts`: `reauthorDue` (the calendar), `reauthorLabel`
@@ -1613,6 +1635,38 @@ its line, the hold, the diff as the first page, Today with the card gone and one
 
 Gate after: e2e **401/401** (was 353; the new checks: nothing on day 89, the card on day 90, the paywall on Free and Not now with nothing lost, the gated screen by its own URL, the side-by-side for Pro with axe on it, Rewrite with the sealed line above an empty field and Back changing nothing, Written again and Keep the old restoring word for word, Let it go with its line and Take it back, Back from the seal with everything still there, the hold, the diff as the Book's first page with axe on it, the reading opening on it, the store's editions, Today with the card gone and the goal off its row), cold 74/74, axe 0 across 36 screens, way-back 32 screens, migration **58 checks** with 0008 (a goal let go by its owner only, and taken back), the live account round-trip **45/45** with 0008 applied, 439 core / 48 ui / 8 storage, typecheck clean, lint 0 errors and 10 warnings, copy / dates / deps / authorship / sql / functions clean.
 
+**What Morrow knows about me (2026-09-17).** §7.9: "*What Morrow knows about me*: the
+memory profile, editable line by line … user edits are locked." §7.12 lists it among the
+settings; §9.2 has it as screen 27 at P1; §3.5 answers the companion-chatbot scrutiny with
+"memory editable and deletable". Settings had a heading with those words and three counts
+under it, and no such screen.
+
+Now `engines/memory.ts`: `buildMemory` is deterministic over the store — the name, the
+register, the track, the times, the witness; each goal and every quotable line under it
+(the if-then with both halves); a goal let go with its line; the edition, what the Book
+opens and closes with; the sealed days, the returns, the weekday they fall on, the word a
+day is closed with most often, the last proof. No line is inferred, and a line the safety
+screen flagged is never one of them. Each line has a stable key, the app's framing in the
+sans and their words, where quoted, in the serif. `applyMemoryEdits` lays the person's
+changes over the rebuild: an edit replaces the line and survives every rebuild; a forget
+removes it; an edit whose line no longer builds is kept anyway, because a line they wrote
+is not the rebuild's to drop. `forgottenLineIds` is what makes Forget real: the store's
+`coachAnalyses` filters by it, and the dawn brief and every chip reply build from that and
+never from `s.analyses` directly — forgetting the if-then means "I'm stuck" stops quoting
+it, checked in the unit test and again in the walk. `memoryDocument` is the ≈1,500-token
+document a coach behind a model would be handed, cut on a line boundary.
+
+The screen, `/memory`, from Settings: the lines by group, Change (a field, Keep this / Leave
+it; the changed line marked "In your words" with "As Morrow had it" beside it), Forget, and
+a count of what is forgotten with one way to bring it back. The footer says what the page is
+not: the writing itself is never changed from it. The sync carries one row per person on
+`memory_profiles` (0009, applied live) — the edits and the document — keyed by the person
+rather than an id, which the push had to be told: with the default conflict target the push
+stopped at that table and nothing after it landed, and only the live round-trip could see it
+(now its 46th check).
+
+Gate after: e2e **417/417** (was 401; the new checks open the page from Settings with axe on it, find the name, the goal, the stones, the Book and the days, change the name and find it in their words and still there after a relaunch, restore it, forget the if-then and find "I'm stuck" without it, bring it back, and go Back to Settings), cold 76/76, axe 0 across 37 screens, way-back 33 screens, migration **62 checks** with 0009 (the row is the person's alone), the live account round-trip **46/46**, 450 core / 48 ui / 8 storage, typecheck clean, lint 0 errors and 10 warnings, copy / dates / deps / authorship / sql / functions clean.
+
 Gate after: 416 core / 48 ui / 8 storage, e2e **326/326** (was 317; the new checks seed a live virtues sitting and press both closing-screen buttons on the faults, write a Past line in crisis and change it without the card returning, and read the Interview-only caption), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
 
 Gate after: 416 core / 48 ui / 8 storage, e2e **317/317** (was 311; the new checks relaunch cold mid-Interview and resume, press Begin then Back on the Past doorway and find no sitting behind it, and reread a written Present from Today), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
@@ -1816,7 +1870,7 @@ program's actual prompt text by someone with a licensed copy.
 - A model endpoint (`pnpm sb secrets set LLM_BASE_URL=… LLM_API_KEY=… LLM_MODEL=…`, any
   OpenAI-compatible provider, or `ANTHROPIC_API_KEY`), a fal.ai key, RevenueCat keys: needed
   to test real providers. Everything runs on local fallbacks without them. The Supabase
-  project itself is connected and live (schema through 0008, four functions, the account
+  project itself is connected and live (schema through 0009, four functions, the account
   round-trip in `pnpm test:account`).
 - Supabase Pro, or custom SMTP, before the six-digit-code email template can be pushed; the
   free tier refuses template changes, so the email carries a link and the app signs in from it.

@@ -2344,6 +2344,75 @@ async function main() {
     check('and the card is gone: the next ninety count from this seal', (await seen('screen-today')) && !(await seen('today-reauthor')));
     check('the goal let go is off Today’s row of goals', !(await seen(`goal-chip-${gLast.id}`)) && (await seen(`goal-chip-${g0.id}`)));
 
+    // ---- what Morrow knows about me (PRD 7.9, 7.12): every line, theirs to change or forget
+    //
+    // Built from the store as it stands at the end of the walk: a name, one
+    // goal with its stones, a Book, sealed days. The forget has to reach the
+    // coach — that is the whole point of the screen — so the check is the
+    // coach's own reply before and after.
+    await page.goto(`${BASE}/settings`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(500);
+    check('Settings opens the memory profile', await seen('settings-memory'));
+    await tap('settings-memory');
+    await page.waitForTimeout(700);
+    check('What Morrow knows about you', (await seen('screen-memory')) && (await seen('memory-title')));
+    await accessible('what Morrow knows, line by line');
+    const memoryKeys = await page.evaluate(() => [...document.querySelectorAll('[data-testid^="memory-line-"]')].map((e) => e.getAttribute('data-testid').slice('memory-line-'.length)));
+    check('it has the name, the goal, the stones, the Book and the days', ['you.name', `goal.${g0.id}`, 'book.first', 'days.sealed'].every((k) => memoryKeys.includes(k)), memoryKeys.join(' '));
+    check('and the name is theirs, in the serif', (await seen('memory-quote-you.name')) && (await text('memory-quote-you.name')) === 'Sam');
+    const obstaclesId = await page.evaluate((gid) => (JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.analyses ?? []).find((a) => a.goalId === gid && a.kind === 'obstacles')?.id ?? '', g0.id);
+    check('the if-then is one of the lines, both halves', (await seen(`memory-line-line.${obstaclesId}`)) && (await text(`memory-quote-line.${obstaclesId}`)).includes('then'));
+
+    // Change: their words replace the line and are marked as theirs.
+    await tap('memory-change-you.name');
+    await page.waitForTimeout(300);
+    await page.locator('[data-testid="memory-field-you.name"]').fill('Call me S.');
+    await page.waitForTimeout(200);
+    await tap('memory-keep-you.name');
+    await page.waitForTimeout(400);
+    check('a changed line reads in their words, and says so', (await text('memory-quote-you.name')) === 'Call me S.' && (await text('memory-line-you.name')).toLowerCase().includes('in your words'));
+    check('with a way back to what Morrow had', await seen('memory-restore-you.name'));
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(600);
+    check('and the change survives a relaunch: the edit is locked', (await text('memory-quote-you.name')) === 'Call me S.');
+    await tap('memory-restore-you.name');
+    await page.waitForTimeout(300);
+    check('As Morrow had it puts the rebuilt line back', (await text('memory-quote-you.name')) === 'Sam' && !(await seen('memory-restore-you.name')));
+
+    // Forget the if-then, and the coach stops quoting it.
+    await page.goto(`${BASE}/coach`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(600);
+    await tap('chip-stuck');
+    await page.waitForTimeout(600);
+    const stuckBefore = await page.locator('[data-testid^="msg-coach-"]').last().innerText().catch(() => '');
+    check('before: I’m stuck quotes the if-then', stuckBefore.toLowerCase().includes('then'), stuckBefore.slice(0, 120));
+    await page.goto(`${BASE}/memory`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(500);
+    await tap(`memory-forget-line.${obstaclesId}`);
+    await page.waitForTimeout(400);
+    check('a forgotten line is gone from the page', !(await seen(`memory-line-line.${obstaclesId}`)));
+    check('and counted, with a way to bring it back', (await seen('memory-forgotten')) && (await seen('memory-bring-back')));
+    await page.goto(`${BASE}/coach`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(600);
+    await tap('chip-stuck');
+    await page.waitForTimeout(600);
+    const stuckAfter = await page.locator('[data-testid^="msg-coach-"]').last().innerText().catch(() => '');
+    check('after: the coach no longer has the if-then to quote', !stuckAfter.toLowerCase().includes('stairwell') && stuckAfter !== stuckBefore, stuckAfter.slice(0, 120));
+    await page.goto(`${BASE}/memory`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(500);
+    await tap('memory-bring-back');
+    await page.waitForTimeout(400);
+    check('Bring it back is exactly that', (await seen(`memory-line-line.${obstaclesId}`)) && !(await seen('memory-forgotten')));
+    await tap('memory-back');
+    await page.waitForTimeout(600);
+    check('Back from the memory screen is Settings', await seen('screen-settings'));
+
     // Consent reached by its own URL has nothing behind it; Back did nothing
     // at all, on the one screen a person can land on before anything exists.
     await page.goto(`${BASE}/consent`, { waitUntil: 'networkidle' });

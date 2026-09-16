@@ -290,6 +290,8 @@ const bundle: SyncBundle = {
     },
   ],
   pastListed: true,
+  memoryEdits: [],
+  memoryDocument: '',
 };
 
 describe('the store as rows', () => {
@@ -483,6 +485,33 @@ describe('the Past and Present volumes on the wire', () => {
     const fromOlder = fromRows(older as Parameters<typeof fromRows>[0], bundle.profile);
     expect(fromOlder.goals[1]!.lesson).toBeUndefined();
     expect(fromOlder.goals[1]!.letGoAt).toBeUndefined();
+  });
+
+  it('carries the memory profile’s edits and document, and reads their absence as none', () => {
+    const withMemory = {
+      ...bundle,
+      memoryEdits: [
+        { key: 'you.name', text: 'Call me S.', editedAt: '2026-09-17T09:00:00.000Z' },
+        { key: 'line.a2', text: null, editedAt: '2026-09-17T09:01:00.000Z' },
+      ],
+      memoryDocument: '- You asked to be called “S.”',
+    };
+    const tables = toRows(withMemory, USER, 'UTC');
+    const byTable = Object.fromEntries(tables.map((t) => [t.table, t.rows]));
+    expect(byTable.memory_profiles).toHaveLength(1);
+    expect(byTable.memory_profiles![0]!.user_id).toBe(USER);
+    expect(byTable.memory_profiles![0]!.document).toContain('asked to be called');
+    const back = fromRows(byTable as Parameters<typeof fromRows>[0], bundle.profile);
+    expect(back.memoryEdits).toEqual(withMemory.memoryEdits);
+    expect(back.memoryDocument).toBe(withMemory.memoryDocument);
+    // No row at all, from before 0009: nothing changed, nothing forgotten.
+    const older = { ...byTable, memory_profiles: [] };
+    const fromOlder = fromRows(older as Parameters<typeof fromRows>[0], bundle.profile);
+    expect(fromOlder.memoryEdits).toEqual([]);
+    expect(fromOlder.memoryDocument).toBe('');
+    // A malformed edit on the row is dropped, not crashed on.
+    const odd = { ...byTable, memory_profiles: [{ ...byTable.memory_profiles![0]!, edits: [{ key: 'x' }, withMemory.memoryEdits[0]] }] };
+    expect(fromRows(odd as Parameters<typeof fromRows>[0], bundle.profile).memoryEdits).toEqual([withMemory.memoryEdits[0]]);
   });
 
   it('brings the periods back in their order, whatever order the rows arrive in', () => {

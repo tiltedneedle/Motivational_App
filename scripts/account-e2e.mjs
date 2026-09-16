@@ -218,6 +218,10 @@ try {
   check('the Past periods and events are on the account', counts.past_epochs === up.pastEpochs.length && counts.past_events === up.pastEvents.length, `${counts.past_epochs} periods, ${counts.past_events} events`);
   const profileRow = await (await rest('/profiles?select=past_listed', session.access_token)).json();
   check("the Past walk's end is on the account", Array.isArray(profileRow) && profileRow[0]?.past_listed === true, JSON.stringify(profileRow).slice(0, 80));
+  // The memory profile (PRD 7.9) is keyed by the person, not by an id; the
+  // push has to know that or it stops here and nothing after it lands.
+  const memoryRow = await (await rest('/memory_profiles?select=user_id,document', session.access_token)).json();
+  check('the memory profile is on the account, with its document', Array.isArray(memoryRow) && memoryRow.length === 1 && String(memoryRow[0]?.document ?? '').includes('- '), JSON.stringify(memoryRow).slice(0, 80));
 
   // A card let go and written about again is a new row with the same card.
   // present_picks has a second unique key, so the upsert has to match on it —

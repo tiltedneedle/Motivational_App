@@ -9,6 +9,7 @@ export * from './engines/practices';
 export * from './engines/notifications';
 export * from './engines/entitlement';
 export * from './engines/reauthor';
+export * from './engines/memory';
 export * from './engines/path';
 export * from './engines/letters';
 export * from './engines/book-html';

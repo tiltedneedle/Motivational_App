@@ -20,6 +20,10 @@ import {
   LocalProvider,
   buildBookVersion,
   diffBooks,
+  applyMemoryEdits,
+  buildMemory,
+  forgottenLineIds,
+  memoryDocument,
   buildDawnBrief,
   buildPlan,
   buildPortrait,
@@ -87,6 +91,8 @@ import {
   type DomainId,
   type Evidence,
   type Goal,
+  type MemoryEdit,
+  type MemoryLine,
   type GoalAnalysis,
   type Letter,
   type Plan,
@@ -273,6 +279,8 @@ export interface MorrowState {
   pastEvents: PastEventRow[];
   /** True once the person has walked every period and said they are done listing. */
   pastListed: boolean;
+  /** What Morrow knows about me (PRD §7.9): the person's changes to the memory profile. */
+  memoryEdits: MemoryEdit[];
   /**
    * Letters from the future self, and to it (PRD §7.8).
    *
@@ -350,6 +358,12 @@ export interface MorrowState {
    * page; everything that ran off it stops.
    */
   letGoGoal: (id: string, lesson: string) => void;
+  /** A memory line in the person's own words, which the rebuild then never touches. */
+  editMemory: (key: string, text: string) => void;
+  /** A memory line gone, and its material out of the coach's hands. */
+  forgetMemory: (key: string) => void;
+  /** The rebuilt line back, in place of the person's edit or forget. */
+  restoreMemory: (key: string) => void;
   /** The way back from Let it go, until the edition is sealed. */
   takeBackGoal: (id: string) => void;
   rankGoals: (ids: string[]) => void;
@@ -639,6 +653,7 @@ const EMPTY = {
   pastEpochs: [],
   pastEvents: [],
   pastListed: false,
+  memoryEdits: [],
   letters: [],
   account: null,
   accountAsked: false,
@@ -746,6 +761,16 @@ const store = create<MorrowState>()(
           practices: s.practices.map((p) => (p.goalId === id && !p.archivedAt ? { ...p, archivedAt: at } : p)),
         }));
       },
+
+      editMemory: (key, text) =>
+        set((s) => ({
+          memoryEdits: [...s.memoryEdits.filter((e) => e.key !== key), { key, text: text.trim(), editedAt: new Date().toISOString() }],
+        })),
+      forgetMemory: (key) =>
+        set((s) => ({
+          memoryEdits: [...s.memoryEdits.filter((e) => e.key !== key), { key, text: null, editedAt: new Date().toISOString() }],
+        })),
+      restoreMemory: (key) => set((s) => ({ memoryEdits: s.memoryEdits.filter((e) => e.key !== key) })),
 
       takeBackGoal: (id) =>
         set((s) => {
@@ -1735,7 +1760,7 @@ const store = create<MorrowState>()(
             // The day's moves in Today's order, so the brief's "start with"
             // is the move on the Now card, not the first move of any plan.
             moves: todaysMoves(s),
-            analyses: s.analyses,
+            analyses: coachAnalyses(s),
             persona: s.profile.persona,
             score: r.score,
             previousScore: r.previous,
@@ -1809,6 +1834,7 @@ const store = create<MorrowState>()(
           pastEpochs: b.pastEpochs,
           pastEvents: b.pastEvents,
           pastListed: b.pastListed,
+          memoryEdits: b.memoryEdits,
         });
         return { ok: true, pulled: true };
       },
@@ -2178,6 +2204,8 @@ function bundleOf(s: MorrowState): SyncBundle {
     pastEpochs: s.pastEpochs,
     pastEvents: s.pastEvents,
     pastListed: s.pastListed,
+    memoryEdits: s.memoryEdits,
+    memoryDocument: memoryDocument(memoryLines(s)),
   };
 }
 
@@ -2357,6 +2385,29 @@ function horizonToDate(horizon: string): string | null {
  * taught, and the chapters it has in older editions are all still theirs —
  * but it is not on Today, not on the stones, and not in the next edition.
  */
+/**
+ * What Morrow knows about me (PRD §7.9): the profile as it stands, with the
+ * person's edits laid over it. Rebuilt on every read — it is a view of the
+ * store, and the only thing kept is what they changed.
+ */
+export function memoryLines(s: MorrowState): MemoryLine[] {
+  const today = dayOf(new Date(), s.profile.dayBoundaryHour);
+  return applyMemoryEdits(
+    buildMemory({ profile: s.profile, goals: s.goals, analyses: s.analyses, books: s.books, days: s.days, today }),
+    s.memoryEdits,
+  );
+}
+
+/**
+ * The lines the coach may quote: quotable, and not forgotten. Forgetting a
+ * line on the memory screen is meant to be real, so the brief and every chip
+ * reply build from this and never from `s.analyses` directly.
+ */
+export function coachAnalyses(s: MorrowState): GoalAnalysis[] {
+  const forgotten = forgottenLineIds(s.memoryEdits);
+  return quotable(s.analyses).filter((a) => !forgotten.has(a.id));
+}
+
 export function activeGoals(s: MorrowState): Goal[] {
   return s.goals.filter((g) => g.status !== 'archived').sort((a, b) => a.rank - b.rank);
 }

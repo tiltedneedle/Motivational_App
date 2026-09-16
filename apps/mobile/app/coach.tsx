@@ -23,7 +23,7 @@ import {
   type CoachReply,
 } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Quoted, Rule, Stone, Studio, Toast, TopBar, UserField, UserText, accent, day, type as fonts } from '@morrow/ui';
-import { useConsistency, useLatestBook, useMorrow, useTodaysMoves } from '../src/store';
+import { coachAnalyses, useConsistency, useLatestBook, useMorrow, useTodaysMoves } from '../src/store';
 import { dictation } from '../src/dictation';
 
 export default function Coach() {
@@ -126,7 +126,8 @@ export default function Coach() {
 
   const ctx = {
     book,
-    analyses: quotable(state.analyses),
+    // Quotable, and not forgotten on the memory screen (PRD §7.9).
+    analyses: coachAnalyses(state),
     moves,
     days,
     today,

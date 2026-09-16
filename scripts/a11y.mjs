@@ -76,6 +76,7 @@ const ROUTES = {
   wallpaper: '/wallpaper',
   declare: '/declare',
   reauthor: '/reauthor',
+  memory: '/memory',
 };
 
 /**

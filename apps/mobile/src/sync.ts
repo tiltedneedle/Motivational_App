@@ -91,10 +91,12 @@ const CONFLICT: Partial<Record<string, string>> = {
   // A card let go and written about again is a new row with the same card:
   // matched on the card, or the account's old row refuses every push after.
   present_picks: 'user_id,half,card_id',
+  // One row per person, keyed by the person (PRD §7.9's memory_profiles).
+  memory_profiles: 'user_id',
 };
 
 /** The column that names a row, where it is not the id. */
-const KEY: Partial<Record<string, string>> = { day_summaries: 'day' };
+const KEY: Partial<Record<string, string>> = { day_summaries: 'day', memory_profiles: 'user_id' };
 
 const PAGE = 1000;
 

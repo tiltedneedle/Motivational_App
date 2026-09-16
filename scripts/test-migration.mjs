@@ -230,6 +230,24 @@ ${one}`;
   await as(ALICE, `update public.goals set status = 'active', lesson = null, let_go_at = null where id = $1`, [goalId]);
   check('and it can be taken back', true);
 
+  // ---- the memory profile (0009): one row, the person's alone
+  await as(
+    ALICE,
+    `insert into public.memory_profiles (user_id, edits, document) values ($1, '[{"key":"you.name","text":"Call me A.","editedAt":"2026-09-17T09:00:00Z"}]'::jsonb, '- You asked to be called “A.”')`,
+    [ALICE],
+  );
+  const memory = await as(ALICE, 'select edits, document from public.memory_profiles where user_id = $1', [ALICE]);
+  check('a person can keep what they changed about their memory profile', memory.rows.length === 1 && String(memory.rows[0]?.document).includes('asked to be called'));
+  const bobMemory = await as(BOB, 'select user_id from public.memory_profiles');
+  check("and nobody can read another person's", bobMemory.rows.length === 0, `${bobMemory.rows.length} rows`);
+  await asRejects(
+    "nor write a memory row stamped with another's id",
+    BOB,
+    `insert into public.memory_profiles (user_id, edits, document) values ($1, '[]'::jsonb, 'not mine')`,
+    [ALICE],
+    'policy',
+  );
+
   // ---- a move must have a line the same person wrote, for the same goal
 
   const planId = (

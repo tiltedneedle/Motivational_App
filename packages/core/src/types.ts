@@ -417,6 +417,18 @@ export const BookVersion = z.object({
 });
 export type BookVersion = z.infer<typeof BookVersion>;
 
+/**
+ * What Morrow knows about me (PRD §7.9): one change the person made to one
+ * line of the memory profile. `text` null is "forget this". Keyed by the
+ * line's stable key, so the edit lands on the same line after every rebuild.
+ */
+export const MemoryEdit = z.object({
+  key: z.string(),
+  text: z.string().nullable(),
+  editedAt: z.string(),
+});
+export type MemoryEdit = z.infer<typeof MemoryEdit>;
+
 export const Practice = z.object({
   id: z.string(),
   goalId: z.string().nullable(),

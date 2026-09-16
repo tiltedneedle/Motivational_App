@@ -32,7 +32,9 @@ import type {
   PresentPickRow,
   PastEpochRow,
   PastEventRow,
+  MemoryEdit,
 } from '../types';
+import { MemoryEdit as MemoryEditSchema } from '../types';
 import type { PracticeLog } from './practices';
 
 /** Everything the store persists that belongs to the person's account. */
@@ -59,6 +61,10 @@ export interface SyncBundle {
    * a finished Past on the walk and the chooser called it "Picked up".
    */
   pastListed: boolean;
+  /** The person's changes to the memory profile (PRD §7.9); the lines rebuild, the edits travel. */
+  memoryEdits: MemoryEdit[];
+  /** The profile as a document, for a coach behind a model; rebuilt on every push. */
+  memoryDocument: string;
 }
 
 export type Row = Record<string, unknown>;
@@ -74,6 +80,7 @@ export interface TableRows {
  */
 export const TABLE_ORDER = [
   'profiles',
+  'memory_profiles',
   'goals',
   'authoring_sessions',
   'authoring_texts',
@@ -161,6 +168,16 @@ export function toRows(bundle: SyncBundle, userId: string, timezone: string): Ta
           paywall_seen: p.paywallSeen ?? [],
           muted_moments: p.mutedMoments ?? [],
           notifications_off: p.notificationsOff ?? false,
+        },
+      ],
+    },
+    {
+      table: 'memory_profiles',
+      rows: [
+        {
+          user_id: userId,
+          edits: bundle.memoryEdits,
+          document: bundle.memoryDocument,
         },
       ],
     },
@@ -830,7 +847,20 @@ export function fromRows(tables: Partial<Record<(typeof TABLE_ORDER)[number], Ro
     // A missing column is the zero value: a profile row from before 0006
     // reads as not yet listed, which is one Back away from right.
     pastListed: bool(pr?.past_listed),
+    // Absent before 0009, and absent for a person who never changed a line.
+    memoryEdits: memoryEditsOf(t('memory_profiles')[0]?.edits),
+    memoryDocument: str(t('memory_profiles')[0]?.document ?? ''),
   };
+}
+
+function memoryEditsOf(raw: unknown): MemoryEdit[] {
+  if (!Array.isArray(raw)) return [];
+  const out: MemoryEdit[] = [];
+  for (const e of raw) {
+    const parsed = MemoryEditSchema.safeParse(e);
+    if (parsed.success) out.push(parsed.data);
+  }
+  return out;
 }
 
 function groupBy<T>(items: T[], key: (t: T) => string): Map<string, T[]> {

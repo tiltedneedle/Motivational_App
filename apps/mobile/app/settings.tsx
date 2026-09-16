@@ -164,6 +164,10 @@ export default function Settings() {
             {plural(state.pastEvents.length, 'event')} of Past, {plural(state.books.length, 'edition')} of the Book. All of it
             on this device.
           </Body>
+          {/* PRD §7.9, §7.12: the memory profile, line by line, theirs to change or forget. */}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            <Chip testID="settings-memory" label="Every line, and what to forget" ghost onPress={() => router.push('/memory')} />
+          </View>
 
           <View style={{ gap: 10 }}>
             <Label>Depth</Label>
