@@ -74,13 +74,17 @@ export default function PortraitScreen() {
   if (!goal || !portrait) {
     return (
       <Studio testID="screen-portrait">
-        <SafeAreaView style={{ flex: 1, padding: 22, justifyContent: 'center', gap: 12 }}>
+        <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
+          {/* A way back at the top, like every other screen: this branch is what a stale link lands on. */}
+          <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'portrait-back' }} where="The Portrait" />
+          <View style={{ flex: 1, justifyContent: 'center', gap: 12 }}>
           <Statement>Not yet.</Statement>
           <Body>
             A Portrait is built out of the five stones. Write them and it makes itself — nothing here is invented to
             fill the gap.
           </Body>
           <InkButton testID="portrait-onwards" label="Go on" onPress={onwards} />
+          </View>
         </SafeAreaView>
       </Studio>
     );

@@ -26,7 +26,7 @@ import {
   TopBar,
 } from '@morrow/ui';
 import { printBook } from '../src/print';
-import { useLatestBook, useMorrow } from '../src/store';
+import { useLatestBook, useMorrow, useFirstRun } from '../src/store';
 
 /**
  * A goal's name, set in the face that tells the truth about who wrote it.
@@ -62,14 +62,22 @@ export default function BookScreen() {
   // `react-hooks/rules-of-hooks` now fails the build on exactly that.
   const [printing, setPrinting] = useState(false);
   const twoColumn = useTwoColumn();
+  const firstRun = useFirstRun();
 
   if (!book) {
+    // Reached cold — a stale notification, a bookmarked link — since a Today
+    // without a Book has no tab bar. So it has a way back at the top like
+    // every other screen, and Begin goes to the next step of the path rather
+    // than to a consent already given.
     return (
       <Studio testID="screen-book">
-        <SafeAreaView style={{ flex: 1, padding: 22, justifyContent: 'center', gap: 12 }}>
-          <Statement>No Book yet.</Statement>
-          <Body>Three evenings and there will be one. It starts with the Interview.</Body>
-          <InkButton testID="book-start" label="Begin" onPress={() => router.replace('/consent')} />
+        <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
+          <TopBar back={{ label: 'Today', onPress: () => router.dismissTo('/today'), testID: 'book-back' }} where="The Book" />
+          <View style={{ flex: 1, justifyContent: 'center', gap: 12 }}>
+            <Statement>No Book yet.</Statement>
+            <Body>Three evenings and there will be one. It starts with the Interview.</Body>
+            <InkButton testID="book-start" label={firstRun.label} onPress={() => router.push(firstRun.route)} />
+          </View>
         </SafeAreaView>
       </Studio>
     );

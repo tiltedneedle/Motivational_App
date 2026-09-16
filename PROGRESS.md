@@ -1385,6 +1385,26 @@ wrong but because each sat in the middle of a sequence the walk depends on — t
 state, the safety card's settle window. A check that navigates belongs at the end of the
 walk, after everything that reads the state it would disturb.
 
+**Every route, opened cold (2026-09-16).** A new gate step, `pnpm test:cold`, and the reason it
+exists: `SEED=scripts/fixtures/empty.json` was documented on the axe pass and never run by
+anything, so no check had ever asked what a route does on a fresh install or with an id in
+its URL that points at nothing — a stale notification, a bookmarked link. It opens all 34
+routes on both stores and requires a screen, a way out, no page error and no error boundary.
+
+First run: **60/68**. Four routes on the empty store — Today, the spine, the seal, Welcome —
+were rendering the error boundary ("This screen broke, not your writing") on a fresh install.
+The axe pass had passed them for two days because the boundary is accessible. Cause: the
+fixture held `bookTitle: null` and `iWill: null` from when those fields were nullable, the
+store's `merge` spreads persisted over defaults, and every screen that trimmed either fell
+over. Two fixes, one for the fixture and one for the class: `merge` now never lets a
+persisted null replace a default that is not null (a field whose default is null keeps it),
+so an older store can no longer take a screen down with a field that changed type. The other
+four were the check's own vocabulary ("Skip" and "Go on" are ways out) and two cold landings
+that had none at the top — the Book's "No Book yet" (whose Begin also went to a consent
+already given; it goes to the next step of the path now) and the Portrait's "Not yet".
+
+Gate after: 421 core / 48 ui / 8 storage, e2e **330/330**, cold **68/68** (34 routes × two stores), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors. `pnpm verify` now ends with `test:cold`.
+
 Gate after: 416 core / 48 ui / 8 storage, e2e **326/326** (was 317; the new checks seed a live virtues sitting and press both closing-screen buttons on the faults, write a Past line in crisis and change it without the card returning, and read the Interview-only caption), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
 
 Gate after: 416 core / 48 ui / 8 storage, e2e **317/317** (was 311; the new checks relaunch cold mid-Interview and resume, press Begin then Back on the Past doorway and find no sitting behind it, and reread a written Present from Today), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.

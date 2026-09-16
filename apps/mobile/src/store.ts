@@ -2004,10 +2004,18 @@ const store = create<MorrowState>()(
        */
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<MorrowState>;
+        // A persisted null never replaces a default that is not null. A field
+        // that was once nullable and is a string now — the spine, the last
+        // line — came back from an older store as null, and every screen that
+        // trimmed it fell into the error boundary on a fresh install. Fields
+        // whose default is null keep their null; nothing legitimate is lost.
+        const sound = Object.fromEntries(
+          Object.entries(p).filter(([k, v]) => !(v === null && (current as unknown as Record<string, unknown>)[k] !== null)),
+        ) as Partial<MorrowState>;
         return {
           ...current,
-          ...p,
-          profile: { ...DEFAULT_PROFILE, ...current.profile, ...(p.profile ?? {}) },
+          ...sound,
+          profile: { ...DEFAULT_PROFILE, ...current.profile, ...(sound.profile ?? {}) },
         };
       },
       onRehydrateStorage: () => (state, error) => {
