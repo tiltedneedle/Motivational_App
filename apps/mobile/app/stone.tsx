@@ -20,9 +20,12 @@ import {
   type AnalysisKind,
   FAULT_FRAMINGS,
   ifThenFromFault,
+  formatDay,
+  sealedOn,
+  thenHalf,
 } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Question, Statement, Stone, Studio, TextButton, TopBar, UserField, accent, announce, day } from '@morrow/ui';
-import { analysesFor, useGoals, useMorrow, cardText } from '../src/store';
+import { Body, Chip, InkButton, Label, Question, Statement, Stone, Studio, TextButton, TopBar, UserField, accent, announce, day, UserText } from '@morrow/ui';
+import { analysesFor, useGoals, useLatestBook, useMorrow, cardText } from '../src/store';
 import { useFirstRunStep } from '../src/analytics';
 
 // The plan of analyses per goal lives in core now (`firstRunStep` needs it
@@ -36,7 +39,7 @@ export default function StoneScreen() {
   const router = useRouter();
   useFirstRunStep('stone');
   const showResources = useMorrow((st) => st.showResources);
-  const params = useLocalSearchParams<{ goal?: string; kind?: string }>();
+  const params = useLocalSearchParams<{ goal?: string; kind?: string; rewrite?: string; from?: string }>();
   const goals = useGoals();
   const track = useMorrow((s) => s.profile.track);
   const write = useMorrow((s) => s.writeAnalysis);
@@ -51,15 +54,34 @@ export default function StoneScreen() {
 
   const existing = analysesFor(state, goalId).find((a) => a.kind === kind);
   /**
+   * Day-90 re-authoring (PRD §7.3): "the same screens with the old line
+   * above the new". Opened from the re-authoring with `rewrite=1`, this
+   * stone shows the line as the latest edition sealed it and starts on an
+   * empty field — and goes back where it came from instead of on to the next
+   * stone. The sealed line comes from the Book, not the stone: the stone is
+   * what gets written again, and once it has been, the edition is the only
+   * copy of what it said before.
+   */
+  const latest = useLatestBook();
+  const boundary = useMorrow((s) => s.profile.dayBoundaryHour);
+  const returnTo = typeof params.from === 'string' && params.from.startsWith('/') ? params.from : null;
+  const before =
+    params.rewrite === '1' && returnTo && latest
+      ? (latest.chapters.find((c) => c.goalId === goalId)?.lines.find((l) => l.kind === kind) ?? null)
+      : null;
+  // Empty while the stone still says what was sealed; once it says something
+  // else, that is what is edited, so coming back does not blank a new line.
+  const fresh = !!before && (existing?.line.trim() ?? '') === before.text;
+  /**
    * The sitting they left, if it was this stone's. Read once, at mount: after
    * that this screen is the thing writing it. A draft of some other stone is
    * not ours to open.
    */
   const [resumed] = useState(() => (draft && draft.goalId === goalId && draft.kind === kind ? draft : null));
   const [framingId, setFramingId] = useState<string | null>(resumed?.framingId ?? existing?.framingId ?? null);
-  const [line, setLine] = useState(resumed?.line ?? existing?.line ?? '');
-  const [line2, setLine2] = useState(resumed?.line2 ?? existing?.line2 ?? '');
-  const [paragraph, setParagraph] = useState(resumed?.paragraph ?? existing?.paragraph ?? '');
+  const [line, setLine] = useState(resumed?.line ?? (fresh ? '' : (existing?.line ?? '')));
+  const [line2, setLine2] = useState(resumed?.line2 ?? (fresh ? '' : (existing?.line2 ?? '')));
+  const [paragraph, setParagraph] = useState(resumed?.paragraph ?? (fresh ? '' : (existing?.paragraph ?? '')));
   const [followUpAsked, setFollowUpAsked] = useState(false);
   // The follow-up's own words ("Tuesdays at 7, in the kitchen"), joined to
   // the line when it is kept. Bound to the same state as the line, the
@@ -128,6 +150,13 @@ export default function StoneScreen() {
         ...(track === 'full' && paragraph.trim() ? { paragraph } : {}),
       });
     }
+    // A stone opened from the re-authoring goes back to it, not to the
+    // stone before it in the walk.
+    if (returnTo) {
+      if (router.canGoBack()) router.back();
+      else router.replace(returnTo);
+      return;
+    }
     if (stepIndex > 0) {
       router.replace(`/stone?goal=${goalId}&kind=${plan[stepIndex - 1]}`);
       return;
@@ -167,6 +196,16 @@ export default function StoneScreen() {
       ...(kind === 'obstacles' ? { line2 } : {}),
       ...(track === 'full' && paragraph.trim() ? { paragraph } : {}),
     });
+
+    // Written again from the re-authoring: the plan is refreshed from the
+    // new line (it keeps its kept moves) and the sitting goes back to the
+    // two Books side by side, where this stone now reads "Written again".
+    if (returnTo) {
+      makePlan(goalId);
+      if (router.canGoBack()) router.back();
+      else router.replace(returnTo);
+      return;
+    }
 
     const nextKind = plan[stepIndex + 1];
     if (nextKind) {
@@ -271,8 +310,21 @@ export default function StoneScreen() {
             </View>
           ) : null}
 
+          {before && latest ? (
+            <View testID="stone-before" style={{ gap: 4, backgroundColor: day.surface2, borderRadius: 18, padding: 14 }}>
+              <Label>What you sealed, {formatDay(sealedOn(latest.sealedAt, boundary))}</Label>
+              <UserText style={{ fontSize: 17, lineHeight: 26, color: day.ink2 }}>{before.text}</UserText>
+              {before.text2 ? (
+                <UserText italic framing={thenHalf(before.text2).framing} style={{ fontSize: 15, lineHeight: 23, color: day.ink3 }}>
+                  {thenHalf(before.text2).act}
+                </UserText>
+              ) : null}
+              <Body style={{ fontSize: 13 }}>Write it again below. Back leaves the sealed line as it is.</Body>
+            </View>
+          ) : null}
+
           <View style={{ gap: 6 }}>
-            <Label>In your words</Label>
+            <Label>{before ? 'Now, in your words' : 'In your words'}</Label>
             <UserField
               testID="stone-line"
               labelHidden
@@ -359,7 +411,7 @@ export default function StoneScreen() {
         <View style={{ paddingTop: 10, paddingBottom: 18, gap: 4 }}>
           <InkButton
             testID="stone-seat"
-            label={ready ? (stepIndex + 1 < plan.length ? 'Keep this line · next' : 'Keep this line') : kind === 'obstacles' ? 'Write both lines' : 'Write your line'}
+            label={ready ? (!returnTo && stepIndex + 1 < plan.length ? 'Keep this line · next' : 'Keep this line') : kind === 'obstacles' ? 'Write both lines' : 'Write your line'}
             disabled={!ready}
             onPress={() => {
               if (needsFollowUp) {

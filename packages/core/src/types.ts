@@ -128,6 +128,13 @@ export const Goal = z.object({
    * existed are unaffected.
    */
   titleAuthored: z.boolean().optional(),
+  /**
+   * Day-90 re-authoring (PRD §7.3): a goal let go is archived "with a line
+   * about what it taught, written now". The line, and when. Both absent on
+   * every goal that is still in play.
+   */
+  lesson: z.string().optional(),
+  letGoAt: z.string().optional(),
   createdAt: z.string(),
 });
 export type Goal = z.infer<typeof Goal>;
@@ -397,7 +404,15 @@ export const BookVersion = z.object({
   /** user characters ÷ all characters. Must be ≥ 0.95 (PRD §11.1). */
   authorshipRatio: z.number().min(0).max(1),
   diff: z
-    .object({ kept: z.array(z.string()), rewritten: z.array(z.string()), letGo: z.array(z.string()) })
+    .object({
+      kept: z.array(z.string()),
+      rewritten: z.array(z.string()),
+      letGo: z.array(z.string()),
+      /** Goals named since the previous edition; absent on editions sealed before this existed. */
+      added: z.array(z.string()).optional(),
+      /** What each let-go goal taught, in the person's words. */
+      lessons: z.array(z.object({ name: z.string(), line: z.string() })).optional(),
+    })
     .nullable(),
 });
 export type BookVersion = z.infer<typeof BookVersion>;

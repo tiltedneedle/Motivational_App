@@ -2102,6 +2102,248 @@ async function main() {
     await page.waitForTimeout(500);
     check('Settings has Manage subscription and Restore purchases too', (await seen('settings-manage-subscription')) && (await seen('settings-restore')));
 
+    // ---- day 90 (PRD 7.3): the dawn brief opens the re-authoring, and every 90 after
+    //
+    // Ninety days on from the seal. The clock is Playwright's, so the app's
+    // calendar moves and nothing else does: same store, same Book, same
+    // goals. This lands at the end of the walk because it changes the day
+    // for everything after it.
+    const sealedStrategies = 'Tuesday, Thursday, Saturday at 6:40, out the back door before the kettle boils';
+    const ORD = ['Zeroth', 'First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth'];
+    await page.evaluate(() => {
+      const k = 'morrow-v1';
+      const st = JSON.parse(localStorage.getItem(k) ?? '{}');
+      const now = new Date().toISOString();
+      const id = 'goal_e2e_guitar';
+      st.state.goals = [
+        ...st.state.goals,
+        { id, title: 'Play the guitar on the wall', domain: 'craft', horizon: 'This season', targetDate: null, status: 'authored', rank: st.state.goals.length, titleAuthored: true, createdAt: now },
+      ];
+      st.state.analyses = [
+        ...st.state.analyses,
+        { id: 'an_e2e_guitar_m', goalId: id, kind: 'motives', track: 'starter', framingId: null, line: 'Because it is on the wall where I can see it from the table', specificity: 0.7, followupShown: false, writtenAt: now },
+        { id: 'an_e2e_guitar_s', goalId: id, kind: 'strategies', track: 'starter', framingId: null, line: 'Ten minutes after dinner, before the plates', specificity: 0.8, followupShown: false, writtenAt: now },
+      ];
+      localStorage.setItem(k, JSON.stringify(st));
+    });
+    await page.goto(`${BASE}/seal-book`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(600);
+    await page.locator('[data-testid="seal-hold"]').first().focus().catch(() => {});
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(800);
+    check('an edition with both goals is sealed to be re-authored', await seen('seal-open-book'));
+    const editionBefore = await page.evaluate(() => (JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.books ?? []).length);
+    const sealedAt = await page.evaluate(() => {
+      const b = JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.books ?? [];
+      return b[b.length - 1]?.sealedAt ?? '';
+    });
+    check('and the edition has a chapter for each', (await page.evaluate(() => {
+      const b = JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.books ?? [];
+      return b[b.length - 1]?.chapters.length ?? 0;
+    })) === 2);
+    // Day 89: nothing. Day 90, nine in the morning: the card.
+    const day90 = new Date(new Date(sealedAt).getTime() + 90 * 86_400_000);
+    day90.setHours(9, 0, 0, 0);
+    await page.clock.setSystemTime(new Date(day90.getTime() - 86_400_000));
+    await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(700);
+    check('on day 89 Today has no such card', (await seen('screen-today')) && !(await seen('today-reauthor')));
+    await page.clock.setSystemTime(day90);
+    await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(700);
+    check('on day 90 Today carries the card', await seen('today-reauthor'));
+    check('and names the day', (await noticeText('today-reauthor')).toLowerCase().includes('day ninety'), await noticeText('today-reauthor'));
+    await tap('today-reauthor');
+    await page.waitForTimeout(700);
+    check(
+      'on the free plan the door is the paywall, at the moment the PRD names',
+      (await seen('screen-paywall')) && (await page.locator('body').innerText()).includes('Ninety days'),
+    );
+    await tap('paywall-not-now');
+    await page.waitForTimeout(700);
+    check('Not now is Today again, the card still there, nothing lost', (await seen('screen-today')) && (await seen('today-reauthor')));
+
+    // Reached by its own URL on the free plan: what Pro adds and what stays
+    // theirs, on the screen itself — not a crash and not a silent redirect.
+    await page.goto(`${BASE}/reauthor`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(500);
+    check('the screen itself says what Pro adds and what stays theirs', (await seen('reauthor-gated')) && (await page.locator('body').innerText()).includes('yours either way'));
+    await tap('reauthor-back');
+    await page.waitForTimeout(600);
+    check('and its Back is Today', await seen('screen-today'));
+
+    // Pro. Set the way the billing webhook sets it; the app never can.
+    await page.evaluate(() => {
+      const k = 'morrow-v1';
+      const st = JSON.parse(localStorage.getItem(k) ?? '{}');
+      st.state.profile.entitled = true;
+      localStorage.setItem(k, JSON.stringify(st));
+    });
+    await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(700);
+    await tap('today-reauthor');
+    await page.waitForTimeout(700);
+    check('for Pro the card opens the two Books side by side', (await seen('screen-reauthor')) && (await seen('reauthor-title')));
+    await accessible('the re-authoring, two Books side by side');
+    const goalsNow = await page.evaluate(() =>
+      (JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.goals ?? []).map((g) => ({ id: g.id, title: g.title, status: g.status })),
+    );
+    const g0 = goalsNow[0] ?? { id: '', title: '' };
+    const statusOf = async (id) => page.evaluate((gid) => (JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.goals ?? []).find((g) => g.id === gid)?.status ?? '', id);
+    const lineOf = async (id, kind) =>
+      page.evaluate(
+        ([gid, k]) => (JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.analyses ?? []).find((a) => a.goalId === gid && a.kind === k)?.line ?? '',
+        [id, kind],
+      );
+    check(
+      'it says which edition, and when it was sealed',
+      (await noticeText('reauthor-sealed')).toLowerCase().includes(`${ORD[editionBefore].toLowerCase()} edition`) && (await noticeText('reauthor-sealed')).toLowerCase().includes('sealed'),
+      await noticeText('reauthor-sealed'),
+    );
+    check(
+      'every sealed line is printed as it stands',
+      (await seen(`reauthor-before-${g0.id}-strategies`)) && (await text(`reauthor-before-${g0.id}-strategies`)).includes('kettle boils'),
+    );
+    check('with Keep on and Rewrite beside it', (await seen(`reauthor-keep-${g0.id}-strategies`)) && (await seen(`reauthor-rewrite-${g0.id}-strategies`)));
+    check('and, nothing changed yet, it says so', (await noticeText('reauthor-summary')).includes('Nothing changed'), await noticeText('reauthor-summary'));
+
+    // Rewrite: the same stone, the sealed line above, an empty field.
+    await tap(`reauthor-rewrite-${g0.id}-strategies`);
+    await page.waitForTimeout(700);
+    check('Rewrite opens the same stone', await seen('screen-stone'));
+    check('with the sealed line above the field', (await seen('stone-before')) && (await noticeText('stone-before')).includes('kettle boils'));
+    check('and the field empty, so the new line is written and not edited', (await page.locator('[data-testid="stone-line"]').inputValue()) === '');
+    await tap('stone-back');
+    await page.waitForTimeout(700);
+    check(
+      'Back with nothing written is the re-authoring again, the line still kept',
+      (await seen('screen-reauthor')) && !(await seen(`reauthor-now-${g0.id}-strategies`)) && (await lineOf(g0.id, 'strategies')) === sealedStrategies,
+    );
+    const rewriteStrategies = async () => {
+      await tap(`reauthor-rewrite-${g0.id}-strategies`);
+      await page.waitForTimeout(700);
+      await page.locator('[data-testid="stone-line"]').fill('Every morning at 6:40, out the door, and the kettle can wait');
+      await page.waitForTimeout(300);
+      await tap('stone-seat');
+      // The one follow-up a vague Strategies line earns; this one is not vague, but the button is the same either way.
+      if (await seen('stone-followup')) await tap('stone-seat');
+      await page.waitForTimeout(800);
+    };
+    await rewriteStrategies();
+    check('Keep this line returns to the re-authoring', await seen('screen-reauthor'));
+    check(
+      'where the stone now reads Written again, the old line above the new',
+      (await seen(`reauthor-now-${g0.id}-strategies`)) &&
+        (await text(`reauthor-now-${g0.id}-strategies`)).includes('kettle can wait') &&
+        (await text(`reauthor-before-${g0.id}-strategies`)).includes('kettle boils') &&
+        (await text(`reauthor-rewrite-${g0.id}-strategies`)).includes('Written again'),
+    );
+    check('and the summary counts it', (await noticeText('reauthor-summary')).includes('1 line written again'), await noticeText('reauthor-summary'));
+    await tap(`reauthor-keep-${g0.id}-strategies`);
+    await page.waitForTimeout(500);
+    check(
+      'Keep the old puts the sealed line back on the stone, word for word',
+      !(await seen(`reauthor-now-${g0.id}-strategies`)) && (await lineOf(g0.id, 'strategies')) === sealedStrategies,
+      await lineOf(g0.id, 'strategies'),
+    );
+    await rewriteStrategies();
+    check('and it can be written again after that', (await seen('screen-reauthor')) && (await seen(`reauthor-now-${g0.id}-strategies`)));
+
+    // Let it go: one line about what it taught, and a way back until the seal.
+    check('there is more than one goal, so one can be let go', goalsNow.length >= 2, `${goalsNow.length} goals`);
+    const gLast = goalsNow[goalsNow.length - 1] ?? { id: '', title: '' };
+    await tap(`reauthor-let-go-${gLast.id}`);
+    await page.waitForTimeout(400);
+    check('Let it go asks for the line about what it taught', await seen(`reauthor-lesson-field-${gLast.id}`));
+    await tap(`reauthor-let-go-cancel-${gLast.id}`);
+    await page.waitForTimeout(300);
+    check(
+      'and Keep it closes it with nothing changed',
+      !(await seen(`reauthor-lesson-field-${gLast.id}`)) && !(await seen(`reauthor-take-back-${gLast.id}`)) && (await statusOf(gLast.id)) !== 'archived',
+    );
+    const letGoLast = async () => {
+      await tap(`reauthor-let-go-${gLast.id}`);
+      await page.waitForTimeout(300);
+      await page.locator(`[data-testid="reauthor-lesson-field-${gLast.id}"]`).fill('It was never the guitar I wanted; it was the evenings.');
+      await page.waitForTimeout(200);
+      await tap(`reauthor-let-go-confirm-${gLast.id}`);
+      await page.waitForTimeout(500);
+    };
+    await letGoLast();
+    check(
+      'the goal is let go, its line printed, with a way back',
+      (await seen(`reauthor-lesson-${gLast.id}`)) && (await text(`reauthor-lesson-${gLast.id}`)).includes('the evenings') && (await seen(`reauthor-take-back-${gLast.id}`)),
+    );
+    check('and is archived in the store, not deleted', (await statusOf(gLast.id)) === 'archived', await statusOf(gLast.id));
+    await tap(`reauthor-take-back-${gLast.id}`);
+    await page.waitForTimeout(500);
+    check('Take it back is exactly that', (await statusOf(gLast.id)) === 'active' && (await seen(`reauthor-let-go-${gLast.id}`)), await statusOf(gLast.id));
+    await letGoLast();
+    check('the summary counts both', (await noticeText('reauthor-summary')).includes('1 goal let go'), await noticeText('reauthor-summary'));
+
+    // The seal, with the hold. Back from it is the re-authoring, nothing lost.
+    await tap('reauthor-seal');
+    await page.waitForTimeout(700);
+    check('Seal is the seal screen, with the hold', (await seen('screen-seal-book')) && (await seen('seal-hold')));
+    check('and the I will line is still theirs from the first edition', (await page.locator('[data-testid="i-will"]').inputValue()).includes('kettle boils'));
+    await tap('seal-book-back');
+    await page.waitForTimeout(700);
+    check(
+      'Back from the seal is the re-authoring, with everything still on it',
+      (await seen('screen-reauthor')) && (await noticeText('reauthor-summary')).includes('1 goal let go') && (await seen(`reauthor-now-${g0.id}-strategies`)),
+    );
+    await tap('reauthor-seal');
+    await page.waitForTimeout(700);
+    await page.locator('[data-testid="seal-hold"]').first().focus().catch(() => {});
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(800);
+    check('the new edition is sealed', await seen('seal-open-book'));
+    await tap('seal-open-book');
+    // The stack's slide runs on the fake clock; until it has run, the new
+    // screen is mid-transition and innerText reads only its first line.
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(900);
+    check('and the Book opens', await seen('screen-book'));
+    check('on the diff as its first page', await seen('book-diff'));
+    const diffNodes = await page.locator('[data-testid="book-diff"]').count();
+    const diffText = diffNodes ? (await page.locator('[data-testid="book-diff"]').last().innerText()).trim() : '';
+    check('exactly one Book screen is mounted behind the diff', diffNodes === 1, String(diffNodes) + ' nodes; first: ' + (diffNodes ? (await page.locator('[data-testid="book-diff"]').first().innerText()).trim().slice(0, 80) : ''));
+    // The labels are uppercased by the Label's own text-transform, which innerText honours.
+    check('which says what was written again', diffText.toLowerCase().includes('written again') && diffText.includes(g0.title), diffText.slice(0, 160));
+    check(
+      'and what was let go, with the line about what it taught',
+      diffText.toLowerCase().includes('let go') && diffText.includes(gLast.title) && diffText.includes('it was the evenings'),
+      diffText.slice(0, 200),
+    );
+    check(`the spine says ${ORD[editionBefore + 1].toLowerCase()} edition`, (await page.locator('body').innerText()).toLowerCase().includes(`${ORD[editionBefore + 1].toLowerCase()} edition`));
+    await accessible('the re-authored edition, diff first');
+    const secondEdition = await page.evaluate(() => {
+      const st = JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state ?? {};
+      return { books: (st.books ?? []).map((b) => ({ version: b.version, goalIds: b.chapters.map((c) => c.goalId), diff: b.diff })), goals: st.goals ?? [] };
+    });
+    const wasSealed = secondEdition.books[editionBefore - 1];
+    const nowSealed = secondEdition.books[editionBefore];
+    check('one more edition in the store, the one before it untouched', secondEdition.books.length === editionBefore + 1 && wasSealed?.goalIds.includes(gLast.id) === true);
+    check('the new one without the goal let go, and with the diff on it', nowSealed?.goalIds.includes(gLast.id) === false && nowSealed?.diff?.letGo?.includes(gLast.title) === true);
+    check('and the diff names the line written again', nowSealed?.diff?.rewritten?.includes(g0.title) === true, JSON.stringify(nowSealed?.diff ?? null));
+    check('the goal let go keeps its line', secondEdition.goals.find((g) => g.id === gLast.id)?.lesson?.includes('the evenings') === true);
+
+    await page.goto(`${BASE}/reading`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(500);
+    check('the Sunday reading opens on the same page', await seen('reading-diff'));
+
+    await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(700);
+    check('and the card is gone: the next ninety count from this seal', (await seen('screen-today')) && !(await seen('today-reauthor')));
+    check('the goal let go is off Today’s row of goals', !(await seen(`goal-chip-${gLast.id}`)) && (await seen(`goal-chip-${g0.id}`)));
+
     // Consent reached by its own URL has nothing behind it; Back did nothing
     // at all, on the one screen a person can land on before anything exists.
     await page.goto(`${BASE}/consent`, { waitUntil: 'networkidle' });

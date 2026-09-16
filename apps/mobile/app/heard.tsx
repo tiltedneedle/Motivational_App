@@ -11,7 +11,7 @@ import { ActivityIndicator, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { domainMeta, plural, type Span } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Notice, Statement, Stone, Studio, TopBar, UserField, UserText, day } from '@morrow/ui';
-import { ai, latestText, useMorrow } from '../src/store';
+import { useGoals, ai, latestText, useMorrow } from '../src/store';
 import { useFirstRunStep } from '../src/analytics';
 
 interface Row {
@@ -26,7 +26,7 @@ export default function Heard() {
   const showResources = useMorrow((st) => st.showResources);
   const texts = useMorrow((s) => s.texts);
   const addGoals = useMorrow((s) => s.addGoals);
-  const goals = useMorrow((s) => s.goals);
+  const goals = useGoals();
 
   const savedRows = useMorrow((s) => s.readBackDraft);
   const saveRows = useMorrow((s) => s.saveReadBackDraft);

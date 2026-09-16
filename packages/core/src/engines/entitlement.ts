@@ -106,14 +106,15 @@ export function annualAgainstMonthly(plans: PricePlan[] = PLANS): string | null 
   return `A year for the price of ${words[months - 1]} months.`;
 }
 
-/** The three lines on the paywall. App chrome; never set in the serif. */
+/** The lines on the paywall. App chrome; never set in the serif. */
 export const BENEFITS = [
   'Every goal gets its own Blueprint, not just the first.',
-  // What Pro gates in this build, and nothing it does not yet: re-authoring
-  // the Book is a later release, and a paywall that promises it is a paywall
-  // that lies.
   'A scene for every goal, drawn from what you wrote about it.',
   'The coach every day, with the whole Book in front of it.',
+  // What Pro gates in this build, and nothing it does not: this line waited
+  // until the re-authoring was built, because a paywall that promises a
+  // later release is a paywall that lies.
+  'The Book written again every ninety days, the old line above the new.',
 ] as const;
 
 export interface EntitlementContext {
@@ -162,6 +163,22 @@ export function canBuildBlueprint(ctx: EntitlementContext): Gate {
  * on the free plan). Proposing is never gated — reading what the app would
  * change costs nothing and is theirs to see — only applying is.
  */
+/**
+ * Day-90 re-authoring (PRD §7.3) is one of the free limits the PRD names
+ * (§7.13): the brief opens it for everybody on day 90, and on the free plan
+ * the door is the paywall. The Book itself, and sealing it again by walking
+ * the stones, stay free; what Pro adds is the guided sitting — the two
+ * Books side by side, the old line above the new, the diff as a first page.
+ */
+export function canReauthor(ctx: EntitlementContext): Gate {
+  if (ctx.entitled) return { allowed: true };
+  return {
+    allowed: false,
+    moment: 'reauthor',
+    reason: 'Writing the Book again, side by side with the old one, is part of Morrow Pro. The Book you have is yours either way.',
+  };
+}
+
 export function canReplan(ctx: EntitlementContext): Gate {
   const cap = limits(ctx.entitled).replansPerMonth;
   if (ctx.replansThisMonth < cap) return { allowed: true };

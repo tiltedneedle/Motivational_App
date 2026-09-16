@@ -29,7 +29,7 @@ import {
   type WritingSessionState,
 } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Question, Ring, Statement, Stone, Studio, TopBar, UserText, accent, focusRing, night, type as fonts, useReducedMotion, webOnlyStyle } from '@morrow/ui';
-import { latestText, useMorrow } from '../src/store';
+import { useGoals, latestText, useMorrow } from '../src/store';
 import { useFirstRunStep } from '../src/analytics';
 import { dictation } from '../src/dictation';
 
@@ -48,7 +48,7 @@ export default function Write() {
   const saveText = useMorrow((s) => s.saveText);
   const saveDraft = useMorrow((s) => s.saveDraft);
   const clearDraft = useMorrow((s) => s.clearDraft);
-  const goals = useMorrow((s) => s.goals);
+  const goals = useGoals();
   const draft = useMorrow((s) => s.drafts[kind]);
   // An earlier sitting that may still be quoted, so someone whose latest one
   // was paused is not sent back to the beginning.

@@ -18,6 +18,7 @@ import {
   PLANS,
   PRO,
   canBuildBlueprint,
+  canReauthor,
   canTakeCoachTurn,
   isDismissible,
   limits,
@@ -128,13 +129,27 @@ describe('the screen it opens', () => {
     }
   });
 
-  it('promises three things, and each of them is a thing the app does', () => {
-    expect(BENEFITS).toHaveLength(3);
+  it('promises four things, and each of them is a thing the app does', () => {
+    // One per gate: the second Blueprint, the scene, the coach's cap, and —
+    // since the re-authoring was built — the Book written again on day 90.
+    expect(BENEFITS).toHaveLength(4);
     for (const b of BENEFITS) {
       expect(b.length).toBeGreaterThan(20);
       expect(b).not.toMatch(/unlimited everything|best|amazing/i);
     }
     expect(BENEFITS.join(' ')).toContain('Blueprint');
     expect(BENEFITS.join(' ')).toContain('coach');
+    expect(BENEFITS.join(' ')).toContain('ninety days');
+  });
+
+  it('gates the day-90 re-authoring on the free plan, and on the free plan only', () => {
+    const gate = canReauthor(free);
+    expect(gate.allowed).toBe(false);
+    if (!gate.allowed) {
+      expect(gate.moment).toBe('reauthor');
+      // The reason says what stays theirs, not only what is behind the door.
+      expect(gate.reason).toMatch(/yours/);
+    }
+    expect(canReauthor({ ...free, entitled: true }).allowed).toBe(true);
   });
 });

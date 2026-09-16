@@ -23,6 +23,8 @@ import {
   firstVisit,
     presentStanding,
   halfDone,
+  reauthorDue,
+  reauthorLabel,
 } from '@morrow/core';
 import {
   Body,
@@ -164,6 +166,8 @@ export default function Today() {
   const settledIn = Object.values(state.days).some((d) => Boolean(d.sealedAt));
 
   const today = dayOf(new Date(), state.profile.dayBoundaryHour);
+  const reauthor = reauthorDue(state.books, today, state.profile.dayBoundaryHour);
+  const entitled = state.profile.entitled === true;
   const intendedMoveId = state.days[today]?.intentionMoveId ?? null;
   const isSunday = new Date(`${today}T00:00:00Z`).getUTCDay() === 0;
 
@@ -358,6 +362,25 @@ export default function Today() {
                 {unreadLetters === 1 ? 'A letter' : plural(unreadLetters, 'letter')}
               </Label>
               <Body style={{ color: day.ink, fontSize: 16 }}>Waiting, from the other end of this.</Body>
+            </Pressable>
+          ) : null}
+
+          {/*
+            Day 90 (PRD §7.3): "the dawn brief opens it on day 90 and every 90
+            after." A card for the week it belongs to and nothing outside it,
+            like Sunday's. On the free plan the door is the paywall, which is
+            one of the moments the PRD names; Not now comes straight back here.
+          */}
+          {reauthor ? (
+            <Pressable
+              testID="today-reauthor"
+              accessibilityRole="button"
+              accessibilityLabel={`${reauthorLabel(reauthor.cycle)}: time to write the Book again`}
+              onPress={() => router.push(entitled ? '/reauthor?from=/today' : '/paywall?moment=reauthor&from=/today')}
+              style={{ marginTop: 16, backgroundColor: day.surface2, borderRadius: radius.card, padding: 18, gap: 6 }}
+            >
+              <Label style={{ color: accent.coralText }}>{reauthorLabel(reauthor.cycle)}</Label>
+              <Body style={{ color: day.ink, fontSize: 16 }}>Time to write it again. Two Books, side by side.</Body>
             </Pressable>
           ) : null}
 

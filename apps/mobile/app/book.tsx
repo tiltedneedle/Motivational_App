@@ -27,6 +27,7 @@ import {
 } from '@morrow/ui';
 import { printBook } from '../src/print';
 import { useLatestBook, useMorrow, useFirstRun } from '../src/store';
+import { DiffPage } from '../src/components/DiffPage';
 
 /**
  * A goal's name, set in the face that tells the truth about who wrote it.
@@ -52,9 +53,16 @@ export default function BookScreen() {
   const { from } = useLocalSearchParams<{ from?: string }>();
   const fromSeal = from === 'seal';
   const book = useLatestBook();
+  const authoredName = (name: string): boolean => {
+    const here = book?.chapters.find((c) => c.name === name);
+    const earlier = book ? books.find((b) => b.version === book.version - 1)?.chapters.find((c) => c.name === name) : undefined;
+    const c = here ?? earlier;
+    return c ? c.nameAuthored !== false : false;
+  };
   // Kept: this one is read on Today, which is where it navigates to.
   const setToast = useMorrow((s) => s.setToast);
   const boundary = useMorrow((s) => s.profile.dayBoundaryHour);
+  const books = useMorrow((s) => s.books);
   const [exportError, setExportError] = useState<string | null>(null);
   // Above the early return, with the other hooks. Declared below it, this
   // would be called on one render and not the next the moment a Book appeared
@@ -161,6 +169,14 @@ export default function BookScreen() {
             )}
           </View>
           <Rule style={{ backgroundColor: '#E2DACB' }} />
+
+          {/* A re-authored edition opens on what changed (PRD §7.3). */}
+          {book.diff && book.version > 1 ? (
+            <>
+              <DiffPage diff={book.diff} previous={book.version - 1} authored={authoredName} />
+              <Rule style={{ backgroundColor: '#E2DACB' }} />
+            </>
+          ) : null}
 
           {/*
             PRD §7.14: two-column Book on a tablet.

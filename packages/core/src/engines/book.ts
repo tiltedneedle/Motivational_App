@@ -17,7 +17,7 @@ import type {
 import { ANALYSIS_ORDER } from '../types';
 import { framingLabel } from './framings';
 import { isQuotable } from './safety';
-import { formatDay, plural, sealedOn, thenHalf } from '../ids';
+import { ordinal, formatDay, plural, sealedOn, thenHalf } from '../ids';
 import { firstSentence, restOfIdeal } from './portrait';
 
 export const MIN_AUTHORSHIP_RATIO = 0.95;
@@ -218,6 +218,8 @@ export function pageCount(book: BookVersion): number {
  * own document is a different document.
  */
 export type BookPage =
+  /** A re-authored edition opens on what changed (PRD §7.3). */
+  | { kind: 'diff'; diff: BookDiff; previous: number }
   | { kind: 'opening'; firstSentence: string; rest: string }
   | { kind: 'shadow'; text: string }
   | { kind: 'contents'; chapters: BookVersion['chapters'] }
@@ -230,7 +232,9 @@ export type BookPage =
 
 export function bookPages(book: BookVersion): BookPage[] {
   const rest = restOfIdeal(book.ideal, book.firstSentence);
-  const pages: BookPage[] = [{ kind: 'opening', firstSentence: book.firstSentence, rest }];
+  const pages: BookPage[] = [];
+  if (book.diff && book.version > 1) pages.push({ kind: 'diff', diff: book.diff, previous: book.version - 1 });
+  pages.push({ kind: 'opening', firstSentence: book.firstSentence, rest });
   if (book.shadow) pages.push({ kind: 'shadow', text: book.shadow });
   pages.push({ kind: 'contents', chapters: book.chapters });
   for (const chapter of book.chapters) pages.push({ kind: 'chapter', chapter });
@@ -245,32 +249,60 @@ export function bookPages(book: BookVersion): BookPage[] {
   return pages;
 }
 
-export interface BookDiff {
-  kept: string[];
-  rewritten: string[];
-  letGo: string[];
-}
+export type BookDiff = NonNullable<BookVersion['diff']>;
 
-/** Day-90 re-authoring: what changed between editions (PRD §7.3). */
-export function diffBooks(previous: BookVersion, next: BookVersion): BookDiff {
+/**
+ * Day-90 re-authoring: what changed between editions (PRD §7.3). "The diff
+ * is its first page."
+ *
+ * Kept, written again, let go, and — since a person may name a goal between
+ * editions — added. A goal in the new edition with no chapter in the old one
+ * used to be listed as "rewritten", which is not what happened to it.
+ * `lessons` are the lines written on letting go; only the ones for goals
+ * this diff actually lists are kept, so a stale line cannot ride along.
+ */
+export function diffBooks(previous: BookVersion, next: BookVersion, lessons: { name: string; line: string }[] = []): BookDiff {
   const prev = new Map(previous.chapters.map((c) => [c.goalId, c]));
   const kept: string[] = [];
   const rewritten: string[] = [];
   const letGo: string[] = [];
+  const added: string[] = [];
   for (const ch of next.chapters) {
     const before = prev.get(ch.goalId);
     if (!before) {
-      rewritten.push(ch.name);
+      added.push(ch.name);
       continue;
     }
     const same =
       before.lines.length === ch.lines.length &&
-      before.lines.every((l, i) => l.text === ch.lines[i]?.text && (l.paragraph ?? '') === (ch.lines[i]?.paragraph ?? ''));
+      before.lines.every(
+        (l, i) =>
+          l.text === ch.lines[i]?.text &&
+          (l.text2 ?? '') === (ch.lines[i]?.text2 ?? '') &&
+          (l.paragraph ?? '') === (ch.lines[i]?.paragraph ?? ''),
+      );
     (same ? kept : rewritten).push(ch.name);
     prev.delete(ch.goalId);
   }
   for (const [, ch] of prev) letGo.push(ch.name);
-  return { kept, rewritten, letGo };
+  const kept_lessons = lessons.filter((l) => letGo.includes(l.name) && l.line.trim()).map((l) => ({ name: l.name, line: l.line.trim() }));
+  return {
+    kept,
+    rewritten,
+    letGo,
+    ...(added.length ? { added } : {}),
+    ...(kept_lessons.length ? { lessons: kept_lessons } : {}),
+  };
+}
+
+/** One line per part of the diff, for the plain text and the HTML. */
+export function diffLines(diff: BookDiff): { label: string; names: string[] }[] {
+  const out: { label: string; names: string[] }[] = [];
+  if (diff.kept.length) out.push({ label: 'Kept', names: diff.kept });
+  if (diff.rewritten.length) out.push({ label: 'Written again', names: diff.rewritten });
+  if (diff.added?.length) out.push({ label: 'New', names: diff.added });
+  if (diff.letGo.length) out.push({ label: 'Let go', names: diff.letGo });
+  return out;
 }
 
 /** Plain-text export. The PDF renderer uses the same shape. */
@@ -281,6 +313,12 @@ export function bookToText(book: BookVersion, boundaryHour = 3): string {
   out.push([book.titleFraming, book.title].filter(Boolean).join(' ').toUpperCase());
   out.push(`Sealed ${formatDay(sealedOn(book.sealedAt, boundaryHour))} · ${plural(book.chapters.length, 'goal')} · ${book.track}`);
   out.push('');
+  if (book.diff && book.version > 1) {
+    out.push(`SINCE THE ${ordinal(book.version - 1).toUpperCase()} EDITION`);
+    for (const row of diffLines(book.diff)) out.push(`  ${row.label}: ${row.names.join(', ')}`);
+    for (const l of book.diff.lessons ?? []) out.push(`  ${l.name} — ${l.line}`);
+    out.push('');
+  }
   out.push('CHAPTER ONE · THE FIFTEEN');
   out.push(book.ideal);
   out.push('');

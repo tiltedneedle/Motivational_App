@@ -75,6 +75,7 @@ const ROUTES = {
   account: '/account',
   wallpaper: '/wallpaper',
   declare: '/declare',
+  reauthor: '/reauthor',
 };
 
 /**

@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ANALYSIS_TITLES, bookPages, dayOf, distanceLabel, formatDay, horizonReview, plural, sealedOn, thenHalf } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Quoted, Rule, Statement, Studio, TextButton, UserText, fitSentence, night, paper, radius, TopBar } from '@morrow/ui';
 import { useGoals, useLatestBook, useMorrow } from '../src/store';
+import { DiffPage } from '../src/components/DiffPage';
 
 export default function Reading() {
   const router = useRouter();
@@ -23,6 +24,13 @@ export default function Reading() {
   const goals = useGoals();
   const setToast = useMorrow((s) => s.setToast);
   const boundary = useMorrow((s) => s.profile.dayBoundaryHour);
+  const books = useMorrow((s) => s.books);
+  const authoredName = (name: string): boolean => {
+    const here = book?.chapters.find((c) => c.name === name);
+    const earlier = book ? books.find((b) => b.version === book.version - 1)?.chapters.find((c) => c.name === name) : undefined;
+    const c = here ?? earlier;
+    return c ? c.nameAuthored !== false : false;
+  };
 
   const pages = useMemo(() => (book ? bookPages(book) : []), [book]);
   const [index, setIndex] = useState(0);
@@ -101,6 +109,8 @@ export default function Reading() {
             style={{ flex: 1, backgroundColor: paper.ground, borderRadius: radius.card }}
             contentContainerStyle={{ padding: 26, paddingBottom: 40, gap: 16, flexGrow: 1, justifyContent: 'center' }}
           >
+            {page.kind === 'diff' ? <DiffPage diff={page.diff} previous={page.previous} authored={authoredName} testID="reading-diff" /> : null}
+
             {page.kind === 'opening' ? (
               <>
                 <Label style={{ color: paper.ink3 }}>Chapter one · the Fifteen</Label>

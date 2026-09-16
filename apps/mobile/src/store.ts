@@ -19,6 +19,7 @@ import {
   AnthropicProvider,
   LocalProvider,
   buildBookVersion,
+  diffBooks,
   buildDawnBrief,
   buildPlan,
   buildPortrait,
@@ -342,6 +343,15 @@ export interface MorrowState {
   ) => void;
   renameGoal: (id: string, title: string) => void;
   dropGoal: (id: string) => void;
+  /**
+   * Day-90 re-authoring (PRD §7.3): "Let it go — the goal is archived with a
+   * line about what it taught, written now." The goal stays in the list as
+   * archived, with the line, so the next seal can print both on its first
+   * page; everything that ran off it stops.
+   */
+  letGoGoal: (id: string, lesson: string) => void;
+  /** The way back from Let it go, until the edition is sealed. */
+  takeBackGoal: (id: string) => void;
   rankGoals: (ids: string[]) => void;
 
   // authoring
@@ -726,6 +736,32 @@ const store = create<MorrowState>()(
           evidence: s.evidence.map((e) => (e.goalId === id ? { ...e, goalId: null } : e)),
         })),
 
+      letGoGoal: (id, lesson) => {
+        const at = new Date().toISOString();
+        set((s) => ({
+          goals: s.goals.map((g) => (g.id === id ? { ...g, status: 'archived' as const, lesson: lesson.trim(), letGoAt: at } : g)),
+          // Its practices stop, the same way as under dropGoal: their runs
+          // are days that happened and stay in the log. Stamped with the same
+          // instant as the goal, so taking it back can find exactly these.
+          practices: s.practices.map((p) => (p.goalId === id && !p.archivedAt ? { ...p, archivedAt: at } : p)),
+        }));
+      },
+
+      takeBackGoal: (id) =>
+        set((s) => {
+          const goal = s.goals.find((g) => g.id === id);
+          if (!goal || goal.status !== 'archived') return {};
+          const at = goal.letGoAt;
+          return {
+            goals: s.goals.map((g) => {
+              if (g.id !== id) return g;
+              const { lesson: _lesson, letGoAt: _letGoAt, ...rest } = g;
+              return { ...rest, status: 'active' as const };
+            }),
+            practices: s.practices.map((p) => (p.goalId === id && at && p.archivedAt === at ? { ...p, archivedAt: null } : p)),
+          };
+        }),
+
       rankGoals: (ids) =>
         set((s) => ({
           goals: s.goals
@@ -858,7 +894,7 @@ const store = create<MorrowState>()(
         const shadow = latestText(s.texts, 'shadow');
         const additions = s.texts.filter((t) => t.kind === 'addition' && isQuotable(t)).map((t) => t.body);
         try {
-          const book = buildBookVersion(
+          const built = buildBookVersion(
             {
               version: s.books.length + 1,
               title: s.bookTitle || 'Untitled',
@@ -871,7 +907,9 @@ const store = create<MorrowState>()(
               ideal: [ideal?.body ?? '', ...additions].filter(Boolean).join('\n\n'),
               shadow: shadow?.body ?? null,
               iWill: s.iWill,
-              goals: s.goals,
+              // A goal let go is not in the new edition; it is on its first
+              // page, under "let go", with the line written about it.
+              goals: activeGoals(s),
               // Only lines the screen let through; the engine checks too.
               analyses: quotable(s.analyses),
               // The other two volumes, if they have anything in them. A card's
@@ -914,6 +952,17 @@ const store = create<MorrowState>()(
             },
             newId,
           );
+          // Every edition after the first opens on what changed (PRD §7.3).
+          // The comparison needs the built chapters, so it runs after the
+          // build and is laid onto it; the engine's ratio does not count the
+          // diff on either side, and neither does the server's.
+          const previous = s.books[s.books.length - 1];
+          const lessons = previous
+            ? s.goals
+                .filter((g) => g.status === 'archived' && g.letGoAt && g.letGoAt > previous.sealedAt)
+                .map((g) => ({ name: g.title, line: g.lesson ?? '' }))
+            : [];
+          const book: BookVersion = previous ? { ...built, diff: diffBooks(previous, built, lessons) } : built;
           set((st) => ({
             books: [...st.books, book],
             goals: st.goals.map((g) => (g.status === 'authored' ? { ...g, status: 'active' as const } : g)),
@@ -1589,7 +1638,7 @@ const store = create<MorrowState>()(
           // ledger line back at somebody months later would be the worst
           // possible use of the one place the app writes prose.
           evidence: quotable(s.evidence).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)),
-          goals: s.goals,
+          goals: activeGoals(s),
           moves: s.plans.flatMap((p) => p.moves),
         };
 
@@ -2302,8 +2351,14 @@ function horizonToDate(horizon: string): string | null {
 // selector here goes through `useShallow`. Learned the hard way: the first
 // end-to-end run died with React error #185 on this exact mistake.
 
+/**
+ * The goals in play, in rank order. A goal let go at a re-authoring (PRD
+ * §7.3) stays in `goals` as archived — its row, its line about what it
+ * taught, and the chapters it has in older editions are all still theirs —
+ * but it is not on Today, not on the stones, and not in the next edition.
+ */
 export function activeGoals(s: MorrowState): Goal[] {
-  return [...s.goals].sort((a, b) => a.rank - b.rank);
+  return s.goals.filter((g) => g.status !== 'archived').sort((a, b) => a.rank - b.rank);
 }
 
 export function analysesFor(s: MorrowState, goalId: string): GoalAnalysis[] {
@@ -2398,7 +2453,7 @@ export const useTodaysPractices = () => useMorrow(useShallow(todaysPractices));
 /** Where the person is on the first-run path (core's `firstRunStep`), from the store. */
 export function firstRunOf(s: MorrowState): FirstRunStep {
   return firstRunStep({
-    goals: s.goals,
+    goals: activeGoals(s),
     hasIdeal: latestText(s.texts, 'ideal') !== null,
     hasTitle: s.bookTitle.trim().length > 0,
     consented: Boolean(s.profile.consentedAt),

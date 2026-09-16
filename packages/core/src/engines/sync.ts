@@ -178,6 +178,8 @@ export function toRows(bundle: SyncBundle, userId: string, timezone: string): Ta
         status: g.status,
         rank: g.rank,
         source_span: orNull(g.sourceSpan),
+        lesson: orNull(g.lesson),
+        let_go_at: g.letGoAt ?? null,
         created_at: g.createdAt,
       })),
     },
@@ -561,6 +563,8 @@ export function fromRows(tables: Partial<Record<(typeof TABLE_ORDER)[number], Ro
     rank: num(r.rank),
     ...(strOrNull(r.source_span) ? { sourceSpan: str(r.source_span) } : {}),
     ...(r.title_authored === false ? { titleAuthored: false } : {}),
+    ...(strOrNull(r.lesson) ? { lesson: str(r.lesson) } : {}),
+    ...(strOrNull(r.let_go_at) ? { letGoAt: str(r.let_go_at) } : {}),
     createdAt: str(r.created_at),
   }));
 

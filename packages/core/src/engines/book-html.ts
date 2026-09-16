@@ -15,6 +15,7 @@
 import type { BookVersion } from '../types';
 import { ANALYSIS_TITLES } from './framings';
 import { formatDay, ordinal, plural, sealedOn, thenHalf } from '../ids';
+import { diffLines } from './book';
 import { restOfIdeal } from './portrait';
 
 /** The one place text meets markup. Nothing the person wrote is trusted as HTML. */
@@ -160,6 +161,16 @@ export function bookToHtml(book: BookVersion, boundaryHour = 3): string {
   )} · ${escapeHtml(book.track)}</div>
   <hr class="rule" />
 
+${
+    book.diff && book.version > 1
+      ? `<div class="label">Since the ${escapeHtml(ordinal(book.version - 1).toLowerCase())} edition</div>
+  ${diffLines(book.diff)
+    .map((row) => `<p class="line"><span class="label">${escapeHtml(row.label)}</span> ${escapeHtml(row.names.join(', '))}</p>`)
+    .join('\n  ')}
+  ${(book.diff.lessons ?? []).map((l) => `<p class="line theirs"><em>${escapeHtml(l.name)}</em> — ${escapeHtml(l.line)}</p>`).join('\n  ')}
+  <hr class="rule" />`
+      : ''
+  }
   <div class="label">Chapter one · the Fifteen</div>
   <p class="first theirs">${escapeHtml(book.firstSentence)}</p>
   <p class="body theirs">${escapeHtml(rest)}</p>

@@ -214,6 +214,22 @@ ${one}`;
     'policy',
   );
 
+  // ---- a goal let go (0008): archived, with the line it taught, by its owner only
+  await as(
+    ALICE,
+    `update public.goals set status = 'archived', lesson = 'It was never the guitar I wanted; it was the evenings.', let_go_at = now() where id = $1`,
+    [goalId],
+  );
+  const letGo = await as(ALICE, 'select status, lesson, let_go_at from public.goals where id = $1', [goalId]);
+  check(
+    'a goal can be let go with the line it taught',
+    letGo.rows[0]?.status === 'archived' && String(letGo.rows[0]?.lesson).includes('the evenings') && letGo.rows[0]?.let_go_at != null,
+  );
+  const bobLetsGo = await as(BOB, `update public.goals set status = 'archived', lesson = 'not mine' where id = $1 returning id`, [goalId]);
+  check("and nobody can let go another person's goal", bobLetsGo.rows.length === 0, `${bobLetsGo.rows.length} rows`);
+  await as(ALICE, `update public.goals set status = 'active', lesson = null, let_go_at = null where id = $1`, [goalId]);
+  check('and it can be taken back', true);
+
   // ---- a move must have a line the same person wrote, for the same goal
 
   const planId = (

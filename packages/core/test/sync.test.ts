@@ -455,6 +455,36 @@ describe('the Past and Present volumes on the wire', () => {
     expect(fromOlder.profile.declaredAt).toBeNull();
   });
 
+  it('carries a goal let go with the line it taught, and reads a goal from before 0008 as still in play', () => {
+    const g0 = bundle.goals[0]!;
+    const letGo = {
+      ...bundle,
+      goals: [
+        { ...g0, status: 'archived' as const, lesson: 'It was never the guitar I wanted; it was the evenings.', letGoAt: '2026-12-15T09:00:00.000Z' },
+        { ...g0, id: 'goal-still', title: 'Row on the river', rank: 1 },
+      ],
+    };
+    const tables = toRows(letGo, USER, 'UTC');
+    const byTable = Object.fromEntries(tables.map((t) => [t.table, t.rows]));
+    const row = byTable.goals![0]!;
+    expect(row.status).toBe('archived');
+    expect(row.lesson).toContain('the evenings');
+    expect(row.let_go_at).toBe('2026-12-15T09:00:00.000Z');
+    // A goal still in play carries nulls, never an empty string.
+    expect(byTable.goals![1]!.lesson).toBeNull();
+    expect(byTable.goals![1]!.let_go_at).toBeNull();
+    const back = fromRows(byTable as Parameters<typeof fromRows>[0], bundle.profile);
+    expect(back.goals[0]!.status).toBe('archived');
+    expect(back.goals[0]!.lesson).toContain('the evenings');
+    expect(back.goals[0]!.letGoAt).toBe('2026-12-15T09:00:00.000Z');
+    expect(back.goals[1]!.lesson).toBeUndefined();
+    // A goals row from before 0008 has neither column.
+    const older = { ...byTable, goals: byTable.goals!.map((r) => Object.fromEntries(Object.entries(r).filter(([k]) => k !== 'lesson' && k !== 'let_go_at'))) };
+    const fromOlder = fromRows(older as Parameters<typeof fromRows>[0], bundle.profile);
+    expect(fromOlder.goals[1]!.lesson).toBeUndefined();
+    expect(fromOlder.goals[1]!.letGoAt).toBeUndefined();
+  });
+
   it('brings the periods back in their order, whatever order the rows arrive in', () => {
     const at = '2026-09-15T20:00:00.000Z';
     const epochs = [

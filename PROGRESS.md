@@ -49,6 +49,17 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 40. **Day-90 re-authoring (§7.3), 2026-09-17.** The calendar is Morrow's:
+      ninety days after the latest seal, and every ninety after, Today carries a
+      card for a week. Two Books side by side — every sealed line printed as it
+      stands, Keep on, Rewrite beside it — and Rewrite opens the same stone with
+      the sealed line above an empty field. Let it go asks for the one line about
+      what it taught (migration 0008, applied live), archives the goal, and can be
+      taken back until the seal. The new edition is sealed with the hold; the
+      diff — kept, written again, new, let go, and the lines — is its first page
+      on the Book, in the Sunday reading, and in both exports. On the free plan
+      the door is the paywall at the moment the PRD names, and Not now is Today
+      with nothing lost. See "Day-90 re-authoring" below.
 - [x] 39. **The Declaration (§7.17), the part of it that needs no key.** On the day
       the Book is sealed, and any day after: the I will line across the person's
       own photo (camera or library, through the platform's picker; the night
@@ -949,9 +960,26 @@ fixed anyway). All 47 are closed. The ones that mattered most:
   (`paper` tokens, measured); "Sealed" uses the app's day, not UTC's; the
   seal-book label said "second edition" on the first; "The last 1 thing";
   the gentle notification's colon; the paywall promised re-authoring, which
-  is not built; the crisis card said nothing was sent anywhere, which is
+  was not built then (it is now, 2026-09-17, and the line is back); the crisis
+  card said nothing was sent anywhere, which is
   untrue with a remote screen; the consent screen now names the safety
   screening and the scene.
+
+## Day-90 re-authoring (2026-09-17)
+Built and verified; see the dated entry above. The pieces, for whoever opens it next:
+- **Core** — `engines/reauthor.ts`: `reauthorDue` (the calendar), `reauthorLabel`
+  ("Day ninety"), `sideBySide` (the two Books), `plusDays`. `engines/book.ts`:
+  `diffBooks(previous, next, lessons)` with `added` and `lessons`, `diffLines`, and the
+  diff as `bookPages`' first page for any edition after the first; the text and HTML
+  exports print it. `entitlement.ts`: `canReauthor`. `types.ts`: `Goal.lesson`,
+  `Goal.letGoAt`; the diff's two optional fields. `sync.ts`: the two goal columns.
+- **Store** — `letGoGoal`, `takeBackGoal`; `activeGoals` excludes archived; the seal
+  builds from active goals and lays the diff onto the edition.
+- **Screens** — `app/reauthor.tsx`; `app/stone.tsx` in rewrite mode (`rewrite=1&from=`);
+  the card on `app/today.tsx`; `src/components/DiffPage.tsx` on the Book and in the reading.
+- **Schema** — `0008_let_go.sql`, applied live.
+- **Checks** — `test/reauthor.test.ts`; the e2e's day-90 block at the end of the walk;
+  `/reauthor` in the cold and a11y sweeps.
 
 ## The account (2026-09-11)
 
@@ -1537,6 +1565,54 @@ most-tested screens; converting them is churn for no user-visible gain.
 
 Gate after: e2e **353/353** (was 349), cold 72/72, axe 0 across 35 screens, way-back 31 screens, 422 core / 48 ui / 8 storage, typecheck clean, lint 0 errors and 10 warnings.
 
+**Day-90 re-authoring (2026-09-17).** PRD §7.3's last unbuilt paragraph: "Two Books side
+by side. Per stone: Keep, Rewrite (the same screens with the old line above the new) or
+Let it go (the goal is archived with a line about what it taught, written now). The new
+edition is sealed with the hold; the diff is its first page. The calendar is Morrow's: the
+dawn brief opens it on day 90 and every 90 after." `diffBooks` existed and nothing
+consumed it; nothing fired on day 90; the `reauthor` paywall moment had no door.
+
+Now, in order of what the person meets. `reauthorDue` (core, `engines/reauthor.ts`) is
+the calendar: counted from the latest edition's sealed day in the person's own day
+boundary, due at 90 and every 90 after, offered for a week so a missed morning is not a
+missed quarter, quiet again once a new edition is sealed. Today carries the card
+(`today-reauthor`, "Day ninety" / "Day one hundred and eighty"); on the free plan it opens
+the paywall at the `reauthor` moment — one of the free limits §7.13 names — and Not now
+is Today with the card still there. `/reauthor` is the two Books side by side
+(`sideBySide` in core: the sealed chapter's lines against the stones as they stand now):
+each line printed with its framing, Keep on and Rewrite beside it as two radios. Rewrite
+opens the same stone with `rewrite=1&from=/reauthor`: the sealed line sits above an empty
+field ("What you sealed, 18 Jun"), Back leaves the sealed line as it is, Keep this line
+refreshes the plan and returns. Once written again, Keep becomes "Keep the old" and puts the
+sealed line back word for word. Let it go opens one field — "What it taught" — and archives
+the goal with the line and the instant (`letGoGoal`; `status = 'archived'`, which the
+schema always allowed and nothing had ever set; `lesson`, `let_go_at` in migration 0008,
+applied live); its practices stop the way `dropGoal` stops them; "Take it back" restores
+exactly that. `activeGoals` now means not archived, and the seal, the letters, the naming
+screens and the first-run step all read it. Seal is the seal screen with the hold; the store
+computes the diff against the previous edition at the seal (added is now its own part, not
+"rewritten"; a changed then-half counts; the lessons ride in the diff, which is jsonb on
+`book_versions` already, so no migration for them) and the Book opens on it: kept, written
+again, new, let go, what it taught — names in the serif when the person typed them and the
+sans when they came from the bank, the same rule as the chapter headings. The Sunday
+reading turns to it as page one; the plain text and the PDF print it under "Since the
+second edition". The paywall's fourth line, held back until this existed, is back.
+
+The decision worth recording: re-authoring is Pro, because §7.13 lists "re-authoring on
+day 90" among the free limits, and the gate's reason says what stays theirs — the Book,
+and sealing it again by walking the stones, which was never gated. What Pro adds is the
+guided sitting. A person who lets go their only goal cannot seal (a Book needs one) and
+the seal screen says so, the same refusal as before; Take it back is one tap above.
+
+Found on the way: the walk ends with one goal and two editions, so the e2e seeds a second
+goal through the store and seals it in through the app's own seal before moving the clock;
+and `innerText` honours the Label's `text-transform`, so the diff's parts are compared
+lower-cased. Verified by hand in the browser pane on the filled fixture moved to day 91:
+the card, the gate, the side-by-side, the rewrite with the sealed line above, the let-go and
+its line, the hold, the diff as the first page, Today with the card gone and one goal left.
+
+Gate after: e2e **401/401** (was 353; the new checks: nothing on day 89, the card on day 90, the paywall on Free and Not now with nothing lost, the gated screen by its own URL, the side-by-side for Pro with axe on it, Rewrite with the sealed line above an empty field and Back changing nothing, Written again and Keep the old restoring word for word, Let it go with its line and Take it back, Back from the seal with everything still there, the hold, the diff as the Book's first page with axe on it, the reading opening on it, the store's editions, Today with the card gone and the goal off its row), cold 74/74, axe 0 across 36 screens, way-back 32 screens, migration **58 checks** with 0008 (a goal let go by its owner only, and taken back), the live account round-trip **45/45** with 0008 applied, 439 core / 48 ui / 8 storage, typecheck clean, lint 0 errors and 10 warnings, copy / dates / deps / authorship / sql / functions clean.
+
 Gate after: 416 core / 48 ui / 8 storage, e2e **326/326** (was 317; the new checks seed a live virtues sitting and press both closing-screen buttons on the faults, write a Past line in crisis and change it without the card returning, and read the Interview-only caption), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
 
 Gate after: 416 core / 48 ui / 8 storage, e2e **317/317** (was 311; the new checks relaunch cold mid-Interview and resume, press Begin then Back on the Past doorway and find no sitting behind it, and reread a written Present from Today), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
@@ -1740,7 +1816,7 @@ program's actual prompt text by someone with a licensed copy.
 - A model endpoint (`pnpm sb secrets set LLM_BASE_URL=… LLM_API_KEY=… LLM_MODEL=…`, any
   OpenAI-compatible provider, or `ANTHROPIC_API_KEY`), a fal.ai key, RevenueCat keys: needed
   to test real providers. Everything runs on local fallbacks without them. The Supabase
-  project itself is connected and live (schema through 0006, four functions, the account
+  project itself is connected and live (schema through 0008, four functions, the account
   round-trip in `pnpm test:account`).
 - Supabase Pro, or custom SMTP, before the six-digit-code email template can be pushed; the
   free tier refuses template changes, so the email carries a link and the app signs in from it.
