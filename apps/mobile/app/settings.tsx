@@ -8,6 +8,7 @@ import { Linking, Platform, Pressable, ScrollView, Share, View } from 'react-nat
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { HELPLINES, bookToText, formatDay, plural, sealedOn, type Moment } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, accent, day, TopBar } from '@morrow/ui';
+import { manageSubscriptionUrl } from '../src/billing';
 import { useLatestBook, useMorrow } from '../src/store';
 import { hasSupabase } from '../src/supabase';
 
@@ -35,6 +36,7 @@ export default function Settings() {
   const reset = useMorrow((s) => s.reset);
   const fewerNotifications = useMorrow((s) => s.fewerNotifications);
   const account = useMorrow((s) => s.account);
+  const restore = useMorrow((s) => s.restore);
   const pushToAccount = useMorrow((s) => s.pushToAccount);
   const allowNotifications = useMorrow((s) => s.allowNotifications);
   const signOutAccount = useMorrow((s) => s.signOutAccount);
@@ -267,6 +269,19 @@ export default function Settings() {
             <Label>Past, present and future</Label>
             <Body style={{ fontSize: 14 }}>Three ways to write about the same life. Any of them can be picked up at any time, and doing one does not change another.</Body>
             <Chip testID="settings-volumes" label="See the three" ghost onPress={() => router.push('/choose')} />
+          </View>
+
+          <Rule />
+          {/* Morrow Pro (PRD §7.13): manage or restore, on the platform's own page. */}
+          <View style={{ gap: 6 }}>
+            <Label>Morrow Pro</Label>
+            <Body style={{ fontSize: 14 }}>
+              The Interview, the Fifteen, the Book and its export are free forever. A subscription is changed or cancelled on your phone’s own subscription page, never here.
+            </Body>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              <Chip testID="settings-manage-subscription" label="Manage subscription" ghost onPress={() => void Linking.openURL(manageSubscriptionUrl())} />
+              <Chip testID="settings-restore" label="Restore purchases" ghost onPress={() => void restore()} />
+            </View>
           </View>
 
           <Rule />

@@ -2090,6 +2090,18 @@ async function main() {
       check('and Back to Today goes there', await seen('screen-today'));
     }
 
+    // ---- the paywall's required pieces (PRD 7.13): restore, manage, and an honest price
+    await page.goto(`${BASE}/paywall?moment=second-blueprint`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(500);
+    check('the paywall offers Restore', await seen('paywall-restore'));
+    check('and a way to the platform\u2019s own subscription page', await seen('paywall-manage'));
+    check('and says its figures are in US dollars until a store is behind it', (await seen('plan-currency')) && (await text('plan-currency')).includes('US dollars'));
+    await page.goto(`${BASE}/settings`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(500);
+    check('Settings has Manage subscription and Restore purchases too', (await seen('settings-manage-subscription')) && (await seen('settings-restore')));
+
     // Consent reached by its own URL has nothing behind it; Back did nothing
     // at all, on the one screen a person can land on before anything exists.
     await page.goto(`${BASE}/consent`, { waitUntil: 'networkidle' });

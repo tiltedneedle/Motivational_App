@@ -1520,6 +1520,23 @@ by Smart Invert. `declare` joins the three route lists.
 
 Gate after: 422 core / 48 ui / 8 storage, migration 54 checks with 0007, e2e **349/349** (was 339; the new checks open the Declaration from the Book, find the line across it, name a witness, download it on the web, find the witness in Settings, seal an evening and find "Tell Sam" waiting), cold 72/72, axe 0 across 35 screens, way-back 31 screens, typecheck clean, lint 0 errors.
 
+**The paywall's required pieces (2026-09-16).** PRD §7.13 names three things beside the
+purchase itself: restore, a manage-subscription deep link, and price localization. Restore
+was there; the other two were not. Now: "Manage subscription" on the paywall and in Settings
+(with "Restore purchases" beside it) opens the platform's own subscription page — the only
+place a subscription can actually be changed, never a screen of Morrow's pretending to.
+And the `Billing` seam gains `offerings()`: the store's own price strings in the person's
+currency, shown when a store is behind the build; until then the US figures carry a caption
+saying so, rather than letting a dollar sign pass for a local price. The purchase SDK itself
+still waits on the RevenueCat keys — `billing()` is one function to fill in when they come.
+
+Also: the one lint warning that was mine (the Past's box reset, an effect) is now React's
+documented render-time adjustment, so the old lines are never painted under a new event's
+title even for a frame. Ten warnings remain, all older than the volumes, all in the app's
+most-tested screens; converting them is churn for no user-visible gain.
+
+Gate after: e2e **353/353** (was 349), cold 72/72, axe 0 across 35 screens, way-back 31 screens, 422 core / 48 ui / 8 storage, typecheck clean, lint 0 errors and 10 warnings.
+
 Gate after: 416 core / 48 ui / 8 storage, e2e **326/326** (was 317; the new checks seed a live virtues sitting and press both closing-screen buttons on the faults, write a Past line in crisis and change it without the card returning, and read the Interview-only caption), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
 
 Gate after: 416 core / 48 ui / 8 storage, e2e **317/317** (was 311; the new checks relaunch cold mid-Interview and resume, press Begin then Back on the Past doorway and find no sitting behind it, and reread a written Present from Today), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.

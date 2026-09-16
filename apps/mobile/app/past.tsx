@@ -227,16 +227,16 @@ export default function Past() {
   }, [showingDone, touched, entered, cursor, picked, age, title, labels, analysingId, what, shaped, believe, framingId]);
 
   // Moving to the next event empties the boxes, and a draft that belonged to
-  // some other event never lands in them.
-  useEffect(() => {
-    if (!analysingId || writingFor === analysingId) return;
+  // some other event never lands in them. Adjusted during the render that
+  // sees the new event rather than in an effect after it, so the old lines
+  // are never painted under the new title, even for a frame.
+  if (analysingId && writingFor !== analysingId) {
     setWritingFor(analysingId);
     setWhat('');
     setShaped('');
     setBelieve('');
     setFramingId(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [analysingId]);
+  }
 
   // Each step says itself once, the way the Interview says each question.
   const said = step.step === 'events' ? String(Math.min(cursor, Math.max(0, epochs.length - 1))) : '';

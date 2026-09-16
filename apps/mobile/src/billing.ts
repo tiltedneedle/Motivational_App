@@ -16,10 +16,19 @@ export type PlanId = 'monthly' | 'annual' | 'lifetime';
 
 export type BillingResult = { ok: true } | { ok: false; error: string };
 
+/** The store's own price strings, in the person's currency, by plan. */
+export type Offerings = Partial<Record<PlanId, { price: string; perMonth?: string }>>;
+
 export interface Billing {
   configured: boolean;
   purchase(plan: PlanId): Promise<BillingResult>;
   restore(): Promise<BillingResult>;
+  /**
+   * PRD §7.13: price localization is required. The store is the only honest
+   * source of a local price, so this asks it; null means there is no store
+   * behind this build and the paywall says so beside its US figures.
+   */
+  offerings(): Promise<Offerings | null>;
 }
 
 /** Set at build time. Absent in every build so far. */
@@ -41,7 +50,21 @@ export const localBilling: Billing = {
   async restore() {
     return { ok: false, error: UNCONFIGURED };
   },
+  async offerings() {
+    return null;
+  },
 };
+
+/**
+ * Where a subscription is managed (PRD §7.13: a manage-subscription deep link
+ * is required). The platform's own page, which is the only place a
+ * subscription can actually be changed — never a screen of Morrow's that
+ * pretends to. On the web the Apple page, since that is where most will be.
+ */
+export function manageSubscriptionUrl(): string {
+  if (Platform.OS === 'android') return 'https://play.google.com/store/account/subscriptions?package=app.morrow.client';
+  return 'https://apps.apple.com/account/subscriptions';
+}
 
 /**
  * The real one, when there is a key for it.

@@ -11,7 +11,7 @@
  */
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { Linking, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   BENEFITS,
@@ -24,6 +24,7 @@ import {
   type PricePlan,
 } from '@morrow/core';
 import { Body, Card, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, TopBar, UserText, accent, day } from '@morrow/ui';
+import { billing, manageSubscriptionUrl, type Offerings } from '../src/billing';
 import { useLatestBook, useMorrow } from '../src/store';
 
 function isMoment(s: string | undefined): s is PaywallMoment {
@@ -42,6 +43,25 @@ export default function Paywall() {
   const restore = useMorrow((s) => s.restore);
 
   const [choice, setChoice] = useState<PricePlan['id']>(HIGHLIGHTED);
+  /**
+   * The store's own prices, in the person's currency, when a store is behind
+   * this build. Until then the figures are the US ones, and the caption under
+   * them says so rather than letting a dollar sign pass for a local price.
+   */
+  const [offerings, setOfferings] = useState<Offerings | null>(null);
+  useEffect(() => {
+    let live = true;
+    void billing()
+      .offerings()
+      .then((o) => {
+        if (live) setOfferings(o);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, []);
+  const localPrice = offerings?.[choice];
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -177,7 +197,14 @@ export default function Paywall() {
               ))}
             </View>
             <Card testID="plan-note" style={{ padding: 18, gap: 4 }}>
-              <Body style={{ color: day.ink, fontSize: 17 }}>{selected.note}</Body>
+              <Body style={{ color: day.ink, fontSize: 17 }}>
+                {localPrice ? localPrice.price + (localPrice.perMonth ? ' · ' + localPrice.perMonth : '') : selected.note}
+              </Body>
+              {localPrice ? null : (
+                <Body testID="plan-currency" style={{ fontSize: 12 }}>
+                  In US dollars. The store shows the price in your own currency before anything is charged.
+                </Body>
+              )}
               {/* The trial line, in a caption. Never a countdown. */}
               {selected.trialDays ? (
                 <Body testID="plan-trial" style={{ fontSize: 13 }}>
@@ -205,6 +232,8 @@ export default function Paywall() {
             the user to where they were with nothing lost."
           */}
           <TextButton testID="paywall-not-now" label="Not now" onPress={notNow} />
+          {/* PRD §7.13: the way to the platform's own subscription page, always. */}
+          <TextButton testID="paywall-manage" label="Manage subscription" onPress={() => void Linking.openURL(manageSubscriptionUrl())} />
 
           <Body style={{ fontSize: 12, lineHeight: 18 }}>
             The Interview, the Fifteen, the Book and its export are free forever, and stay yours whatever you choose
