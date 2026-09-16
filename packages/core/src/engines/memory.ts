@@ -20,7 +20,7 @@
  * quoting it, not only that the screen stops listing it.
  */
 import type { BookVersion, DaySummary, Goal, GoalAnalysis, MemoryEdit, Profile, SafetyRisk } from '../types';
-import { formatDay, ifThenOf, ordinal, plural, sealedOn } from '../ids';
+import { formatDay, ifThenOf, ordinal, plural, sealedOn, thenHalf } from '../ids';
 import { ANALYSIS_TITLES } from './framings';
 import { detectReturns } from './consistency';
 import { clockLabel } from './notifications';
@@ -49,6 +49,12 @@ export interface MemoryLine {
    * between the halves in the sans, as it does on every other screen.
    */
   quote2?: string;
+  /**
+   * The app's words between the halves: "then I", or "then" when the person's
+   * own half already starts with "I'll" — the same choice `thenHalf` makes
+   * for the Book, so the subject is never doubled.
+   */
+  quote2Framing?: 'then I' | 'then';
   /** False when the quote is a bank title, which is the app's words and goes in the sans. */
   quoteAuthored?: boolean;
   /** The safety screen's word on a line the person wrote here; a crisis line is never handed to a coach. */
@@ -115,7 +121,9 @@ export function buildMemory(input: MemoryInput): MemoryLine[] {
         goal: { name: g.title, authored },
         tail: halves ? ': if' : ':',
         quote: halves ? (halves[0] ?? text) : text,
-        ...(halves && halves[1] ? { quote2: halves[1] } : {}),
+        ...(halves && halves[1]
+          ? { quote2: halves[1], quote2Framing: (thenHalf(a.line2 ?? '').framing === '…then' ? 'then' : 'then I') as 'then I' | 'then' }
+          : {}),
       });
     }
   }
@@ -236,7 +244,7 @@ export function memoryDocument(lines: readonly MemoryLine[]): string {
       l.goal ? (l.goal.authored ? `“${l.goal.name}”` : l.goal.name) : '',
       l.tail ?? '',
       l.quote ? (l.quoteAuthored === false ? l.quote : `“${l.quote}”`) : '',
-      l.quote2 ? `then I “${l.quote2}”` : '',
+      l.quote2 ? `${l.quote2Framing ?? 'then I'} “${l.quote2}”` : '',
     ].filter(Boolean);
     const row = '- ' + parts.reduce((acc, part) => (acc === '' ? part : /^[:,.;]/.test(part) ? acc + part : acc + ' ' + part), '');
     if (length + row.length + 1 > MEMORY_DOCUMENT_CHARS) break;

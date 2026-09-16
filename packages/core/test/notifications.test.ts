@@ -83,6 +83,12 @@ describe('quiet hours', () => {
     // A Sunday at eight with a morning at nine is not inside the quiet.
     expect(quietFor({ wakeTime: '09:00', eveningTime: '21:30', sundayHour: 8 })).toEqual({ from: 22, to: 8 });
     expect(outOfQuiet('08:00', quietFor({ wakeTime: '09:00', eveningTime: '21:30', sundayHour: 8 }))).toBe('08:00');
+    // A Sunday hour outside the window leaves it alone: an evening line after
+    // midnight with a Sunday hour before it must not wrap the quiet round
+    // over the morning.
+    expect(quietFor({ wakeTime: '07:00', eveningTime: '01:00', sundayHour: 0 })).toEqual({ from: 2, to: 7 });
+    expect(quietFor({ wakeTime: '07:00', eveningTime: '21:30', sundayHour: 12 })).toEqual({ from: 22, to: 7 });
+    expect(quietFor({ wakeTime: '07:00', eveningTime: '21:30', sundayHour: 22 })).toEqual({ from: 22, to: 7 });
     // No room for quiet at all: the default, never a window over the whole clock.
     expect(quietFor({ wakeTime: '01:00', eveningTime: '00:15' })).toEqual(DEFAULT_QUIET);
     // Rubbish falls back too.

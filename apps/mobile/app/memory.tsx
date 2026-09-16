@@ -24,6 +24,16 @@ import { MEMORY_ABOUT_ORDER, memoryEditOf, plural, type MemoryLine } from '@morr
 import { Body, Chip, Label, Rule, Statement, Studio, TextButton, TopBar, UserField, UserText, day, radius } from '@morrow/ui';
 import { memoryLines, useMorrow } from '../src/store';
 
+/**
+ * What Change starts from: their words, and both halves of an if-then with
+ * the app's framing between them, so editing one half never drops the other.
+ * A bank title is the app's words and seeds nothing.
+ */
+function seedOf(l: MemoryLine): string {
+  if (!l.quote || l.quoteAuthored === false) return '';
+  return l.quote2 ? `if ${l.quote}, ${l.quote2Framing ?? 'then I'} ${l.quote2}` : l.quote;
+}
+
 const ABOUT_LABEL: Record<MemoryLine['about'], string> = {
   you: 'You',
   'your goals': 'Your goals',
@@ -123,7 +133,7 @@ export default function MemoryScreen() {
                         <UserText testID={`memory-quote-${l.key}`} style={{ fontSize: 17, lineHeight: 26, color: day.ink }}>
                           {l.quote}
                         </UserText>
-                        <UserText italic framing="then I" style={{ fontSize: 16, lineHeight: 24, color: day.ink2 }}>
+                        <UserText italic framing={l.quote2Framing ?? 'then I'} style={{ fontSize: 16, lineHeight: 24, color: day.ink2 }}>
                           {l.quote2}
                         </UserText>
                       </View>
@@ -159,7 +169,7 @@ export default function MemoryScreen() {
                               // Their words, or nothing: a line left as Morrow
                               // had it is not an edit, and the app's own
                               // sentence never becomes a quote in the serif.
-                              if (!draft.trim() || draft.trim() === (l.quote ?? '')) {
+                              if (!draft.trim() || draft.trim() === seedOf(l)) {
                                 setMemoryDraft(null);
                                 setChanging(null);
                                 return;
@@ -188,7 +198,7 @@ export default function MemoryScreen() {
                             // the app's framing starts empty: Change means
                             // "say it in your words", never "edit Morrow's".
                             setChanging(l.key);
-                            setMemoryDraft(l.quote && l.quoteAuthored !== false ? { key: l.key, text: l.quote } : null);
+                            setMemoryDraft(seedOf(l) ? { key: l.key, text: seedOf(l) } : null);
                           }}
                         />
                         <TextButton testID={`memory-forget-${l.key}`} label="Forget" onPress={() => forget(l.key)} />

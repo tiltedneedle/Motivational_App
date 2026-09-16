@@ -67,8 +67,10 @@ export function quietFor(times: { wakeTime: string; eveningTime: string; sundayH
   // it is outside the quiet already; one that is not an hour at all is
   // ignored. It only ever shortens the window, never to nothing.
   const sunday = times.sundayHour !== undefined && Number.isInteger(times.sundayHour) && times.sundayHour >= 0 && times.sundayHour <= 23 ? times.sundayHour : wake;
-  const earlier = Math.min(wake, sunday);
-  const to = earlier !== from ? earlier : wake;
+  // Only a Sunday hour that falls inside the window can end it early; one
+  // outside it (before an after-midnight evening line, or after the morning)
+  // leaves the window alone, so it can never wrap round over the morning.
+  const to = sunday !== from && isQuiet(sunday, { from, to: wake }) ? sunday : wake;
   // A day with no room for quiet (evening line after midnight, morning right
   // behind it) keeps the default rather than a window that swallows the clock.
   return from === to ? DEFAULT_QUIET : { from, to };

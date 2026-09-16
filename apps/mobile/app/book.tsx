@@ -447,14 +447,15 @@ export default function BookScreen() {
           {/* The ways out of the app: quieter than the ways through it. */}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 18, alignItems: 'center' }}>
             <TextButton testID="book-export" label="Export" onPress={onExport} />
-            {book === latest ? (
-              <>
             {/*
               The Book as a PDF (PRD §7.3). The same page, typeset the same
               way, handed to the platform's own renderer; on the web it is the
-              print dialogue, which has Save as PDF in it everywhere.
+              print dialogue, which has Save as PDF in it everywhere. Of the
+              edition on the page, like Export.
             */}
             <TextButton testID="book-pdf" label={printing ? 'Making it…' : 'PDF'} onPress={() => void onPdf()} />
+            {book === latest ? (
+              <>
             {/* The I will line as a lock screen (PRD §7.8). */}
             <TextButton testID="book-wallpaper" label="Lock screen" onPress={() => router.push('/wallpaper')} />
             {/* The Declaration (PRD §7.17): the line across their own face, for one witness or nobody. */}

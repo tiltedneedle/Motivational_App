@@ -85,6 +85,13 @@ describe('what Morrow knows', () => {
     expect(ifThen.tail).toBe(': if');
     expect(ifThen.quote).toBe('it rains');
     expect(ifThen.quote2).toBe('take the stairwell');
+    expect(ifThen.quote2Framing).toBe('then I');
+    // A then-half that starts with "I'll" keeps its subject, and the framing drops its own.
+    const contracted = buildMemory({ ...input, analyses: [{ ...obstacles, line2: "I'll take the stairwell" }] }).find((l) => l.key === 'line.a2')!;
+    expect(contracted.quote2).toBe("I'll take the stairwell");
+    expect(contracted.quote2Framing).toBe('then');
+    expect(memoryDocument([contracted])).toContain('then “I\'ll take the stairwell”');
+    expect(memoryDocument([contracted])).not.toContain('then I “I');
     // The goal's name travels beside the framing in its own face, not inside the app's sentence.
     expect(lines.find((l) => l.key === 'line.a1')?.text).toBe('How, for');
     expect(lines.find((l) => l.key === 'line.a1')?.tail).toBe(':');

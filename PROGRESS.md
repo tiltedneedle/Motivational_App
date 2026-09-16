@@ -1855,6 +1855,38 @@ none refuted, eight smaller ones unverified and fixed anyway. What it found in t
 
 Gate after: e2e **443/443**, cold 84/84, axe 0 across 37 screens, way-back 33 screens, migration **66 checks**, 461 core / 48 ui / 8 storage, typecheck clean, lint 0 errors.
 
+**The third pass (2026-09-17).** Over the second round's commit alone: two reviewers, a
+skeptic per finding — seven confirmed, none refuted. Each was in code written in the two
+rounds before, which is the point of running the pass again:
+
+- The memory if-then printed "then I" before a half that already began with "I'll" — the
+  doubled subject `ifThenOf` exists to prevent, back on the one screen that claims to show
+  exactly what is said about them. The framing `thenHalf` chooses now travels with the line
+  (`quote2Framing`) and the screen and the document both use it.
+- Change on an if-then seeded the field with the condition alone, so a typo fixed in one
+  half dropped the other from the profile. It seeds the whole line they wrote, both halves
+  with the framing between, and compares Keep this against the same seed.
+- The brief written again mid-day (a first move arriving, or the Book sealed on day 90)
+  recomputed the once-only support offer against a profile already stamped, and the offer
+  vanished for good. A rebuild carries the first brief's offer forward, and the stamp is
+  written once.
+- `addGoals` still ranked by array position, and two paths leave the array out of rank
+  order — a pull (rows come back by id) and a store written by an earlier build. It merges
+  over `activeGoals` now, which is in rank order, and the pull and the persist merge both
+  run `denseRanks` so the array agrees with its ranks from wherever it came.
+- `quietFor`'s Sunday shortening could wrap the window over the morning when the evening
+  line was after midnight and the Sunday hour before it — reachable only through a synced
+  row, and the entry above said "never". Only a Sunday hour inside the window can end it early.
+- An earlier edition by number lost its PDF along with the two latest-only doors, though
+  `onPdf` prints the edition on the page as Export does. PDF stays; Lock screen and Declare
+  are the guarded two.
+- The unsealed card's accessible name did not begin with its visible label, and the letters
+  card two blocks up had the same shape. Both begin with the word on the card now.
+
+Three passes, thirty-one findings, none refuted. The next pass is the next body of work's.
+
+Gate after: e2e **443/443**, cold 84/84, axe 0 across 37 screens, way-back 33 screens, 461 core / 48 ui / 8 storage, typecheck clean, lint 0 errors.
+
 Gate after: 416 core / 48 ui / 8 storage, e2e **326/326** (was 317; the new checks seed a live virtues sitting and press both closing-screen buttons on the faults, write a Past line in crisis and change it without the card returning, and read the Interview-only caption), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
 
 Gate after: 416 core / 48 ui / 8 storage, e2e **317/317** (was 311; the new checks relaunch cold mid-Interview and resume, press Begin then Back on the Past doorway and find no sitting behind it, and reread a written Present from Today), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.

@@ -353,7 +353,7 @@ export default function Today() {
             <Pressable
               testID="today-letters"
               accessibilityRole="button"
-              accessibilityLabel={`${plural(unreadLetters, 'letter')} waiting`}
+              accessibilityLabel={`${unreadLetters === 1 ? 'A letter' : plural(unreadLetters, 'letter')}: waiting, from the other end of this`}
               onPress={() => router.push('/letters')}
               style={{ marginTop: 16, backgroundColor: day.surface2, borderRadius: radius.card, padding: 18, gap: 6 }}
             >
@@ -377,7 +377,7 @@ export default function Today() {
               accessibilityLabel={
                 reauthor
                   ? `${reauthorLabel(reauthor.cycle)}: time to write the Book again`
-                  : `${pending.length === 1 ? 'A goal' : plural(pending.length, 'goal')} let go, and no edition sealed since`
+                  : `Unsealed: ${pending.length === 1 ? 'a goal was' : plural(pending.length, 'goal') + ' were'} let go and no edition sealed since`
               }
               // A let-go waiting goes to the screen that can take it back
               // whatever the plan; the gated branch offers exactly that.

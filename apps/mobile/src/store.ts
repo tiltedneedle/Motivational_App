@@ -710,7 +710,10 @@ const store = create<MorrowState>()(
           // Over the goals in play only. A goal let go at a re-authoring keeps
           // its row, and a new goal named the same way is a new goal — merged
           // into the archived row it would never appear anywhere.
-          const live = s.goals.filter((g) => g.status !== 'archived');
+          // In rank order, whatever order the array is in: `mergeGoalDrafts`
+          // ranks by position, and a pulled or rehydrated array may not agree
+          // with its rank field.
+          const live = activeGoals(s);
           const archived = s.goals.filter((g) => g.status === 'archived');
           const merged = mergeGoalDrafts(
             live.map((g) => ({ ...g, titleAuthored: g.titleAuthored !== false })),
@@ -1823,7 +1826,10 @@ const store = create<MorrowState>()(
         // computed on every write, stored on the row, and then ignored by every
         // screen — the band existed in the data and nowhere else.
         const soften = softenNow(s, day);
-        const offerSupport = shouldOfferSupport(soften, s.profile.supportOfferedAt ?? null);
+        // A brief written again today keeps the offer the first one made: the
+        // one time support is named must not be consumed by a brief that no
+        // longer exists.
+        const offerSupport = existing?.support != null || shouldOfferSupport(soften, s.profile.supportOfferedAt ?? null);
         const brief = buildDawnBrief(
           {
             day,
@@ -1847,7 +1853,7 @@ const store = create<MorrowState>()(
           // Stamped when the line is actually written into a brief, not when
           // the band opens — otherwise a brief that failed to build would still
           // burn the one offer the person gets.
-          profile: offerSupport ? { ...st.profile, supportOfferedAt: new Date().toISOString() } : st.profile,
+          profile: offerSupport && !st.profile.supportOfferedAt ? { ...st.profile, supportOfferedAt: new Date().toISOString() } : st.profile,
         }));
         return brief;
       },
@@ -1891,7 +1897,9 @@ const store = create<MorrowState>()(
         // added since the copy was made is not undefined.
         set({
           profile: { ...DEFAULT_PROFILE, ...b.profile },
-          goals: b.goals,
+          // In rank order with the archived rows after: the pull returns rows
+          // by id, and two writers rank by array position.
+          goals: denseRanks(b.goals),
           texts: b.texts,
           analyses: b.analyses,
           books: b.books,
@@ -2171,6 +2179,9 @@ const store = create<MorrowState>()(
           ...current,
           ...sound,
           profile: { ...DEFAULT_PROFILE, ...current.profile, ...(sound.profile ?? {}) },
+          // A store written by an earlier build may hold the goals out of rank
+          // order; the array agrees with its ranks from here on.
+          ...(Array.isArray(sound.goals) ? { goals: denseRanks(sound.goals as Goal[]) } : {}),
         };
       },
       onRehydrateStorage: () => (state, error) => {
