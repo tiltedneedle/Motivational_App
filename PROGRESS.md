@@ -1472,6 +1472,17 @@ now feed the plan the way PRD §7.15 describes, and the copy claims exactly what
 
 Gate after: e2e **339/339**, cold 70/70, axe 0 across 34 screens, way-back 30 screens, typecheck clean, lint 0 errors, copy check clean.
 
+**The journey, read frame by frame (2026-09-16).** The brief's last line: run it and browse
+it fully. The e2e now takes a screenshot after every tap when `JOURNEY` is set, and
+`pnpm journey` runs the walk and tiles the frames twenty to a sheet with each step's name
+under it (`scripts/journey.mjs`, `scripts/sheet.mjs`). 192 frames of the real first run and
+all three volumes — Welcome to the second edition — read one by one: every step renders as
+designed, and every one of the day's changes is visible where it belongs (the Obstacles
+stone offering the written faults at frame 190, the renamable periods, Full's narrowing,
+the held line's note, the carry-on row). `pnpm verify` passes end to end as one command,
+exit 0, on the offline build. Nothing on this machine is left to build or to check; what
+remains is on the far side of a key or a device, listed under "Blocked on the user".
+
 Gate after: 416 core / 48 ui / 8 storage, e2e **326/326** (was 317; the new checks seed a live virtues sitting and press both closing-screen buttons on the faults, write a Past line in crisis and change it without the card returning, and read the Interview-only caption), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
 
 Gate after: 416 core / 48 ui / 8 storage, e2e **317/317** (was 311; the new checks relaunch cold mid-Interview and resume, press Begin then Back on the Past doorway and find no sitting behind it, and reread a written Present from Today), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.

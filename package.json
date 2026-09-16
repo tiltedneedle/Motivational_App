@@ -25,6 +25,7 @@
     "test:e2e": "node scripts/e2e.mjs",
     "test:a11y": "node scripts/a11y.mjs",
     "shots": "node scripts/shots.mjs",
+    "journey": "node scripts/journey.mjs",
     "verify": "pnpm test:deps && pnpm test:dates && pnpm test:copy && pnpm typecheck && pnpm lint && pnpm test && pnpm test:functions && pnpm test:sql && pnpm test:migration && pnpm test:authorship && pnpm test:back && pnpm build:web:offline && pnpm test:e2e && pnpm test:a11y && pnpm test:cold",
     "web": "pnpm --filter mobile web",
     "demo": "node scripts/serve-web.mjs",

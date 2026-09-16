@@ -11,7 +11,7 @@
  */
 import { chromium } from 'playwright';
 import { createServer } from 'node:http';
-import { readFile, stat } from 'node:fs/promises';
+import { mkdir, readFile, stat } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { PNG } from 'pngjs';
 import { join, extname } from 'node:path';
@@ -107,11 +107,26 @@ async function main() {
   const pageErrors = [];
   page.on('pageerror', (e) => pageErrors.push(String(e.message).slice(0, 300)));
 
+  /**
+   * The journey, frame by frame. With JOURNEY=<dir> every tap is followed by
+   * a screenshot named in sequence, so the whole first run and all three
+   * volumes can be read as a person sees them — the checks read the DOM;
+   * this is for the eye. `pnpm test:e2e` alone captures nothing.
+   */
+  const journey = process.env.JOURNEY ? join(ROOT, process.env.JOURNEY) : null;
+  if (journey) await mkdir(journey, { recursive: true });
+  let frame = 0;
+  const snap = async (id) => {
+    if (!journey) return;
+    frame += 1;
+    await page.screenshot({ path: join(journey, `${String(frame).padStart(3, '0')}-${id.replace(/[^a-z0-9-]/gi, '_')}.png`) }).catch(() => {});
+  };
   const tap = async (id) => {
     const el = page.locator(`[data-testid="${id}"]`).first();
     await el.waitFor({ state: 'visible', timeout: 10_000 });
     await el.click();
     await page.waitForTimeout(320);
+    await snap(id);
   };
   const seen = async (id) => (await page.locator(`[data-testid="${id}"]`).count()) > 0;
   const text = async (id) => (await page.locator(`[data-testid="${id}"]`).first().innerText()).trim();
