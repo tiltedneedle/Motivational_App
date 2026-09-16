@@ -49,6 +49,15 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 39. **The Declaration (§7.17), the part of it that needs no key.** On the day
+      the Book is sealed, and any day after: the I will line across the person's
+      own photo (camera or library, through the platform's picker; the night
+      ground with no photo), kept in Photos, shared, or sent to one named witness
+      — through whatever the person already uses to reach them. The witness is a
+      name on the profile (migration 0007, applied live); a sealed evening with a
+      witness offers "Tell <name>" — the count and the line, nothing written that
+      day — and waits instead of closing itself. The Book and Settings both open
+      it. Gift a chapter stays behind the store keys. See "The Declaration" below.
 - [x] 38. **The volumes verified the way a person uses them (2026-09-16).** Twelve
       rounds after the three volumes shipped — seven adversarial passes while the
       account allowed them, then by hand — each a new class of check, each finding
@@ -1482,6 +1491,34 @@ stone offering the written faults at frame 190, the renamable periods, Full's na
 the held line's note, the carry-on row). `pnpm verify` passes end to end as one command,
 exit 0, on the offline build. Nothing on this machine is left to build or to check; what
 remains is on the far side of a key or a device, listed under "Blocked on the user".
+
+### The Declaration (2026-09-16)
+
+PRD §7.17, the product's only social surface, was the one specified feature with no
+code behind it. Built the part that needs no key: **the Declaration** — the I will line
+set across the person's own portrait (camera or library through `expo-image-picker`,
+the platform's own picker; the night ground when there is no photo), the seal date under
+it, captured square at 1080 through the same `react-native-view-shot` path as the lock
+screen, kept in Photos, downloaded on the web, or shared. **One witness**, by the name the
+person calls them, kept on the profile (`witnessName`, `declaredAt`; migration 0007, two
+columns on `profiles`, applied to the live project, carried by the sync). What the witness
+gets: the image when it is sent, and — on a sealed evening, if the person taps "Tell
+<name>" — one line with the count of sealed days and the I will line, through the OS
+share sheet. Nothing else, nothing without a tap, no server-side relationship, no feed.
+The photo is never stored by the app.
+
+Decisions taken without asking, and why: the witness is a *name*, not an account or an
+email — the PRD's "receives it" is honoured through whatever the person already uses,
+which needs no SMTP and puts nothing about a third party on Morrow's servers; and the
+sealed evening stops closing itself once a witness is named, because "tell them" is a
+choice to make on the spot or not. **Gift a chapter** (a second Future volume for a friend
+who becomes the witness) is a purchase and stays behind the RevenueCat keys.
+
+Reachable from the Book ("Declare it", beside "Lock screen") and Settings ("The
+Declaration", which names the witness). A11y: the photograph is marked to be left alone
+by Smart Invert. `declare` joins the three route lists.
+
+Gate after: 422 core / 48 ui / 8 storage, migration 54 checks with 0007, e2e **349/349** (was 339; the new checks open the Declaration from the Book, find the line across it, name a witness, download it on the web, find the witness in Settings, seal an evening and find "Tell Sam" waiting), cold 72/72, axe 0 across 35 screens, way-back 31 screens, typecheck clean, lint 0 errors.
 
 Gate after: 416 core / 48 ui / 8 storage, e2e **326/326** (was 317; the new checks seed a live virtues sitting and press both closing-screen buttons on the faults, write a Past line in crisis and change it without the card returning, and read the Interview-only caption), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
 

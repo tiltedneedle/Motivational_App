@@ -87,6 +87,7 @@ const ROUTES = {
   paywall: '/paywall?moment=second-blueprint',
   account: '/account',
   wallpaper: '/wallpaper',
+  declare: '/declare',
 };
 
 function serve() {

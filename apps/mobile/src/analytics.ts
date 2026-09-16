@@ -66,8 +66,11 @@ export type Event =
         | 'present_write'
         | 'past_doorway'
         | 'past_events'
-        | 'past_analyse';
+        | 'past_analyse'
+        | 'declare';
     }
+  /** The Declaration made (PRD §7.17): with a photo or the night ground, and whether a witness is named. No image, no name. */
+  | { name: 'declaration_made'; with_photo: boolean; witness: boolean }
   /** Which door was taken from the chooser, and whether it was a first visit. */
   | { name: 'volume_opened'; volume: 'past' | 'present' | 'future'; first: boolean }
   | { name: 'volume_finished'; volume: 'past' | 'present' | 'future' }

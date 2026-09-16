@@ -2048,6 +2048,48 @@ async function main() {
       }
     }
 
+    // ---- the Declaration (PRD 7.17): the line across the night ground, one witness, kept
+    await page.goto(`${BASE}/book`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(600);
+    check('the Book offers the Declaration beside the lock screen', await seen('book-declare'));
+    await tap('book-declare');
+    check('the Declaration opens on the I will line', (await seen('screen-declare')) && (await seen('declare-line')));
+    check('with the person\u2019s own line across it', (await text('declare-line')).toLowerCase().includes('kettle'), await text('declare-line'));
+    await page.locator('[data-testid="declare-witness"]').fill('Sam');
+    await page.waitForTimeout(200);
+    await tap('declare-keep');
+    await page.waitForTimeout(800);
+    check('keeping it downloads on the web and says so', (await seen('declare-note')) && (await text('declare-note')).includes('Downloaded'), (await seen('declare-note')) ? await text('declare-note') : '');
+    const declared = await page.evaluate(() => JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.profile ?? {});
+    check('the witness is kept with the profile, and the Declaration dated', declared.witnessName === 'Sam' && typeof declared.declaredAt === 'string', JSON.stringify({ w: declared.witnessName, d: declared.declaredAt }));
+    check('and the screen says when it was first made', await seen('declare-made'));
+
+    // Settings knows the witness by name.
+    await page.goto(`${BASE}/settings`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(500);
+    check('Settings names the witness', (await page.locator('body').innerText()).includes('Your witness is Sam'));
+
+    // The sealed evening offers to tell the witness the count, and does not close on its own.
+    await page.goto(`${BASE}/seal-day`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(600);
+    if (await seen('seal-day-hold')) {
+      await page.locator('[data-testid="seal-proof"]').fill('Out the door at 6:40, kettle still cold.');
+      await page.waitForTimeout(200);
+      await page.locator('[data-testid="seal-day-hold"]').first().focus().catch(() => {});
+      await page.keyboard.press('Enter');
+      await page.waitForTimeout(600);
+      await page.clock.runFor(1500);
+      await page.waitForTimeout(400);
+      check('a sealed evening with a witness offers to tell them, and waits', (await seen('seal-witness')) && (await seen('screen-seal-day')));
+      check('by name', (await noticeText('seal-tell')).includes('Sam'), await noticeText('seal-tell'));
+      await tap('seal-witness-today');
+      await page.waitForTimeout(500);
+      check('and Back to Today goes there', await seen('screen-today'));
+    }
+
     // Consent reached by its own URL has nothing behind it; Back did nothing
     // at all, on the one screen a person can land on before anything exists.
     await page.goto(`${BASE}/consent`, { waitUntil: 'networkidle' });

@@ -425,6 +425,8 @@ export default function BookScreen() {
             <TextButton testID="book-pdf" label={printing ? 'Making it…' : 'PDF'} onPress={() => void onPdf()} />
             {/* The I will line as a lock screen (PRD §7.8). */}
             <TextButton testID="book-wallpaper" label="Lock screen" onPress={() => router.push('/wallpaper')} />
+            {/* The Declaration (PRD §7.17): the line across their own face, for one witness or nobody. */}
+            <TextButton testID="book-declare" label="Declare it" onPress={() => router.push('/declare')} />
           </View>
         </View>
       </SafeAreaView>

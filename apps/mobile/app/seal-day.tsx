@@ -4,7 +4,7 @@
  */
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, Share, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Chip, HoldBar, Label, Quoted, Statement, Stone, Studio, TopBar, UserField, night, useReducedMotion } from '@morrow/ui';
 import { dayOf } from '@morrow/core';
@@ -39,6 +39,25 @@ export default function SealDay() {
   const [gladOf, setGladOf] = useState(resumed?.gladOf ?? today?.gladOf ?? '');
   const [sealed, setSealed] = useState(false);
   /** PRD §7.6: "optional sixty seconds by voice". Into the proof field, to be read before it is sealed. */
+  const witnessName = useMorrow((s) => s.profile.witnessName);
+  const iWillLine = useMorrow((s) => s.books[s.books.length - 1]?.iWill ?? '');
+  const sealedCount = useMorrow((s) => Object.values(s.days).filter((d) => d.sealedAt).length);
+  const [told, setTold] = useState<string | null>(null);
+  /**
+   * The witness (PRD §7.17) gets the sealed days when the person chooses:
+   * one line, through whatever they already use to reach them. The count
+   * and the I will line — nothing that was written today.
+   */
+  const tell = async () => {
+    const count = sealedCount;
+    const message = String(count) + (count === 1 ? ' sealed day.' : ' sealed days.') + (iWillLine.trim() ? ' ' + iWillLine.trim() : '') + ' — Morrow';
+    try {
+      await Share.share({ message, title: 'To ' + witnessName });
+      setTold('Sent to ' + witnessName + '.');
+    } catch {
+      setTold('This device would not open the share sheet. Nothing was sent.');
+    }
+  };
   const [listening, setListening] = useState(false);
   const [micNote, setMicNote] = useState<string | null>(null);
   const anchorRef = useRef('');
@@ -143,7 +162,13 @@ export default function SealDay() {
           </View>
         </ScrollView>
 
-        <View style={{ paddingBottom: 22 }}>
+        <View style={{ paddingBottom: 22, gap: 8 }}>
+          {sealed && witnessName.trim() ? (
+            <View testID="seal-witness" style={{ gap: 6 }}>
+              <Chip testID="seal-tell" label={told ? told : 'Tell ' + witnessName} onPress={() => void tell()} />
+              <Chip testID="seal-witness-today" label="Back to Today" ghost onPress={() => router.dismissTo('/today')} />
+            </View>
+          ) : null}
           <HoldBar
             testID="seal-day-hold"
             label="Hold to close the day"
@@ -160,7 +185,9 @@ export default function SealDay() {
                 if (Object.values(useMorrow.getState().days).filter((x) => x.sealedAt).length <= 1) track({ name: 'first_value', kind: 'first_day_sealed' });
               }
               setSealed(true);
-              setTimeout(() => router.dismissTo('/today'), 900);
+              // With a witness named the evening does not close itself: the
+              // count is theirs to send or not, and then Today.
+              if (!witnessName.trim()) setTimeout(() => router.dismissTo('/today'), 900);
             }}
           />
         </View>

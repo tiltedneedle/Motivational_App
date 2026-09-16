@@ -440,6 +440,21 @@ describe('the Past and Present volumes on the wire', () => {
     expect(back.pastListed).toBe(true);
   });
 
+  it('carries the witness and the Declaration, and reads their absence as none', () => {
+    const declared = { ...bundle, profile: { ...bundle.profile, witnessName: 'Sam', declaredAt: '2026-09-16T20:00:00.000Z' } };
+    const tables = toRows(declared, USER, 'UTC');
+    const byTable = Object.fromEntries(tables.map((t) => [t.table, t.rows]));
+    expect(byTable.profiles![0]!.witness_name).toBe('Sam');
+    const back = fromRows(byTable as Parameters<typeof fromRows>[0], bundle.profile);
+    expect(back.profile.witnessName).toBe('Sam');
+    expect(back.profile.declaredAt).toBe('2026-09-16T20:00:00.000Z');
+    // A profile row from before 0007 has neither column.
+    const older = { ...byTable, profiles: [Object.fromEntries(Object.entries(byTable.profiles![0]!).filter(([k]) => k !== 'witness_name' && k !== 'declared_at'))] };
+    const fromOlder = fromRows(older as Parameters<typeof fromRows>[0], bundle.profile);
+    expect(fromOlder.profile.witnessName).toBe('');
+    expect(fromOlder.profile.declaredAt).toBeNull();
+  });
+
   it('brings the periods back in their order, whatever order the rows arrive in', () => {
     const at = '2026-09-15T20:00:00.000Z';
     const epochs = [

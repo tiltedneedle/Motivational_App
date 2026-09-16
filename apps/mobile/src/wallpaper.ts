@@ -21,15 +21,18 @@ const REFUSED = 'Photos was not allowed. You can allow it in Settings, or share 
 /** Lock-screen pixels for the current run of phones; the view is drawn at a third of this. */
 export const WALLPAPER = { width: 1170, height: 2532, scale: 3 } as const;
 
-async function capture(ref: RefObject<unknown>, result: 'tmpfile' | 'data-uri'): Promise<string | null> {
+/** The pixel size the print is captured at: the lock screen's by default, or the Declaration's square. */
+export type PrintSize = { width: number; height: number };
+
+async function capture(ref: RefObject<unknown>, result: 'tmpfile' | 'data-uri', size: PrintSize = WALLPAPER): Promise<string | null> {
   try {
     const shot: any = await import('react-native-view-shot');
     const uri: string = await shot.captureRef(ref, {
       format: 'png',
       quality: 1,
       result,
-      width: WALLPAPER.width,
-      height: WALLPAPER.height,
+      width: size.width,
+      height: size.height,
     });
     return uri || null;
   } catch {
@@ -38,14 +41,14 @@ async function capture(ref: RefObject<unknown>, result: 'tmpfile' | 'data-uri'):
 }
 
 /** Save the wallpaper where the platform keeps images. */
-export async function saveWallpaper(ref: RefObject<unknown>): Promise<WallpaperResult> {
+export async function saveWallpaper(ref: RefObject<unknown>, fileName = 'morrow-lock-screen.png', size: PrintSize = WALLPAPER): Promise<WallpaperResult> {
   if (Platform.OS === 'web') {
-    const data = await capture(ref, 'data-uri');
+    const data = await capture(ref, 'data-uri', size);
     if (!data) return { ok: false, error: NO_WAY };
     try {
       const a = globalThis.document.createElement('a');
       a.href = data;
-      a.download = 'morrow-lock-screen.png';
+      a.download = fileName;
       a.click();
       return { ok: true, how: 'downloaded' };
     } catch {
@@ -53,7 +56,7 @@ export async function saveWallpaper(ref: RefObject<unknown>): Promise<WallpaperR
     }
   }
 
-  const uri = await capture(ref, 'tmpfile');
+  const uri = await capture(ref, 'tmpfile', size);
   if (!uri) return { ok: false, error: NO_WAY };
   try {
     const media: any = await import('expo-media-library/legacy');
@@ -68,14 +71,14 @@ export async function saveWallpaper(ref: RefObject<unknown>): Promise<WallpaperR
 }
 
 /** Hand the wallpaper to the share sheet instead — the way onto Android's lock screen, among others. */
-export async function shareWallpaper(ref: RefObject<unknown>): Promise<WallpaperResult> {
-  if (Platform.OS === 'web') return saveWallpaper(ref);
-  const uri = await capture(ref, 'tmpfile');
+export async function shareWallpaper(ref: RefObject<unknown>, fileName = 'morrow-lock-screen.png', title = 'Your lock screen', size: PrintSize = WALLPAPER): Promise<WallpaperResult> {
+  if (Platform.OS === 'web') return saveWallpaper(ref, fileName, size);
+  const uri = await capture(ref, 'tmpfile', size);
   if (!uri) return { ok: false, error: NO_WAY };
   try {
     const sharing: any = await import('expo-sharing');
     if (!(await sharing.isAvailableAsync())) return { ok: false, error: 'There is nowhere to share it to on this device.' };
-    await sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Your lock screen', UTI: 'public.png' });
+    await sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: title, UTI: 'public.png' });
     return { ok: true, how: 'shared' };
   } catch {
     return { ok: false, error: NO_WAY };

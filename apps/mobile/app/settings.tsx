@@ -270,6 +270,18 @@ export default function Settings() {
           </View>
 
           <Rule />
+          {/* The Declaration (PRD §7.17). One witness or nobody; the only social surface there is. */}
+          <View style={{ gap: 6 }}>
+            <Label>The Declaration</Label>
+            <Body style={{ fontSize: 14 }}>
+              {state.profile.witnessName
+                ? 'Your witness is ' + state.profile.witnessName + '. They get what you send them and nothing else.'
+                : 'Your line across your own face, for you alone or for one person you name. No feed.'}
+            </Body>
+            <Chip testID="settings-declare" label={state.profile.declaredAt ? 'Make it again' : 'Make it'} ghost onPress={() => router.push('/declare')} />
+          </View>
+
+          <Rule />
           {/* Welcome, again. It never comes back on its own once it has been seen. */}
           <View style={{ gap: 6 }}>
             <Label>The introduction</Label>

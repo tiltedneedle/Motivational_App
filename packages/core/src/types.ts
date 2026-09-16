@@ -595,6 +595,15 @@ export const Profile = z.object({
    * to look at, not the room's to show).
    */
   hideClock: z.boolean().default(false),
+  /**
+   * The Declaration (PRD §7.17): one named witness, by the name the person
+   * calls them. The product's only social surface — no feed, no likes. What
+   * the witness gets is the Declaration image and, when the person chooses,
+   * their sealed days; nothing else, and nothing without a tap.
+   */
+  witnessName: z.string().default(''),
+  /** When the Declaration was first made, or null. */
+  declaredAt: z.string().nullable().default(null),
 });
 export type Profile = z.infer<typeof Profile>;
 
@@ -619,6 +628,8 @@ export const DEFAULT_PROFILE: Profile = {
   paywallSeen: [],
   todayIntroSeen: false,
   hideClock: false,
+  witnessName: '',
+  declaredAt: null,
 };
 
 // ---------------------------------------------------------------- domain meta
