@@ -18,6 +18,7 @@ import {
   plural,
   sourceLineFor,
   thenHalf,
+  virtuesForGoal,
 } from '@morrow/core';
 import {
   Body,
@@ -37,7 +38,7 @@ import {
   TopBar,
 } from '@morrow/ui';
 import { analysisPlan } from './stone';
-import { analysesFor, useGoals, useMorrow } from '../src/store';
+import { analysesFor, useGoals, useMorrow, cardText } from '../src/store';
 
 export default function GoalScreen() {
   const router = useRouter();
@@ -53,6 +54,8 @@ export default function GoalScreen() {
   const today = dayOf(new Date(), boundary);
 
   const twoColumn = useTwoColumn();
+  const picks = useMorrow((s) => s.presentPicks);
+  const virtues = id ? virtuesForGoal(picks, id).filter((p) => p.applyLine.trim()) : [];
 
   if (!goal) {
     return (
@@ -148,6 +151,24 @@ export default function GoalScreen() {
               />
             ) : null}
           </View>
+
+          {/*
+            The Present volume's other half. Each virtue the person wrote about
+            names the goal that needs it, and this is where that pairing shows:
+            the card's sentence as a heading, and under it their own line about
+            where they will use it next week. Nothing here unless they wrote it.
+          */}
+          {virtues.length ? (
+            <View testID="goal-virtues" style={{ gap: 10 }}>
+              <Label>What you are good at, for this</Label>
+              {virtues.map((p) => (
+                <View key={p.cardId} style={{ gap: 3 }}>
+                  <Body style={{ fontSize: 15, color: day.ink2 }}>{cardText(p.cardId)}</Body>
+                  <UserText italic style={{ fontSize: 16, lineHeight: 24 }}>{p.applyLine}</UserText>
+                </View>
+              ))}
+            </View>
+          ) : null}
 
           {portrait?.identityLine ? (
             <View style={{ gap: 4 }}>

@@ -1782,6 +1782,8 @@ async function main() {
     await tap(`present-card-${vCards[0]}`);
     await tap('present-continue');
     check("the virtue's second write offers the goals to pair it with", (await page.locator('[data-testid^="present-goal-"]').count()) > 0);
+    await page.locator('[data-testid^="present-goal-"]').first().click();
+    await page.waitForTimeout(200);
     await page.locator('[data-testid="present-story"]').fill("I don't want to be here any more");
     await page.locator('[data-testid="present-apply"]').fill('On Tuesday I use this to get the first draft out.');
     await page.waitForTimeout(250);
@@ -1797,6 +1799,19 @@ async function main() {
     check('and says, per card, that the line stays out of the Book', await seen(`present-held-${vCards[0]}`));
     const heldRow = ((await store()).presentPicks ?? []).find((q) => q.half === 'virtues');
     check('kept on the phone, flagged, never sealed', heldRow?.safetyRisk === 'crisis', JSON.stringify(heldRow ?? {}).slice(0, 100));
+
+    // ---- a paired virtue sits on its goal's page
+    {
+      const pairedVirtue = ((await store()).presentPicks ?? []).find((q) => q.half === 'virtues' && q.goalId);
+      if (pairedVirtue) {
+        await page.goto(`${BASE}/goal?id=${pairedVirtue.goalId}`, { waitUntil: 'networkidle' });
+        await page.clock.runFor(1200);
+        await page.waitForTimeout(500);
+        check('a virtue paired with a goal sits on that goal\u2019s page', (await seen('goal-virtues')) && (await page.locator('body').innerText()).includes(pairedVirtue.applyLine.slice(0, 30)));
+      } else {
+        check('a virtue was paired with a goal to show on its page', false, 'no virtue carries a goalId');
+      }
+    }
 
     // ---- Full's deck takes everything, then narrows: the source's second move
     await patchStore(`s.profile.track = 'full'; s.presentPicks = (s.presentPicks ?? []).filter((q) => q.half === 'faults'); s.presentDraft = null;`);

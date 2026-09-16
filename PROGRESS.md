@@ -1441,6 +1441,17 @@ read-back — stays open; it needs a place in the read-back's flow that does not
 
 Gate after: e2e **338/338** (was 330 — the reorder surfaced eight checks a silent `if` had skipped since the stone draft landed: the store is wiped for the cold-launch check at the very end now, and the two guards are checks), cold **70/70**, axe 0 across 34 screens, way-back 30 screens, lint 0 errors. Also: `scripts/fixtures/filled.mjs` builds the store with all three volumes written and a second edition carrying them, for the progress screenshots; `stone-obstacles` joins the three route lists.
 
+**The virtues have somewhere to go (2026-09-16).** The last loose thread of the volumes.
+Each virtue the person writes about names the goal that needs it, and until now that pairing
+went nowhere: `virtuesForGoal` had no consumer and the closing copy could not say where a
+virtue would be seen again. The goal's own page now carries "What you are good at, for this"
+— the card's sentence as a heading and, under it, the person's line about where they will
+use it next week — for every virtue paired with that goal, and nothing at all when none is.
+The virtues' closing copy says so. That closes the list in "Next steps" item 8: both volumes
+now feed the plan the way PRD §7.15 describes, and the copy claims exactly what the app does.
+
+Gate after: e2e **339/339**, cold 70/70, axe 0 across 34 screens, way-back 30 screens, typecheck clean, lint 0 errors, copy check clean.
+
 Gate after: 416 core / 48 ui / 8 storage, e2e **326/326** (was 317; the new checks seed a live virtues sitting and press both closing-screen buttons on the faults, write a Past line in crisis and change it without the card returning, and read the Interview-only caption), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
 
 Gate after: 416 core / 48 ui / 8 storage, e2e **317/317** (was 311; the new checks relaunch cold mid-Interview and resume, press Begin then Back on the Past doorway and find no sitting behind it, and reread a written Present from Today), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
@@ -1726,13 +1737,11 @@ credential, or a product call.
    line is on the Book and the lock screen.
 7. **Counsel's read of the prompts** against the program's real text, with a
    licensed copy (see "The stones, renamed").
-8. **One thread the volumes left deliberately loose**: a virtue could be
-   offered for pairing at the read-back, where goals are first named
-   (`virtuesForGoal` exists and has no consumer); the virtues' closing copy
-   claims nothing until it is. The fault → Obstacles stone connection is
-   built (2026-09-16). And one Present draft slot: ticking a card on one deck
-   replaces a live draft of the other half, which the door routing makes a
-   chosen act.
+8. **Both of the volumes' loose threads are tied** (2026-09-16): a written
+   fault is offered on that goal's Obstacles stone, and a paired virtue sits on
+   its goal's page. One thing stays as it is by choice: a single Present draft
+   slot, so ticking a card on one deck replaces a live draft of the other half,
+   which the door routing makes a chosen act.
 9. Then loop: implement, test, harden, research, repeat.
 
 ## Where the walkthrough habits are written down

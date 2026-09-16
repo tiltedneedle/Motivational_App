@@ -199,7 +199,7 @@ export const VIRTUE_COPY: Record<string, string> = {
   "deckNoteFull": "Tick everything that is plainly true, not what sounds good; you narrow it to the nine that matter most next.",
   "narrowPrompt": "Which of these matter most?",
   "narrowNote": "Keep up to nine. Take one off to let another through.",
-  "done": "Each one has a time it mattered and a place to use it next week. They join your Book when it is next sealed.",
+  "done": "Each one has a time it mattered and a place to use it next week. They join your Book when it is next sealed, and each sits on the page of the goal you paired it with.",
   "doneNoBook": "There is no Book yet. One is sealed at the end of Future, and these go into it.",
   "doneNextEdition": "Your Book is sealed already, so these wait for the next edition — one hold away.",
   "doneNoGoal": "When you name your goals in Future, each of these can be paired with the one that needs it.",
