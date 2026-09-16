@@ -1788,6 +1788,10 @@ Worth keeping on the next resume, because each cost an hour to learn:
   new document; the browser's back then unloads it, and no `beforeRemove` in the app can
   stop that. A platform-back check must reach the screen by an in-app tap (a door, a
   push), never by `goto`, and the entry behind it must be a different route.
+- **A check behind a silent `if` is not a check.** `if (await seen(x)) { …checks… }` skipped two
+  rounds of stone checks for a day because an earlier block had wiped the goals; the total
+  went up by two instead of four and nobody noticed. Every guard is itself a `check(...)`
+  now, and a block that navigates or wipes the store goes last in the walk. Read the count.
 - **After a fan-out, check `git status` and file mtimes before staging.** The
   first audit's subagents edited twelve product files they had been told not to
   touch.
