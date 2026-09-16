@@ -1823,6 +1823,38 @@ under "Blocked on the user".
 
 Gate after: e2e **443/443** (was 430; the new checks: the brief on day 90, a let-go goal's moves off Today and out of the brief, the let-go line surviving Back, the door open on day 99 with Take it back behind it, Change starting from their words and an unchanged Keep this not an edit, a framing-only line starting empty, the goal's name in its own face on the profile, a letter by id first on the page), cold 84/84, axe 0 across 37 screens, way-back 33 screens, migration **65 checks** with 0010, the live account round-trip **46/46**, 461 core / 48 ui / 8 storage, typecheck clean, lint 0 errors.
 
+**The second pass (2026-09-17).** The fixes above were a new body of work, so the same shape
+of sweep ran over that one commit: three reviewers, a skeptic per finding — ten confirmed,
+none refuted, eight smaller ones unverified and fixed anyway. What it found in the fixes:
+
+- `denseRanks` rewrote the rank field and left the array where it was; two writers rank by
+  array position (`mergeGoalDrafts` under `addGoals`, and `dropGoal`), so a taken-back goal
+  jumped back to its old place at the next naming. The array is now kept in rank order with
+  the archived rows after it, and `dropGoal` ranks the same way.
+- `setMoveStatus` still tallied the day with every plan while the other four writes used the
+  live ones, so a day's planned count — and the Consistency score — alternated between two
+  definitions depending on the last write. One definition now.
+- The re-authoring intro still said "a line about what it taught" two paragraphs above the
+  field that asks the PRD's question; and Keep the old restored the rewritten framing when
+  the sealed line had none. Both as the sealed edition has them now.
+- The memory if-then carried the app's "if" and "then I" inside the quotation marks. The two
+  halves are theirs (`ifThenOf(...).spans`) and the framing sits between them in the sans,
+  on the screen and in the document; the stone rows got their colon back; a bank title is
+  never quoted as theirs in the document either.
+- The concern band did not read the two new verdicts; it does. The export did not carry the
+  two drafts; it does. The drafts dropped a leading space or Return; they are stored as typed.
+  A let-go line never kept outlived the seal and reopened its field a quarter later; the seal
+  clears it, `dropGoal` drops the goal's, and only a draft for a goal on the page opens its
+  field. The morning's brief kept saying the Book was waiting after it was sealed that day; it
+  is written again when that changes. `quietFor` only ever shortens the quiet, never to
+  nothing, whatever Sunday hour the sync brings in. The Let it go and Keep it controls carry
+  the goal's name for a screen reader; the unsealed card's plural reads; an earlier edition
+  opened by number is read, not acted on — the verdicts and the doors belong to the edition
+  that stands, and the page says so and leads there; the migration test writes `lesson_risk`
+  before it tests the check, so a missing column cannot pass as a refusal.
+
+Gate after: e2e **443/443**, cold 84/84, axe 0 across 37 screens, way-back 33 screens, migration **66 checks**, 461 core / 48 ui / 8 storage, typecheck clean, lint 0 errors.
+
 Gate after: 416 core / 48 ui / 8 storage, e2e **326/326** (was 317; the new checks seed a live virtues sitting and press both closing-screen buttons on the faults, write a Past line in crisis and change it without the card returning, and read the Interview-only caption), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
 
 Gate after: 416 core / 48 ui / 8 storage, e2e **317/317** (was 311; the new checks relaunch cold mid-Interview and resume, press Begin then Back on the Past doorway and find no sitting behind it, and reread a written Present from Today), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.

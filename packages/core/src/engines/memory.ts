@@ -44,6 +44,11 @@ export interface MemoryLine {
   tail?: string;
   /** Their own words, if the line quotes any, in the serif. */
   quote?: string;
+  /**
+   * The second half of an if-then, in their words; the app's "then I" sits
+   * between the halves in the sans, as it does on every other screen.
+   */
+  quote2?: string;
   /** False when the quote is a bank title, which is the app's words and goes in the sans. */
   quoteAuthored?: boolean;
   /** The safety screen's word on a line the person wrote here; a crisis line is never handed to a coach. */
@@ -100,10 +105,18 @@ export function buildMemory(input: MemoryInput): MemoryLine[] {
     for (const a of analyses.filter((x) => x.goalId === g.id && isQuotable(x))) {
       const text = a.line.trim() || a.paragraph?.trim() || '';
       if (!text) continue;
-      // The if-then as the Book and the brief print it: `ifThenOf` supplies
-      // "then I" once, whether the person typed it or not.
-      const quote = a.kind === 'obstacles' && a.line2?.trim() ? ifThenOf(a.line, a.line2).sentence : text;
-      lines.push({ key: `line.${a.id}`, about: 'your lines', text: `${ANALYSIS_TITLES[a.kind]}, for`, goal: { name: g.title, authored }, quote });
+      // The if-then's two halves as they wrote them; the framing words —
+      // "if", "then I" — are the app's and stay outside the quotation marks.
+      const halves = a.kind === 'obstacles' && a.line2?.trim() ? ifThenOf(a.line, a.line2).spans : null;
+      lines.push({
+        key: `line.${a.id}`,
+        about: 'your lines',
+        text: `${ANALYSIS_TITLES[a.kind]}, for`,
+        goal: { name: g.title, authored },
+        tail: halves ? ': if' : ':',
+        quote: halves ? (halves[0] ?? text) : text,
+        ...(halves && halves[1] ? { quote2: halves[1] } : {}),
+      });
     }
   }
   // A goal let go (PRD §7.3: "What did it turn out to be instead?"). A line
@@ -216,7 +229,16 @@ export function memoryDocument(lines: readonly MemoryLine[]): string {
   for (const l of lines) {
     // A flagged line is theirs to see here and never a coach's to be handed.
     if (l.risk === 'crisis') continue;
-    const row = `- ${[l.text.trim(), l.goal ? (l.goal.authored ? `“${l.goal.name}”` : l.goal.name) : '', l.tail ?? '', l.quote ? `“${l.quote}”` : ''].filter(Boolean).join(' ')}`;
+    // Their words in quotation marks; the app's — the framing, a bank title —
+    // without. Punctuation joins the part before it without a space.
+    const parts = [
+      l.text.trim(),
+      l.goal ? (l.goal.authored ? `“${l.goal.name}”` : l.goal.name) : '',
+      l.tail ?? '',
+      l.quote ? (l.quoteAuthored === false ? l.quote : `“${l.quote}”`) : '',
+      l.quote2 ? `then I “${l.quote2}”` : '',
+    ].filter(Boolean);
+    const row = '- ' + parts.reduce((acc, part) => (acc === '' ? part : /^[:,.;]/.test(part) ? acc + part : acc + ' ' + part), '');
     if (length + row.length + 1 > MEMORY_DOCUMENT_CHARS) break;
     out.push(row);
     length += row.length + 1;

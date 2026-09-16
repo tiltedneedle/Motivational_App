@@ -2298,12 +2298,12 @@ async function main() {
     await rewriteStrategies();
     check('and it can be written again after that', (await seen('screen-reauthor')) && (await seen(`reauthor-now-${g0.id}-strategies`)));
 
-    // Let it go: one line about what it taught, and a way back until the seal.
+    // Let it go: one line on what it turned out to be instead, and a way back until the seal.
     check('there is more than one goal, so one can be let go', goalsNow.length >= 2, `${goalsNow.length} goals`);
     const gLast = goalsNow[goalsNow.length - 1] ?? { id: '', title: '' };
     await tap(`reauthor-let-go-${gLast.id}`);
     await page.waitForTimeout(400);
-    check('Let it go asks for the line about what it taught', await seen(`reauthor-lesson-field-${gLast.id}`));
+    check('Let it go asks what it turned out to be instead', await seen(`reauthor-lesson-field-${gLast.id}`));
     await tap(`reauthor-let-go-cancel-${gLast.id}`);
     await page.waitForTimeout(300);
     check(
@@ -2444,7 +2444,8 @@ async function main() {
     check('it has the name, the goal, the stones, the Book and the days', ['you.name', `goal.${g0.id}`, 'book.first', 'days.sealed'].every((k) => memoryKeys.includes(k)), memoryKeys.join(' '));
     check('and the name is theirs, in the serif', (await seen('memory-quote-you.name')) && (await text('memory-quote-you.name')) === 'Sam');
     const obstaclesId = await page.evaluate((gid) => (JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.analyses ?? []).find((a) => a.goalId === gid && a.kind === 'obstacles')?.id ?? '', g0.id);
-    check('the if-then is one of the lines, both halves', (await seen(`memory-line-line.${obstaclesId}`)) && (await text(`memory-quote-line.${obstaclesId}`)).includes('then'));
+    // Both halves are theirs; the framing between them is the app's, in the sans, so it is read off the row and not the quote.
+    check('the if-then is one of the lines, both halves', (await seen(`memory-line-line.${obstaclesId}`)) && (await text(`memory-line-line.${obstaclesId}`)).toLowerCase().includes('then i') && (await text(`memory-quote-line.${obstaclesId}`)).length > 0);
 
     // Change: their words replace the line and are marked as theirs.
     await tap('memory-change-you.name');

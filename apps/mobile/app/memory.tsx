@@ -55,7 +55,7 @@ export default function MemoryScreen() {
   const draft = memoryDraft?.key === changing ? memoryDraft.text : '';
   const setDraft = (text: string) => {
     if (!changing) return;
-    setMemoryDraft(text.trim() ? { key: changing, text } : null);
+    setMemoryDraft({ key: changing, text });
   };
 
   const goBack = () => {
@@ -118,7 +118,16 @@ export default function MemoryScreen() {
                         ) : null}
                       </View>
                     ) : null}
-                    {l.quote ? (
+                    {l.quote2 ? (
+                      <View style={{ gap: 2 }}>
+                        <UserText testID={`memory-quote-${l.key}`} style={{ fontSize: 17, lineHeight: 26, color: day.ink }}>
+                          {l.quote}
+                        </UserText>
+                        <UserText italic framing="then I" style={{ fontSize: 16, lineHeight: 24, color: day.ink2 }}>
+                          {l.quote2}
+                        </UserText>
+                      </View>
+                    ) : l.quote ? (
                       l.quoteAuthored === false ? (
                         <Body testID={`memory-quote-${l.key}`} style={{ color: day.ink, fontSize: 16 }}>
                           {l.quote}

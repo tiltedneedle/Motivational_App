@@ -755,8 +755,9 @@ const store = create<MorrowState>()(
        */
       dropGoal: (id) =>
         set((s) => ({
-          goals: s.goals.filter((g) => g.id !== id).map((g, i) => ({ ...g, rank: i })),
+          goals: denseRanks(s.goals.filter((g) => g.id !== id)),
           analyses: s.analyses.filter((a) => a.goalId !== id),
+          letGoDrafts: Object.fromEntries(Object.entries(s.letGoDrafts).filter(([k]) => k !== id)),
           plans: s.plans.filter((p) => p.goalId !== id),
           portraits: s.portraits.filter((p) => p.goalId !== id),
           scenes: s.scenes.filter((sc) => sc.goalId !== id),
@@ -796,15 +797,17 @@ const store = create<MorrowState>()(
         });
       },
 
+      // As typed, spaces and returns included: a controlled field that
+      // refuses a first keystroke reads as broken. The readers trim.
       setLetGoDraft: (goalId, text) =>
         set((s) => {
-          if (text === null || !text.trim()) {
+          if (text === null) {
             const { [goalId]: _gone, ...rest } = s.letGoDrafts;
             return { letGoDrafts: rest };
           }
           return { letGoDrafts: { ...s.letGoDrafts, [goalId]: text } };
         }),
-      setMemoryDraft: (draft) => set({ memoryDraft: draft && draft.text.trim() ? draft : null }),
+      setMemoryDraft: (draft) => set({ memoryDraft: draft }),
 
       editMemory: (key, text) => {
         const line = text.trim();
@@ -1046,6 +1049,9 @@ const store = create<MorrowState>()(
           const book: BookVersion = previous ? { ...built, diff: diffBooks(previous, built, lessons) } : built;
           set((st) => ({
             books: [...st.books, book],
+            // The re-authoring is over; a line typed on letting go and never
+            // kept does not wait for the next one.
+            letGoDrafts: {},
             goals: st.goals.map((g) => (g.status === 'authored' ? { ...g, status: 'active' as const } : g)),
           }));
           track({ name: 'book_sealed', edition: book.version, goals: book.chapters.length, track: book.track, authorship: book.authorshipRatio });
@@ -1407,7 +1413,9 @@ const store = create<MorrowState>()(
                   e.moveId ? e.moveId !== moveId : !(e.kind === 'move' && e.text === title && e.day === day),
                 );
           let days = s.days;
-          for (const d of touched) days = recomputeDay({ ...s, days }, plans, ev, d);
+          // The goals in play only, the same as every other write to the day.
+          const live = livePlans({ ...s, plans });
+          for (const d of touched) days = recomputeDay({ ...s, days }, live, ev, d);
           return { plans, evidence: ev, days };
         }),
 
@@ -1802,7 +1810,11 @@ const store = create<MorrowState>()(
         // the path, the Book sealed later the same day — named no first move,
         // and stayed that way all day. Written again once there is one.
         const nowHasMove = todaysMoves(s).some((m) => m.status === 'todo');
-        if (existing && (existing.firstMoveId || !nowHasMove)) return existing;
+        // And written again when the Book's waiting has changed since — sealed
+        // on day 90, the morning's "the Book is waiting" is no longer true.
+        const waitingNow = reauthorLabelFor(s, day) !== null;
+        const saidWaiting = existing ? /^Day [a-z0-9 ]+: the Book is waiting/.test(existing.today) : false;
+        if (existing && (existing.firstMoveId || !nowHasMove) && saidWaiting === waitingNow) return existing;
         const daysArr = Object.values(s.days);
         const r = reading(daysArr, day);
         const yesterdayKey = new Date(new Date(`${day}T00:00:00Z`).getTime() - 86_400_000).toISOString().slice(0, 10);
@@ -2333,6 +2345,10 @@ export function softenNow(s: MorrowState, today: string): boolean {
     ...Object.values(s.days).map((d) => ({ risk: d.safetyRisk, day: d.day })),
     // The chat leaves nothing else behind. See `concernAt`.
     ...(s.concernAt ? [{ risk: 'concern' as const, day: s.concernAt }] : []),
+    // The line on letting a goal go and a memory line in their words carry
+    // the screen's word like every other write, and the band reads them too.
+    ...s.goals.filter((g) => g.lessonRisk && g.letGoAt).map((g) => ({ risk: g.lessonRisk, day: dayOf(new Date(g.letGoAt!), boundary) })),
+    ...s.memoryEdits.filter((e) => e.risk).map((e) => ({ risk: e.risk, day: dayOf(new Date(e.editedAt), boundary) })),
   ];
   return softenFrom(stamps, today);
 }
@@ -2518,11 +2534,17 @@ function reauthorLabelFor(s: MorrowState, day: string): string | null {
   return due ? reauthorLabel(due.cycle) : null;
 }
 
-/** Ranks dense over the goals in play, archived rows left as they are. */
+/**
+ * Ranks dense over the goals in play, and the array in that order with the
+ * archived rows after it. Two writers — `addGoals` through `mergeGoalDrafts`,
+ * and the Interview's own ordering — rank by array position, so the array
+ * has to agree with the rank field or the next of them quietly rewrites
+ * the person's order.
+ */
 function denseRanks(goals: Goal[]): Goal[] {
   const live = goals.filter((g) => g.status !== 'archived').sort((a, b) => a.rank - b.rank);
-  const rank = new Map(live.map((g, i) => [g.id, i]));
-  return goals.map((g) => (rank.has(g.id) ? { ...g, rank: rank.get(g.id)! } : g));
+  const archived = goals.filter((g) => g.status === 'archived');
+  return [...live.map((g, i) => ({ ...g, rank: i })), ...archived];
 }
 
 /**

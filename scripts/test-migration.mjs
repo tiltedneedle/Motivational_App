@@ -230,7 +230,10 @@ ${one}`;
   await as(ALICE, `update public.goals set status = 'active', lesson = null, let_go_at = null where id = $1`, [goalId]);
   check('and it can be taken back', true);
   await asRejects('a blank line on letting go is refused (0010)', ALICE, `update public.goals set lesson = '   ' where id = $1`, [goalId], 'goals_lesson_not_blank');
-  await asRejects('and so is a risk the screen does not know', ALICE, `update public.goals set lesson_risk = 'high' where id = $1`, [goalId], 'lesson_risk');
+  await as(ALICE, `update public.goals set lesson_risk = 'none' where id = $1`, [goalId]);
+  const riskRow = await as(ALICE, 'select lesson_risk from public.goals where id = $1', [goalId]);
+  check("the screen's word on the line is kept (0010)", riskRow.rows[0]?.lesson_risk === 'none');
+  await asRejects('and a word the screen does not use is refused', ALICE, `update public.goals set lesson_risk = 'high' where id = $1`, [goalId], 'goals_lesson_risk_check');
 
   // ---- the memory profile (0009): one row, the person's alone
   await as(

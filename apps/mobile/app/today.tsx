@@ -374,7 +374,11 @@ export default function Today() {
             <Pressable
               testID="today-reauthor"
               accessibilityRole="button"
-              accessibilityLabel={reauthor ? `${reauthorLabel(reauthor.cycle)}: time to write the Book again` : 'A goal let go, and no edition sealed since'}
+              accessibilityLabel={
+                reauthor
+                  ? `${reauthorLabel(reauthor.cycle)}: time to write the Book again`
+                  : `${pending.length === 1 ? 'A goal' : plural(pending.length, 'goal')} let go, and no edition sealed since`
+              }
               // A let-go waiting goes to the screen that can take it back
               // whatever the plan; the gated branch offers exactly that.
               onPress={() => router.push(entitled || pending.length ? '/reauthor?from=/today' : '/paywall?moment=reauthor&from=/today')}
@@ -384,7 +388,9 @@ export default function Today() {
               <Body style={{ color: day.ink, fontSize: 16 }}>
                 {reauthor
                   ? 'Time to write it again. Two Books, side by side.'
-                  : `${pending.length === 1 ? 'A goal was' : plural(pending.length, 'goal') + ' were'} let go and no edition sealed since. Seal it, or take it back.`}
+                  : pending.length === 1
+                    ? 'A goal was let go and no edition sealed since. Seal it, or take it back.'
+                    : `${plural(pending.length, 'goal')} were let go and no edition sealed since. Seal the edition, or take them back.`}
               </Body>
             </Pressable>
           ) : null}

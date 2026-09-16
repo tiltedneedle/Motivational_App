@@ -70,7 +70,9 @@ export default function ReauthorScreen() {
    * store, by goal, as it is typed: Back never loses it, and opening another
    * goal's field does not wipe the first.
    */
-  const [lettingGo, setLettingGo] = useState<string | null>(() => Object.keys(letGoDrafts)[0] ?? null);
+  const [lettingGo, setLettingGo] = useState<string | null>(
+    () => Object.keys(letGoDrafts).find((id) => books[books.length - 1]?.chapters.some((c) => c.goalId === id)) ?? null,
+  );
 
   const goBack = () => {
     if (router.canGoBack()) router.back();
@@ -146,7 +148,7 @@ export default function ReauthorScreen() {
             </Label>
             <Statement testID="reauthor-title">Time to write it again.</Statement>
             <Body>
-              Every line you sealed, and a choice for each: keep it, or write it again with the old one above. A goal that has done its work can be let go, with a line about what it taught.
+              Every line you sealed, and a choice for each: keep it, or write it again with the old one above. A goal that has done its work can be let go, with one line on what it turned out to be instead.
             </Body>
           </View>
 
@@ -231,7 +233,8 @@ export default function ReauthorScreen() {
                               ? framingSet(l.kind, domain).framings.find((f) => f.label === l.before.framingLabel)?.id
                               : null;
                             write(ch.goalId, l.kind, {
-                              framingId: sealedFraming ?? a?.framingId ?? null,
+                              // No framing on the sealed line means none now, too.
+                              framingId: l.before.framingLabel ? (sealedFraming ?? a?.framingId ?? null) : null,
                               line: l.before.text,
                               ...(l.before.text2 ? { line2: l.before.text2 } : {}),
                               ...(l.before.paragraph ? { paragraph: l.before.paragraph } : {}),
@@ -268,6 +271,7 @@ export default function ReauthorScreen() {
                         <Chip
                           testID={`reauthor-let-go-confirm-${ch.goalId}`}
                           label="Let it go"
+                          accessibilityLabel={`Let it go, ${ch.name}`}
                           role="button"
                           selected
                           onPress={() => {
@@ -280,6 +284,7 @@ export default function ReauthorScreen() {
                         <TextButton
                           testID={`reauthor-let-go-cancel-${ch.goalId}`}
                           label="Keep it"
+                          accessibilityLabel={`Keep it, ${ch.name}`}
                           onPress={() => {
                             // Closed on purpose: the line goes with it.
                             setLetGoDraft(ch.goalId, null);
@@ -293,6 +298,7 @@ export default function ReauthorScreen() {
                       <TextButton
                         testID={`reauthor-let-go-${ch.goalId}`}
                         label={letGoDrafts[ch.goalId]?.trim() ? 'Let it go · a line waiting' : 'Let it go'}
+                        accessibilityLabel={`${letGoDrafts[ch.goalId]?.trim() ? 'Let it go, a line waiting' : 'Let it go'}, ${ch.name}`}
                         onPress={() => setLettingGo(ch.goalId)}
                       />
                     </View>

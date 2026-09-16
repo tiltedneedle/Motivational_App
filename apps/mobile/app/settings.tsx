@@ -131,6 +131,8 @@ export default function Settings() {
       // What they changed about what is said about them (PRD §7.9): a line in
       // their own words is theirs, and was the one thing this left behind.
       memoryEdits: state.memoryEdits,
+      letGoDrafts: state.letGoDrafts,
+      memoryDraft: state.memoryDraft,
       pastEvents: state.pastEvents,
       pastListed: state.pastListed,
       presentDraft: state.presentDraft,

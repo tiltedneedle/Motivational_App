@@ -80,10 +80,14 @@ describe('what Morrow knows', () => {
     expect(lines.find((l) => l.key === 'you.witness')?.quote).toBe('Jo');
     expect(lines.find((l) => l.key === 'goal.g1')?.quote).toBe('Half marathon');
     expect(lines.find((l) => l.key === 'line.a1')?.quote).toContain('Tuesday, Thursday');
-    // The if-then as the Book prints it, "then I" supplied once.
-    expect(lines.find((l) => l.key === 'line.a2')?.quote).toBe('if it rains, then I take the stairwell');
+    // The if-then's two halves are theirs; "if" and "then I" are the app's and stay outside the quotes.
+    const ifThen = lines.find((l) => l.key === 'line.a2')!;
+    expect(ifThen.tail).toBe(': if');
+    expect(ifThen.quote).toBe('it rains');
+    expect(ifThen.quote2).toBe('take the stairwell');
     // The goal's name travels beside the framing in its own face, not inside the app's sentence.
     expect(lines.find((l) => l.key === 'line.a1')?.text).toBe('How, for');
+    expect(lines.find((l) => l.key === 'line.a1')?.tail).toBe(':');
     expect(lines.find((l) => l.key === 'line.a1')?.goal).toEqual({ name: 'Half marathon', authored: true });
     // A bank title is the app's words, and the line says so.
     const bank = buildMemory({ ...input, goals: [{ ...goal, titleAuthored: false }] });
@@ -183,7 +187,12 @@ describe('the document', () => {
     const doc = memoryDocument(lines);
     expect(doc.split('\n')).toHaveLength(lines.length);
     expect(doc).toContain('- You asked to be called “Sam”');
-    expect(doc).toContain('- How, for “Half marathon” “Tuesday, Thursday, Saturday at 6:40, out the back door”');
+    expect(doc).toContain('- How, for “Half marathon”: “Tuesday, Thursday, Saturday at 6:40, out the back door”');
+    expect(doc).toContain('- What gets in the way, for “Half marathon”: if “it rains” then I “take the stairwell”');
+    // A bank title is the app's words and goes without quotation marks.
+    const bankDoc = memoryDocument(buildMemory({ ...input, goals: [{ ...goal, titleAuthored: false }] }));
+    expect(bankDoc).toContain('- Six months — Half marathon');
+    expect(bankDoc).toContain('- How, for Half marathon: “Tuesday');
     const long = Array.from({ length: 400 }, (_, i) => ({ key: `k${i}`, about: 'you' as const, text: `Line ${i}`, quote: 'x'.repeat(40) }));
     const capped = memoryDocument(long);
     expect(capped.length).toBeLessThanOrEqual(MEMORY_DOCUMENT_CHARS);

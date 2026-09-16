@@ -412,6 +412,18 @@ export default function BookScreen() {
               <InkButton testID="book-to-today" label="On to Today — your first move" onPress={() => router.dismissTo('/today')} />
               <Label style={{ color: night.ink3, textAlign: 'center' }}>Read it any time from the Book tab</Label>
             </View>
+          ) : book !== latest ? (
+            /*
+              An earlier edition, opened by its number. It is read, not acted
+              on: the verdicts and the doors below belong to the edition that
+              stands, and this page says so and leads there.
+            */
+            <View style={{ gap: 8 }}>
+              <Label testID="book-earlier" style={{ color: night.ink3 }}>
+                An earlier edition. The {latest ? ordinal(latest.version).toLowerCase() : 'latest'} is the one that stands.
+              </Label>
+              <Chip testID="book-latest" label="The edition that stands" onPress={() => router.replace('/book')} />
+            </View>
           ) : (
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
               {/*
@@ -435,6 +447,8 @@ export default function BookScreen() {
           {/* The ways out of the app: quieter than the ways through it. */}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 18, alignItems: 'center' }}>
             <TextButton testID="book-export" label="Export" onPress={onExport} />
+            {book === latest ? (
+              <>
             {/*
               The Book as a PDF (PRD §7.3). The same page, typeset the same
               way, handed to the platform's own renderer; on the web it is the
@@ -445,6 +459,8 @@ export default function BookScreen() {
             <TextButton testID="book-wallpaper" label="Lock screen" onPress={() => router.push('/wallpaper')} />
             {/* The Declaration (PRD §7.17): the line across their own face, for one witness or nobody. */}
             <TextButton testID="book-declare" label="Declare it" onPress={() => router.push('/declare')} />
+              </>
+            ) : null}
           </View>
         </View>
       </SafeAreaView>
