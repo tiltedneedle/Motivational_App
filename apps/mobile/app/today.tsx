@@ -66,6 +66,7 @@ import {
   useTodaysPractices,
   useVolumeStates,
   interviewKept,
+  pendingLetGo,
 } from '../src/store';
 import { scheduler } from '../src/notify';
 
@@ -164,6 +165,8 @@ export default function Today() {
   const today = dayOf(new Date(), state.profile.dayBoundaryHour);
   const reauthor = reauthorDue(state.books, today, state.profile.dayBoundaryHour);
   const entitled = state.profile.entitled === true;
+  /** A goal let go since the latest edition: the door to Take it back, or the seal, stays open. */
+  const pending = pendingLetGo(state);
   const intendedMoveId = state.days[today]?.intentionMoveId ?? null;
   const isSunday = new Date(`${today}T00:00:00Z`).getUTCDay() === 0;
 
@@ -367,16 +370,22 @@ export default function Today() {
             like Sunday's. On the free plan the door is the paywall, which is
             one of the moments the PRD names; Not now comes straight back here.
           */}
-          {reauthor ? (
+          {reauthor || pending.length ? (
             <Pressable
               testID="today-reauthor"
               accessibilityRole="button"
-              accessibilityLabel={`${reauthorLabel(reauthor.cycle)}: time to write the Book again`}
-              onPress={() => router.push(entitled ? '/reauthor?from=/today' : '/paywall?moment=reauthor&from=/today')}
+              accessibilityLabel={reauthor ? `${reauthorLabel(reauthor.cycle)}: time to write the Book again` : 'A goal let go, and no edition sealed since'}
+              // A let-go waiting goes to the screen that can take it back
+              // whatever the plan; the gated branch offers exactly that.
+              onPress={() => router.push(entitled || pending.length ? '/reauthor?from=/today' : '/paywall?moment=reauthor&from=/today')}
               style={{ marginTop: 16, backgroundColor: day.surface2, borderRadius: radius.card, padding: 18, gap: 6 }}
             >
-              <Label style={{ color: accent.coralText }}>{reauthorLabel(reauthor.cycle)}</Label>
-              <Body style={{ color: day.ink, fontSize: 16 }}>Time to write it again. Two Books, side by side.</Body>
+              <Label style={{ color: accent.coralText }}>{reauthor ? reauthorLabel(reauthor.cycle) : 'Unsealed'}</Label>
+              <Body style={{ color: day.ink, fontSize: 16 }}>
+                {reauthor
+                  ? 'Time to write it again. Two Books, side by side.'
+                  : `${pending.length === 1 ? 'A goal was' : plural(pending.length, 'goal') + ' were'} let go and no edition sealed since. Seal it, or take it back.`}
+              </Body>
             </Pressable>
           ) : null}
 

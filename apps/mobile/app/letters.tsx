@@ -10,7 +10,7 @@
  * their quoted spans in the serif; a letter the person wrote is theirs from end
  * to end, so all of it is serif.
  */
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -47,6 +47,8 @@ function LetterBody({ letter }: { letter: Letter }) {
 export default function Letters() {
   const router = useRouter();
   const letters = useMorrow((s) => s.letters);
+  /** A letter by id (PRD §9.3's morrow://letter/{id}): first on the page, whatever its date. */
+  const { id: wanted } = useLocalSearchParams<{ id?: string }>();
   const catchUpLetters = useMorrow((s) => s.catchUpLetters);
   const writeToFuture = useMorrow((s) => s.writeToFuture);
   const markLetterRead = useMorrow((s) => s.markLetterRead);
@@ -69,7 +71,9 @@ export default function Letters() {
   // screen whose whole job is knowing which day it is.
   const today = useMemo(() => dayOf(new Date(), boundary), [boundary]);
 
-  const arrived = letters.filter((l) => l.deliverAt.slice(0, 10) <= today);
+  const arrived = letters
+    .filter((l) => l.deliverAt.slice(0, 10) <= today)
+    .sort((a, b) => (a.id === wanted ? -1 : b.id === wanted ? 1 : 0));
   const waiting = letters.filter((l) => l.deliverAt.slice(0, 10) > today);
 
   const send = () => {

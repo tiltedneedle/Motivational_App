@@ -9,6 +9,12 @@
  * as they wrote it whatever the rebuild says; forget one and it is gone — and
  * where the line is one of the stones, the coach stops quoting it too, which
  * is what forgetting has to mean or the screen is decoration.
+ *
+ * What the copy promises is exactly what the code does. The coach here reads
+ * the Book, the stones and the ledger directly; this profile is what a coach
+ * behind a model would be handed, and Forget on a stone reaches the coach
+ * that exists. Forgetting a line about the Book or the ledger takes it out
+ * of the profile; it does not unwrite the Book.
  */
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
@@ -35,12 +41,22 @@ export default function MemoryScreen() {
   const forget = useMorrow((s) => s.forgetMemory);
   const restore = useMorrow((s) => s.restoreMemory);
 
+  const memoryDraft = useMorrow((s) => s.memoryDraft);
+  const setMemoryDraft = useMorrow((s) => s.setMemoryDraft);
+
   const lines = useMemo(() => memoryLines(state), [state]);
   const forgotten = edits.filter((e) => e.text === null).length;
 
-  /** The line whose field is open, and what is in it. */
-  const [changing, setChanging] = useState<string | null>(null);
-  const [draft, setDraft] = useState('');
+  /**
+   * The line whose field is open. What is in it lives in the store as it is
+   * typed, so Back never loses it and the field is open again on return.
+   */
+  const [changing, setChanging] = useState<string | null>(() => memoryDraft?.key ?? null);
+  const draft = memoryDraft?.key === changing ? memoryDraft.text : '';
+  const setDraft = (text: string) => {
+    if (!changing) return;
+    setMemoryDraft(text.trim() ? { key: changing, text } : null);
+  };
 
   const goBack = () => {
     if (router.canGoBack()) router.back();
@@ -62,7 +78,7 @@ export default function MemoryScreen() {
           <View style={{ gap: 8 }}>
             <Statement testID="memory-title">What Morrow knows about you.</Statement>
             <Body>
-              Every line comes from something you wrote or did; nothing is guessed. The coach reads the Book and these lines, and nothing else. Change a line and it stays as you wrote it. Forget one and it is gone — and if it is one of your stones, the coach stops quoting it.
+              Every line comes from something you wrote or did; nothing is guessed. This is what is said about you on the way to a coach. Change a line and it stays as you wrote it here. Forget one and it is gone from here — and if it is one of your stones, the coach stops quoting it.
             </Body>
           </View>
 
@@ -79,15 +95,39 @@ export default function MemoryScreen() {
                 return (
                   <View key={l.key} testID={`memory-line-${l.key}`} style={{ gap: 6, backgroundColor: day.surface2, borderRadius: radius.card, padding: 14 }}>
                     {e ? <Label style={{ fontSize: 11 }}>In your words</Label> : null}
-                    {l.text ? (
-                      <Body testID={`memory-text-${l.key}`} style={{ color: day.ink, fontSize: 15 }}>
-                        {l.text}
-                      </Body>
+                    {l.text || l.goal ? (
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', columnGap: 5 }}>
+                        {l.text ? (
+                          <Body testID={`memory-text-${l.key}`} style={{ color: day.ink, fontSize: 15 }}>
+                            {l.text}
+                          </Body>
+                        ) : null}
+                        {l.goal ? (
+                          l.goal.authored ? (
+                            <UserText testID={`memory-goal-${l.key}`} style={{ fontSize: 16, lineHeight: 22, color: day.ink }}>
+                              {l.goal.name}
+                            </UserText>
+                          ) : (
+                            <Body testID={`memory-goal-${l.key}`} style={{ color: day.ink, fontSize: 15 }}>
+                              {l.goal.name}
+                            </Body>
+                          )
+                        ) : null}
+                        {l.tail ? (
+                          <Body style={{ color: day.ink, fontSize: 15 }}>{l.tail}</Body>
+                        ) : null}
+                      </View>
                     ) : null}
                     {l.quote ? (
-                      <UserText testID={`memory-quote-${l.key}`} style={{ fontSize: 17, lineHeight: 26, color: day.ink }}>
-                        {l.quote}
-                      </UserText>
+                      l.quoteAuthored === false ? (
+                        <Body testID={`memory-quote-${l.key}`} style={{ color: day.ink, fontSize: 16 }}>
+                          {l.quote}
+                        </Body>
+                      ) : (
+                        <UserText testID={`memory-quote-${l.key}`} style={{ fontSize: 17, lineHeight: 26, color: day.ink }}>
+                          {l.quote}
+                        </UserText>
+                      )
                     ) : null}
                     {open ? (
                       <View style={{ gap: 8, marginTop: 4 }}>
@@ -104,20 +144,27 @@ export default function MemoryScreen() {
                           <Chip
                             testID={`memory-keep-${l.key}`}
                             label="Keep this"
+                            role="button"
                             selected
                             onPress={() => {
-                              if (!draft.trim()) return;
+                              // Their words, or nothing: a line left as Morrow
+                              // had it is not an edit, and the app's own
+                              // sentence never becomes a quote in the serif.
+                              if (!draft.trim() || draft.trim() === (l.quote ?? '')) {
+                                setMemoryDraft(null);
+                                setChanging(null);
+                                return;
+                              }
                               edit(l.key, draft);
                               setChanging(null);
-                              setDraft('');
                             }}
                           />
                           <TextButton
                             testID={`memory-cancel-${l.key}`}
                             label="Leave it"
                             onPress={() => {
+                              setMemoryDraft(null);
                               setChanging(null);
-                              setDraft('');
                             }}
                           />
                         </View>
@@ -128,8 +175,11 @@ export default function MemoryScreen() {
                           testID={`memory-change-${l.key}`}
                           label="Change"
                           onPress={() => {
+                            // Seeded with their words only. A line that is all
+                            // the app's framing starts empty: Change means
+                            // "say it in your words", never "edit Morrow's".
                             setChanging(l.key);
-                            setDraft(l.quote ?? l.text);
+                            setMemoryDraft(l.quote && l.quoteAuthored !== false ? { key: l.key, text: l.quote } : null);
                           }}
                         />
                         <TextButton testID={`memory-forget-${l.key}`} label="Forget" onPress={() => forget(l.key)} />

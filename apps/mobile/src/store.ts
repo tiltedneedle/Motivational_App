@@ -20,6 +20,8 @@ import {
   LocalProvider,
   buildBookVersion,
   quietFor,
+  reauthorDue,
+  reauthorLabel,
   diffBooks,
   applyMemoryEdits,
   buildMemory,
@@ -131,7 +133,7 @@ import {
 export interface SafetyPause {
   risk: SafetyRisk;
   at: string;
-  source?: { kind: 'text' | 'analysis' | 'evidence' | 'day' | 'present' | 'past'; id: string } | null;
+  source?: { kind: 'text' | 'analysis' | 'evidence' | 'day' | 'present' | 'past' | 'lesson' | 'memory'; id: string } | null;
   /** Asked for by the person ("Need someone?"), not raised by the screen. */
   voluntary?: boolean;
 }
@@ -328,6 +330,13 @@ export interface MorrowState {
   presentDraft: PresentDraft | null;
   pastDraft: PastDraft | null;
   stoneDraft: StoneDraft | null;
+  /**
+   * The line being written on letting a goal go (PRD §7.3), by goal, until it
+   * is kept or the field is closed on purpose. Back never loses it.
+   */
+  letGoDrafts: Record<string, string>;
+  /** A memory line mid-change (PRD §7.9), for the same reason. */
+  memoryDraft: { key: string; text: string } | null;
   dayDraft: DayDraft | null;
   interviewDraft: InterviewDraft | null;
   readBackDraft: { rows: ReadBackRow[]; leftOut?: string; source: string; updatedAt: string } | null;
@@ -365,6 +374,8 @@ export interface MorrowState {
   forgetMemory: (key: string) => void;
   /** The rebuilt line back, in place of the person's edit or forget. */
   restoreMemory: (key: string) => void;
+  setLetGoDraft: (goalId: string, text: string | null) => void;
+  setMemoryDraft: (draft: { key: string; text: string } | null) => void;
   /** The way back from Let it go, until the edition is sealed. */
   takeBackGoal: (id: string) => void;
   rankGoals: (ids: string[]) => void;
@@ -665,6 +676,8 @@ const EMPTY = {
   presentDraft: null,
   pastDraft: null,
   stoneDraft: null,
+  letGoDrafts: {},
+  memoryDraft: null,
   dayDraft: null,
   interviewDraft: null,
   readBackDraft: null,
@@ -694,11 +707,16 @@ const store = create<MorrowState>()(
           // The merge rule itself lives in the core package so it can be
           // tested; the store adds the things only it knows about — ids,
           // timestamps, and the date a horizon phrase resolves to.
+          // Over the goals in play only. A goal let go at a re-authoring keeps
+          // its row, and a new goal named the same way is a new goal — merged
+          // into the archived row it would never appear anywhere.
+          const live = s.goals.filter((g) => g.status !== 'archived');
+          const archived = s.goals.filter((g) => g.status === 'archived');
           const merged = mergeGoalDrafts(
-            s.goals.map((g) => ({ ...g, titleAuthored: g.titleAuthored !== false })),
+            live.map((g) => ({ ...g, titleAuthored: g.titleAuthored !== false })),
             drafts,
           );
-          const byName = new Map(s.goals.map((g) => [g.title.trim().toLowerCase(), g]));
+          const byName = new Map(live.map((g) => [g.title.trim().toLowerCase(), g]));
           const goals: Goal[] = merged.map((m) => {
             const existing = byName.get(m.title.trim().toLowerCase());
             if (existing) {
@@ -716,7 +734,7 @@ const store = create<MorrowState>()(
               createdAt: new Date().toISOString(),
             } as Goal;
           });
-          return { goals };
+          return { goals: [...goals, ...archived] };
         }),
 
       renameGoal: (id, title) =>
@@ -754,19 +772,53 @@ const store = create<MorrowState>()(
 
       letGoGoal: (id, lesson) => {
         const at = new Date().toISOString();
-        set((s) => ({
-          goals: s.goals.map((g) => (g.id === id ? { ...g, status: 'archived' as const, lesson: lesson.trim(), letGoAt: at } : g)),
-          // Its practices stop, the same way as under dropGoal: their runs
-          // are days that happened and stay in the log. Stamped with the same
-          // instant as the goal, so taking it back can find exactly these.
-          practices: s.practices.map((p) => (p.goalId === id && !p.archivedAt ? { ...p, archivedAt: at } : p)),
-        }));
+        const line = lesson.trim();
+        // Free text like every other: screened, and a crisis line raises the
+        // same resources card the stones do. The line stays theirs either way.
+        const risk = screen(line);
+        set((s) => {
+          const goals = s.goals.map((g) =>
+            g.id === id ? { ...g, status: 'archived' as const, lesson: line, letGoAt: at, lessonRisk: risk.risk } : g,
+          );
+          const { [id]: _draft, ...letGoDrafts } = s.letGoDrafts;
+          return {
+            // Ranks stay dense over the goals in play: `analysisPlan` gives
+            // the full five stones to `rank < 3`, and an archived goal holding
+            // a slot pushed a live one past it.
+            goals: denseRanks(goals),
+            // Its practices stop, the same way as under dropGoal: their runs
+            // are days that happened and stay in the log. Stamped with the same
+            // instant as the goal, so taking it back can find exactly these.
+            practices: s.practices.map((p) => (p.goalId === id && !p.archivedAt ? { ...p, archivedAt: at } : p)),
+            letGoDrafts,
+            safetyPause: risk.risk === 'crisis' ? pauseOn(risk.risk, 'lesson', id) : s.safetyPause,
+          };
+        });
       },
 
-      editMemory: (key, text) =>
+      setLetGoDraft: (goalId, text) =>
+        set((s) => {
+          if (text === null || !text.trim()) {
+            const { [goalId]: _gone, ...rest } = s.letGoDrafts;
+            return { letGoDrafts: rest };
+          }
+          return { letGoDrafts: { ...s.letGoDrafts, [goalId]: text } };
+        }),
+      setMemoryDraft: (draft) => set({ memoryDraft: draft && draft.text.trim() ? draft : null }),
+
+      editMemory: (key, text) => {
+        const line = text.trim();
+        if (!line) return;
+        const risk = screen(line);
         set((s) => ({
-          memoryEdits: [...s.memoryEdits.filter((e) => e.key !== key), { key, text: text.trim(), editedAt: new Date().toISOString() }],
-        })),
+          memoryEdits: [
+            ...s.memoryEdits.filter((e) => e.key !== key),
+            { key, text: line, editedAt: new Date().toISOString(), ...(risk.risk !== 'none' ? { risk: risk.risk } : {}) },
+          ],
+          memoryDraft: s.memoryDraft?.key === key ? null : s.memoryDraft,
+          safetyPause: risk.risk === 'crisis' ? pauseOn(risk.risk, 'memory', key) : s.safetyPause,
+        }));
+      },
       forgetMemory: (key) =>
         set((s) => ({
           memoryEdits: [...s.memoryEdits.filter((e) => e.key !== key), { key, text: null, editedAt: new Date().toISOString() }],
@@ -778,12 +830,15 @@ const store = create<MorrowState>()(
           const goal = s.goals.find((g) => g.id === id);
           if (!goal || goal.status !== 'archived') return {};
           const at = goal.letGoAt;
+          const liveCount = s.goals.filter((g) => g.status !== 'archived').length;
           return {
-            goals: s.goals.map((g) => {
-              if (g.id !== id) return g;
-              const { lesson: _lesson, letGoAt: _letGoAt, ...rest } = g;
-              return { ...rest, status: 'active' as const };
-            }),
+            goals: denseRanks(
+              s.goals.map((g) => {
+                if (g.id !== id) return g;
+                const { lesson: _lesson, letGoAt: _letGoAt, lessonRisk: _risk, ...rest } = g;
+                return { ...rest, status: 'active' as const, rank: liveCount };
+              }),
+            ),
             practices: s.practices.map((p) => (p.goalId === id && at && p.archivedAt === at ? { ...p, archivedAt: null } : p)),
           };
         }),
@@ -985,7 +1040,7 @@ const store = create<MorrowState>()(
           const previous = s.books[s.books.length - 1];
           const lessons = previous
             ? s.goals
-                .filter((g) => g.status === 'archived' && g.letGoAt && g.letGoAt > previous.sealedAt)
+                .filter((g) => g.status === 'archived' && g.letGoAt && g.letGoAt > previous.sealedAt && g.lessonRisk !== 'crisis')
                 .map((g) => ({ name: g.title, line: g.lesson ?? '' }))
             : [];
           const book: BookVersion = previous ? { ...built, diff: diffBooks(previous, built, lessons) } : built;
@@ -1249,7 +1304,7 @@ const store = create<MorrowState>()(
               ]
             : s.evidence;
 
-        set({ practiceLogs: logs, evidence, days: recomputeDay(s, s.plans, evidence, day, logs) });
+        set({ practiceLogs: logs, evidence, days: recomputeDay(s, livePlans(s), evidence, day, logs) });
       },
 
       makeScene: async (goalId, type) => {
@@ -1433,7 +1488,7 @@ const store = create<MorrowState>()(
           const evidence = [...s.evidence, row];
           return {
             evidence,
-            days: recomputeDay(s, s.plans, evidence, day),
+            days: recomputeDay(s, livePlans(s), evidence, day),
             safetyPause: risk.risk === 'crisis' ? pauseOn(risk.risk, 'evidence', row.id) : s.safetyPause,
             // Filed with undo (PRD 7.6). A flagged line raises the card
             // instead and is not announced.
@@ -1446,7 +1501,7 @@ const store = create<MorrowState>()(
           const row = s.evidence.find((e) => e.id === id);
           if (!row || row.kind !== 'capture') return {};
           const evidence = s.evidence.filter((e) => e.id !== id);
-          return { evidence, days: recomputeDay(s, s.plans, evidence, row.day), toast: null };
+          return { evidence, days: recomputeDay(s, livePlans(s), evidence, row.day), toast: null };
         }),
 
       sealDay: ({ moodWord, proof, gladOf }) =>
@@ -1479,7 +1534,7 @@ const store = create<MorrowState>()(
                   createdAt: new Date().toISOString(),
                 },
               ];
-          const days = recomputeDay(s, s.plans, evidence, day);
+          const days = recomputeDay(s, livePlans(s), evidence, day);
           const existing = days[day];
           if (existing) {
             days[day] = {
@@ -1581,6 +1636,7 @@ const store = create<MorrowState>()(
           // Quiet hours are the person's own, not the default's: a lark's
           // morning line at 05:30 used to be moved to seven.
           quiet: quietFor(s.profile),
+          reauthorDay: reauthorLabelFor(s, day),
           persona: s.profile.persona,
           book: s.books[s.books.length - 1] ?? null,
           moves: todaysMoves(s),
@@ -1651,7 +1707,7 @@ const store = create<MorrowState>()(
           today: day,
           portraitReady: s.portraits.length > 0,
           returns: detectReturns(Object.values(s.days), day).length,
-          reachedMilestones: s.plans
+          reachedMilestones: livePlans(s)
             .flatMap((p) => p.milestones)
             .filter((m) => m.reachedAt)
             .map((m) => ({ id: m.id, goalId: m.goalId, reachedAt: m.reachedAt as string })),
@@ -1668,7 +1724,7 @@ const store = create<MorrowState>()(
           // possible use of the one place the app writes prose.
           evidence: quotable(s.evidence).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)),
           goals: activeGoals(s),
-          moves: s.plans.flatMap((p) => p.moves),
+          moves: livePlans(s).flatMap((p) => p.moves),
         };
 
         const written: Letter[] = [];
@@ -1770,6 +1826,7 @@ const store = create<MorrowState>()(
             previousScore: r.previous,
             soften,
             offerSupport,
+            reauthorDay: reauthorLabelFor(s, day),
           },
           newId,
         );
@@ -2055,6 +2112,13 @@ const store = create<MorrowState>()(
               // Clearing the flag does not put the event in the Book: that is
               // still the person's separate choice, made on its own screen.
               return { pastEvents: st.pastEvents.map((v) => (v.id === source.id ? clear(v) : v)), safetyPause: null };
+            case 'lesson':
+              return { goals: st.goals.map((g) => (g.id === source.id ? { ...g, lessonRisk: 'none' as const } : g)), safetyPause: null };
+            case 'memory':
+              return {
+                memoryEdits: st.memoryEdits.map((e) => (e.key === source.id ? { ...e, risk: 'none' as const } : e)),
+                safetyPause: null,
+              };
           }
         }),
 
@@ -2162,7 +2226,8 @@ onStorageFailure(() => {
 export function entitlementOf(s: MorrowState, day: string): EntitlementContext {
   return {
     entitled: s.profile.entitled === true,
-    blueprintsBuilt: new Set(s.plans.map((p) => p.goalId)).size,
+    // A goal let go is not holding the free plan's one Blueprint.
+    blueprintsBuilt: new Set(livePlans(s).map((p) => p.goalId)).size,
     coachTurnsToday: s.coachTurns[day] ?? 0,
     afterBlueprintShown: (s.profile.paywallSeen ?? []).includes('after-blueprint'),
     firstDaySealed: Object.values(s.days).some((d) => Boolean(d.sealedAt)),
@@ -2409,7 +2474,10 @@ export function memoryLines(s: MorrowState): MemoryLine[] {
  */
 export function coachAnalyses(s: MorrowState): GoalAnalysis[] {
   const forgotten = forgottenLineIds(s.memoryEdits);
-  return quotable(s.analyses).filter((a) => !forgotten.has(a.id));
+  // And only the goals in play: a goal let go keeps its lines for the old
+  // editions, and the coach does not open the morning with them.
+  const live = new Set(activeGoals(s).map((g) => g.id));
+  return quotable(s.analyses).filter((a) => live.has(a.goalId) && !forgotten.has(a.id));
 }
 
 export function activeGoals(s: MorrowState): Goal[] {
@@ -2432,9 +2500,44 @@ export function latestBook(s: MorrowState): BookVersion | null {
  * first move is dated tomorrow — the next upcoming move comes forward, so the
  * screen is never empty and starting early is allowed.
  */
+/**
+ * The plans of the goals in play. A goal let go at a re-authoring (PRD §7.3)
+ * keeps its plan — it is theirs, and Take it back puts it straight back on
+ * the table — but its moves are not on Today, not in the brief, not in the
+ * morning notice, and not in the day's tally, or letting go changed nothing
+ * the person could see before the seal and everything after.
+ */
+export function livePlans(s: MorrowState): Plan[] {
+  const live = new Set(activeGoals(s).map((g) => g.id));
+  return s.plans.filter((p) => live.has(p.goalId));
+}
+
+/** "Day ninety" on a morning the brief opens the re-authoring; null otherwise. */
+function reauthorLabelFor(s: MorrowState, day: string): string | null {
+  const due = reauthorDue(s.books, day, s.profile.dayBoundaryHour);
+  return due ? reauthorLabel(due.cycle) : null;
+}
+
+/** Ranks dense over the goals in play, archived rows left as they are. */
+function denseRanks(goals: Goal[]): Goal[] {
+  const live = goals.filter((g) => g.status !== 'archived').sort((a, b) => a.rank - b.rank);
+  const rank = new Map(live.map((g, i) => [g.id, i]));
+  return goals.map((g) => (rank.has(g.id) ? { ...g, rank: rank.get(g.id)! } : g));
+}
+
+/**
+ * A re-authoring begun and not sealed: a goal let go since the latest
+ * edition. Today keeps the door to /reauthor open while one is waiting, so
+ * Take it back is never out of reach once the week's card has gone.
+ */
+export function pendingLetGo(s: MorrowState): Goal[] {
+  const latest = s.books[s.books.length - 1];
+  return s.goals.filter((g) => g.status === 'archived' && g.letGoAt && (!latest || g.letGoAt > latest.sealedAt));
+}
+
 export function todaysMoves(s: MorrowState) {
   const day = dayOf(new Date(), s.profile.dayBoundaryHour);
-  const all = s.plans.flatMap((p) => p.moves);
+  const all = livePlans(s).flatMap((p) => p.moves);
   const boundary = s.profile.dayBoundaryHour;
   // What the day is still asking for, plus what was finished today. A parked
   // move is still open: "not today" is not "never". See `movesOpenOn`.

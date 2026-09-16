@@ -119,9 +119,26 @@ describe('two Books side by side', () => {
     const s = rows[0]!.lines.find((l) => l.kind === 'strategies')!;
     expect(s.rewritten).toBe(true);
     expect(s.before.text).toContain('Tuesday, Thursday, Saturday');
-    expect(s.now).toContain('Every morning');
+    expect(s.now?.text).toContain('Every morning');
     // The other stone is untouched.
     expect(rows[0]!.lines.find((l) => l.kind === 'obstacles')!.rewritten).toBe(false);
+  });
+
+  it('reads a changed then-half or paragraph as written again, the same as the diff will', () => {
+    const thenChanged = { ...obstacles, line2: 'the gym at the end of the road' };
+    const rows = sideBySide(first, [goal(), guitar], [analysis(), thenChanged, guitarLine]);
+    const o = rows[0]!.lines.find((l) => l.kind === 'obstacles')!;
+    expect(o.rewritten).toBe(true);
+    expect(o.now).toEqual({ text: 'it rains', text2: 'the gym at the end of the road' });
+    // And the seal agrees.
+    const next = buildBookVersion(
+      { version: 2, title: 'A year of the back door', track: 'starter', ideal: IDEAL, shadow: null, iWill: 'I will be out the back door before the kettle boils', goals: [goal(), guitar], analyses: [analysis(), thenChanged, guitarLine], sealedAt: '2026-12-15T21:00:00.000Z' },
+      sequentialIds(),
+    );
+    expect(diffBooks(first, next).rewritten).toEqual(['Half marathon']);
+    // A stone emptied since the seal is neither kept nor rewritten: there is nothing to compare.
+    const emptied = sideBySide(first, [goal(), guitar], [analysis(), guitarLine]);
+    expect(emptied[0]!.lines.find((l) => l.kind === 'obstacles')!.now).toBeNull();
   });
 
   it('shows a goal let go with the line written about it', () => {

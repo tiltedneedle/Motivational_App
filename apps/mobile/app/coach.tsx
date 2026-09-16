@@ -13,7 +13,6 @@ import {
   dayOf,
   detectReturns,
   plural,
-  quotable,
   replyToChip,
   replyToText,
   screen,
@@ -114,11 +113,14 @@ export default function Coach() {
   // one thing, in their own words, and this asks whether they want to on the
   // rest. Not a sales line the app made up about them.
   const longestLine = useMemo(() => {
-    const lines = quotable(state.analyses)
+    // What the coach may quote, and nothing else (PRD §7.9): not a forgotten
+    // line, not a goal let go.
+    const lines = coachAnalyses(state)
       .map((a) => a.paragraph?.trim() || a.line.trim())
       .filter((l) => l.length > 0);
     return lines.sort((a, b) => b.length - a.length)[0] ?? '';
-  }, [state.analyses]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.analyses, state.memoryEdits, state.goals]);
   const invitation =
     book && !state.fullTrackInvited && state.profile.track === 'starter' && longestLine.length >= 40
       ? fullTrackInvitation(longestLine)

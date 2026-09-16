@@ -229,6 +229,8 @@ ${one}`;
   check("and nobody can let go another person's goal", bobLetsGo.rows.length === 0, `${bobLetsGo.rows.length} rows`);
   await as(ALICE, `update public.goals set status = 'active', lesson = null, let_go_at = null where id = $1`, [goalId]);
   check('and it can be taken back', true);
+  await asRejects('a blank line on letting go is refused (0010)', ALICE, `update public.goals set lesson = '   ' where id = $1`, [goalId], 'goals_lesson_not_blank');
+  await asRejects('and so is a risk the screen does not know', ALICE, `update public.goals set lesson_risk = 'high' where id = $1`, [goalId], 'lesson_risk');
 
   // ---- the memory profile (0009): one row, the person's alone
   await as(

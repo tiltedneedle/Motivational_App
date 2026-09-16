@@ -49,6 +49,14 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 45. **The review of the day's five commits, 2026-09-17.** One adversarial sweep
+      over the diff since 5a7de00 (five reviewers, a skeptic per finding, a
+      completeness critic): 14 findings confirmed, 12 gaps. All fixed, the two
+      severe ones first: a goal let go kept its Blueprint running on Today and
+      in the brief; and `+native-intent` returned null for every link that
+      already named a route, which expo-router reads as "drop the link". Also
+      the PRD's own Let it go question ("What did it turn out to be instead?")
+      where a line of my own had stood. See "The review" below.
 - [x] 44. **The 16+ gate (§12, §3.5), and every disabled button announced as such, 2026-09-17.**
       Consent now says who Morrow is for and waits for one tap — "I am sixteen or
       over" — before Continue is live; the consent timestamp is the record of the
@@ -84,7 +92,7 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
       card for a week. Two Books side by side — every sealed line printed as it
       stands, Keep on, Rewrite beside it — and Rewrite opens the same stone with
       the sealed line above an empty field. Let it go asks for the one line about
-      what it taught (migration 0008, applied live), archives the goal, and can be
+      what it turned out to be instead (migration 0008, applied live), archives the goal, and can be
       taken back until the seal. The new edition is sealed with the hold; the
       diff — kept, written again, new, let go, and the lines — is its first page
       on the Book, in the Sunday reading, and in both exports. On the free plan
@@ -1611,7 +1619,7 @@ Gate after: e2e **353/353** (was 349), cold 72/72, axe 0 across 35 screens, way-
 
 **Day-90 re-authoring (2026-09-17).** PRD §7.3's last unbuilt paragraph: "Two Books side
 by side. Per stone: Keep, Rewrite (the same screens with the old line above the new) or
-Let it go (the goal is archived with a line about what it taught, written now). The new
+Let it go ("What did it turn out to be instead?"). The new
 edition is sealed with the hold; the diff is its first page. The calendar is Morrow's: the
 dawn brief opens it on day 90 and every 90 after." `diffBooks` existed and nothing
 consumed it; nothing fired on day 90; the `reauthor` paywall moment had no door.
@@ -1628,7 +1636,7 @@ each line printed with its framing, Keep on and Rewrite beside it as two radios.
 opens the same stone with `rewrite=1&from=/reauthor`: the sealed line sits above an empty
 field ("What you sealed, 18 Jun"), Back leaves the sealed line as it is, Keep this line
 refreshes the plan and returns. Once written again, Keep becomes "Keep the old" and puts the
-sealed line back word for word. Let it go opens one field — "What it taught" — and archives
+sealed line back word for word. Let it go opens one field — the PRD's own "What did it turn out to be instead?" — and archives
 the goal with the line and the instant (`letGoGoal`; `status = 'archived'`, which the
 schema always allowed and nothing had ever set; `lesson`, `let_go_at` in migration 0008,
 applied live); its practices stop the way `dropGoal` stops them; "Take it back" restores
@@ -1637,7 +1645,7 @@ screens and the first-run step all read it. Seal is the seal screen with the hol
 computes the diff against the previous edition at the seal (added is now its own part, not
 "rewritten"; a changed then-half counts; the lessons ride in the diff, which is jsonb on
 `book_versions` already, so no migration for them) and the Book opens on it: kept, written
-again, new, let go, what it taught — names in the serif when the person typed them and the
+again, new, let go, what it turned out to be — names in the serif when the person typed them and the
 sans when they came from the bank, the same rule as the chapter headings. The Sunday
 reading turns to it as page one; the plain text and the PDF print it under "Since the
 second edition". The paywall's fourth line, held back until this existed, is back.
@@ -1746,6 +1754,74 @@ the stack's slide was still running on the fake clock — a focus placed mid-sli
 nowhere and the Enter after it seals nothing. It waits for the clock and the bar now.
 
 Gate after: e2e **430/430** (was 427; the age gate, Continue waiting for it, one tap clearing the note), cold 84/84, axe 0 across 37 screens, way-back 33 screens, 459 core / 48 ui / 8 storage, typecheck clean, lint 0 errors.
+
+**The review (2026-09-17).** The five commits of the day had the gate and not the adversarial
+pass the earlier work got. One workflow, read-only: five reviewers over one dimension each,
+one skeptic per finding prompted to refute it, a completeness critic over the PRD paragraphs
+each entry cites. Twenty agents, 32 raw findings, 28 unique, the top 14 verified — every one
+of them confirmed — and 12 gaps. Fixed, in order of what a person would meet:
+
+- **A goal let go kept its Blueprint** (high). `letGoGoal` archived the goal and its
+  practices and left its plan; Today's Now card, the dawn brief, the morning notice, the
+  day's tally and the letters all read every plan. `livePlans(s)` — the plans of the goals in
+  play — is what all of them read now; the plan itself stays, so Take it back puts it straight
+  back. `coachAnalyses` filters by the goals in play too, so the brief and the chips no longer
+  open the morning with a let-go goal's if-then. The walk seeds a second goal with a Blueprint
+  and checks its moves leave Today and the brief.
+- **`+native-intent` dropped every link it did not rewrite** (high). `resolveLink` answers
+  null for a link that already names a route; expo-router reads a null return from
+  `redirectSystemPath` as "no URL" — `getLinkingConfig` replaces the initial URL with it, the
+  subscribe path fires only on a truthy href — so `morrow://today`, `morrow://book` and
+  `https://…/stone?goal=…` opened nothing on a device. The path itself goes back now whenever
+  there is nothing to change. (The app's own notifications were never affected: they route
+  through `onNotificationOpened`.) Not reachable by any web gate; found by reading the router.
+- **The side-by-side and the diff disagreed.** `sideBySide` compared the first line only;
+  `diffBooks` compared text, then-half and paragraph. One `sameLine` in `book.ts` now, used
+  by both and by the stone's `fresh`; `now` carries all three parts and the screen prints them.
+- **Let it go was committed at once while the docblock said nothing was** — and once the
+  week's card was gone, `/reauthor` and Take it back were unreachable. `pendingLetGo(s)`: a
+  goal let go since the latest edition keeps a card on Today ("Unsealed … Seal it, or take it
+  back") whatever the calendar says, and the gated branch of `/reauthor` offers Take it back
+  too. The docblock says what happens.
+- **The PRD's question.** §7.3's Let it go asks "What did it turn out to be instead?"; my
+  earlier entries quoted a line that is not in the PRD ("archived with a line about what it
+  taught, written now") and the screen, the first page and the profile all carried it. The
+  field, the Book's first page ("What it turned out to be"), the memory line ("You let go
+  <goal> — it turned out to be:") and the entries above are the PRD's words now. The column
+  stays `lesson`.
+- **Naming a goal with a let-go goal's title merged it into the archived row** and it appeared
+  nowhere. `addGoals` merges over the goals in play and appends the archived rows untouched.
+  Ranks stay dense over the goals in play (`denseRanks`), so `analysisPlan`'s `rank < 3` is
+  not lost to an archived slot; Take it back lands at the end.
+- **The let-go line and a memory edit were the only free-text writes never screened.** Both go
+  through `screen()` now; a crisis line raises the resources card like every other, stays
+  theirs, and is never printed on the first page, listed on the profile, or handed to a coach
+  (`Goal.lessonRisk`, `MemoryEdit.risk`; migration 0010, applied live, with the not-blank
+  check every other free-text column has and the `updated_at` trigger `memory_profiles` lacked).
+- **The memory screen's copy over-promised.** "The coach reads the Book and these lines, and
+  nothing else" was not true of Change (the coach quotes the stones directly), nor of Forget on
+  a non-stone line. The copy now says exactly what the code does. Change seeds the field with
+  their words only — a line that is all Morrow's framing starts empty — and Keep this with the
+  line unchanged is not an edit, so the app's own sentence can never become a serif quote "in
+  your words". The coach's Full-track invitation read `quotable(state.analyses)` and could
+  quote a forgotten line; it reads `coachAnalyses` now.
+- **Smaller.** The memory if-then is composed by `ifThenOf`, not by hand ("then take…"); the
+  goal's name sits beside the framing in its own face and a bank title's quote is in the sans;
+  the clock label, not "07:00"; an orphaned edit keeps its group by key; the export carries
+  `memoryEdits`; "Keep this" and the Let it go confirm are buttons, not checked radios; the
+  let-go line and a memory line mid-change live in the store, so Back never loses them; "it
+  joins" is plural for several new goals; Seal is disabled with a line saying why when every
+  goal is let go; "Keep the old" restores the sealed framing by its label; `quietFor` never
+  puts the Sunday hour inside the quiet; a malformed escape in a linked id is kept, encoded,
+  rather than thrown on in `+not-found`; `morrow://letter/{id}` opens that letter first and
+  `/book/{n}` opens that edition; the dawn brief and the morning notice say "Day ninety" when
+  the Book is waiting, which is the PRD's "the dawn brief opens it".
+
+Not done, and said so: the shift calendar (§7.12) and the policy and terms link (§12) — the
+first is a feature of its own, the second needs the client's text and URL. Both are listed
+under "Blocked on the user".
+
+Gate after: e2e **443/443** (was 430; the new checks: the brief on day 90, a let-go goal's moves off Today and out of the brief, the let-go line surviving Back, the door open on day 99 with Take it back behind it, Change starting from their words and an unchanged Keep this not an edit, a framing-only line starting empty, the goal's name in its own face on the profile, a letter by id first on the page), cold 84/84, axe 0 across 37 screens, way-back 33 screens, migration **65 checks** with 0010, the live account round-trip **46/46**, 461 core / 48 ui / 8 storage, typecheck clean, lint 0 errors.
 
 Gate after: 416 core / 48 ui / 8 storage, e2e **326/326** (was 317; the new checks seed a live virtues sitting and press both closing-screen buttons on the faults, write a Past line in crisis and change it without the card returning, and read the Interview-only caption), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
 
@@ -1950,7 +2026,7 @@ program's actual prompt text by someone with a licensed copy.
 - A model endpoint (`pnpm sb secrets set LLM_BASE_URL=… LLM_API_KEY=… LLM_MODEL=…`, any
   OpenAI-compatible provider, or `ANTHROPIC_API_KEY`), a fal.ai key, RevenueCat keys: needed
   to test real providers. Everything runs on local fallbacks without them. The Supabase
-  project itself is connected and live (schema through 0009, four functions, the account
+  project itself is connected and live (schema through 0010, four functions, the account
   round-trip in `pnpm test:account`).
 - Supabase Pro, or custom SMTP, before the six-digit-code email template can be pushed; the
   free tier refuses template changes, so the email carries a link and the app signs in from it.
@@ -1960,6 +2036,8 @@ program's actual prompt text by someone with a licensed copy.
 - Google sign-in: `signInWithGoogle(idToken)` is in `src/supabase.ts`; the native half (`@react-native-google-signin/google-signin`) needs the client's iOS and web OAuth client ids before it can be added and built.
 - Crash reporting: Sentry's React Native SDK is a native dependency and a DSN; not added until there is a project to send to. Analytics is a seam already (PostHog key).
 - Sound on the seal: an asset decision. Haptics are in; a placeholder click is worse than silence.
+- The privacy policy and terms (§12): nothing in the app links to them because there is no text and no URL yet; a placeholder page would be worse than the gap. One row in Settings and one on Consent, the day the client's URL exists.
+- The shift calendar (§7.12): per-day wake and evening times. The planner takes one pair; a per-weekday override on the profile is a feature of its own and is not started.
 
 ## Decisions log
 - 2026-09-09: start. Stones via react-native-svg (works on web for Playwright tests) rather than Skia; Skia can replace later for grain.

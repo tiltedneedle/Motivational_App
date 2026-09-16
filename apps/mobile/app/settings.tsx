@@ -128,6 +128,9 @@ export default function Settings() {
       // did not, and a person who did Past first had no Book to carry it.
       presentPicks: state.presentPicks,
       pastEpochs: state.pastEpochs,
+      // What they changed about what is said about them (PRD §7.9): a line in
+      // their own words is theirs, and was the one thing this left behind.
+      memoryEdits: state.memoryEdits,
       pastEvents: state.pastEvents,
       pastListed: state.pastListed,
       presentDraft: state.presentDraft,

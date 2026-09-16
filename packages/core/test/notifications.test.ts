@@ -80,6 +80,9 @@ describe('quiet hours', () => {
     expect(owl).toEqual({ from: 23, to: 8 });
     expect(outOfQuiet('22:30', owl)).toBe('22:30');
     expect(outOfQuiet('08:30', owl)).toBe('08:30');
+    // A Sunday at eight with a morning at nine is not inside the quiet.
+    expect(quietFor({ wakeTime: '09:00', eveningTime: '21:30', sundayHour: 8 })).toEqual({ from: 22, to: 8 });
+    expect(outOfQuiet('08:00', quietFor({ wakeTime: '09:00', eveningTime: '21:30', sundayHour: 8 }))).toBe('08:00');
     // No room for quiet at all: the default, never a window over the whole clock.
     expect(quietFor({ wakeTime: '01:00', eveningTime: '00:15' })).toEqual(DEFAULT_QUIET);
     // Rubbish falls back too.

@@ -52,7 +52,7 @@ export function DiffPage({
       )}
       {diff.lessons?.length ? (
         <View testID={`${testID}-lessons`} style={{ gap: 8, marginTop: 4 }}>
-          <Label style={{ color: paper.ink3 }}>What it taught</Label>
+          <Label style={{ color: paper.ink3 }}>What it turned out to be</Label>
           {diff.lessons.map((l, i) => (
             <View key={`lesson-${i}`} style={{ gap: 2 }}>
               {authored(l.name) ? (

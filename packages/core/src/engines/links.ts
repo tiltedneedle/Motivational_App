@@ -81,7 +81,14 @@ function pathOf(input: string): { path: string; search: string } {
   return { path, search };
 }
 
-const enc = (s: string) => encodeURIComponent(decodeURIComponent(s));
+/** Encoded once, whatever came in; a malformed escape is kept as it was rather than thrown on. */
+const enc = (s: string): string => {
+  try {
+    return encodeURIComponent(decodeURIComponent(s));
+  } catch {
+    return encodeURIComponent(s);
+  }
+};
 
 /**
  * Where a link goes. Null when it already names one of the app's routes (no
@@ -119,14 +126,14 @@ export function resolveLink(input: string): string | null {
       if (b === 'sunday') return '/reading';
       if (b === 'reauthor') return '/reauthor';
       if (b === 'declare') return '/declare';
-      return '/book';
+      return b && /^\d+$/.test(b) ? `/book?version=${b}` : '/book';
     case 'practice':
     case 'practices':
       if (b && c === 'run') return `/run?id=${enc(b)}`;
       // The builder takes a goal, not a practice; a practice by id is the runner's business.
       return '/practice';
     case 'letter':
-      return '/letters';
+      return b ? `/letters?id=${enc(b)}` : '/letters';
     case 'envision':
       return b === 'letters' ? '/letters' : '/envision';
     case 'brief':

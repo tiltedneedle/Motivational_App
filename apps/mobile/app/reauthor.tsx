@@ -2,9 +2,9 @@
  * Day-90 re-authoring (PRD §7.3).
  *
  * "Two Books side by side. Per stone: Keep, Rewrite (the same screens with
- * the old line above the new) or Let it go (the goal is archived with a line
- * about what it taught, written now). The new edition is sealed with the
- * hold; the diff is its first page."
+ * the old line above the new) or Let it go ("What did it turn out to be
+ * instead?"). The new edition is sealed with the hold; the diff is its first
+ * page."
  *
  * Every line the person sealed, printed as it stands, with one choice under
  * it. Keep is the default and costs nothing: a Book that is read again and
@@ -12,9 +12,11 @@
  * opens the same stone it was written on, with the sealed line above the
  * field. Let it go asks for the one line the PRD asks for, and no more.
  *
- * Nothing here is committed until the hold on the seal screen: the sealed
- * edition is never touched, a stone written again is a stone written again,
- * and a goal let go can be taken back until the new edition exists.
+ * The sealed edition is never touched. A stone written again is written
+ * again on the stone itself; a goal let go is archived at once — off Today,
+ * off the stones — and can be taken back from here until the new edition is
+ * sealed. Today keeps this screen reachable while one is waiting, whatever
+ * the calendar says, so Take it back is never out of reach.
  */
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
@@ -32,9 +34,10 @@ import {
   sealedOn,
   sideBySide,
   thenHalf,
+  framingSet,
 } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, TopBar, UserField, UserText, accent, day, radius } from '@morrow/ui';
-import { activeGoals, entitlementOf, useMorrow } from '../src/store';
+import { activeGoals, entitlementOf, pendingLetGo, useMorrow } from '../src/store';
 
 export default function ReauthorScreen() {
   const router = useRouter();
@@ -47,6 +50,8 @@ export default function ReauthorScreen() {
   const letGo = useMorrow((s) => s.letGoGoal);
   const takeBack = useMorrow((s) => s.takeBackGoal);
   const write = useMorrow((s) => s.writeAnalysis);
+  const letGoDrafts = useMorrow((s) => s.letGoDrafts);
+  const setLetGoDraft = useMorrow((s) => s.setLetGoDraft);
   const state = useMorrow((s) => s);
 
   const previous = books[books.length - 1];
@@ -60,9 +65,12 @@ export default function ReauthorScreen() {
     [previous, state],
   );
 
-  /** The goal whose Let it go line is open, and the line. */
-  const [lettingGo, setLettingGo] = useState<string | null>(null);
-  const [lesson, setLesson] = useState('');
+  /**
+   * The goal whose Let it go field is open. The line itself lives in the
+   * store, by goal, as it is typed: Back never loses it, and opening another
+   * goal's field does not wipe the first.
+   */
+  const [lettingGo, setLettingGo] = useState<string | null>(() => Object.keys(letGoDrafts)[0] ?? null);
 
   const goBack = () => {
     if (router.canGoBack()) router.back();
@@ -93,6 +101,12 @@ export default function ReauthorScreen() {
             <Label>{due ? reauthorLabel(due.cycle) : 'Writing it again'}</Label>
             <Statement testID="reauthor-gated">Time to write it again.</Statement>
             <Body>{gate.reason}</Body>
+            {pendingLetGo(state).map((g) => (
+              <View key={g.id} testID={`reauthor-pending-${g.id}`} style={{ gap: 4, alignItems: 'flex-start' }}>
+                <Body style={{ fontSize: 14 }}>A goal was let go and no edition sealed since.</Body>
+                <TextButton testID={`reauthor-take-back-${g.id}`} label={`Take back “${g.title}”`} onPress={() => takeBack(g.id)} />
+              </View>
+            ))}
             <InkButton
               testID="reauthor-see-pro"
               label="See Morrow Pro"
@@ -109,6 +123,8 @@ export default function ReauthorScreen() {
   const rewrittenCount = chapters.reduce((n, c) => n + (c.letGo ? 0 : c.lines.filter((l) => l.rewritten).length), 0);
   const letGoCount = chapters.filter((c) => c.letGo).length;
   const nextEdition = ordinal(previous.version + 1).toLowerCase();
+  /** A Book needs one goal; the seal would refuse, and this screen knows it first. */
+  const nothingLeft = activeGoals(state).length === 0;
 
   return (
     <Studio testID="screen-reauthor">
@@ -177,8 +193,16 @@ export default function ReauthorScreen() {
                         <View style={{ gap: 2, borderLeftWidth: 2, borderLeftColor: accent.coral, paddingLeft: 10 }}>
                           <Label style={{ color: accent.coralText }}>Now</Label>
                           <UserText testID={`reauthor-now-${ch.goalId}-${l.kind}`} style={{ fontSize: 17, lineHeight: 26, color: day.ink }}>
-                            {l.now}
+                            {l.now.text}
                           </UserText>
+                          {l.now.text2 ? (
+                            <UserText italic framing={thenHalf(l.now.text2).framing} style={{ fontSize: 15, lineHeight: 23, color: day.ink2 }}>
+                              {thenHalf(l.now.text2).act}
+                            </UserText>
+                          ) : null}
+                          {l.now.paragraph ? (
+                            <UserText style={{ fontSize: 15, lineHeight: 23, color: day.ink2 }}>{l.now.paragraph}</UserText>
+                          ) : null}
                         </View>
                       ) : null}
                       {/*
@@ -199,8 +223,15 @@ export default function ReauthorScreen() {
                           onPress={() => {
                             if (!l.rewritten) return;
                             const a = analyses.find((x) => x.goalId === ch.goalId && x.kind === l.kind);
+                            // The sealed framing comes back with the sealed
+                            // words: the edition carries its label, and the
+                            // bank still has the id behind it.
+                            const domain = goals.find((g) => g.id === ch.goalId)?.domain ?? 'custom';
+                            const sealedFraming = l.before.framingLabel
+                              ? framingSet(l.kind, domain).framings.find((f) => f.label === l.before.framingLabel)?.id
+                              : null;
                             write(ch.goalId, l.kind, {
-                              framingId: a?.framingId ?? null,
+                              framingId: sealedFraming ?? a?.framingId ?? null,
                               line: l.before.text,
                               ...(l.before.text2 ? { line2: l.before.text2 } : {}),
                               ...(l.before.paragraph ? { paragraph: l.before.paragraph } : {}),
@@ -222,13 +253,14 @@ export default function ReauthorScreen() {
                   <Rule />
                   {lettingGo === ch.goalId ? (
                     <View style={{ gap: 8 }}>
-                      <Label>What it taught</Label>
+                      {/* PRD §7.3's own question, word for word. */}
+                      <Label>What did it turn out to be instead?</Label>
                       <UserField
                         testID={`reauthor-lesson-field-${ch.goalId}`}
                         labelHidden
-                        label="What this goal taught you"
-                        value={lesson}
-                        onChangeText={setLesson}
+                        label="What this goal turned out to be instead"
+                        value={letGoDrafts[ch.goalId] ?? ''}
+                        onChangeText={(t) => setLetGoDraft(ch.goalId, t)}
                         placeholder="one line, written now"
                         multiline
                       />
@@ -236,20 +268,22 @@ export default function ReauthorScreen() {
                         <Chip
                           testID={`reauthor-let-go-confirm-${ch.goalId}`}
                           label="Let it go"
+                          role="button"
                           selected
                           onPress={() => {
-                            if (!lesson.trim()) return;
-                            letGo(ch.goalId, lesson);
+                            const line = letGoDrafts[ch.goalId] ?? '';
+                            if (!line.trim()) return;
+                            letGo(ch.goalId, line);
                             setLettingGo(null);
-                            setLesson('');
                           }}
                         />
                         <TextButton
                           testID={`reauthor-let-go-cancel-${ch.goalId}`}
                           label="Keep it"
                           onPress={() => {
+                            // Closed on purpose: the line goes with it.
+                            setLetGoDraft(ch.goalId, null);
                             setLettingGo(null);
-                            setLesson('');
                           }}
                         />
                       </View>
@@ -258,11 +292,8 @@ export default function ReauthorScreen() {
                     <View style={{ alignItems: 'flex-start' }}>
                       <TextButton
                         testID={`reauthor-let-go-${ch.goalId}`}
-                        label="Let it go"
-                        onPress={() => {
-                          setLettingGo(ch.goalId);
-                          setLesson('');
-                        }}
+                        label={letGoDrafts[ch.goalId]?.trim() ? 'Let it go · a line waiting' : 'Let it go'}
+                        onPress={() => setLettingGo(ch.goalId)}
                       />
                     </View>
                   )}
@@ -285,7 +316,11 @@ export default function ReauthorScreen() {
                   </UserText>
                 ),
               )}
-              <Body style={{ fontSize: 13 }}>Written on its own stones; it joins the {nextEdition} edition as it stands.</Body>
+              <Body style={{ fontSize: 13 }}>
+                {newSince.length === 1
+                  ? `Written on its own stones; it joins the ${nextEdition} edition as it stands.`
+                  : `Written on their own stones; they join the ${nextEdition} edition as they stand.`}
+              </Body>
             </View>
           ) : null}
 
@@ -300,7 +335,12 @@ export default function ReauthorScreen() {
                     .filter(Boolean)
                     .join(' · ')}
             </Body>
-            <InkButton testID="reauthor-seal" label={`Seal the ${nextEdition} edition`} onPress={() => router.push('/seal-book?from=reauthor')} />
+            {nothingLeft ? (
+              <Body testID="reauthor-nothing-left" style={{ fontSize: 14, color: day.ink }}>
+                A Book needs at least one goal. Take one back, or name a new one from Today, before sealing.
+              </Body>
+            ) : null}
+            <InkButton testID="reauthor-seal" label={`Seal the ${nextEdition} edition`} disabled={nothingLeft} onPress={() => router.push('/seal-book?from=reauthor')} />
             <Body style={{ fontSize: 13 }}>
               Nothing is overwritten. The {ordinal(previous.version).toLowerCase()} edition stays as it was, and what changed is the new one’s first page.
             </Body>

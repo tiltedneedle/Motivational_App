@@ -135,6 +135,8 @@ export const Goal = z.object({
    */
   lesson: z.string().optional(),
   letGoAt: z.string().optional(),
+  /** The safety screen's word on the line, like every other free-text write. */
+  lessonRisk: SafetyRisk.optional(),
   createdAt: z.string(),
 });
 export type Goal = z.infer<typeof Goal>;
@@ -426,6 +428,8 @@ export const MemoryEdit = z.object({
   key: z.string(),
   text: z.string().nullable(),
   editedAt: z.string(),
+  /** The safety screen's word on the text; a crisis line is kept for them and never handed on. */
+  risk: SafetyRisk.optional(),
 });
 export type MemoryEdit = z.infer<typeof MemoryEdit>;
 

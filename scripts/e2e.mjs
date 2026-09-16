@@ -2149,8 +2149,12 @@ async function main() {
       st.state.analyses = [
         ...st.state.analyses,
         { id: 'an_e2e_guitar_m', goalId: id, kind: 'motives', track: 'starter', framingId: null, line: 'Because it is on the wall where I can see it from the table', specificity: 0.7, followupShown: false, writtenAt: now },
-        { id: 'an_e2e_guitar_s', goalId: id, kind: 'strategies', track: 'starter', framingId: null, line: 'Ten minutes after dinner, before the plates', specificity: 0.8, followupShown: false, writtenAt: now },
+        { id: 'an_e2e_guitar_s', goalId: id, kind: 'strategies', track: 'starter', framingId: null, line: 'Monday, Wednesday, Friday at 8:30, ten minutes before the plates', specificity: 0.8, followupShown: false, writtenAt: now },
+        { id: 'an_e2e_guitar_o', goalId: id, kind: 'obstacles', track: 'starter', framingId: null, line: 'the plates are still on the table', line2: 'leave them and play first', specificity: 0.5, followupShown: false, writtenAt: now },
       ];
+      // Pro for the seal-in, so the second goal gets a Blueprint of its own —
+      // the let-go check needs moves to lose. Free again before the gate.
+      st.state.profile.entitled = true;
       localStorage.setItem(k, JSON.stringify(st));
     });
     await page.goto(`${BASE}/seal-book`, { waitUntil: 'networkidle' });
@@ -2169,6 +2173,12 @@ async function main() {
       const b = JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.books ?? [];
       return b[b.length - 1]?.chapters.length ?? 0;
     })) === 2);
+    await page.evaluate(() => {
+      const k = 'morrow-v1';
+      const st = JSON.parse(localStorage.getItem(k) ?? '{}');
+      st.state.profile.entitled = false;
+      localStorage.setItem(k, JSON.stringify(st));
+    });
     // Day 89: nothing. Day 90, nine in the morning: the card.
     const day90 = new Date(new Date(sealedAt).getTime() + 90 * 86_400_000);
     day90.setHours(9, 0, 0, 0);
@@ -2182,6 +2192,13 @@ async function main() {
     await page.clock.runFor(1500);
     await page.waitForTimeout(700);
     check('on day 90 Today carries the card', await seen('today-reauthor'));
+    await page.goto(`${BASE}/coach`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(600);
+    check('and the dawn brief opens it, in words', (await seen('dawn-brief')) && (await noticeText('dawn-brief')).toLowerCase().includes('day ninety'), (await noticeText('dawn-brief')).slice(0, 160));
+    await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(700);
     check('and names the day', (await noticeText('today-reauthor')).toLowerCase().includes('day ninety'), await noticeText('today-reauthor'));
     await tap('today-reauthor');
     await page.waitForTimeout(700);
@@ -2293,6 +2310,19 @@ async function main() {
       'and Keep it closes it with nothing changed',
       !(await seen(`reauthor-lesson-field-${gLast.id}`)) && !(await seen(`reauthor-take-back-${gLast.id}`)) && (await statusOf(gLast.id)) !== 'archived',
     );
+    // Half a line, Back, and back in: the line is where it was left.
+    await tap(`reauthor-let-go-${gLast.id}`);
+    await page.waitForTimeout(300);
+    await page.locator(`[data-testid="reauthor-lesson-field-${gLast.id}"]`).fill('It was never the guitar');
+    await page.waitForTimeout(300);
+    await tap('reauthor-back');
+    await page.waitForTimeout(600);
+    await page.goto(`${BASE}/reauthor`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(600);
+    check('a half-written line on letting go survives Back', (await seen(`reauthor-lesson-field-${gLast.id}`)) && (await page.locator(`[data-testid="reauthor-lesson-field-${gLast.id}"]`).inputValue()) === 'It was never the guitar');
+    await tap(`reauthor-let-go-cancel-${gLast.id}`);
+    await page.waitForTimeout(300);
     const letGoLast = async () => {
       await tap(`reauthor-let-go-${gLast.id}`);
       await page.waitForTimeout(300);
@@ -2301,6 +2331,8 @@ async function main() {
       await tap(`reauthor-let-go-confirm-${gLast.id}`);
       await page.waitForTimeout(500);
     };
+    const guitarMoves = await page.evaluate((gid) => (JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.plans ?? []).filter((p) => p.goalId === gid).flatMap((p) => p.moves.map((m) => m.title)), gLast.id);
+    check('the goal let go had a Blueprint of its own to lose from Today', guitarMoves.length > 0, `${guitarMoves.length} moves`);
     await letGoLast();
     check(
       'the goal is let go, its line printed, with a way back',
@@ -2312,6 +2344,18 @@ async function main() {
     check('Take it back is exactly that', (await statusOf(gLast.id)) === 'active' && (await seen(`reauthor-let-go-${gLast.id}`)), await statusOf(gLast.id));
     await letGoLast();
     check('the summary counts both', (await noticeText('reauthor-summary')).includes('1 goal let go'), await noticeText('reauthor-summary'));
+    // Day 99: the week's card is gone, and the door is still open because a
+    // goal is let go and nothing sealed since.
+    await page.clock.setSystemTime(new Date(day90.getTime() + 9 * 86_400_000));
+    await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(700);
+    check('past the week, a let-go left unsealed keeps the door on Today', (await seen('today-reauthor')) && (await noticeText('today-reauthor')).toLowerCase().includes('let go'), await noticeText('today-reauthor'));
+    await tap('today-reauthor');
+    await page.waitForTimeout(700);
+    check('and it opens the re-authoring, with the goal still there to take back', (await seen('screen-reauthor')) && (await seen(`reauthor-take-back-${gLast.id}`)));
+    // Later the same day 90, not its first second: the seal must come after the let-go.
+    await page.clock.setSystemTime(new Date(day90.getTime() + 3 * 3_600_000));
 
     // The seal, with the hold. Back from it is the re-authoring, nothing lost.
     await tap('reauthor-seal');
@@ -2374,6 +2418,13 @@ async function main() {
     await page.waitForTimeout(700);
     check('and the card is gone: the next ninety count from this seal', (await seen('screen-today')) && !(await seen('today-reauthor')));
     check('the goal let go is off Today’s row of goals', !(await seen(`goal-chip-${gLast.id}`)) && (await seen(`goal-chip-${g0.id}`)));
+    const todayText = await page.locator('body').innerText();
+    check('and its moves are off Today with it', guitarMoves.every((t) => !todayText.includes(t)), guitarMoves.join(' | '));
+    await page.goto(`${BASE}/coach`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(600);
+    const briefText = await noticeText('dawn-brief');
+    check('and out of the brief', guitarMoves.every((t) => !briefText.includes(t)) && !briefText.includes('before the plates'), briefText.slice(0, 200));
 
     // ---- what Morrow knows about me (PRD 7.9, 7.12): every line, theirs to change or forget
     //
@@ -2403,6 +2454,7 @@ async function main() {
     await tap('memory-keep-you.name');
     await page.waitForTimeout(400);
     check('a changed line reads in their words, and says so', (await text('memory-quote-you.name')) === 'Call me S.' && (await text('memory-line-you.name')).toLowerCase().includes('in your words'));
+    check('the stone lines carry the goal’s name in its own face', (await seen(`memory-goal-line.${obstaclesId}`)) && (await text(`memory-goal-line.${obstaclesId}`)) === g0.title);
     check('with a way back to what Morrow had', await seen('memory-restore-you.name'));
     await page.reload({ waitUntil: 'networkidle' });
     await page.clock.runFor(1200);
@@ -2411,6 +2463,17 @@ async function main() {
     await tap('memory-restore-you.name');
     await page.waitForTimeout(300);
     check('As Morrow had it puts the rebuilt line back', (await text('memory-quote-you.name')) === 'Sam' && !(await seen('memory-restore-you.name')));
+    await tap('memory-change-you.name');
+    await page.waitForTimeout(300);
+    check('Change starts from their words', (await page.locator('[data-testid="memory-field-you.name"]').inputValue()) === 'Sam');
+    await tap('memory-keep-you.name');
+    await page.waitForTimeout(300);
+    check('and Keep this with nothing changed is not an edit', !(await seen('memory-restore-you.name')) && !(await text('memory-line-you.name')).toLowerCase().includes('in your words'));
+    await tap('memory-change-you.register');
+    await page.waitForTimeout(300);
+    check('a line that is all Morrow’s framing starts empty: Change means in your words, never Morrow’s', (await page.locator('[data-testid="memory-field-you.register"]').inputValue()) === '');
+    await tap('memory-cancel-you.register');
+    await page.waitForTimeout(200);
 
     // Forget the if-then, and the coach stops quoting it.
     await page.goto(`${BASE}/coach`, { waitUntil: 'networkidle' });
@@ -2454,6 +2517,10 @@ async function main() {
     await linkLands(`/goals/${g0.id}/stone/obstacles`, 'screen-stone', async () => (await seen('stone-line2')));
     await linkLands('/book/sunday', 'screen-reading');
     await linkLands('/settings/memory', 'screen-memory');
+    const letterId = await page.evaluate(() => (JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.letters ?? []).map((l) => l.id)[0] ?? '');
+    // The first letter, which arrived on day one; the last is one written to the future and not yet due.
+    check('there is a letter to link to', letterId.length > 0);
+    await linkLands(`/letter/${letterId}`, 'screen-letters', async () => (await page.locator('[data-testid^="letter-letter"]').first().getAttribute('data-testid')) === `letter-${letterId}`);
     await linkLands('/no-such-screen', 'screen-today');
     check('and the unmatched page is never shown', !(await page.locator('body').innerText()).includes('Unmatched Route'));
 

@@ -80,8 +80,18 @@ describe('what Morrow knows', () => {
     expect(lines.find((l) => l.key === 'you.witness')?.quote).toBe('Jo');
     expect(lines.find((l) => l.key === 'goal.g1')?.quote).toBe('Half marathon');
     expect(lines.find((l) => l.key === 'line.a1')?.quote).toContain('Tuesday, Thursday');
-    // The if-then carries both halves.
-    expect(lines.find((l) => l.key === 'line.a2')?.quote).toBe('it rains — then take the stairwell');
+    // The if-then as the Book prints it, "then I" supplied once.
+    expect(lines.find((l) => l.key === 'line.a2')?.quote).toBe('if it rains, then I take the stairwell');
+    // The goal's name travels beside the framing in its own face, not inside the app's sentence.
+    expect(lines.find((l) => l.key === 'line.a1')?.text).toBe('How, for');
+    expect(lines.find((l) => l.key === 'line.a1')?.goal).toEqual({ name: 'Half marathon', authored: true });
+    // A bank title is the app's words, and the line says so.
+    const bank = buildMemory({ ...input, goals: [{ ...goal, titleAuthored: false }] });
+    expect(bank.find((l) => l.key === 'goal.g1')?.quoteAuthored).toBe(false);
+    expect(bank.find((l) => l.key === 'line.a1')?.goal?.authored).toBe(false);
+    // The clock, not the stored form.
+    expect(lines.find((l) => l.key === 'you.times')?.text).toContain('7:00');
+    expect(lines.find((l) => l.key === 'you.times')?.text).not.toContain('07:00');
     expect(lines.find((l) => l.key === 'book.first')?.quote).toContain('kitchen is still blue');
     expect(lines.find((l) => l.key === 'book.iwill')?.quote).toContain('kettle boils');
     expect(lines.find((l) => l.key === 'days.sealed')?.text).toContain('3 days');
@@ -103,9 +113,16 @@ describe('what Morrow knows', () => {
     expect(bare.map((l) => l.key)).toEqual(['you.register', 'you.track', 'you.times']);
   });
 
-  it('names a goal let go, with its line', () => {
+  it('names a goal let go, with what it turned out to be, unless the screen flagged the line', () => {
     const letGo = buildMemory({ ...input, goals: [{ ...goal, status: 'archived', lesson: 'It was the evenings.' }] });
-    expect(letGo.find((l) => l.key === 'goal.g1.letgo')?.quote).toBe('It was the evenings.');
+    const row = letGo.find((l) => l.key === 'goal.g1.letgo')!;
+    expect(row.text).toBe('You let go');
+    expect(row.goal).toEqual({ name: 'Half marathon', authored: true });
+    expect(row.tail).toBe('— it turned out to be:');
+    expect(row.quote).toBe('It was the evenings.');
+    const flagged = buildMemory({ ...input, goals: [{ ...goal, status: 'archived', lesson: 'a line the screen flagged', lessonRisk: 'crisis' }] });
+    expect(flagged.find((l) => l.key === 'goal.g1.letgo')?.quote).toBeUndefined();
+    expect(memoryDocument(flagged)).not.toContain('the screen flagged');
     expect(letGo.map((l) => l.key)).not.toContain('goal.g1');
     // Its stones are not listed either.
     expect(letGo.map((l) => l.key)).not.toContain('line.a1');
@@ -123,6 +140,15 @@ describe('edits', () => {
     expect(name?.text).toBe('');
     // A rebuild changes nothing about it.
     expect(applyMemoryEdits(buildMemory({ ...input, profile: { ...input.profile, displayName: 'Samuel' } }), edits).find((l) => l.key === 'you.name')?.quote).toBe('Call me S.');
+  });
+
+  it('an edit the screen flagged is theirs to see and never a coach’s to be handed', () => {
+    const edits: MemoryEdit[] = [{ key: 'you.name', text: 'a line the screen flagged', editedAt: 'x', risk: 'crisis' }];
+    const after = applyMemoryEdits(lines, edits);
+    expect(after.find((l) => l.key === 'you.name')?.quote).toBe('a line the screen flagged');
+    expect(memoryDocument(after)).not.toContain('the screen flagged');
+    // An edit whose line no longer builds keeps its group by its key.
+    expect(applyMemoryEdits([], [{ key: 'line.gone', text: 'kept', editedAt: 'x' }])[0]?.about).toBe('your lines');
   });
 
   it('forget: the line is gone, and an edit whose line no longer builds is kept', () => {
@@ -157,6 +183,7 @@ describe('the document', () => {
     const doc = memoryDocument(lines);
     expect(doc.split('\n')).toHaveLength(lines.length);
     expect(doc).toContain('- You asked to be called “Sam”');
+    expect(doc).toContain('- How, for “Half marathon” “Tuesday, Thursday, Saturday at 6:40, out the back door”');
     const long = Array.from({ length: 400 }, (_, i) => ({ key: `k${i}`, about: 'you' as const, text: `Line ${i}`, quote: 'x'.repeat(40) }));
     const capped = memoryDocument(long);
     expect(capped.length).toBeLessThanOrEqual(MEMORY_DOCUMENT_CHARS);

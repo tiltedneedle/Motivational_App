@@ -50,9 +50,12 @@ function ChapterName({ name, authored, size }: { name: string; authored: boolean
 export default function BookScreen() {
   const router = useRouter();
   // Straight from the seal: one door, to Today. Checked against a shape this app owns.
-  const { from } = useLocalSearchParams<{ from?: string }>();
+  const { from, version } = useLocalSearchParams<{ from?: string; version?: string }>();
   const fromSeal = from === 'seal';
-  const book = useLatestBook();
+  const latest = useLatestBook();
+  const books = useMorrow((s) => s.books);
+  // An older edition by number (the inventory's /book/[version]); the latest otherwise.
+  const book = (version ? books.find((b) => String(b.version) === version) : undefined) ?? latest;
   const authoredName = (name: string): boolean => {
     const here = book?.chapters.find((c) => c.name === name);
     const earlier = book ? books.find((b) => b.version === book.version - 1)?.chapters.find((c) => c.name === name) : undefined;
@@ -62,7 +65,6 @@ export default function BookScreen() {
   // Kept: this one is read on Today, which is where it navigates to.
   const setToast = useMorrow((s) => s.setToast);
   const boundary = useMorrow((s) => s.profile.dayBoundaryHour);
-  const books = useMorrow((s) => s.books);
   const [exportError, setExportError] = useState<string | null>(null);
   // Above the early return, with the other hooks. Declared below it, this
   // would be called on one render and not the next the moment a Book appeared

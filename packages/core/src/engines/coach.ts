@@ -28,6 +28,12 @@ export interface BriefInput {
   soften?: boolean;
   /** The one time the app names professional support. See `shouldOfferSupport`. */
   offerSupport?: boolean;
+  /**
+   * Day 90 (PRD §7.3): "the dawn brief opens it on day 90 and every 90
+   * after." The label — "Day ninety" — when the Book is waiting to be
+   * written again; the brief's Today paragraph opens with it.
+   */
+  reauthorDay?: string | null;
 }
 
 const REGISTER: Record<Persona, { open: (s: string) => string; push: (s: string) => string }> = {
@@ -154,7 +160,12 @@ export function buildDawnBrief(input: BriefInput, newId: (p: string) => string):
     day: input.day,
     kind: 'dawn',
     yesterday: yesterdayLine,
-    today: quote ? `${quote} Your line. ${todayLine}` : todayLine,
+    today: [
+      input.reauthorDay ? `${input.reauthorDay}: the Book is waiting to be written again.` : '',
+      quote ? `${quote} Your line. ${todayLine}` : todayLine,
+    ]
+      .filter(Boolean)
+      .join(' '),
     ifThen: ifLine,
     quotedSpans: quotes,
     firstMoveId: first?.id ?? null,

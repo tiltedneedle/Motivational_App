@@ -56,14 +56,18 @@ export const DEFAULT_QUIET: QuietHours = { from: 22, to: 7 };
  * the morning to 05:30 hears the morning line at 05:30 rather than at seven,
  * and an owl's 22:30 evening line is not pushed to the next morning.
  */
-export function quietFor(times: { wakeTime: string; eveningTime: string }): QuietHours {
+export function quietFor(times: { wakeTime: string; eveningTime: string; sundayHour?: number }): QuietHours {
   const wake = hourOf(times.wakeTime);
   const evening = hourOf(times.eveningTime);
   if (wake === null || evening === null) return DEFAULT_QUIET;
   const from = (evening + 1) % 24;
+  // The Sunday reading is a time the person asked to be spoken to as well;
+  // a Sunday at eight with a morning at nine is not inside the quiet.
+  const sunday = times.sundayHour !== undefined && Number.isInteger(times.sundayHour) && times.sundayHour >= 0 && times.sundayHour <= 23 ? times.sundayHour : wake;
+  const to = Math.min(wake, sunday);
   // A day with no room for quiet (evening line after midnight, morning right
   // behind it) keeps the default rather than a window that swallows the clock.
-  return from === wake ? DEFAULT_QUIET : { from, to: wake };
+  return from === to ? DEFAULT_QUIET : { from, to };
 }
 
 function hourOf(hhmm: string): number | null {
@@ -125,6 +129,8 @@ export interface NoticeInput {
   milestone?: { title: string; proof: string } | null;
   /** Off entirely. Everything below returns nothing. */
   muted?: boolean;
+  /** Day 90 (PRD §7.3): "the dawn brief opens it on day 90 and every 90 after." The morning line says so. */
+  reauthorDay?: string | null;
 }
 
 /**
@@ -236,7 +242,7 @@ export function planNotices(input: NoticeInput): Notice[] {
       id: `${input.day}:wake`,
       moment: 'wake',
       at: at(input.day, wakeAt),
-      title: 'This morning',
+      title: input.reauthorDay ? `${input.reauthorDay}. This morning` : 'This morning',
       route: '/today',
       body: wakeLine(endSentence(`Start with ${lower(first.title)}`)),
       quotes: [first.title],

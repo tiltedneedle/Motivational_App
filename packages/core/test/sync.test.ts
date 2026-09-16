@@ -462,7 +462,7 @@ describe('the Past and Present volumes on the wire', () => {
     const letGo = {
       ...bundle,
       goals: [
-        { ...g0, status: 'archived' as const, lesson: 'It was never the guitar I wanted; it was the evenings.', letGoAt: '2026-12-15T09:00:00.000Z' },
+        { ...g0, status: 'archived' as const, lesson: 'It was never the guitar I wanted; it was the evenings.', letGoAt: '2026-12-15T09:00:00.000Z', lessonRisk: 'none' as const },
         { ...g0, id: 'goal-still', title: 'Row on the river', rank: 1 },
       ],
     };
@@ -479,6 +479,9 @@ describe('the Past and Present volumes on the wire', () => {
     expect(back.goals[0]!.status).toBe('archived');
     expect(back.goals[0]!.lesson).toContain('the evenings');
     expect(back.goals[0]!.letGoAt).toBe('2026-12-15T09:00:00.000Z');
+    expect(row.lesson_risk).toBe('none');
+    expect(back.goals[0]!.lessonRisk).toBe('none');
+    expect(byTable.goals![1]!.lesson_risk).toBeNull();
     expect(back.goals[1]!.lesson).toBeUndefined();
     // A goals row from before 0008 has neither column.
     const older = { ...byTable, goals: byTable.goals!.map((r) => Object.fromEntries(Object.entries(r).filter(([k]) => k !== 'lesson' && k !== 'let_go_at'))) };

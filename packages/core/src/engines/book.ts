@@ -261,6 +261,19 @@ export type BookDiff = NonNullable<BookVersion['diff']>;
  * `lessons` are the lines written on letting go; only the ones for goals
  * this diff actually lists are kept, so a stale line cannot ride along.
  */
+/**
+ * Whether a stone still says what the sealed line says: text, then-half and
+ * paragraph all the same. The one comparison the diff, the side-by-side and
+ * the stone in rewrite mode share, so what the screen calls "Written again"
+ * is what the first page will say was written again.
+ */
+export function sameLine(
+  before: { text: string; text2?: string; paragraph?: string },
+  now: { text: string; text2?: string; paragraph?: string },
+): boolean {
+  return before.text === now.text && (before.text2 ?? '') === (now.text2 ?? '') && (before.paragraph ?? '') === (now.paragraph ?? '');
+}
+
 export function diffBooks(previous: BookVersion, next: BookVersion, lessons: { name: string; line: string }[] = []): BookDiff {
   const prev = new Map(previous.chapters.map((c) => [c.goalId, c]));
   const kept: string[] = [];
@@ -273,14 +286,7 @@ export function diffBooks(previous: BookVersion, next: BookVersion, lessons: { n
       added.push(ch.name);
       continue;
     }
-    const same =
-      before.lines.length === ch.lines.length &&
-      before.lines.every(
-        (l, i) =>
-          l.text === ch.lines[i]?.text &&
-          (l.text2 ?? '') === (ch.lines[i]?.text2 ?? '') &&
-          (l.paragraph ?? '') === (ch.lines[i]?.paragraph ?? ''),
-      );
+    const same = before.lines.length === ch.lines.length && before.lines.every((l, i) => ch.lines[i] !== undefined && sameLine(l, ch.lines[i]!));
     (same ? kept : rewritten).push(ch.name);
     prev.delete(ch.goalId);
   }

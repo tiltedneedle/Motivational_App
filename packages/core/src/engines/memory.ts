@@ -19,10 +19,11 @@
  * the coach's hands as well — forgetting the if-then means the coach stops
  * quoting it, not only that the screen stops listing it.
  */
-import type { BookVersion, DaySummary, Goal, GoalAnalysis, MemoryEdit, Profile } from '../types';
-import { formatDay, ordinal, plural, sealedOn } from '../ids';
+import type { BookVersion, DaySummary, Goal, GoalAnalysis, MemoryEdit, Profile, SafetyRisk } from '../types';
+import { formatDay, ifThenOf, ordinal, plural, sealedOn } from '../ids';
 import { ANALYSIS_TITLES } from './framings';
 import { detectReturns } from './consistency';
+import { clockLabel } from './notifications';
 import { isQuotable } from './safety';
 
 export type MemoryAbout = 'you' | 'your goals' | 'your lines' | 'the Book' | 'your days';
@@ -33,8 +34,20 @@ export interface MemoryLine {
   about: MemoryAbout;
   /** The app's framing, in the sans. */
   text: string;
+  /**
+   * A goal the line is about, printed after `text` in the goal's own face:
+   * the serif when the person typed the name, the sans when it came from
+   * the bank — the same rule as the Book's chapter headings.
+   */
+  goal?: { name: string; authored: boolean };
+  /** App prose after the goal's name, before the quote. */
+  tail?: string;
   /** Their own words, if the line quotes any, in the serif. */
   quote?: string;
+  /** False when the quote is a bank title, which is the app's words and goes in the sans. */
+  quoteAuthored?: boolean;
+  /** The safety screen's word on a line the person wrote here; a crisis line is never handed to a coach. */
+  risk?: SafetyRisk;
 }
 
 export interface MemoryInput {
@@ -75,23 +88,35 @@ export function buildMemory(input: MemoryInput): MemoryLine[] {
   you('you.track', `You write on the ${profile.track === 'full' ? 'Full' : 'Starter'} track.`);
   you(
     'you.times',
-    `Your morning is ${profile.wakeTime}, your evening ${profile.eveningTime}, and a day ends at ${hourInWords(profile.dayBoundaryHour)}.`,
+    `Your morning is ${clockLabel(profile.wakeTime)}, your evening ${clockLabel(profile.eveningTime)}, and a day ends at ${hourInWords(profile.dayBoundaryHour)}.`,
   );
   if (profile.witnessName?.trim()) you('you.witness', 'Your witness is', profile.witnessName.trim());
 
   // ---- your goals, and the lines under each
   const active = goals.filter((g) => g.status !== 'archived').sort((a, b) => a.rank - b.rank);
   for (const g of active) {
-    lines.push({ key: `goal.${g.id}`, about: 'your goals', text: `${g.horizon} —`, quote: g.title });
+    const authored = g.titleAuthored !== false;
+    lines.push({ key: `goal.${g.id}`, about: 'your goals', text: `${g.horizon} —`, quote: g.title, quoteAuthored: authored });
     for (const a of analyses.filter((x) => x.goalId === g.id && isQuotable(x))) {
       const text = a.line.trim() || a.paragraph?.trim() || '';
       if (!text) continue;
-      const quote = a.kind === 'obstacles' && a.line2?.trim() ? `${text} — then ${a.line2.trim()}` : text;
-      lines.push({ key: `line.${a.id}`, about: 'your lines', text: `${ANALYSIS_TITLES[a.kind]}, for ${g.title}:`, quote });
+      // The if-then as the Book and the brief print it: `ifThenOf` supplies
+      // "then I" once, whether the person typed it or not.
+      const quote = a.kind === 'obstacles' && a.line2?.trim() ? ifThenOf(a.line, a.line2).sentence : text;
+      lines.push({ key: `line.${a.id}`, about: 'your lines', text: `${ANALYSIS_TITLES[a.kind]}, for`, goal: { name: g.title, authored }, quote });
     }
   }
+  // A goal let go (PRD §7.3: "What did it turn out to be instead?"). A line
+  // the safety screen flagged as crisis is theirs and is not the profile's.
   for (const g of goals.filter((x) => x.status === 'archived')) {
-    lines.push({ key: `goal.${g.id}.letgo`, about: 'your goals', text: `You let go “${g.title}”${g.lesson?.trim() ? ':' : '.'}`, ...(g.lesson?.trim() ? { quote: g.lesson.trim() } : {}) });
+    const lesson = g.lesson?.trim() && g.lessonRisk !== 'crisis' ? g.lesson.trim() : '';
+    lines.push({
+      key: `goal.${g.id}.letgo`,
+      about: 'your goals',
+      text: 'You let go',
+      goal: { name: g.title, authored: g.titleAuthored !== false },
+      ...(lesson ? { tail: '— it turned out to be:', quote: lesson } : {}),
+    });
   }
 
   // ---- the Book
@@ -145,13 +170,22 @@ export function applyMemoryEdits(lines: readonly MemoryLine[], edits: readonly M
     }
     if (e.text === null) continue;
     // Their words replace the whole line, framing and quote both.
-    out.push({ key: line.key, about: line.about, text: '', quote: e.text });
+    out.push({ key: line.key, about: line.about, text: '', quote: e.text, ...(e.risk ? { risk: e.risk } : {}) });
   }
   const seen = new Set(lines.map((l) => l.key));
   for (const e of edits) {
-    if (e.text !== null && !seen.has(e.key)) out.push({ key: e.key, about: 'you', text: '', quote: e.text });
+    if (e.text !== null && !seen.has(e.key)) out.push({ key: e.key, about: aboutOf(e.key), text: '', quote: e.text, ...(e.risk ? { risk: e.risk } : {}) });
   }
   return out;
+}
+
+/** Where an edit whose line no longer builds still belongs, by its key. */
+function aboutOf(key: string): MemoryAbout {
+  if (key.startsWith('line.')) return 'your lines';
+  if (key.startsWith('goal.')) return 'your goals';
+  if (key.startsWith('book.')) return 'the Book';
+  if (key.startsWith('days.')) return 'your days';
+  return 'you';
 }
 
 /** Whether a line has been edited by the person (locked) or forgotten. */
@@ -180,7 +214,9 @@ export function memoryDocument(lines: readonly MemoryLine[]): string {
   const out: string[] = [];
   let length = 0;
   for (const l of lines) {
-    const row = `- ${[l.text.trim(), l.quote ? `“${l.quote}”` : ''].filter(Boolean).join(' ')}`;
+    // A flagged line is theirs to see here and never a coach's to be handed.
+    if (l.risk === 'crisis') continue;
+    const row = `- ${[l.text.trim(), l.goal ? (l.goal.authored ? `“${l.goal.name}”` : l.goal.name) : '', l.tail ?? '', l.quote ? `“${l.quote}”` : ''].filter(Boolean).join(' ')}`;
     if (length + row.length + 1 > MEMORY_DOCUMENT_CHARS) break;
     out.push(row);
     length += row.length + 1;

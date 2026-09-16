@@ -13,7 +13,7 @@ describe('the PRD’s deep links', () => {
     expect(resolveLink('morrow://book')).toBeNull();
     expect(resolveLink('morrow://authoring/2')).toBe('/authoring');
     expect(resolveLink('morrow://practice/pr_1/run')).toBe('/run?id=pr_1');
-    expect(resolveLink('morrow://letter/letter_9')).toBe('/letters');
+    expect(resolveLink('morrow://letter/letter_9')).toBe('/letters?id=letter_9');
     expect(resolveLink('morrow://brief/2026-09-17')).toBe('/coach');
     expect(resolveLink('morrow://capture')).toBe('/new-move');
   });
@@ -35,7 +35,8 @@ describe('the PRD’s deep links', () => {
     expect(resolveLink('/book/sunday')).toBe('/reading');
     expect(resolveLink('/book/reauthor')).toBe('/reauthor');
     expect(resolveLink('/book/declare')).toBe('/declare');
-    expect(resolveLink('/book/2')).toBe('/book');
+    expect(resolveLink('/book/2')).toBe('/book?version=2');
+    expect(resolveLink('/book/latest')).toBe('/book');
     expect(resolveLink('/seal')).toBe('/seal-day');
     expect(resolveLink('/you/ledger')).toBe('/progress');
     expect(resolveLink('/envision/letters')).toBe('/letters');
@@ -77,5 +78,9 @@ describe('the PRD’s deep links', () => {
     expect(resolveLink('morrow:')).toBeNull();
     expect(resolveLink('morrow://')).toBeNull();
     expect(resolveLink('%E0%A4%A')).toBe('/today');
+    // A malformed escape in an id is kept, encoded, rather than thrown on —
+    // +not-found calls this during render with no net under it.
+    expect(resolveLink('/goal/100%')).toBe('/goal?id=100%25');
+    expect(resolveLink('/goals/%E0%A4%A/stone/motives')).toBe('/stone?goal=%25E0%25A4%25A&kind=motives');
   });
 });

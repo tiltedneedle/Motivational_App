@@ -23,6 +23,8 @@ import {
   formatDay,
   sealedOn,
   thenHalf,
+  sameLine,
+  stoneNow,
 } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Question, Statement, Stone, Studio, TextButton, TopBar, UserField, accent, announce, day, UserText } from '@morrow/ui';
 import { analysesFor, useGoals, useLatestBook, useMorrow, cardText } from '../src/store';
@@ -69,9 +71,13 @@ export default function StoneScreen() {
     params.rewrite === '1' && returnTo && latest
       ? (latest.chapters.find((c) => c.goalId === goalId)?.lines.find((l) => l.kind === kind) ?? null)
       : null;
-  // Empty while the stone still says what was sealed; once it says something
-  // else, that is what is edited, so coming back does not blank a new line.
-  const fresh = !!before && (existing?.line.trim() ?? '') === before.text;
+  // Empty while the stone still says what was sealed — line, then-half and
+  // paragraph, the comparison the diff makes; once it says something else,
+  // that is what is edited, so coming back does not blank a new line.
+  const fresh = !!before && (() => {
+    const now = stoneNow(existing);
+    return now === null || sameLine(before, now);
+  })();
   /**
    * The sitting they left, if it was this stone's. Read once, at mount: after
    * that this screen is the thing writing it. A draft of some other stone is

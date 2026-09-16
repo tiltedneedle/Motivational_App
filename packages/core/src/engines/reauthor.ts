@@ -2,14 +2,15 @@
  * Day-90 re-authoring (PRD §7.3).
  *
  * "Two Books side by side. Per stone: Keep, Rewrite (the same screens with
- * the old line above the new) or Let it go (the goal is archived with a line
- * about what it taught, written now). The new edition is sealed with the
- * hold; the diff is its first page. The calendar is Morrow's: the dawn brief
- * opens it on day 90 and every 90 after."
+ * the old line above the new) or Let it go ("What did it turn out to be
+ * instead?"). The new edition is sealed with the hold; the diff is its first
+ * page. The calendar is Morrow's: the dawn brief opens it on day 90 and
+ * every 90 after."
  *
  * The calendar lives here. The screen only asks whether it is time.
  */
 import { sealedOn } from '../ids';
+import { sameLine } from './book';
 import type { AnalysisKind, BookChapterLine, BookVersion, Goal, GoalAnalysis } from '../types';
 
 export const REAUTHOR_EVERY = 90;
@@ -81,10 +82,22 @@ export interface SideBySideLine {
   kind: AnalysisKind;
   /** The line as it stands in the sealed edition. */
   before: BookChapterLine;
-  /** The line as it is on the stone now; null if the stone has been emptied. */
-  now: string | null;
-  /** Whether the stone has been written again since the seal. */
+  /** The stone as it is now — line, then-half, paragraph; null if it has been emptied. */
+  now: { text: string; text2?: string; paragraph?: string } | null;
+  /** Whether the stone has been written again since the seal, by `sameLine`. */
   rewritten: boolean;
+}
+
+/** The stone's lines as the Book would print them, for the comparison. */
+export function stoneNow(a: GoalAnalysis | undefined): { text: string; text2?: string; paragraph?: string } | null {
+  if (!a) return null;
+  const text = a.line.trim() || a.paragraph?.trim() || '';
+  if (!text) return null;
+  return {
+    text,
+    ...(a.line2?.trim() ? { text2: a.line2.trim() } : {}),
+    ...(a.line.trim() && a.paragraph?.trim() ? { paragraph: a.paragraph.trim() } : {}),
+  };
 }
 
 export interface SideBySideChapter {
@@ -112,10 +125,8 @@ export function sideBySide(previous: BookVersion, goals: readonly Goal[], analys
     const goal = goals.find((g) => g.id === chapter.goalId);
     if (!goal) continue;
     const lines = chapter.lines.map((before) => {
-      const a = analyses.find((x) => x.goalId === goal.id && x.kind === before.kind);
-      const text = a ? a.line.trim() || a.paragraph?.trim() || '' : '';
-      const now = text || null;
-      return { kind: before.kind, before, now, rewritten: now !== null && now !== before.text };
+      const now = stoneNow(analyses.find((x) => x.goalId === goal.id && x.kind === before.kind));
+      return { kind: before.kind, before, now, rewritten: now !== null && !sameLine(before, now) };
     });
     out.push({
       goalId: goal.id,
