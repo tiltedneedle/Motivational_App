@@ -130,7 +130,10 @@ async function walk(label, seed) {
       const screens = [...document.querySelectorAll('[data-testid^="screen-"]')].map((e) => e.getAttribute('data-testid'));
       const text = (document.body.innerText || '').replace(/\s+/g, ' ').trim();
       const buttons = [...document.querySelectorAll('[role="button"],button,a[href]')].map((e) => (e.getAttribute('aria-label') || e.textContent || '').replace(/\s+/g, ' ').trim()).filter(Boolean);
-      const wayOut = buttons.some((b) => /\b(back|today|close|skip|not now|another time)\b/i.test(b));
+      // Today and Welcome are the roots: they have no way out by design, the
+      // same rule check-back.mjs holds. Every other screen must lead to one.
+      const isRoot = screens.includes('screen-today') || screens.includes('screen-welcome');
+      const wayOut = isRoot || buttons.some((b) => /\b(back|today|close|skip|not now|another time)\b/i.test(b));
       const boot = Boolean(document.querySelector('[data-testid="boot"]'));
       // The error boundary is a screen too, and the one this check exists to catch.
       const broke = Boolean(document.querySelector('[data-testid="error-boundary"]'));
