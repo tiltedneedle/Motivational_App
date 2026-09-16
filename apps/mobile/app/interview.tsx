@@ -87,6 +87,9 @@ export default function Interview() {
   const stepBack = () => {
     const prev = history[history.length - 1];
     if (!prev) {
+      // Backed all the way out: the draft of the first question is not a
+      // sitting, and must not read as one on Welcome or Today.
+      clearDraft();
       if (router.canGoBack()) router.back();
       else router.dismissTo('/');
       return;

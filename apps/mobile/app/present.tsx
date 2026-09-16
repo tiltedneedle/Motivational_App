@@ -35,7 +35,7 @@ import {
   type PresentCard,
   type PresentHalf,
 } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Notice, Statement, Studio, TextButton, TopBar, UserField, announce, day } from '@morrow/ui';
+import { Body, Chip, InkButton, Label, Notice, Statement, Studio, TextButton, TopBar, UserField, announce, day, UserText } from '@morrow/ui';
 import { usePlatformBack } from '../src/platform-back';
 import { useGoals, useMorrow } from '../src/store';
 import { track, useFirstRunStep } from '../src/analytics';
@@ -289,9 +289,10 @@ function Present({ half }: { half: PresentHalf }) {
   if (finished) {
     const other: PresentHalf = half === 'faults' ? 'virtues' : 'faults';
     const otherDone = halfComplete(picks, other, depth);
-    // Kept, and kept out of the Book: said here, per card, rather than left
-    // for the person to notice a page missing.
-    const held = mine.filter((p) => p.safetyRisk === 'crisis');
+    // The lines themselves, so "reread" from Today means reread: a closing
+    // screen that printed none of them read as the writing gone. A held card
+    // says so under its own lines rather than in a list of its own.
+    const lines = [...mine].filter((p) => p.storyLine.trim() && p.applyLine.trim()).sort((a, b) => a.rank - b.rank);
     return (
       <Studio testID="screen-present-done">
         <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
@@ -307,11 +308,31 @@ function Present({ half }: { half: PresentHalf }) {
               {editions ? copy.doneNextEdition : copy.doneNoBook}
             </Body>
             {half === 'virtues' && goals.length === 0 ? <Body testID="present-done-no-goal">{copy.doneNoGoal}</Body> : null}
-            {held.map((p) => (
-              <Body key={p.id} testID={'present-held-' + p.cardId} style={{ fontSize: 13 }}>
-                {(deck.find((c) => c.id === p.cardId)?.text ?? '') + ' — ' + (copy.heldNote ?? '')}
-              </Body>
-            ))}
+            <View testID="present-done-lines" style={{ gap: 12, marginTop: 4 }}>
+              {lines.map((p) => (
+                <View key={p.id} style={{ gap: 3, borderTopWidth: 1, borderTopColor: day.line, paddingTop: 10 }}>
+                  <Body style={{ fontSize: 15 }}>
+                    {(deck.find((c) => c.id === p.cardId)?.text ?? '') +
+                      (half === 'faults'
+                        ? framings.find((f) => f.id === p.framingId)?.label
+                          ? ' · ' + framings.find((f) => f.id === p.framingId)!.label
+                          : ''
+                        : goals.find((g) => g.id === p.goalId)?.title
+                          ? ' · ' + goals.find((g) => g.id === p.goalId)!.title
+                          : '')}
+                  </Body>
+                  <UserText style={{ fontSize: 16, lineHeight: 24, color: day.ink }}>{p.storyLine}</UserText>
+                  <UserText italic style={{ fontSize: 15, lineHeight: 23, color: day.ink2 }}>
+                    {p.applyLine}
+                  </UserText>
+                  {p.safetyRisk === 'crisis' ? (
+                    <Body testID={'present-held-' + p.cardId} style={{ fontSize: 13 }}>
+                      {copy.heldNote}
+                    </Body>
+                  ) : null}
+                </View>
+              ))}
+            </View>
             <InkButton
               testID="present-next-half"
               label={otherDone ? 'Back to Today' : half === 'faults' ? 'Now what you are good at' : 'Now what gets in your way'}
@@ -325,6 +346,13 @@ function Present({ half }: { half: PresentHalf }) {
                 router.replace('/present?half=' + other);
               }}
             />
+            {otherDone ? (
+              <TextButton
+                testID="present-other-half"
+                label={half === 'faults' ? 'Read what you are good at too' : 'Read what gets in your way too'}
+                onPress={() => router.replace('/present?half=' + other)}
+              />
+            ) : null}
             {editions ? <TextButton testID="present-seal" label="Seal a new edition now" onPress={() => router.push('/seal-book')} /> : null}
             {otherDone ? null : (
               <TextButton

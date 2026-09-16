@@ -206,6 +206,17 @@ async function main() {
     await tap('interview-continue');
     await tap('option-0'); // Finish a race
     check('follow-up asked', (await text('interview-question')) === 'How far?');
+    // Killed mid-Interview and opened again: Today, not Welcome page one, and
+    // the one button resumes the same question.
+    await page.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(700);
+    check('a relaunch mid-Interview opens on Today, not on Welcome again', (await seen('screen-today')) && !(await seen('screen-welcome')));
+    check('which says a sitting is kept', (await text('today-path')).toLowerCase().includes('sitting is kept'), await text('today-path'));
+    await tap('today-begin');
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(500);
+    check('and Begin the Interview resumes on the same question', (await text('interview-question')) === 'How far?', await text('interview-question'));
     // A wrong tap is not final: Back undoes it and keeps everything before it (§7.1).
     await tap('interview-back');
     check('Back in the Interview undoes the last answer', (await text('interview-question')) !== 'How far?');
@@ -1778,6 +1789,10 @@ async function main() {
     await page.clock.runFor(1500);
     await page.waitForTimeout(600);
     await tap('past-begin');
+    await tap('past-age-back');
+    const emptyDraft = (await store()).pastDraft ?? null;
+    check('Begin then Back leaves no sitting behind', emptyDraft === null, JSON.stringify(emptyDraft ?? {}).slice(0, 80));
+    await tap('past-begin');
     await page.locator('[data-testid="past-age"]').fill('40');
     await page.waitForTimeout(250);
     check('the age cuts the periods on the same screen, to keep or rename', await seen('past-periods'));
@@ -1920,6 +1935,16 @@ async function main() {
     check('a person who did only Present and Past opens on Today, not on Welcome again', (await seen('screen-today')) && !(await seen('screen-welcome')));
     check('and Today says what is there rather than "Nothing here yet"', !(await noticeText('today-path')).includes('Nothing here yet'), await noticeText('today-path'));
     check('with a way back into the finished volume', await seen('today-reread-past'));
+    await tap('today-reread-present');
+    await page.waitForTimeout(500);
+    check('Reread your Present prints the lines themselves', (await seen('present-done-lines')) && (await page.locator('body').innerText()).includes('The Tuesday it cost me'));
+    check(
+      'and points to the other half from there',
+      (await seen('present-other-half')) || (await noticeText('present-next-half')).toLowerCase().includes('good at'),
+      await noticeText('present-next-half'),
+    );
+    await page.goBack({ waitUntil: 'commit' }).catch(() => {});
+    await page.waitForTimeout(500);
     check('and the door is named as the three volumes', (await noticeText('today-other-volumes')).toLowerCase().includes('three volumes'), await noticeText('today-other-volumes'));
     await page.goto(`${BASE}/?intro=1`, { waitUntil: 'networkidle' });
     await page.clock.runFor(1200);

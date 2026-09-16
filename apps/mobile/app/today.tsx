@@ -62,6 +62,7 @@ import {
   useTodaysMoves,
   useTodaysPractices,
   useVolumeStates,
+  interviewKept,
 } from '../src/store';
 import { scheduler } from '../src/notify';
 
@@ -143,7 +144,8 @@ export default function Today() {
   const picksAll = useMorrow((s) => s.presentPicks);
   const faultsDone = halfComplete(picksAll, 'faults', state.profile.track);
   const virtuesDone = halfComplete(picksAll, 'virtues', state.profile.track);
-  const elsewhere = !firstVisit(volumes) || Boolean(presentDraft) || Boolean(pastDraft);
+  const interviewDraft = useMorrow((s) => s.interviewDraft);
+  const elsewhere = !firstVisit(volumes) || Boolean(presentDraft) || Boolean(pastDraft) || interviewKept(interviewDraft);
   const whatIsThere = (): string => {
     if (volumes.past === 'done' && volumes.present === 'done') return 'Your past and your Present are written.';
     if (volumes.past === 'done') return 'Your past is written.';
@@ -255,7 +257,13 @@ export default function Today() {
           {carryOnRow}
           {/* A finished volume is one tap away, not two taps and a door mark away. */}
           {volumes.past === 'done' ? <TextButton testID="today-reread-past" label="Reread your past" onPress={() => router.push('/past')} /> : null}
-          {volumes.present === 'done' ? <TextButton testID="today-reread-present" label="Reread your Present" onPress={() => router.push('/present')} /> : null}
+          {volumes.present === 'done' ? (
+            <TextButton testID="today-reread-present" label="Reread your Present" onPress={() => router.push('/present')} />
+          ) : faultsDone ? (
+            <TextButton testID="today-reread-present" label="Reread the faults" onPress={() => router.push('/present?half=faults')} />
+          ) : virtuesDone ? (
+            <TextButton testID="today-reread-present" label="Reread the virtues" onPress={() => router.push('/present?half=virtues')} />
+          ) : null}
           {/* Today comes from the Future volume, but it is not the only door. */}
           <TextButton
             testID="today-other-volumes"

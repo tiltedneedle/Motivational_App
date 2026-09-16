@@ -1271,6 +1271,38 @@ client's stated case, a brand-new person doing a volume and losing their footing
   it says "Before you write", and the on-device row names the decks, the periods and the
   events. The unrendered `stop.*` copy is gone.
 
+**The verify pass on that round (2026-09-16).** Three lenses, one skeptic per finding:
+8 confirmed, 0 refuted, and two of them the same shape as the round they checked:
+
+- **The gate ignored the Interview.** `hasBegunOf` counted the other two volumes' drafts
+  but not `interviewDraft`, so a person killed mid-Interview relaunched onto Welcome page
+  one — the exact case just fixed for Present and Past. It now counts an Interview draft
+  that holds something (`interviewKept`: an answer behind it, or an area picked); undoing
+  every answer clears the draft rather than leaving the first question on disk as a
+  "sitting"; Today's card says "A sitting is kept." over the resuming button.
+- **"Reread your Present" opened a closing screen with no lines on it** ("in your words",
+  over no words). The Present closing screen now prints every kept card with its two lines,
+  the sign or the goal, and a held card's note under its own lines; and when both halves are
+  written it offers the other half from there. Today's row follows suit: a written half is
+  one tap away too ("Reread the faults" / "Reread the virtues"), not only a finished volume.
+- **Begin, then Back, on the Past doorway left an empty draft** that Welcome and Today read
+  as a kept sitting for ever. A draft that holds nothing — no periods, no age, no rename —
+  is cleared wherever the person stands, and Begin alone no longer writes one.
+- **A change re-screened the whole event** and silently undid a prior "not about me" and
+  the Book choice. Only the boxes that changed are screened again; a verdict the person had
+  cleared stays cleared unless that line is the one that changed; and the Book choice is
+  never overwritten by the store — the seal and the chips gate on the verdict, so a cleared
+  flag gives the choice back.
+- "Export everything" now carries the Interview draft, the read-back rows, the spine and the
+  "I will" line — the unsealed words a refused seal or the storage banner sends people there
+  to save. A change from the Book question announces the event, not the question. The PDF
+  sets the two volumes as the paper does (a rule and a plain heading, the card at reading
+  size, the last line in full ink).
+- Left as it is, on purpose: a renamed period prints as a heading in every printer and earns
+  no authorship credit — the same rule as a chapter name, and the server counts the same.
+
+Gate after: 416 core / 48 ui / 8 storage, e2e **317/317** (was 311; the new checks relaunch cold mid-Interview and resume, press Begin then Back on the Past doorway and find no sitting behind it, and reread a written Present from Today), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
+
 Gate after: 416 core / 48 ui / 8 storage, e2e **311/311** (was 297; the new checks relaunch cold with only the two volumes in the store, change an event from the Book question, seal a second edition from the Past's closing screen and find it on the Book's paper), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors, copy check clean.
 
 Gate after: 415 core / 48 ui / 8 storage, migration 53 checks, e2e **297/297** (was 286; the new checks press the browser's back on Full's writing screen reached by the door, re-cut the periods with events listed, un-tick a card mid-write, kill on the deck, and reopen a finished Past), the live account round-trip **45/45** (now the three volume tables, `past_listed`, and the let-go-and-rewrite push; run before the platform-back change, which touches no sync), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.

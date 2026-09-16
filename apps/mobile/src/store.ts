@@ -1839,7 +1839,21 @@ const store = create<MorrowState>()(
         set((s) => ({ pastEvents: s.pastEvents.map((v) => (v.id === id ? { ...v, analysed } : v)) })),
       savePastAnalysis: (id, fields) =>
         set((s) => {
-          const risk = screen(`${fields.whatHappened} ${fields.shapedMe} ${fields.stillBelieve}`).risk;
+          /**
+           * Only what changed is screened again. A line the person had already
+           * said was not about them stays cleared unless that line is the one
+           * that changed, and a change to one box does not raise the card for
+           * another. The Past is the volume where "overdose" appears in an
+           * ordinary account of a death in the family.
+           */
+          const was = s.pastEvents.find((v) => v.id === id);
+          const old = { whatHappened: was?.whatHappened ?? '', shapedMe: was?.shapedMe ?? '', stillBelieve: was?.stillBelieve ?? '' };
+          const rank: Record<SafetyRisk, number> = { none: 0, concern: 1, crisis: 2 };
+          // The stored verdict is milder than the text screens at: the person cleared it.
+          const cleared = was ? rank[screen(`${old.whatHappened} ${old.shapedMe} ${old.stillBelieve}`).risk] > rank[was.safetyRisk] : false;
+          const per = (key: keyof typeof old): SafetyRisk =>
+            fields[key].trim() !== old[key] ? screen(fields[key]).risk : cleared ? 'none' : screen(old[key]).risk;
+          const risk = [per('whatHappened'), per('shapedMe'), per('stillBelieve')].sort((a, b) => rank[b] - rank[a])[0]!;
           return {
             pastEvents: s.pastEvents.map((v) =>
               v.id === id
@@ -1849,11 +1863,11 @@ const store = create<MorrowState>()(
                     shapedMe: fields.shapedMe.trim(),
                     stillBelieve: fields.stillBelieve.trim(),
                     safetyRisk: risk,
-                    // A line written in crisis never reaches the Book, whatever
-                    // was chosen before, and the screen says so rather than
-                    // overriding quietly. A concern-band line is theirs to place,
-                    // as it is everywhere else in the app.
-                    joinsBook: risk === 'crisis' ? false : v.joinsBook,
+                    // The choice stays theirs. A line written in crisis never
+                    // reaches the Book whatever was chosen — the seal and the
+                    // chips both gate on the verdict — so nothing has to be
+                    // taken away here, and a cleared flag gives the choice back.
+                    joinsBook: v.joinsBook,
                   }
                 : v,
             ),
@@ -2340,7 +2354,24 @@ export const useFirstRun = () => useMorrow(useShallow(firstRunOf));
  */
 export function hasBegunOf(s: MorrowState): boolean {
   const v = volumesOf(s);
-  return firstRunOf(s).step !== 'interview' || v.present !== 'untouched' || v.past !== 'untouched' || s.presentDraft !== null || s.pastDraft !== null;
+  return (
+    firstRunOf(s).step !== 'interview' ||
+    v.present !== 'untouched' ||
+    v.past !== 'untouched' ||
+    s.presentDraft !== null ||
+    s.pastDraft !== null ||
+    interviewKept(s.interviewDraft)
+  );
+}
+
+/**
+ * Whether an Interview draft holds anything. Undoing every answer leaves a
+ * draft of the first question on disk, and that is not a sitting; the shape
+ * guard is the same as the Interview's own, since the draft is persisted
+ * state from whichever build wrote it.
+ */
+export function interviewKept(d: InterviewDraft | null): boolean {
+  return Boolean(d) && Array.isArray(d?.history) && Array.isArray(d?.s?.picked) && ((d?.history.length ?? 0) > 0 || (d?.s.picked.length ?? 0) > 0);
 }
 export const useHasBegun = () => useMorrow(hasBegunOf);
 

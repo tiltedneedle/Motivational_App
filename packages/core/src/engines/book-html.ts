@@ -57,6 +57,10 @@ const CSS = `
   .line { margin: 0 0 8pt; }
   .line p { margin: 0; font-size: 12pt; line-height: 1.55; }
   .line .then { font-style: italic; color: #5A5750; }
+  /* The card the person picked: the app's sentence, in the second ink, at reading size — not a label. */
+  .line .card { margin: 0; font-size: 12pt; line-height: 1.55; color: #5A5750; }
+  /* The line they still believe: italic, and in full ink, as the paper has it. */
+  .line .believe { font-style: italic; }
   .line .more { font-size: 10.5pt; line-height: 1.55; color: #5A5750; margin: 4pt 0 0; }
   /* The app's framing, not their words: the sans, upright, small. */
   .line .then .framing { font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-style: normal; font-size: 9.5pt; color: #6F6552; }
@@ -110,27 +114,27 @@ export function bookToHtml(book: BookVersion, boundaryHour = 3): string {
   const presentEntries = book.volumes?.present?.entries ?? [];
   const pastEntries = book.volumes?.past?.entries ?? [];
   const present = presentEntries.length
-    ? `<h2 class="chapter-name">What I am like</h2>${presentEntries
+    ? `<section class="chapter"><hr class="rule" /><h2>What I am like</h2>${presentEntries
         .map((e) => {
           const label = `${e.half === 'faults' ? 'What gets in the way' : 'What I am good at'}${e.goalName ? ` · ${escapeHtml(e.goalName)}` : ''}`;
           const framing = e.framing ? `<span class="framing">${escapeHtml(e.framing)}</span> ` : '';
-          return `<div class="line"><div class="label">${label}</div><p class="label" style="margin:0">${escapeHtml(e.card)}</p><p class="theirs">${escapeHtml(
+          return `<div class="line"><div class="label">${label}</div><p class="card">${escapeHtml(e.card)}</p><p class="theirs">${escapeHtml(
             e.story,
           )}</p><p class="theirs then">${framing}${escapeHtml(e.apply)}</p></div>`;
         })
-        .join('')}`
+        .join('')}</section>`
     : '';
   const past = pastEntries.length
-    ? `<h2 class="chapter-name">Where I came from</h2>${pastEntries
+    ? `<section class="chapter"><hr class="rule" /><h2>Where I came from</h2>${pastEntries
         .map(
           (e) =>
             `<div class="line"><div class="label">${escapeHtml(e.period)}</div><p class="theirs">${escapeHtml(
               e.title,
             )}</p><p class="theirs">${escapeHtml(e.whatHappened)}</p><p class="theirs more">${escapeHtml(
               e.shapedMe,
-            )}</p><p class="theirs then">${escapeHtml(e.stillBelieve)}</p></div>`,
+            )}</p><p class="theirs believe">${escapeHtml(e.stillBelieve)}</p></div>`,
         )
-        .join('')}`
+        .join('')}</section>`
     : '';
   const volumes = present + past;
 

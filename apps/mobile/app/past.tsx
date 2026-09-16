@@ -207,7 +207,14 @@ export default function Past() {
       return;
     }
     if (!touched && !resumed) return;
-    if (!entered && epochs.length === 0) return;
+    // Nothing cut, nothing typed, nothing renamed: a draft that holds nothing
+    // is not a sitting to carry on, whether they are on the doorway or on an
+    // empty age screen — and Begin alone must not put one in the store.
+    if (epochs.length === 0 && age === '' && Object.keys(labels).length === 0) {
+      clearDraft();
+      return;
+    }
+    if (!entered) return;
     saveDraft({
       age: Number.isFinite(Number(age)) && age !== '' ? Number(age) : null,
       cursor,
@@ -238,7 +245,8 @@ export default function Past() {
       announce(PAST_COPY['doorway.title'] ?? '');
       return;
     }
-    if (showingAge) announce(PAST_COPY['age.prompt'] ?? '');
+    if (editing) announce(editing.title + '. ' + (PAST_COPY['join.change'] ?? 'Change this') + '.');
+    else if (showingAge) announce(PAST_COPY['age.prompt'] ?? '');
     else if (step.step === 'events') {
       const epoch = epochs[Math.min(cursor, Math.max(0, epochs.length - 1))];
       announce((epoch?.label ? epoch.label + '. ' : '') + (PAST_COPY['events.prompt'] ?? ''));
@@ -248,7 +256,7 @@ export default function Past() {
       announce((ev?.title ?? '') + '. ' + String(step.done + 1) + ' of ' + String(step.total) + '.');
     } else announce(PAST_COPY['join.question'] ?? '');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entered, showingAge, step.step, choosing, analysingId, said]);
+  }, [entered, showingAge, step.step, choosing, analysingId, said, editingId]);
 
   const top = (where: string, onBack: () => void, testID = 'past-back') => (
     <TopBar back={{ onPress: onBack, testID }} where={where} help={{ onPress: showResources }} />

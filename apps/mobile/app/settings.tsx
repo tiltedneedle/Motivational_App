@@ -124,6 +124,15 @@ export default function Settings() {
       pastListed: state.pastListed,
       presentDraft: state.presentDraft,
       pastDraft: state.pastDraft,
+      // And the Future volume's own unsealed words: the Interview mid-way, the
+      // read-back rows, the spine and the last line — typed, and not yet in
+      // any Book when a seal is refused or the storage banner sends them here.
+      // Kept out on purpose: the account session and what has been asked.
+      interviewDraft: state.interviewDraft,
+      readBackDraft: state.readBackDraft,
+      bookTitle: state.bookTitle,
+      bookTitleFraming: state.bookTitleFraming,
+      iWill: state.iWill,
     };
     const message = book ? `${bookToText(book)}\n\n---\n${JSON.stringify(payload, null, 2)}` : JSON.stringify(payload, null, 2);
     try {
