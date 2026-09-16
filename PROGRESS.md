@@ -1323,6 +1323,34 @@ refuted, one of them high:
   Present is counted by the store once, when the picks make it true, not on every reread's
   "Back to Today".
 
+**"Written" meant the first card, not the last (2026-09-16).** The pass after that filed
+the analytics event firing too early; reading the code for it found the event was the
+smallest of its symptoms. `halfComplete` asks only about the picks — and a pick is a card
+already written about, with a floor of one — so **writing the first of three cards marked
+the half written everywhere**: the chooser's door said "The faults written", Today said
+"Your Present is written." and offered to reread it, `volumeStates` called the volume done,
+the closing screen's button read "Back to Today" with two cards still to write, and the
+sealed Book's own door mark agreed. It was true on Starter from the day the volume shipped,
+and Full only hid it until its floor dropped to one in the second audit; five passes missed
+it because every one of them walked the volume to the end.
+
+The cards still to write live in the sitting, so the sitting is what settles it:
+`halfDone(picks, half, track, open)` is `halfComplete` plus "and every card this half's
+open sitting holds has been written". `volumeStates` takes the sitting, the store hands it
+over, and the chooser, Today and the Present screen all ask `halfDone` now. The analytics
+event falls out of the same rule: the transition to written can only happen on the last
+Keep of the second half.
+
+Two more, both in the Interview: "Add another goal" returns to the areas question with the
+shaped goals still in the draft, and un-ticking the last area threw them away — it clears
+only when there is nothing behind the question either; and Drop and Add another on the
+summary were the only two changes in the file that never persisted, so a kill there
+resurrected a dropped goal. Today's caption now keys each half of itself on the state it
+describes, rather than going quiet about a kept Interview when a Present sitting is open
+beside it.
+
+Gate after: 421 core / 48 ui / 8 storage, e2e **328/328** (was 326; the new checks stop half-way through a half and find the door still says "Picked up" and the route still goes back to the writing), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors, copy check clean.
+
 Gate after: 416 core / 48 ui / 8 storage, e2e **326/326** (was 317; the new checks seed a live virtues sitting and press both closing-screen buttons on the faults, write a Past line in crisis and change it without the card returning, and read the Interview-only caption), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
 
 Gate after: 416 core / 48 ui / 8 storage, e2e **317/317** (was 311; the new checks relaunch cold mid-Interview and resume, press Begin then Back on the Past doorway and find no sitting behind it, and reread a written Present from Today), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.

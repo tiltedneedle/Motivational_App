@@ -9,7 +9,7 @@
  * suggested route, offered on the explainer and nowhere else.
  */
 import type { DepthTrack } from '../types';
-import { halfComplete, type PresentPick } from './present';
+import { halfDone, type PresentOpen, type PresentPick } from './present';
 import { pastStep, type Epoch, type PastAnalysis, type PastEvent } from './past';
 
 export type VolumeName = 'past' | 'present' | 'future';
@@ -23,6 +23,8 @@ export interface VolumesInput {
   books: number;
   /** Present: what survived the narrowing, in both halves. */
   presentPicks: PresentPick[];
+  /** A Present sitting still open, if there is one: a half with cards left to write. */
+  presentOpen?: PresentOpen | null;
   /** Past: the periods, the events, and what was written about them. */
   pastEpochs: Epoch[];
   pastEvents: PastEvent[];
@@ -39,7 +41,8 @@ export interface VolumeStanding {
 export function volumeStates(input: VolumesInput): Record<VolumeName, VolumeState> {
   const future: VolumeState = input.books > 0 ? 'done' : input.goals > 0 || input.hasIdeal ? 'started' : 'untouched';
 
-  const bothHalves = halfComplete(input.presentPicks, 'faults', input.track) && halfComplete(input.presentPicks, 'virtues', input.track);
+  const bothHalves =
+    halfDone(input.presentPicks, 'faults', input.track, input.presentOpen) && halfDone(input.presentPicks, 'virtues', input.track, input.presentOpen);
   const present: VolumeState = bothHalves ? 'done' : input.presentPicks.length > 0 ? 'started' : 'untouched';
 
   const step = pastStep(input.pastEpochs, input.pastEvents, input.pastAnalyses, input.track, input.pastListed ?? false);

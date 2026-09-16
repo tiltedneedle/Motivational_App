@@ -1550,6 +1550,17 @@ async function main() {
     await tap('present-keep');
     const kept = await page.evaluate(() => JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.presentPicks ?? []);
     check('the pick is stored with both lines and the sign they tapped', kept.length === 1 && kept[0].storyLine && kept[0].applyLine && kept[0].framingId === framingId, JSON.stringify(kept[0] ?? {}).slice(0, 120));
+
+    // One of three written is not a written half — the picks alone said it was.
+    await page.goto(`${BASE}/choose`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(500);
+    const doorMark = (await seen('door-present-mark')) ? (await text('door-present-mark')).toLowerCase() : '';
+    check('one card of three written does not call the half written', doorMark === 'picked up', doorMark);
+    await page.goto(`${BASE}/present?half=faults`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(500);
+    check('and the door goes back to the writing, not to a closing screen', await seen('screen-present-write'));
     check('and screened, like every other thing a person writes here', kept[0]?.safetyRisk === 'none');
 
     // ---- the Past volume (PRD 7.16): periods, events, what they made of you

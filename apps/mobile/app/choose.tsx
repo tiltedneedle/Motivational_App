@@ -13,7 +13,7 @@
 import { useRouter } from 'expo-router';
 import { Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { CHOOSER_COPY, doorStanding, firstVisit, halfComplete, presentStanding, type VolumeName } from '@morrow/core';
+import { CHOOSER_COPY, doorStanding, firstVisit, halfDone, presentStanding, type VolumeName } from '@morrow/core';
 import { Body, Card, InkButton, Label, Rise, Statement, Studio, TextButton, TopBar, accent, day, useReducedMotion } from '@morrow/ui';
 import { useMorrow, useVolumeStates } from '../src/store';
 import { useFirstRunStep } from '../src/analytics';
@@ -32,8 +32,10 @@ export default function Choose() {
   const consented = useMorrow((s) => Boolean(s.profile.consentedAt));
   const picks = useMorrow((s) => s.presentPicks);
   const depth = useMorrow((s) => s.profile.track);
-  const faultsDone = halfComplete(picks, 'faults', depth);
-  const virtuesDone = halfComplete(picks, 'virtues', depth);
+  const open = useMorrow((s) => s.presentDraft);
+  const sitting = open ? { half: open.half, selected: open.selected } : null;
+  const faultsDone = halfDone(picks, 'faults', depth, sitting);
+  const virtuesDone = halfDone(picks, 'virtues', depth, sitting);
   const reduced = useReducedMotion();
   const first = firstVisit(states);
 

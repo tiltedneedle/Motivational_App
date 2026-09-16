@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   CARD_GROUPS,
   halfComplete,
+  halfDone,
   ifThenFromFault,
   narrowTo,
   nextHalf,
@@ -496,6 +497,57 @@ describe('the two volumes in the sealed Book', () => {
         (p) => p + '_1',
       ),
     ).toThrow(/not written by you/i);
+  });
+});
+
+describe('a half is written when its writing is finished, not when it is begun', () => {
+  const pick = (cardId: string, half: 'faults' | 'virtues' = 'faults') => ({
+    cardId,
+    half,
+    storyLine: 'a time it cost me',
+    applyLine: 'what I do instead',
+    framingId: null,
+    goalId: null,
+    rank: 0,
+  });
+  const doorBase = {
+    track: 'starter' as const,
+    goals: 0,
+    hasIdeal: false,
+    books: 0,
+    presentPicks: [] as PresentPick[],
+    pastEpochs: [] as Epoch[],
+    pastEvents: [] as PastEvent[],
+    pastAnalyses: [] as PastAnalysis[],
+  };
+
+  it('is not written while the sitting still has cards to write', () => {
+    const one = [pick('f1')];
+    // The picks alone say written: a pick is a card already written about,
+    // and the floor is one.
+    expect(halfComplete(one, 'faults', 'starter')).toBe(true);
+    // The sitting says otherwise, and it is the sitting that is right.
+    expect(halfDone(one, 'faults', 'starter', { half: 'faults', selected: ['f1', 'f2', 'f3'] })).toBe(false);
+  });
+
+  it('is written once every card put into it has been', () => {
+    const all = [pick('f1'), pick('f2'), pick('f3')];
+    expect(halfDone(all, 'faults', 'starter', { half: 'faults', selected: ['f1', 'f2', 'f3'] })).toBe(true);
+  });
+
+  it('is not held open by the other half\u2019s sitting', () => {
+    expect(halfDone([pick('f1')], 'faults', 'starter', { half: 'virtues', selected: ['v1', 'v2'] })).toBe(true);
+  });
+
+  it('is not written with nothing in it, whatever the sitting says', () => {
+    expect(halfDone([], 'faults', 'starter', null)).toBe(false);
+  });
+
+  it('keeps the Present door shut while a half is part-written', () => {
+    const picks = [pick('f1'), pick('f2'), pick('f3'), pick('v1', 'virtues')];
+    const presentOpen = { half: 'virtues' as const, selected: ['v1', 'v2'] };
+    expect(volumeStates({ ...doorBase, presentPicks: picks, presentOpen }).present).toBe('started');
+    expect(volumeStates({ ...doorBase, presentPicks: [...picks, pick('v2', 'virtues')], presentOpen }).present).toBe('done');
   });
 });
 

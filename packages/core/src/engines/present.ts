@@ -104,6 +104,29 @@ export function halfComplete(picks: PresentPick[], half: PresentHalf, track: Dep
   return mine.length >= min && mine.every(pickComplete);
 }
 
+/** A sitting still open on one half: the cards put into it, written or not. */
+export interface PresentOpen {
+  half: PresentHalf;
+  selected: string[];
+}
+
+/**
+ * Whether the half is written: every card the person put into it has been
+ * written about, and at least the floor of them.
+ *
+ * `halfComplete` knows only the picks, and a pick is a card already written
+ * about — so with a floor of one it said "written" the moment the first of
+ * three was kept, and the chooser's door, Today and the route all believed
+ * it. The cards still to write live in the sitting, which is why this takes
+ * one: a half with an open sitting is not finished until the sitting is.
+ */
+export function halfDone(picks: PresentPick[], half: PresentHalf, track: DepthTrack, open?: PresentOpen | null): boolean {
+  if (!halfComplete(picks, half, track)) return false;
+  if (!open || open.half !== half) return true;
+  const written = new Set(picks.filter((p) => p.half === half && pickComplete(p)).map((p) => p.cardId));
+  return open.selected.every((id) => written.has(id));
+}
+
 /**
  * The if-then a fault becomes.
  *

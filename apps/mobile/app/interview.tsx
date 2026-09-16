@@ -132,7 +132,10 @@ export default function Interview() {
         // Kept as they are made, so a kill, the platform's back and the
         // screen's Back all leave the same thing behind: a sitting when an
         // area is ticked, nothing when none is.
-        if (next.picked.length > 0) saveDraft(next, history);
+        // Cleared only when there is nothing behind the question either:
+        // "Add another goal" returns here with shaped goals still in the
+        // draft, and un-ticking the last area used to throw them away.
+        if (next.picked.length > 0 || history.length > 0) saveDraft(next, history);
         else clearDraft();
       }
       return;
@@ -196,8 +199,16 @@ export default function Interview() {
         {s.stage === 'summary' ? (
           <Summary
             s={s}
-            onDrop={(id) => setS(dropDraft(s, id))}
-            onAddAnother={() => setS(addAnother(s))}
+            onDrop={(id) => {
+              const next = dropDraft(s, id);
+              setS(next);
+              saveDraft(next, history);
+            }}
+            onAddAnother={() => {
+              const next = addAnother(s);
+              setS(next);
+              saveDraft(next, history);
+            }}
             onFinish={finish}
           />
         ) : (

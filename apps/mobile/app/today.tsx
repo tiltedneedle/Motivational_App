@@ -21,8 +21,8 @@ import {
   sourceLineFor,
   firstRunCaption,
   firstVisit,
-  halfComplete,
-  presentStanding,
+    presentStanding,
+  halfDone,
 } from '@morrow/core';
 import {
   Body,
@@ -142,13 +142,11 @@ export default function Today() {
    */
   const volumes = useVolumeStates();
   const picksAll = useMorrow((s) => s.presentPicks);
-  const faultsDone = halfComplete(picksAll, 'faults', state.profile.track);
-  const virtuesDone = halfComplete(picksAll, 'virtues', state.profile.track);
+  const sitting = presentDraft ? { half: presentDraft.half, selected: presentDraft.selected } : null;
+  const faultsDone = halfDone(picksAll, 'faults', state.profile.track, sitting);
+  const virtuesDone = halfDone(picksAll, 'virtues', state.profile.track, sitting);
   const interviewDraft = useMorrow((s) => s.interviewDraft);
   const elsewhere = !firstVisit(volumes) || Boolean(presentDraft) || Boolean(pastDraft) || interviewKept(interviewDraft);
-  // Only the Interview is under way: nothing here joins a Book, and the
-  // Interview is not "next" — it is half done, and the button resumes it.
-  const interviewOnly = firstVisit(volumes) && !presentDraft && !pastDraft && interviewKept(interviewDraft);
   const whatIsThere = (): string => {
     if (volumes.past === 'done' && volumes.present === 'done') return 'Your past and your Present are written.';
     if (volumes.past === 'done') return 'Your past is written.';
@@ -253,7 +251,7 @@ export default function Today() {
             {firstRun.step !== 'interview'
               ? firstRunCaption(firstRun, goals.length)
               : elsewhere
-                ? interviewOnly
+                ? interviewKept(interviewDraft)
                   ? 'Your answers so far are kept. Begin picks the Interview up at the question you were on; Today itself comes at the end of Future, once the Book is sealed.'
                   : 'It joins your Book when the Book is sealed, at the end of Future. Today itself comes from Future, so the Interview is next.'
                 : 'Three evenings from now there will be a Book, a plan, and a first move for the morning.'}

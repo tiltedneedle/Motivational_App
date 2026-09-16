@@ -107,7 +107,7 @@ import {
   type PresentPickRow,
   type PastEpochRow,
   type PastEventRow,
-  halfComplete,
+  halfDone,
 } from '@morrow/core';
 
 /**
@@ -1774,7 +1774,11 @@ const store = create<MorrowState>()(
           // Finished is a fact about the picks, counted the once it becomes
           // true — a reread of a written half used to count as finishing it
           // again on every "Back to Today".
-          const done = (list: PresentPickRow[]) => halfComplete(list, 'faults', s.profile.track) && halfComplete(list, 'virtues', s.profile.track);
+          // The sitting says which cards are still to write, so this is the
+          // last Keep of the half and not merely the first.
+          const open = s.presentDraft ? { half: s.presentDraft.half, selected: s.presentDraft.selected } : null;
+          const done = (list: PresentPickRow[]) =>
+            halfDone(list, 'faults', s.profile.track, open) && halfDone(list, 'virtues', s.profile.track, open);
           if (!done(s.presentPicks) && done(next)) track({ name: 'volume_finished', volume: 'present' });
           return {
             presentPicks: next,
@@ -2396,6 +2400,7 @@ export function volumesOf(s: MorrowState): Record<VolumeName, VolumeState> {
     goals: s.goals.length,
     hasIdeal: latestText(s.texts, 'ideal') !== null,
     books: s.books.length,
+    presentOpen: s.presentDraft ? { half: s.presentDraft.half, selected: s.presentDraft.selected } : null,
     presentPicks: s.presentPicks.map((p) => ({
       cardId: p.cardId,
       half: p.half,

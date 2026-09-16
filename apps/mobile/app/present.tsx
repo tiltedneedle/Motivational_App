@@ -27,13 +27,13 @@ import {
   VIRTUE_CARDS_STARTER,
   VIRTUE_COPY,
   VIRTUE_FRAMINGS,
-  halfComplete,
-  narrowTo,
+    narrowTo,
   nextHalf,
   screen,
   sections,
   type PresentCard,
   type PresentHalf,
+  halfDone,
 } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Notice, Statement, Studio, TextButton, TopBar, UserField, announce, day, UserText } from '@morrow/ui';
 import { usePlatformBack } from '../src/platform-back';
@@ -138,7 +138,7 @@ function Present({ half }: { half: PresentHalf }) {
    * closing screen rather than on a deck of inked cards with nothing to say.
    */
   const [writingOpen, setWritingOpen] = useState(() =>
-    resumed ? Boolean(resumedWriting) && Boolean(resumed.open) : halfComplete(picks, half, depth),
+    resumed ? Boolean(resumedWriting) && Boolean(resumed.open) : halfDone(picks, half, depth, draft),
   );
 
   // The card being written about: the first chosen one with nothing written yet.
@@ -233,7 +233,7 @@ function Present({ half }: { half: PresentHalf }) {
   // Finished when nothing selected is left to write — or when the half is
   // written but none of its cards is in this depth's deck, which is what a
   // switch from Full to Starter leaves: the door still says "written".
-  const finished = writingOpen && writingId === null && (selected.length > 0 || halfComplete(picks, half, depth));
+  const finished = writingOpen && writingId === null && (selected.length > 0 || halfDone(picks, half, depth, draft));
 
   /**
    * Back out of the writing to the deck, keeping both the picks and whatever
@@ -291,7 +291,10 @@ function Present({ half }: { half: PresentHalf }) {
   // ---- this half is written
   if (finished) {
     const other: PresentHalf = half === 'faults' ? 'virtues' : 'faults';
-    const otherDone = halfComplete(picks, other, depth);
+    // The other half is written only if no sitting is still open on it —
+    // "Back to Today" instead of "Now what you are good at" used to appear
+    // with two of its three cards unwritten.
+    const otherDone = halfDone(picks, other, depth, draft);
     // The lines themselves, so "reread" from Today means reread: a closing
     // screen that printed none of them read as the writing gone. A held card
     // says so under its own lines rather than in a list of its own.
