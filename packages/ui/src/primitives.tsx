@@ -562,7 +562,11 @@ export function InkButton({
       {...hoverProps}
       accessibilityRole="button"
       accessibilityLabel={label}
-      aria-disabled={disabled || busy}
+      // Through `disabled`, not `aria-disabled`: react-native-web's Pressable
+      // sets aria-disabled from its own prop and overwrites the one passed
+      // in, so every disabled button here was announced as enabled, and the
+      // e2e's first check of a waiting button found no attribute at all.
+      disabled={disabled || busy}
       aria-busy={busy}
       style={style}
     >
@@ -1091,7 +1095,8 @@ export function HoldBar({
       accessibilityHint={
         screenReader ? 'Double tap to seal' : 'Press and hold until the bar fills'
       }
-      aria-disabled={done}
+      // The same as the button above: only `disabled` reaches the DOM.
+      disabled={done}
       focusable
       onLongPress={undefined}
       onAccessibilityTap={sealDirectly}

@@ -184,6 +184,12 @@ async function main() {
     await tap('consent-back');
     check('consent has a way back to Welcome', await seen('screen-welcome'));
     await tap('welcome-begin');
+    // The 16+ gate (PRD 12): Continue waits for the affirmation.
+    check('consent has the age gate', (await seen('consent-age')) && (await seen('consent-age-note')));
+    check('and Continue waits for it', (await page.locator('[data-testid="consent-continue"]').getAttribute('aria-disabled')) === 'true' || (await page.locator('[data-testid="consent-continue"]').isDisabled()));
+    await tap('consent-age');
+    await page.waitForTimeout(200);
+    check('one tap, and the note is gone', !(await seen('consent-age-note')));
     await tap('consent-continue');
 
     // ---- the three doors (client decision, 2026-09-15)
@@ -2319,7 +2325,11 @@ async function main() {
       (await seen('screen-reauthor')) && (await noticeText('reauthor-summary')).includes('1 goal let go') && (await seen(`reauthor-now-${g0.id}-strategies`)),
     );
     await tap('reauthor-seal');
-    await page.waitForTimeout(700);
+    // The stack's slide runs on the fake clock; a focus placed mid-slide
+    // lands nowhere and the Enter after it seals nothing.
+    await page.clock.runFor(1200);
+    await page.locator('[data-testid="seal-hold"]').first().waitFor({ state: 'visible' });
+    await page.waitForTimeout(300);
     await page.locator('[data-testid="seal-hold"]').first().focus().catch(() => {});
     await page.keyboard.press('Enter');
     await page.waitForTimeout(800);

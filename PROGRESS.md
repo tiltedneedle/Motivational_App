@@ -49,6 +49,14 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 44. **The 16+ gate (§12, §3.5), and every disabled button announced as such, 2026-09-17.**
+      Consent now says who Morrow is for and waits for one tap — "I am sixteen or
+      over" — before Continue is live; the consent timestamp is the record of the
+      screen, that affirmation included. Checking that Continue waited found that
+      no disabled button in the app had ever reached the DOM as disabled:
+      react-native-web's Pressable writes `aria-disabled` from its own `disabled`
+      prop and overwrites the one passed in. `InkButton` and `HoldBar` now pass
+      `disabled`, so a waiting button, and a seal already made, are heard as such.
 - [x] 43. **Your day (§7.12), 2026-09-17.** Wake and evening times, the Sunday hour,
       the day boundary, and the chronotype as a preset over them (Lark, In
       between, Owl), as chips under You. Quiet hours follow the person's own
@@ -1715,6 +1723,29 @@ the spot. The **shift calendar** is not built: per-day times are a feature of th
 and a half of one is worse than the chips.
 
 Gate after: e2e **427/427** (was 422; the day's chips, the default preset marked, Lark moving all three, one time moved on its own leaving the preset, every value kept), cold 84/84, axe 0 across 37 screens, 459 core / 48 ui / 8 storage, typecheck clean, lint 0 errors, copy and authorship clean.
+
+**The 16+ gate, and a button that was never disabled (2026-09-17).** §12 and §3.5 both
+name a 16+ gate; the consent screen had none. It now has a row saying who Morrow is for —
+"People sixteen and over. Morrow asks you to write about your own life, and that is not a
+thing to ask of a child." — and one chip, "I am sixteen or over", that Continue waits for,
+with a line under the button saying so until it is tapped. A tap rather than a date of
+birth: a date field is a form, and a child fills one in as easily as anyone; the consent
+timestamp already records the screen, and now records this with it.
+
+The walk's check that Continue waited — `aria-disabled` on the button — found no such
+attribute. react-native-web's Pressable sets `aria-disabled` from its own `disabled` prop
+and overwrites whatever the caller passed, so `InkButton`'s `aria-disabled` had never
+reached the DOM: every disabled button in the app (a stone's "Write your line", a seal's
+"I will…" before it is written, this Continue) was announced to a screen reader as live,
+and the hold bar after a seal as still a hold. Both pass `disabled` now; RNW writes the
+attribute and, on a `<button>`, the native `disabled` too. Found by the gate, not by the
+axe pass, which cannot know a button is meant to be disabled.
+
+Also: the re-authoring seal in the walk focused the hold bar 700 ms after the push, while
+the stack's slide was still running on the fake clock — a focus placed mid-slide lands
+nowhere and the Enter after it seals nothing. It waits for the clock and the bar now.
+
+Gate after: e2e **430/430** (was 427; the age gate, Continue waiting for it, one tap clearing the note), cold 84/84, axe 0 across 37 screens, way-back 33 screens, 459 core / 48 ui / 8 storage, typecheck clean, lint 0 errors.
 
 Gate after: 416 core / 48 ui / 8 storage, e2e **326/326** (was 317; the new checks seed a live virtues sitting and press both closing-screen buttons on the faults, write a Past line in crisis and change it without the card returning, and read the Interview-only caption), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
 

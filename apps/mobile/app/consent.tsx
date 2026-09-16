@@ -3,9 +3,10 @@
  * people are about to write the most honest thing they have written this year.
  */
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Body, InkButton, Label, Rule, Statement, Studio, TextButton, TopBar, day, keyboardScroll } from '@morrow/ui';
+import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, TopBar, day, keyboardScroll } from '@morrow/ui';
 import { useMorrow } from '../src/store';
 import { useFirstRunStep } from '../src/analytics';
 
@@ -33,6 +34,12 @@ const ROWS: { label: string; body: string; items?: string[] }[] = [
     body: 'It never writes a goal, a plan line or a sentence of your Book. It asks, it quotes you, it sorts, it typesets. If it produces text that is not yours, the app throws it away.',
   },
   {
+    // PRD §12, §3.5: the 16+ gate. Said here, once, where consent is given,
+    // and the button below waits for it.
+    label: 'Who this is for',
+    body: 'People sixteen and over. Morrow asks you to write about your own life, and that is not a thing to ask of a child.',
+  },
+  {
     label: 'You can take it all back',
     body: 'Export everything, or delete the account and its writing, from You, the last tab. Deletion is immediate here and complete within seven days.',
   },
@@ -42,6 +49,13 @@ export default function Consent() {
   const router = useRouter();
   useFirstRunStep('consent');
   const consent = useMorrow((s) => s.consent);
+  /**
+   * The age gate (PRD §12). One tap that the button waits for, rather than a
+   * date-of-birth field, which is a form and which a child can fill in as
+   * easily as anyone. The consent timestamp is the record of this screen,
+   * this affirmation included.
+   */
+  const [sixteen, setSixteen] = useState(false);
 
   return (
     <Studio testID="screen-consent">
@@ -68,11 +82,27 @@ export default function Consent() {
             </View>
           ))}
         </ScrollView>
-        <View style={{ paddingTop: 10, paddingBottom: 18, gap: 4 }}>
+        <View style={{ paddingTop: 10, paddingBottom: 18, gap: 8 }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+            <Chip
+              testID="consent-age"
+              label="I am sixteen or over"
+              role="checkbox"
+              selected={sixteen}
+              onPress={() => setSixteen((v) => !v)}
+            />
+          </View>
+          {sixteen ? null : (
+            <Body testID="consent-age-note" style={{ fontSize: 13 }}>
+              Continue waits for that.
+            </Body>
+          )}
           <InkButton
             testID="consent-continue"
             label="I understand, continue"
+            disabled={!sixteen}
             onPress={() => {
+              if (!sixteen) return;
               consent();
               // The three doors, not straight into one of them: the source
               // sells its programs separately and tells people to choose.
