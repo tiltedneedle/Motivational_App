@@ -1301,6 +1301,30 @@ client's stated case, a brand-new person doing a volume and losing their footing
 - Left as it is, on purpose: a renamed period prints as a heading in every printer and earns
   no authorship credit — the same rule as a chapter name, and the server counts the same.
 
+**And the pass on that (2026-09-16).** Two lenses, one skeptic each: 6 confirmed, 0
+refuted, one of them high:
+
+- **The Present closing screen's two buttons wiped the other half's sitting.** "Now what
+  you are good at" and "Another time" both cleared the store's one draft slot — fine when it
+  held this half's draft, ruinous once "Reread the faults" made reaching a finished half's
+  closing screen while a virtues sitting was live an ordinary two-tap path. The buttons no
+  longer clear anything: this half's draft went when the writing ran out, and what the slot
+  holds now is the other half's.
+- **A held Past event raised the resources card again on every Keep**, even for a comma
+  fixed in another box. The card now fires only for a box that changed and screens as
+  crisis; the verdict and the Book choice are handled as before.
+- A half written on Full and reread on Starter printed headless rows, or landed on an empty
+  deck while the door said "written": the card's sentence is looked up across every deck,
+  and the closing screen also closes when the half is written but none of its cards is in
+  this depth's deck.
+- The Interview keeps its ticks as they are made, so a kill, the platform's back and the
+  screen's Back leave the same thing behind; Today's caption for an Interview-only sitting
+  says Begin picks it up where it was, not that it "joins your Book"; and finishing the
+  Present is counted by the store once, when the picks make it true, not on every reread's
+  "Back to Today".
+
+Gate after: 416 core / 48 ui / 8 storage, e2e **326/326** (was 317; the new checks seed a live virtues sitting and press both closing-screen buttons on the faults, write a Past line in crisis and change it without the card returning, and read the Interview-only caption), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
+
 Gate after: 416 core / 48 ui / 8 storage, e2e **317/317** (was 311; the new checks relaunch cold mid-Interview and resume, press Begin then Back on the Past doorway and find no sitting behind it, and reread a written Present from Today), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
 
 Gate after: 416 core / 48 ui / 8 storage, e2e **311/311** (was 297; the new checks relaunch cold with only the two volumes in the store, change an event from the Book question, seal a second edition from the Past's closing screen and find it on the Book's paper), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors, copy check clean.

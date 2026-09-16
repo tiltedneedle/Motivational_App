@@ -88,8 +88,9 @@ export default function Interview() {
     const prev = history[history.length - 1];
     if (!prev) {
       // Backed all the way out: the draft of the first question is not a
-      // sitting, and must not read as one on Welcome or Today.
-      clearDraft();
+      // sitting unless an area is ticked, and must not read as one on
+      // Welcome or Today.
+      if (s.picked.length === 0) clearDraft();
       if (router.canGoBack()) router.back();
       else router.dismissTo('/');
       return;
@@ -125,7 +126,15 @@ export default function Interview() {
     setCustomText('');
     if (q.stage === 'areas') {
       const area = areas.find((a) => a.label === label);
-      if (area) setS(toggleArea(s, area.id));
+      if (area) {
+        const next = toggleArea(s, area.id);
+        setS(next);
+        // Kept as they are made, so a kill, the platform's back and the
+        // screen's Back all leave the same thing behind: a sitting when an
+        // area is ticked, nothing when none is.
+        if (next.picked.length > 0) saveDraft(next, history);
+        else clearDraft();
+      }
       return;
     }
     advance(answer(s, label));

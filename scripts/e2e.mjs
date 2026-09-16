@@ -213,6 +213,7 @@ async function main() {
     await page.waitForTimeout(700);
     check('a relaunch mid-Interview opens on Today, not on Welcome again', (await seen('screen-today')) && !(await seen('screen-welcome')));
     check('which says a sitting is kept', (await text('today-path')).toLowerCase().includes('sitting is kept'), await text('today-path'));
+    check('and the caption says what Begin does', (await text('today-path-caption')).includes('picks the Interview up'), await text('today-path-caption'));
     await tap('today-begin');
     await page.clock.runFor(1200);
     await page.waitForTimeout(500);
@@ -1602,7 +1603,7 @@ async function main() {
     await tap('past-choose-continue');
     for (let i = 0; i < 3; i += 1) {
       if (!(await seen('screen-past-analyse'))) break;
-      await page.locator('[data-testid="past-what"]').fill('It happened in the spring and nobody explained it.');
+      await page.locator('[data-testid="past-what"]').fill(i === 2 ? 'My uncle died of an overdose that spring, and nobody said the word.' : 'It happened in the spring and nobody explained it.');
       await page.locator('[data-testid="past-shaped"]').fill('I pack lightly and I keep the people I find.');
       if (i === 0) {
         // Same test on the heaviest volume, and on more state: the walk it is
@@ -1625,6 +1626,15 @@ async function main() {
       await page.locator('[data-testid="past-believe"]').fill('Starting again is survivable.');
       await page.waitForTimeout(250);
       await tap('past-keep');
+      if (i === 2) {
+        await page.waitForTimeout(400);
+        check('a line written in crisis raises the card in the Past too', await seen('safety-card'));
+        if (await seen('safety-card')) {
+          await page.waitForTimeout(1100);
+          await tap('safety-continue');
+          await page.waitForTimeout(300);
+        }
+      }
     }
     check('the three moves end on the Book question', await seen('screen-past-done'));
     const noDraftLeft = await page.evaluate(
@@ -1637,6 +1647,14 @@ async function main() {
     await tap(`past-join-yes-${written[0].id}`);
     const joined = await page.evaluate(() => (JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.pastEvents ?? []).filter((e) => e.joinsBook).length);
     check('one tap puts one in, and only that one', joined === 1, String(joined));
+    const heldEv = written.find((e) => e.whatHappened.includes('overdose'));
+    check('the held one is said to be held, with no chips', Boolean(heldEv) && (await seen(`past-join-held-${heldEv?.id}`)));
+    await tap(`past-change-${heldEv?.id}`);
+    check('a held event can still be changed', await seen('screen-past-analyse'));
+    await tap('past-keep');
+    await page.waitForTimeout(400);
+    check('and keeping it unchanged does not raise the card again', !(await seen('safety-card')) && (await seen('screen-past-done')));
+    check('while it stays held', await seen(`past-join-held-${heldEv?.id}`));
 
     // ---- the deck's un-tick is a real un-tick (audit: a written card taken off still reached the Book)
     const store = async () => page.evaluate(() => JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state ?? {});
@@ -1716,6 +1734,31 @@ async function main() {
     await page.clock.runFor(1200);
     await page.waitForTimeout(500);
     check('a finished half opened by name lands on its closing screen', await seen('screen-present-done'));
+
+    // The other half's live sitting, and the closing screen's two buttons.
+    await page.goto(`${BASE}/present?half=virtues`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(500);
+    const seedCard = await page.evaluate(() => document.querySelector('[data-testid^="present-card-"]')?.getAttribute('data-testid')?.replace('present-card-', '') ?? '');
+    await patchStore(
+      `s.presentDraft = { half: 'virtues', selected: [${JSON.stringify(seedCard)}], open: false, lines: { [${JSON.stringify(seedCard)}]: { story: 'Half a virtue, not yet kept.', apply: '', framingId: null, goalId: null } }, writing: { cardId: ${JSON.stringify(seedCard)}, story: 'Half a virtue, not yet kept.', apply: '', framingId: null, goalId: null }, updatedAt: '2026-09-16T00:00:00.000Z' };`,
+    );
+    await page.goto(`${BASE}/present?half=faults`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(500);
+    await tap('present-next-half');
+    await page.waitForTimeout(400);
+    const afterNext = (await store()).presentDraft;
+    check('"Now what you are good at" leaves the virtues sitting where it was', afterNext?.half === 'virtues' && (afterNext?.lines?.[seedCard]?.story ?? '').includes('Half a virtue'), JSON.stringify(afterNext ?? null).slice(0, 120));
+    await page.goto(`${BASE}/present?half=faults`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(500);
+    await tap('present-later');
+    await page.waitForTimeout(400);
+    const afterLater = (await store()).presentDraft;
+    check('and so does "Another time"', afterLater?.half === 'virtues' && (afterLater?.lines?.[seedCard]?.story ?? '').includes('Half a virtue'), JSON.stringify(afterLater ?? null).slice(0, 120));
+    check('so Today still offers to carry it on', await seen('today-carry-on'));
+    await patchStore(`s.presentDraft = null;`);
 
     // ---- the virtues: a goal to pair, and a line the screen holds out of the Book
     await page.goto(`${BASE}/present?half=virtues`, { waitUntil: 'networkidle' });

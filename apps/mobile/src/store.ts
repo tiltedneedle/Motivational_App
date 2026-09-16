@@ -107,6 +107,7 @@ import {
   type PresentPickRow,
   type PastEpochRow,
   type PastEventRow,
+  halfComplete,
 } from '@morrow/core';
 
 /**
@@ -1769,10 +1770,14 @@ const store = create<MorrowState>()(
             safetyRisk: risk,
             writtenAt: existing?.writtenAt ?? now,
           };
+          const next = existing ? s.presentPicks.map((p) => (p.id === existing.id ? row : p)) : [...s.presentPicks, row];
+          // Finished is a fact about the picks, counted the once it becomes
+          // true — a reread of a written half used to count as finishing it
+          // again on every "Back to Today".
+          const done = (list: PresentPickRow[]) => halfComplete(list, 'faults', s.profile.track) && halfComplete(list, 'virtues', s.profile.track);
+          if (!done(s.presentPicks) && done(next)) track({ name: 'volume_finished', volume: 'present' });
           return {
-            presentPicks: existing
-              ? s.presentPicks.map((p) => (p.id === existing.id ? row : p))
-              : [...s.presentPicks, row],
+            presentPicks: next,
             safetyPause: risk === 'crisis' ? pauseOn(risk, 'present', row.id) : s.safetyPause,
           };
         }),
@@ -1851,9 +1856,15 @@ const store = create<MorrowState>()(
           const rank: Record<SafetyRisk, number> = { none: 0, concern: 1, crisis: 2 };
           // The stored verdict is milder than the text screens at: the person cleared it.
           const cleared = was ? rank[screen(`${old.whatHappened} ${old.shapedMe} ${old.stillBelieve}`).risk] > rank[was.safetyRisk] : false;
-          const per = (key: keyof typeof old): SafetyRisk =>
-            fields[key].trim() !== old[key] ? screen(fields[key]).risk : cleared ? 'none' : screen(old[key]).risk;
-          const risk = [per('whatHappened'), per('shapedMe'), per('stillBelieve')].sort((a, b) => rank[b] - rank[a])[0]!;
+          const keys = ['whatHappened', 'shapedMe', 'stillBelieve'] as const;
+          const changed = (k: (typeof keys)[number]) => fields[k].trim() !== old[k];
+          const per = (k: (typeof keys)[number]): SafetyRisk => (changed(k) ? screen(fields[k]).risk : cleared ? 'none' : screen(old[k]).risk);
+          const verdicts = keys.map(per);
+          const risk = [...verdicts].sort((a, b) => rank[b] - rank[a])[0]!;
+          // The card is for a line just written in crisis, not for a verdict
+          // carried over from a box that did not change: a held event whose
+          // comma was fixed used to raise it again on every Keep.
+          const raised = keys.some((k, i) => changed(k) && verdicts[i] === 'crisis');
           return {
             pastEvents: s.pastEvents.map((v) =>
               v.id === id
@@ -1871,7 +1882,7 @@ const store = create<MorrowState>()(
                   }
                 : v,
             ),
-            safetyPause: risk === 'crisis' ? pauseOn(risk, 'past', id) : s.safetyPause,
+            safetyPause: raised ? pauseOn('crisis', 'past', id) : s.safetyPause,
           };
         }),
       setPastJoinsBook: (id, joins) =>
@@ -2068,7 +2079,7 @@ function bundleOf(s: MorrowState): SyncBundle {
 }
 
 /** The app's sentence for a card id, for printing it in the Book as a heading. */
-function cardText(id: string): string {
+export function cardText(id: string): string {
   return (
     [...FAULT_CARDS_FULL, ...VIRTUE_CARDS_FULL, ...FAULT_CARDS_STARTER, ...VIRTUE_CARDS_STARTER].find((c) => c.id === id)?.text ?? ''
   );

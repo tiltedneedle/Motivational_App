@@ -146,6 +146,9 @@ export default function Today() {
   const virtuesDone = halfComplete(picksAll, 'virtues', state.profile.track);
   const interviewDraft = useMorrow((s) => s.interviewDraft);
   const elsewhere = !firstVisit(volumes) || Boolean(presentDraft) || Boolean(pastDraft) || interviewKept(interviewDraft);
+  // Only the Interview is under way: nothing here joins a Book, and the
+  // Interview is not "next" — it is half done, and the button resumes it.
+  const interviewOnly = firstVisit(volumes) && !presentDraft && !pastDraft && interviewKept(interviewDraft);
   const whatIsThere = (): string => {
     if (volumes.past === 'done' && volumes.present === 'done') return 'Your past and your Present are written.';
     if (volumes.past === 'done') return 'Your past is written.';
@@ -246,11 +249,13 @@ export default function Today() {
           <Statement testID="today-path">
             {firstRun.step !== 'interview' ? 'Your Book is not finished yet.' : elsewhere ? whatIsThere() : 'Nothing here yet, and that is the right starting point.'}
           </Statement>
-          <Body>
+          <Body testID="today-path-caption">
             {firstRun.step !== 'interview'
               ? firstRunCaption(firstRun, goals.length)
               : elsewhere
-                ? 'It joins your Book when the Book is sealed, at the end of Future. Today itself comes from Future, so the Interview is next.'
+                ? interviewOnly
+                  ? 'Your answers so far are kept. Begin picks the Interview up at the question you were on; Today itself comes at the end of Future, once the Book is sealed.'
+                  : 'It joins your Book when the Book is sealed, at the end of Future. Today itself comes from Future, so the Interview is next.'
                 : 'Three evenings from now there will be a Book, a plan, and a first move for the morning.'}
           </Body>
           <InkButton testID="today-begin" label={firstRun.label} onPress={() => router.push(firstRun.route)} />

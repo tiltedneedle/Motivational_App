@@ -37,8 +37,8 @@ import {
 } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Notice, Statement, Studio, TextButton, TopBar, UserField, announce, day, UserText } from '@morrow/ui';
 import { usePlatformBack } from '../src/platform-back';
-import { useGoals, useMorrow } from '../src/store';
-import { track, useFirstRunStep } from '../src/analytics';
+import { useGoals, useMorrow, cardText } from '../src/store';
+import { useFirstRunStep } from '../src/analytics';
 
 /** The two lines and the two taps under one card. */
 interface Lines {
@@ -230,7 +230,10 @@ function Present({ half }: { half: PresentHalf }) {
     });
   };
 
-  const finished = writingOpen && selected.length > 0 && writingId === null;
+  // Finished when nothing selected is left to write — or when the half is
+  // written but none of its cards is in this depth's deck, which is what a
+  // switch from Full to Starter leaves: the door still says "written".
+  const finished = writingOpen && writingId === null && (selected.length > 0 || halfComplete(picks, half, depth));
 
   /**
    * Back out of the writing to the deck, keeping both the picks and whatever
@@ -312,7 +315,7 @@ function Present({ half }: { half: PresentHalf }) {
               {lines.map((p) => (
                 <View key={p.id} style={{ gap: 3, borderTopWidth: 1, borderTopColor: day.line, paddingTop: 10 }}>
                   <Body style={{ fontSize: 15 }}>
-                    {(deck.find((c) => c.id === p.cardId)?.text ?? '') +
+                    {cardText(p.cardId) +
                       (half === 'faults'
                         ? framings.find((f) => f.id === p.framingId)?.label
                           ? ' · ' + framings.find((f) => f.id === p.framingId)!.label
@@ -337,9 +340,10 @@ function Present({ half }: { half: PresentHalf }) {
               testID="present-next-half"
               label={otherDone ? 'Back to Today' : half === 'faults' ? 'Now what you are good at' : 'Now what gets in your way'}
               onPress={() => {
-                clearDraft();
+                // Nothing to clear here: this half's draft went when the
+                // writing ran out, and the store's one slot may now be holding
+                // the other half's sitting, which is not ours to touch.
                 if (otherDone) {
-                  track({ name: 'volume_finished', volume: 'present' });
                   router.dismissTo('/today');
                   return;
                 }
@@ -358,10 +362,7 @@ function Present({ half }: { half: PresentHalf }) {
               <TextButton
                 testID="present-later"
                 label="Another time"
-                onPress={() => {
-                  clearDraft();
-                  router.dismissTo('/today');
-                }}
+                onPress={() => router.dismissTo('/today')}
               />
             )}
           </ScrollView>
