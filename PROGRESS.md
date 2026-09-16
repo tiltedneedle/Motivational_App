@@ -1467,7 +1467,16 @@ program's actual prompt text by someone with a licensed copy.
 `github.com/tiltedneedle/Motivational_App`, branch `main`, pushed 2026-09-12 from this machine over the `github-tn` SSH alias (never an https remote here — see the machine notes). First push was `77a0070`, 35 commits after the UI pass began; the tree was clean and `pnpm verify` green at that commit. No CI yet: the gate runs locally.
 
 ## Blocked on the user
-- Supabase project URL/anon key, Anthropic API key, fal.ai key, RevenueCat keys: needed to test real providers. Everything runs on local fallbacks without them.
+- A model endpoint (`pnpm sb secrets set LLM_BASE_URL=… LLM_API_KEY=… LLM_MODEL=…`, any
+  OpenAI-compatible provider, or `ANTHROPIC_API_KEY`), a fal.ai key, RevenueCat keys: needed
+  to test real providers. Everything runs on local fallbacks without them. The Supabase
+  project itself is connected and live (schema through 0006, four functions, the account
+  round-trip in `pnpm test:account`).
+- Supabase Pro, or custom SMTP, before the six-digit-code email template can be pushed; the
+  free tier refuses template changes, so the email carries a link and the app signs in from it.
+- A Mac with Xcode, or an Android SDK, and a device: for the native build and the
+  VoiceOver / TalkBack walk. Nothing here can show the native tab bar, the hold gesture,
+  Dynamic Type at 200%, or the Android hardware back through the three volumes.
 - Google sign-in: `signInWithGoogle(idToken)` is in `src/supabase.ts`; the native half (`@react-native-google-signin/google-signin`) needs the client's iOS and web OAuth client ids before it can be added and built.
 - Crash reporting: Sentry's React Native SDK is a native dependency and a DSN; not added until there is a project to send to. Analytics is a seam already (PostHog key).
 - Sound on the seal: an asset decision. Haptics are in; a placeholder click is worse than silence.
@@ -1485,9 +1494,11 @@ program's actual prompt text by someone with a licensed copy.
 
 ## Next steps
 
-Everything that can be done on this machine, without a key, is done. Four
-audits are closed and the built app has been walked end to end. What remains
-needs either hardware or a credential.
+Everything that can be done on this machine, without a key, is done. Seven
+audits are closed (the last four on the three volumes, each adversarially
+verified), the built app is walked end to end by 311 checks, and the account
+round-trips against the live project. What remains needs either hardware, a
+credential, or a product call.
 
 1. **Build it natively, once.** The tree is ready for it: `npx expo-doctor`
    passes 18/18, the Android prebuild generates cleanly, the icon and splash
@@ -1500,8 +1511,13 @@ needs either hardware or a credential.
    autofill from Mail, the iOS keyboard on the Interview's custom field and a
    stone's "then I", VoiceOver and then TalkBack through the whole first run
    (Welcome → Consent → Interview → doorway → the Fifteen → read-back → order →
-   stones → Portrait → seal → Today → seal the day), rotation, the haptics,
-   the wallpaper landing in Photos, and dark mode following the OS. Then the one piece of P1 chrome that waits on a device:
+   stones → Portrait → seal → Today → seal the day), then the same through
+   the other two volumes (the chooser's four doors, the Present deck and Full's
+   narrowing step, the Past's periods and its Book question, and the Android
+   hardware back on every step of both — on web it is intercepted by
+   `usePlatformBack`; on native it is the stack's own `beforeRemove`, which
+   nothing here can press), rotation, the haptics, the wallpaper landing in
+   Photos, and dark mode following the OS. Then the one piece of P1 chrome that waits on a device:
    the native tab bar (`expo-router/unstable-native-tabs`, glass on iOS 26,
    Material on Android) in place of Today's pill — a `(tabs)` group for
    Today, Book, Envision, Coach and You, `dismissTo('/today')` re-pointed,
@@ -1536,7 +1552,16 @@ needs either hardware or a credential.
    line is on the Book and the lock screen.
 7. **Counsel's read of the prompts** against the program's real text, with a
    licensed copy (see "The stones, renamed").
-8. Then loop: implement, test, harden, research, repeat.
+8. **Two threads the volumes left deliberately loose**, each a product call
+   rather than a bug: the fault's second write ("what I do instead") is stored
+   with the sign the person tapped and could become the If/then of that
+   goal's Obstacles stone (`ifThenFromFault` exists and has no consumer); and
+   a virtue could be offered for pairing at the read-back, where goals are
+   first named (`virtuesForGoal` likewise). Until either is built the closing
+   copy claims neither. And one Present draft slot: ticking a card on one
+   deck replaces a live draft of the other half, which the door routing makes
+   a chosen act.
+9. Then loop: implement, test, harden, research, repeat.
 
 ## Where the walkthrough habits are written down
 
