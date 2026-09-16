@@ -67,6 +67,11 @@ const ROUTES = {
   declare: '/declare',
   reauthor: '/reauthor',
   memory: '/memory',
+  // The PRD's link shapes (9.3, 9.2) resolve to the app's routes; nowhere resolves to Today.
+  'link-goal': '/goals/no-such-goal/stone/obstacles',
+  'link-sunday': '/book/sunday',
+  'link-run': '/practice/no-such-practice/run',
+  'link-nowhere': '/no-such-screen',
 };
 
 function serve() {

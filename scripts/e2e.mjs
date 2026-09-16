@@ -2413,6 +2413,19 @@ async function main() {
     await page.waitForTimeout(600);
     check('Back from the memory screen is Settings', await seen('screen-settings'));
 
+    // ---- the PRD's link shapes (9.2, 9.3) land on the app's screens; nowhere lands on Today
+    const linkLands = async (path, screen, more = async () => true) => {
+      await page.goto(`${BASE}${path}`, { waitUntil: 'networkidle' });
+      await page.clock.runFor(1500);
+      await page.waitForTimeout(700);
+      check(`${path} lands on ${screen}`, (await seen(screen)) && (await more()), new URL(page.url()).pathname);
+    };
+    await linkLands(`/goals/${g0.id}/stone/obstacles`, 'screen-stone', async () => (await seen('stone-line2')));
+    await linkLands('/book/sunday', 'screen-reading');
+    await linkLands('/settings/memory', 'screen-memory');
+    await linkLands('/no-such-screen', 'screen-today');
+    check('and the unmatched page is never shown', !(await page.locator('body').innerText()).includes('Unmatched Route'));
+
     // Consent reached by its own URL has nothing behind it; Back did nothing
     // at all, on the one screen a person can land on before anything exists.
     await page.goto(`${BASE}/consent`, { waitUntil: 'networkidle' });

@@ -16,7 +16,8 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 const DIR = join(ROOT, 'apps', 'mobile', 'app');
-const ROOTS = new Set(['index.tsx', 'today.tsx', '_layout.tsx']);
+// +not-found is a redirect and +native-intent is not a screen at all.
+const ROOTS = new Set(['index.tsx', 'today.tsx', '_layout.tsx', '+not-found.tsx', '+native-intent.tsx']);
 
 const files = (await readdir(DIR)).filter((f) => f.endsWith('.tsx')).sort();
 const missing = [];

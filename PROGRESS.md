@@ -49,6 +49,12 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 42. **Deep links (§9.3) and a link to nowhere, 2026-09-17.** The PRD's link
+      shapes (`morrow://goal/{id}`, `/goals/[id]/stone/[kind]`, `/book/sunday`,
+      `/practice/{id}/run`, `/settings/memory`, and the rest of the inventory)
+      resolve to the routes the app has, on native through `+native-intent` and
+      on the web through `+not-found`; a link that names nothing lands on Today,
+      never on the router's "Unmatched Route" page; a sign-in link is left alone.
 - [x] 41. **What Morrow knows about me (§7.9, §7.12), 2026-09-17.** The memory
       profile, screen 27 of the inventory and the product's answer to the
       companion-chatbot row of §3.5: every line built from something the person
@@ -1666,6 +1672,21 @@ stopped at that table and nothing after it landed, and only the live round-trip 
 (now its 46th check).
 
 Gate after: e2e **417/417** (was 401; the new checks open the page from Settings with axe on it, find the name, the goal, the stones, the Book and the days, change the name and find it in their words and still there after a relaunch, restore it, forget the if-then and find "I'm stuck" without it, bring it back, and go Back to Settings), cold 76/76, axe 0 across 37 screens, way-back 33 screens, migration **62 checks** with 0009 (the row is the person's alone), the live account round-trip **46/46**, 450 core / 48 ui / 8 storage, typecheck clean, lint 0 errors and 10 warnings, copy / dates / deps / authorship / sql / functions clean.
+
+**Deep links, and a link to nowhere (2026-09-17).** §9.3 lists eight `morrow://` links and
+§9.2 writes every screen's path the way a document does — `/goals/[id]/stone/[kind]`,
+`/book/sunday`, `/settings/memory` — while the app's routes are flat with query strings.
+A notification, a widget, an email or a stale link in somebody's notes may carry either
+shape, and until now anything but the app's own shape reached expo-router's "Unmatched
+Route" page. `engines/links.ts`: `resolveLink` takes any of them — scheme, host and dev
+prefix stripped; `morrow://goal/x` read as a path, not a host — and returns the route
+(`/goal?id=`, `/stone?goal=&kind=`, `/reading`, `/run?id=`, `/memory`…), null for one of
+the app's own, and Today for nothing. A sign-in link is never touched: its fragment is the
+root layout's to read. `app/+native-intent.tsx` applies it to system paths on native;
+`app/+not-found.tsx` is a redirect through it on every platform, so the unmatched page is
+never shown. The way-back check knows both files are not screens.
+
+Gate after: e2e **422/422** (was 417; a stone by its inventory path with the goal behind it, `/book/sunday` on the reading, `/settings/memory` on the memory screen, a link to nowhere on Today, and never the unmatched page), cold **84/84** (four link shapes on both stores), axe 0 across 37 screens, way-back 33 screens, 457 core / 48 ui / 8 storage, typecheck clean, lint 0 errors.
 
 Gate after: 416 core / 48 ui / 8 storage, e2e **326/326** (was 317; the new checks seed a live virtues sitting and press both closing-screen buttons on the faults, write a Past line in crisis and change it without the card returning, and read the Interview-only caption), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
 
