@@ -30,7 +30,7 @@ export default function Authoring() {
   return (
     <Studio testID="screen-authoring">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/')), testID: 'authoring-back' }} where="Before the Fifteen" />
+        <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'authoring-back' }} where="Before the Fifteen" />
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', gap: 24 }} showsVerticalScrollIndicator={false}>
           <Statement>Three evenings from now you will have a plan you wrote yourself.</Statement>
           <Body>

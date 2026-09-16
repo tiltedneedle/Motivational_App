@@ -171,6 +171,36 @@ export interface PastDraft {
   updatedAt: string;
 }
 
+/**
+ * A stone being written. The line, its second half, the paragraph on the long
+ * track and the follow-up's own words — all of it typed and none of it in the
+ * store until the stone is kept, so a phone call in the middle of one lost
+ * the lot. Held per stone, so a draft can only ever return to its own.
+ */
+export interface StoneDraft {
+  goalId: string;
+  kind: AnalysisKind;
+  framingId: string | null;
+  line: string;
+  line2: string;
+  paragraph: string;
+  whenWhere: string;
+  updatedAt: string;
+}
+
+/**
+ * The evening, half written. The one ritual a person does every day, and the
+ * one whose words lived only on the screen until the hold sealed them. Held
+ * per day: yesterday's half-written proof is not tonight's.
+ */
+export interface DayDraft {
+  day: string;
+  word: string;
+  proof: string;
+  gladOf: string;
+  updatedAt: string;
+}
+
 /** The Interview mid-way: its state and the steps behind it, so a kill is not a restart. */
 export interface InterviewDraft {
   s: InterviewState;
@@ -287,6 +317,8 @@ export interface MorrowState {
    */
   presentDraft: PresentDraft | null;
   pastDraft: PastDraft | null;
+  stoneDraft: StoneDraft | null;
+  dayDraft: DayDraft | null;
   interviewDraft: InterviewDraft | null;
   readBackDraft: { rows: ReadBackRow[]; leftOut?: string; source: string; updatedAt: string } | null;
   /** The coach's single invitation to the Full track, once ever. */
@@ -507,6 +539,10 @@ export interface MorrowState {
   /** The helplines card, asked for. No pause, no "not about me". */
   showResources: () => void;
   /** Written as the person types, the way the writing room's draft is. */
+  saveStoneDraft: (draft: Omit<StoneDraft, 'updatedAt'>) => void;
+  clearStoneDraft: () => void;
+  saveDayDraft: (draft: Omit<DayDraft, 'updatedAt'>) => void;
+  clearDayDraft: () => void;
   savePresentDraft: (draft: Omit<PresentDraft, 'updatedAt'>) => void;
   clearPresentDraft: () => void;
   savePastDraft: (draft: Omit<PastDraft, 'updatedAt'>) => void;
@@ -602,6 +638,8 @@ const EMPTY = {
   toast: null,
   presentDraft: null,
   pastDraft: null,
+  stoneDraft: null,
+  dayDraft: null,
   interviewDraft: null,
   readBackDraft: null,
   fullTrackInvited: false,
@@ -1896,6 +1934,10 @@ const store = create<MorrowState>()(
 
       setToast: (t) => set({ toast: t }),
       showResources: () => set({ safetyPause: { risk: 'none', at: new Date().toISOString(), source: null, voluntary: true } }),
+      saveStoneDraft: (draft) => set({ stoneDraft: { ...draft, updatedAt: new Date().toISOString() } }),
+      clearStoneDraft: () => set({ stoneDraft: null }),
+      saveDayDraft: (draft) => set({ dayDraft: { ...draft, updatedAt: new Date().toISOString() } }),
+      clearDayDraft: () => set({ dayDraft: null }),
       savePresentDraft: (draft) => set({ presentDraft: { ...draft, updatedAt: new Date().toISOString() } }),
       clearPresentDraft: () => set({ presentDraft: null }),
       savePastDraft: (draft) => set({ pastDraft: { ...draft, updatedAt: new Date().toISOString() } }),

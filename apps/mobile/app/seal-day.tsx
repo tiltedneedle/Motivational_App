@@ -24,14 +24,35 @@ export default function SealDay() {
   // A day already sealed opens on what was written, so sealing it again is
   // visibly an edit of that and not an empty form that would replace it.
   const today = useMorrow((s) => s.days[dayOf(new Date(), s.profile.dayBoundaryHour)]);
-  const [word, setWord] = useState(today?.moodWord ?? 'Steady');
-  const [proof, setProof] = useState(today?.proof ?? '');
-  const [gladOf, setGladOf] = useState(today?.gladOf ?? '');
+  const day = useMorrow((s) => dayOf(new Date(), s.profile.dayBoundaryHour));
+  const draft = useMorrow((s) => s.dayDraft);
+  const saveDraft = useMorrow((s) => s.saveDayDraft);
+  const clearDraft = useMorrow((s) => s.clearDayDraft);
+  /**
+   * The evening they left half written, if it was tonight's. This is the one
+   * ritual a person does every day, and its words lived only on this screen
+   * until the hold sealed them.
+   */
+  const [resumed] = useState(() => (draft && draft.day === day ? draft : null));
+  const [word, setWord] = useState(resumed?.word ?? today?.moodWord ?? 'Steady');
+  const [proof, setProof] = useState(resumed?.proof ?? today?.proof ?? '');
+  const [gladOf, setGladOf] = useState(resumed?.gladOf ?? today?.gladOf ?? '');
   const [sealed, setSealed] = useState(false);
   /** PRD §7.6: "optional sixty seconds by voice". Into the proof field, to be read before it is sealed. */
   const [listening, setListening] = useState(false);
   const [micNote, setMicNote] = useState<string | null>(null);
   const anchorRef = useRef('');
+
+  // Written as they type. Nothing is drafted for an evening nobody has
+  // written in, so opening the seal and leaving leaves nothing behind.
+  useEffect(() => {
+    if (!proof.trim() && !gladOf.trim() && word === (today?.moodWord ?? 'Steady')) {
+      if (draft && draft.day === day) clearDraft();
+      return;
+    }
+    saveDraft({ day, word, proof, gladOf });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [day, word, proof, gladOf]);
   const dictationRef = useRef(dictation());
   const listen = async () => {
     if (listening) {
@@ -131,6 +152,7 @@ export default function SealDay() {
             reducedMotion={reduced}
             onComplete={() => {
               sealDay({ moodWord: word, proof, gladOf });
+              clearDraft();
               feelSealed();
               {
                 const d = useMorrow.getState().days[dayOf(new Date(), useMorrow.getState().profile.dayBoundaryHour)];

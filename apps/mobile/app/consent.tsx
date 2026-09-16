@@ -46,7 +46,12 @@ export default function Consent() {
   return (
     <Studio testID="screen-consent">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <TopBar back={{ onPress: () => router.back(), testID: 'consent-back' }} where="Before you write" />
+        {/* Opened straight from a link, or reloaded, there is nothing behind this
+        screen and Back did nothing at all. Every other screen guards it. */}
+        <TopBar
+          back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/')), testID: 'consent-back' }}
+          where="Before you write"
+        />
         <ScrollView {...keyboardScroll} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 12, gap: 18 }}>
           <Statement>Before you write anything.</Statement>
           {ROWS.map((r) => (

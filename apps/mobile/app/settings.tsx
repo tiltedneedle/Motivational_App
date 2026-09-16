@@ -129,6 +129,8 @@ export default function Settings() {
       // any Book when a seal is refused or the storage banner sends them here.
       // Kept out on purpose: the account session and what has been asked.
       interviewDraft: state.interviewDraft,
+      stoneDraft: state.stoneDraft,
+      dayDraft: state.dayDraft,
       readBackDraft: state.readBackDraft,
       bookTitle: state.bookTitle,
       bookTitleFraming: state.bookTitleFraming,

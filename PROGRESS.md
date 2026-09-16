@@ -1351,6 +1351,40 @@ beside it.
 
 Gate after: 421 core / 48 ui / 8 storage, e2e **328/328** (was 326; the new checks stop half-way through a half and find the door still says "Picked up" and the route still goes back to the writing), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors, copy check clean.
 
+**The sweep of the screens the audits never walked (2026-09-16).** Every audit so far was
+pointed at the three volumes, so the rest of the app had been checked only by the guard that
+each screen has a back button — not by asking where that button goes, or what a screen holds
+that is not in the store. Reading all thirty by hand found three, each the same shape as the
+Past-age case the client reported:
+
+- **Consent's Back did nothing.** Opened by its own link, or reloaded, there was nothing
+  behind it and `router.back()` was a no-op — the one screen a person can land on before
+  anything exists, and the only one missing the `canGoBack()` guard every other screen has.
+- **The stones kept nothing.** The line, its "then I" half, the follow-up's own words and,
+  on the long track, a whole paragraph lived on the screen alone until the stone was seated.
+  Now a `stoneDraft`, held per stone so a draft can only return to its own, cleared when the
+  stone is kept.
+- **The evening seal kept nothing.** The proof line is the thing a person writes most often,
+  and an interruption before the hold took it. Now a `dayDraft`, held per day, so last
+  night's half-written proof is never offered as tonight's.
+
+Both drafts join the export. The Fifteen, the Interview, the read-back, Present, Past, the
+stones and the evening now all keep what is typed; nothing in the app asks for writing and
+holds it only on screen.
+
+Also: the authoring doorway's back fell through to Welcome rather than Today — it worked
+only because Welcome redirects, which is luck, not design.
+
+Gate after: 421 core / 48 ui / 8 storage, e2e **330/330** (was 328; a stone killed mid-line
+comes back to the line with the sitting naming its own stone, an evening half written comes
+back to it, and Back on a consent screen opened by its own link goes somewhere), axe 0 across
+33 screens, way-back 30 screens, typecheck clean, lint 0 errors, copy check clean.
+
+One habit worth the note: three of those checks failed at first not because the app was
+wrong but because each sat in the middle of a sequence the walk depends on — the seal's own
+state, the safety card's settle window. A check that navigates belongs at the end of the
+walk, after everything that reads the state it would disturb.
+
 Gate after: 416 core / 48 ui / 8 storage, e2e **326/326** (was 317; the new checks seed a live virtues sitting and press both closing-screen buttons on the faults, write a Past line in crisis and change it without the card returning, and read the Interview-only caption), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
 
 Gate after: 416 core / 48 ui / 8 storage, e2e **317/317** (was 311; the new checks relaunch cold mid-Interview and resume, press Begin then Back on the Past doorway and find no sitting behind it, and reread a written Present from Today), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.

@@ -38,6 +38,9 @@ export default function StoneScreen() {
   const goals = useGoals();
   const track = useMorrow((s) => s.profile.track);
   const write = useMorrow((s) => s.writeAnalysis);
+  const draft = useMorrow((s) => s.stoneDraft);
+  const saveDraft = useMorrow((s) => s.saveStoneDraft);
+  const clearDraft = useMorrow((s) => s.clearStoneDraft);
   const state = useMorrow((s) => s);
 
   const goalId = params.goal ?? goals[0]?.id ?? '';
@@ -45,15 +48,21 @@ export default function StoneScreen() {
   const kind = (params.kind ?? 'motives') as AnalysisKind;
 
   const existing = analysesFor(state, goalId).find((a) => a.kind === kind);
-  const [framingId, setFramingId] = useState<string | null>(existing?.framingId ?? null);
-  const [line, setLine] = useState(existing?.line ?? '');
-  const [line2, setLine2] = useState(existing?.line2 ?? '');
-  const [paragraph, setParagraph] = useState(existing?.paragraph ?? '');
+  /**
+   * The sitting they left, if it was this stone's. Read once, at mount: after
+   * that this screen is the thing writing it. A draft of some other stone is
+   * not ours to open.
+   */
+  const [resumed] = useState(() => (draft && draft.goalId === goalId && draft.kind === kind ? draft : null));
+  const [framingId, setFramingId] = useState<string | null>(resumed?.framingId ?? existing?.framingId ?? null);
+  const [line, setLine] = useState(resumed?.line ?? existing?.line ?? '');
+  const [line2, setLine2] = useState(resumed?.line2 ?? existing?.line2 ?? '');
+  const [paragraph, setParagraph] = useState(resumed?.paragraph ?? existing?.paragraph ?? '');
   const [followUpAsked, setFollowUpAsked] = useState(false);
   // The follow-up's own words ("Tuesdays at 7, in the kitchen"), joined to
   // the line when it is kept. Bound to the same state as the line, the
   // same text used to appear in two fields at once.
-  const [whenWhere, setWhenWhere] = useState('');
+  const [whenWhere, setWhenWhere] = useState(resumed?.whenWhere ?? '');
 
   const set = useMemo(() => framingSet(kind, goal?.domain ?? 'custom'), [kind, goal?.domain]);
   const plan = goal ? analysisPlan(goal.rank, track) : ANALYSIS_ORDER;
@@ -108,8 +117,24 @@ export default function StoneScreen() {
     else router.dismissTo('/today');
   };
 
+  // Written as they type, the way every other room in the app is. Nothing
+  // is drafted for a stone that is still blank, so opening one and leaving
+  // leaves nothing behind.
+  useEffect(() => {
+    if (!line.trim() && !line2.trim() && !paragraph.trim() && !whenWhere.trim() && framingId === null) {
+      if (draft && draft.goalId === goalId && draft.kind === kind) clearDraft();
+      return;
+    }
+    saveDraft({ goalId, kind, framingId, line, line2, paragraph, whenWhere });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [goalId, kind, framingId, line, line2, paragraph, whenWhere]);
+
   const goNext = () => goNextWith(line);
   const goNextWith = (text: string) => {
+    // Kept: the stone is in the store now, and the sitting has nothing left
+    // to hold. Cleared before the route changes, so the next stone opens on
+    // its own draft and never on this one's.
+    clearDraft();
     write(goalId, kind, {
       framingId,
       line: text,
