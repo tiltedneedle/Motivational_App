@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Linking, Platform, Pressable, ScrollView, Share, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { HELPLINES, bookToText, formatDay, plural, sealedOn, type Moment, CHRONOTYPES, DAY_ENDS, EVENING_TIMES, MORNING_TIMES, SUNDAY_HOURS, chronotypeOf, clockLabel, type Profile, SHIFT_EVENINGS, SHIFT_MORNINGS, WEEKDAY_NAMES, WEEK_ORDER, shiftDaysLabel } from '@morrow/core';
+import { hourOf, boundaryFor, HELPLINES, bookToText, formatDay, plural, sealedOn, type Moment, CHRONOTYPES, DAY_ENDS, EVENING_TIMES, MORNING_TIMES, SUNDAY_HOURS, chronotypeOf, clockLabel, type Profile, SHIFT_EVENINGS, SHIFT_MORNINGS, WEEKDAY_NAMES, WEEK_ORDER, shiftDaysLabel } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, accent, day, TopBar } from '@morrow/ui';
 import { manageSubscriptionUrl } from '../src/billing';
 import { useLatestBook, useMorrow } from '../src/store';
@@ -40,7 +40,19 @@ export default function Settings() {
   const syncNotifications = useMorrow((s) => s.syncNotifications);
   /** A time changed is a schedule changed; the notices move with it. */
   const setTimes = (patch: Partial<Pick<Profile, 'wakeTime' | 'eveningTime' | 'sundayHour' | 'dayBoundaryHour' | 'shiftDays' | 'shiftWakeTime' | 'shiftEveningTime'>>) => {
-    setProfile(patch);
+    // A shift evening in the small hours and the hour the day ends at have
+    // to agree, or the evening's seal lands on the next day's column. Whichever
+    // was just chosen wins: a later evening moves the boundary up; an earlier
+    // boundary moves the evening back to half past midnight.
+    const next = { ...state.profile, ...patch };
+    const needed = boundaryFor(next.shiftEveningTime, next.dayBoundaryHour);
+    const reconciled =
+      needed === null
+        ? patch
+        : patch.dayBoundaryHour !== undefined
+          ? { ...patch, shiftEveningTime: '00:30' }
+          : { ...patch, dayBoundaryHour: needed };
+    setProfile(reconciled);
     void syncNotifications();
   };
   const pushToAccount = useMorrow((s) => s.pushToAccount);
@@ -261,7 +273,9 @@ export default function Settings() {
             <Body testID="day-times" style={{ fontSize: 14 }}>
               {`The morning line at ${clockLabel(state.profile.wakeTime)}, the evening line at ${clockLabel(state.profile.eveningTime)}, the Sunday reading at ${state.profile.sundayHour}. Quiet from an hour after the evening line until the morning one.${
                 state.profile.shiftDays.length
-                  ? ` On ${shiftDaysLabel(state.profile.shiftDays)}, the morning line at ${clockLabel(state.profile.shiftWakeTime)} and the evening line at ${clockLabel(state.profile.shiftEveningTime)}.`
+                  ? ` On ${shiftDaysLabel(state.profile.shiftDays)}, the morning line at ${clockLabel(state.profile.shiftWakeTime)} and the evening line at ${clockLabel(state.profile.shiftEveningTime)}${
+                      (hourOf(state.profile.shiftEveningTime) ?? 24) < 12 ? `, the night after; the day ends at ${state.profile.dayBoundaryHour} in the morning so it still counts as that day` : ''
+                    }.`
                   : ''
               }`}
             </Body>

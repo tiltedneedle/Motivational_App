@@ -1929,6 +1929,23 @@ there is a second language to show.
 
 Gate after: e2e **449/449** (was 446; a shift day ticked shows the hours it keeps, the shift's morning is its own, unticked every day is the same), cold 84/84, axe 0 across 37 screens, way-back 33 screens, migration **68 checks** with 0011, the live account round-trip **46/46**, 463 core / 48 ui / 8 storage, typecheck clean, lint 0 errors.
 
+**The shift calendar, reviewed (2026-09-17).** The same pass over that commit: five confirmed,
+none refuted, and the first of them severe. An evening line in the small hours — 00:30,
+02:00 — was planned on the day column's own calendar date, which is the small hour at the
+start of that day, eleven hours before the shift's own morning line and already past by the
+time the day was planned; it never fired, on any shift day, while Settings said when it
+would. The planner puts an evening earlier in the clock than the morning on the next
+calendar date now, and the test keeps it through the afternoon's schedule. With it: 04:00
+is not offered — the latest a day can end is 5, and an evening at or after the boundary is
+cancelled by the next morning's sync before it fires and seals the next day's column when
+tapped; a small-hours evening and the day's end now agree, whichever was chosen last (a
+two o'clock evening moves the day's end to three; a day ending at one moves the evening
+back to half past midnight), and the sentence under Your day says the evening is the night
+after and why it still counts as that day. The walk taps a non-default morning and evening
+and reads all three fields back, which the first version's check could not have caught.
+
+Gate after: e2e **452/452**, cold 84/84, axe 0 across 37 screens, way-back 33 screens, 463 core / 48 ui / 8 storage, typecheck clean, lint 0 errors.
+
 Gate after: 416 core / 48 ui / 8 storage, e2e **326/326** (was 317; the new checks seed a live virtues sitting and press both closing-screen buttons on the faults, write a Past line in crisis and change it without the card returning, and read the Interview-only caption), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
 
 Gate after: 416 core / 48 ui / 8 storage, e2e **317/317** (was 311; the new checks relaunch cold mid-Interview and resume, press Begin then Back on the Past doorway and find no sitting behind it, and reread a written Present from Today), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.

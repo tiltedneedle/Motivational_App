@@ -81,7 +81,7 @@ export function quietFor(times: { wakeTime: string; eveningTime: string; sundayH
   return from === to ? DEFAULT_QUIET : { from, to };
 }
 
-function hourOf(hhmm: string): number | null {
+export function hourOf(hhmm: string): number | null {
   const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm.trim());
   if (!m) return null;
   const h = Number(m[1]);
@@ -136,7 +136,19 @@ export const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thurs
 export const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0] as const;
 /** The shift's hours: a morning that may be a midday, an evening that may be a small hour. */
 export const SHIFT_MORNINGS = ['05:30', '07:00', '09:00', '11:00', '13:00', '15:00', '17:00'] as const;
-export const SHIFT_EVENINGS = ['20:00', '22:00', '23:00', '00:30', '02:00', '04:00'] as const;
+export const SHIFT_EVENINGS = ['20:00', '22:00', '23:00', '00:30', '02:00'] as const;
+
+/**
+ * A small-hours evening line has to fall before the hour the day ends at,
+ * or the seal it leads to lands on the next day's column and the next
+ * morning's sync cancels the line before it fires. Given the pair chosen,
+ * the day boundary the shift needs — or null when the pair is fine as it is.
+ */
+export function boundaryFor(shiftEveningTime: string, dayBoundaryHour: number): number | null {
+  const h = hourOf(shiftEveningTime);
+  if (h === null || h >= 12) return null;
+  return h >= dayBoundaryHour ? Math.min(5, h + 1) : null;
+}
 
 /** "Mondays, Tuesdays and Fridays", in the week's order. */
 export function shiftDaysLabel(days: readonly number[]): string {
@@ -243,6 +255,12 @@ const REGISTER: Record<Persona, (s: string) => string> = {
   fierce: (s) => s,
 };
 
+/** The calendar date after a day column. */
+function nextDate(day: string): string {
+  const d = new Date(Date.UTC(Number(day.slice(0, 4)), Number(day.slice(5, 7)) - 1, Number(day.slice(8, 10)) + 1));
+  return d.toISOString().slice(0, 10);
+}
+
 function at(day: string, hhmm: string): string {
   return `${day}T${hhmm}:00`;
 }
@@ -307,10 +325,15 @@ export function planNotices(input: NoticeInput): Notice[] {
   const eveningAt = outOfQuiet(input.eveningTime, quiet);
   if (eveningAt && !sealed) {
     const done = input.moves.filter((m) => m.status === 'done').length;
+    // A shift day's evening line can be a small hour — 00:30, 02:00 — which
+    // is the night that follows the day, on the next calendar date, not the
+    // small hour at the start of this one. Planned on the day's own date it
+    // was always already past and never fired.
+    const eveningDate = (hourOf(eveningAt) ?? 24) < (hourOf(input.wakeTime) ?? 0) ? nextDate(input.day) : input.day;
     out.push({
       id: `${input.day}:evening`,
       moment: 'evening',
-      at: at(input.day, eveningAt),
+      at: at(eveningDate, eveningAt),
       title: 'Seal the day',
       route: '/seal-day',
       // Never a count of what is missing. A quiet day goes in the ledger as a

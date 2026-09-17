@@ -17,6 +17,7 @@ import {
   chronotypeOf,
   clockLabel,
   fewer,
+  boundaryFor,
   quietFor,
   shiftDaysLabel,
   timesFor,
@@ -110,6 +111,19 @@ describe('quiet hours', () => {
     const shiftDay = timesFor(profile, '2026-09-16');
     const notices = planNotices({ ...base, day: '2026-09-16', wakeTime: shiftDay.wakeTime, eveningTime: shiftDay.eveningTime, quiet: quietFor({ ...shiftDay, sundayHour: 10, onSunday: false }) });
     expect(notices.find((n) => n.moment === 'wake')?.at).toBe('2026-09-16T13:00:00');
+    // The evening line at two in the morning is the night AFTER the day: the
+    // next calendar date. On the day's own date it was already past and never
+    // fired; the schedule at half past one that afternoon keeps it.
+    expect(notices.find((n) => n.moment === 'evening')?.at).toBe('2026-09-17T02:00:00');
+    expect(toSchedule(notices, new Date('2026-09-16T13:30:00')).map((n) => n.moment)).toContain('evening');
+    // A plain evening stays on its own date.
+    const plain = planNotices({ ...base, day: '2026-09-16', wakeTime: '07:00', eveningTime: '21:30' });
+    expect(plain.find((n) => n.moment === 'evening')?.at).toBe('2026-09-16T21:30:00');
+    // The boundary a small-hours evening needs; none for an ordinary one.
+    expect(boundaryFor('02:00', 3)).toBeNull();
+    expect(boundaryFor('02:00', 1)).toBe(3);
+    expect(boundaryFor('00:30', 1)).toBeNull();
+    expect(boundaryFor('23:00', 1)).toBeNull();
     // No shift days: every day the same.
     expect(timesFor({ wakeTime: '07:00', eveningTime: '21:30' }, '2026-09-16').shift).toBe(false);
     expect(shiftDaysLabel([1, 2, 5])).toBe('Mondays, Tuesdays and Fridays');

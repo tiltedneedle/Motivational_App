@@ -1495,12 +1495,29 @@ async function main() {
     await tap('day-shift-3');
     await page.waitForTimeout(300);
     check('a shift day ticked shows the hours it keeps', (await seen('day-shift-times')) && (await text('day-times')).includes('On Wednesdays'), await text('day-times'));
-    await tap('day-shift-morning-13:00');
+    await tap('day-shift-morning-09:00');
     await page.waitForTimeout(300);
-    check('and the shift’s morning is its own', (await text('day-times')).includes('On Wednesdays, the morning line at 13:00'), await text('day-times'));
+    await tap('day-shift-evening-02:00');
+    await page.waitForTimeout(300);
+    check('and the shift’s morning and evening are its own', (await text('day-times')).includes('On Wednesdays, the morning line at 9:00 and the evening line at 2:00'), await text('day-times'));
+    const shiftSaved = await page.evaluate(() => {
+      const p = JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.profile ?? {};
+      return [JSON.stringify(p.shiftDays), p.shiftWakeTime, p.shiftEveningTime, p.dayBoundaryHour].join(' ');
+    });
+    check('and kept, with the day ending after the evening line', shiftSaved === '[3] 09:00 02:00 4', shiftSaved);
+    // The day boundary and a small-hours evening agree, whichever was chosen last.
+    await tap('day-ends-1');
+    await page.waitForTimeout(300);
+    check('a day ending at one moves a two o’clock evening back to half past midnight', (await text('day-times')).includes('the evening line at 0:30') && (await text('day-times')).includes('ends at 1 in the morning'), await text('day-times'));
+    await tap('day-shift-evening-02:00');
+    await page.waitForTimeout(300);
+    check('and a two o’clock evening moves the day’s end to three', (await text('day-times')).includes('ends at 3 in the morning'), await text('day-times'));
     await tap('day-shift-3');
     await page.waitForTimeout(300);
     check('unticked, every day is the same again', !(await seen('day-shift-times')) && !(await text('day-times')).includes('On Wednesdays'));
+    // The day's end as it was before the shift's evening moved it, for the check below.
+    await tap('day-ends-4');
+    await page.waitForTimeout(300);
     const savedTimes = await page.evaluate(() => {
       const p = JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.profile ?? {};
       return [p.wakeTime, p.eveningTime, p.sundayHour, p.dayBoundaryHour].join(' ');
