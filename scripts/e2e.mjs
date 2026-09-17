@@ -178,6 +178,18 @@ async function main() {
     check('Skip lands on the last page', await seen('welcome-page-2'));
     await page.locator('[data-testid="welcome-name"]').fill('Sam');
 
+    // ---- the home screen is not behind the introduction
+    // Somebody who wants to see the room before writing for it can: Today,
+    // honestly empty, with the path and its doors, and Back to Welcome.
+    await tap('welcome-look');
+    check('Welcome opens onto Today for a look around', await seen('screen-today'));
+    check('which says what is there, and what three evenings make', (await text('today-path')).startsWith('Nothing here yet') && (await text('today-begin')).length > 0, await text('today-path'));
+    check('with the other volumes one tap away', await seen('today-other-volumes'));
+    await page.goBack({ waitUntil: 'commit' }).catch(() => {});
+    await page.waitForTimeout(600);
+    check('and Back is Welcome again, name kept', (await seen('screen-welcome')) && (await page.locator('[data-testid="welcome-name"]').inputValue()) === 'Sam');
+    if (!(await seen('welcome-page-2'))) await tap('welcome-skip');
+
     // ---- Interview
     await tap('welcome-begin');
     check('consent screen', await seen('screen-consent'));

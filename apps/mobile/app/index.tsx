@@ -180,6 +180,23 @@ export default function Welcome() {
             <>
               <InkButton testID="welcome-begin" label={book || begun ? 'Back to today' : 'Begin tonight'} onPress={book || begun ? () => router.dismissTo('/today') : begin} />
               {/*
+                The home screen, before anything is written: Today shows the
+                path and its doors, honestly empty, rather than a wall that
+                says "begin" and nothing else. Nobody is made to write before
+                they have seen the room they are writing for.
+              */}
+              {!(book || begun) ? (
+                <TextButton
+                  testID="welcome-look"
+                  label="Have a look around first"
+                  onPress={() => {
+                    const trimmed = name.trim();
+                    if (trimmed !== profile.displayName) setProfile({ displayName: trimmed });
+                    router.push('/today');
+                  }}
+                />
+              ) : null}
+              {/*
                 A new phone (PRD §7.12): the one door back to a Book kept on the
                 account, before anything is written here — once a goal exists the
                 device has writing of its own and the account will not overwrite it.
