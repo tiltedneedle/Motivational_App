@@ -2038,6 +2038,17 @@ makes it real; the caption reads "for your goal" for one.
 
 Gate after: e2e **462/462** (was 461; Something moved from the Book lands on the chooser), cold 84/84, axe 0 across 37 screens, way-back 33 screens, 463 core / 48 ui / 8 storage, typecheck clean, lint 0 errors.
 
+**And once more (2026-09-17).** The pass over those fixes found three, none refuted, and
+then nothing: the runner told Morrow's two-minute stand-in from theirs by re-deriving it
+from the stone's line, while the builder had derived it from the paragraph on the Full
+track — `isMinVersionStandIn` knows the stand-in by its shape now, whichever line it was
+cut from and however that line has been rewritten since; and the new move sheet promised
+"first among this goal's moves" on a day an intention already said comes first — it
+promises only what always holds, "On Today, under <goal>", and the store's comment carries
+the exception again. Dry.
+
+Gate after: e2e **462/462**, cold 84/84, axe 0 across 37 screens, way-back 33 screens, 464 core / 48 ui / 8 storage, typecheck clean, lint 0 errors.
+
 Gate after: 416 core / 48 ui / 8 storage, e2e **326/326** (was 317; the new checks seed a live virtues sitting and press both closing-screen buttons on the faults, write a Past line in crisis and change it without the card returning, and read the Interview-only caption), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
 
 Gate after: 416 core / 48 ui / 8 storage, e2e **317/317** (was 311; the new checks relaunch cold mid-Interview and resume, press Begin then Back on the Past doorway and find no sitting behind it, and reread a written Present from Today), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.

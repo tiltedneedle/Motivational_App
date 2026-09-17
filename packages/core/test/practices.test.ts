@@ -219,3 +219,14 @@ describe('what a practice is worth to a day', () => {
     expect(practiceValue(null)).toBe(0);
   });
 });
+
+describe('the two-minute stand-in', () => {
+  it('is known by its shape, whichever line it was cut from', async () => {
+    const { isMinVersionStandIn, minVersionOf } = await import('../src/engines/blueprint');
+    for (const line of ['', 'Get to the pool before work', 'I will walk to the pool at 6:30', 'Run the loop']) {
+      expect(isMinVersionStandIn(minVersionOf(line))).toBe(true);
+    }
+    expect(isMinVersionStandIn('Shoes on, out the door, two minutes and back')).toBe(false);
+    expect(isMinVersionStandIn(null)).toBe(false);
+  });
+});

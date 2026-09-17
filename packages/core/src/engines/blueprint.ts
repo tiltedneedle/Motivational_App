@@ -79,6 +79,17 @@ function energyFor(text: string): Move['energy'] {
     : 'low';
 }
 
+/**
+ * Whether a two-minute version is Morrow's own stand-in rather than a line
+ * the person typed: the three sentences `minVersionOf` can supply. Matched
+ * by shape, not by re-deriving from a source line that may since have been
+ * rewritten, so the screens can set the stand-in in the sans wherever it is.
+ */
+export function isMinVersionStandIn(text: string | null | undefined): boolean {
+  const t = (text ?? '').trim();
+  return t === 'Two minutes of it, wherever you are.' || t === 'Two minutes of it, and that counts.' || /^Two minutes: \S+, that's the whole ask\.$/.test(t);
+}
+
 /** A two-minute version, cut from the user's own line where possible. */
 export function minVersionOf(line: string): string {
   const t = line.trim();

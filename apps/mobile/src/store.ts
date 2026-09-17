@@ -1442,10 +1442,11 @@ const store = create<MorrowState>()(
           set({ toast: { text: 'Write how you’ll do this goal first — the How stone.', kind: 'info' } });
           return false;
         }
-        // "First among this goal's moves today", as the sheet says: ordered
-        // before every move the plan already has. Today sorts by goal rank
-        // first, so for the top goal that is the Now card and for another goal
-        // it is the top of that goal's part of the list.
+        // Ordered before every move the plan already has, so it is the first
+        // of this goal's moves on Today — under an intention already said
+        // this morning, which Today keeps first, and under the moves of any
+        // goal ranked above it. The sheet promises only what always holds:
+        // "On Today, under <goal>".
         const topOrder = Math.min(0, ...plan.moves.map((m) => m.order)) - 1;
         const move = {
           id: newId('mv'),

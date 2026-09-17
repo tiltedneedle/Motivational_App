@@ -192,7 +192,8 @@ export default function NewMove() {
 
               {picked ? (
                 <View style={{ backgroundColor: day.surface2, borderRadius: radius.card, padding: 14, gap: 4 }}>
-                  <Label>{`First among ${goals.find((g) => g.id === goalId)?.title ?? 'this goal'}’s moves today`}</Label>
+                  {/* What always holds: on Today, under this goal. Where in the list depends on an intention already said. */}
+                  <Label>{`On Today, under ${goals.find((g) => g.id === goalId)?.title ?? 'this goal'}`}</Label>
                   <UserText style={{ fontSize: 17, lineHeight: 24 }}>{picked}</UserText>
                 </View>
               ) : null}

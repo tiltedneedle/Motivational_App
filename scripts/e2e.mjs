@@ -716,7 +716,7 @@ async function main() {
         check('the move lands on Today', await seen('screen-today'));
         const rowsAfter = await page.locator('[data-testid^="row-mv"], [data-testid="now-card"]').count();
         check('as one more stone', rowsAfter > rowsBefore, `${rowsBefore} → ${rowsAfter}`);
-        // "First among this goal's moves today", as the sheet says. The walk adds it to the top goal, where that is the top of today.
+        // Ordered before the plan's other moves. The walk adds it to the top goal with no intention said, where that is the top of today.
         const newest = await page.evaluate(() => {
           const st = JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state ?? {};
           const all = (st.plans ?? []).flatMap((pl) => pl.moves);
