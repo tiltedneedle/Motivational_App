@@ -240,7 +240,7 @@ export interface ToastState {
   actionLabel?: string;
   /** Undo handle: the id of whatever changed. */
   undoId?: string;
-  kind?: 'park' | 'add' | 'info' | 'capture';
+  kind?: 'park' | 'add' | 'info' | 'capture' | 'shrink';
 }
 
 /**
@@ -482,6 +482,8 @@ export interface MorrowState {
    * one counted against their score for not being done.
    */
   shrinkMove: (moveId: string) => boolean;
+  /** The move back to its whole self, after a shrink they did not mean. */
+  unshrinkMove: (moveId: string) => void;
   addEvidence: (text: string, goalId?: string) => void;
   /** Take a captured line back out of the ledger — the toast's Undo. */
   removeEvidence: (id: string) => void;
@@ -1484,10 +1486,20 @@ const store = create<MorrowState>()(
             ...p,
             moves: p.moves.map((m) => (m.id === moveId ? { ...m, doingMinVersion: true } : m)),
           })),
-          toast: { text: `The small version it is · ${move.title}`, kind: 'info' },
+          // With a way back (PRD §11.4: an action written to Today "when the
+          // user agrees"): the chip was the ask, and Undo is the second look.
+          toast: { text: `The small version it is · ${move.title}`, kind: 'shrink', undoId: moveId },
         }));
         return true;
       },
+
+      unshrinkMove: (moveId) =>
+        set((st) => ({
+          plans: st.plans.map((p) => ({
+            ...p,
+            moves: p.moves.map((m) => (m.id === moveId ? { ...m, doingMinVersion: false } : m)),
+          })),
+        })),
 
       addEvidence: (text, goalId) =>
         set((s) => {

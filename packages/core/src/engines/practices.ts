@@ -90,7 +90,10 @@ export function buildPractice(input: BuildPracticeInput): Practice {
   if (steps.some((s) => s.seconds === 0)) problems.push('every step needs a length, even a short one');
   if (problems.length) throw new PracticeInvalid(problems);
 
-  const sourceText = input.source.paragraph?.trim() || input.source.line.trim();
+  // The line, as the Blueprint does: the Full track's paragraph is prose
+  // across four prompts, and a two-minute version cut from it named the
+  // wrong verb.
+  const sourceText = input.source.line.trim() || input.source.paragraph?.trim() || '';
   return {
     id: input.newId('prac'),
     goalId: input.goalId,
@@ -113,7 +116,8 @@ export function buildPractice(input: BuildPracticeInput): Practice {
  * nothing can be cut, the list comes back empty and they write it.
  */
 export function suggestSteps(source: Pick<GoalAnalysis, 'line' | 'paragraph'>): { text: string; seconds: number }[] {
-  const text = source.paragraph?.trim() || source.line.trim();
+  // The line, not the paragraph: the paragraph gave sixty-word steps.
+  const text = source.line.trim() || source.paragraph?.trim() || '';
   return splitFirstMoves(text).map((t) => ({ text: t, seconds: 300 }));
 }
 

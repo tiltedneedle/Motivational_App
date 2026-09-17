@@ -31,6 +31,8 @@ import {
   Portrait as PortraitSchema,
   bookPages,
   bookToHtml,
+  daysBetween,
+  ownDate,
   bookToText,
   buildBookVersion,
   buildDawnBrief,
@@ -84,6 +86,12 @@ function measurable(proof: string): boolean {
 const norm = (s: string): string => s.replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/\s+/g, ' ').trim().toLowerCase();
 const contains = (haystack: string, needle: string): boolean => norm(haystack).includes(norm(needle));
 const inAny = (haystacks: readonly string[], needle: string): boolean => haystacks.some((h) => contains(h, needle));
+
+/** A quotation cut short must not stop on a word that leaves it hanging. */
+const HANGING_CUT = /\b(?:the|a|an|and|or|but|of|to|in|on|at|for|with|that|which|not|just|my|is|was|I|I['’]ve|I['’]m)…”/;
+const HANGING_CUT_LETTER = /\b(?:the|a|an|and|or|but|of|to|in|on|at|for|with|that|which|not|just|my|is|was|I|I['’]ve|I['’]m)” and I have thought/;
+/** Their full stop inside our sentence: “…did it anyway.” and — one sentence, two stops. */
+const STOP_THEN_LOWER = /[.!?]” (?:and|but|so|which|for|or) /;
 
 /** The app's own prose in a piece of coach text: what is left once their quotations are taken out. */
 function appProse(text: string, quotes: readonly string[]): string {
@@ -175,7 +183,7 @@ const report = {
   spans: { total: 0, min: Infinity, max: 0, verified: 0 },
   books: { sealed: 0, minRatio: 1 },
   portraits: 0,
-  plans: { built: 0, moves: 0, milestones: 0 },
+  plans: { built: 0, moves: 0, milestones: 0, efforts: { S: 0, M: 0, L: 0 } as Record<'S' | 'M' | 'L', number> },
   briefs: { built: 0, maxWords: 0 },
   chips: 0,
   letters: { built: 0, minWords: Infinity, maxWords: 0 },
@@ -191,7 +199,7 @@ afterAll(() => {
     `  read-back   ${report.spans.total} spans, ${report.spans.min}–${report.spans.max} a profile, ${report.spans.verified}/${report.spans.total} verbatim`,
     `  books       ${report.books.sealed} sealed, lowest authorship ratio ${report.books.minRatio}`,
     `  portraits   ${report.portraits}`,
-    `  plans       ${report.plans.built} built, ${report.plans.moves} moves, ${report.plans.milestones} milestones, all sourced`,
+    `  plans       ${report.plans.built} built, ${report.plans.moves} moves, ${report.plans.milestones} milestones, all sourced; first moves S ${report.plans.efforts.S} · M ${report.plans.efforts.M} · L ${report.plans.efforts.L}`,
     `  briefs      ${report.briefs.built}, longest ${report.briefs.maxWords} words`,
     `  chips       ${report.chips} replies`,
     `  letters     ${report.letters.built}, ${report.letters.minWords}–${report.letters.maxWords} words`,
@@ -317,6 +325,19 @@ describe.each(built)('$profile.id', (b) => {
     }
     // The identity line is a clause they wrote, or nothing; never a proposal in their face.
     if (portrait.identityLine) expect(contains(p.ideal, portrait.identityLine)).toBe(true);
+    // Who they said they want to be, when they said it (PRD §7.4: "proposed
+    // from the Fifteen's text"), and a line that reads: no "who is is", no
+    // clause that is a verb the framing cannot take.
+    const saidWho = p.ideal.match(/[^.!?]*\bwant to be (?:someone|a \w+) who[^.!?]*/)?.[0];
+    if (saidWho) {
+      expect(portrait.identityLine.length, 'an identity line is proposed when they said who').toBeGreaterThan(0);
+      expect(contains(saidWho, portrait.identityLine), `the identity clause is theirs: "${portrait.identityLine}"`).toBe(true);
+    }
+    if (portrait.identityLine) {
+      expect(portrait.identityFraming).toBeTruthy();
+      expect(portrait.identityLine).not.toMatch(/^(?:is|am|are|was)\b/);
+      expect(`${portrait.identityFraming} ${portrait.identityLine}`).not.toMatch(/\bis is\b/);
+    }
     expect(portrait.firstMoves.length).toBeGreaterThanOrEqual(1);
     expect(portrait.firstMoves.length).toBeLessThanOrEqual(3);
     const strategies = analyses.find((a) => a.kind === 'strategies')!;
@@ -343,7 +364,11 @@ describe.each(built)('$profile.id', (b) => {
 
     expect(plan.moves.length).toBeGreaterThanOrEqual(1);
     const first = [...plan.moves].sort((x, y) => x.order - y.order)[0]!;
-    expect(first.effort, 'the first move is small (≤ 30 min)').toBe('S');
+    // "First move doable in ≤ 30 minutes" (§7.4): the effort is read off their
+    // sentence, and a long piece opens only when every piece is long — the app
+    // cannot shorten their line, and a plan is better than none.
+    if (first.effort === 'L') expect(plan.moves.every((m) => m.effort === 'L'), 'a long first move only when nothing smaller was there').toBe(true);
+    report.plans.efforts[first.effort] += 1;
     expect(first.scheduledFor! > TODAY).toBe(true);
     expect(plan.moves.filter((m) => m.week === 1).length).toBeLessThanOrEqual(3);
     for (const move of plan.moves) {
@@ -354,6 +379,14 @@ describe.each(built)('$profile.id', (b) => {
       expect(inAny(sourceTexts, body), `the move is their sentence: "${move.title.slice(0, 50)}"`).toBe(true);
       expect(words(move.title), `a move fits on a card: "${move.title.slice(0, 50)}"`).toBeLessThanOrEqual(40);
       if (move.ifThen) expect(move.ifThen.startsWith('If ')).toBe(true);
+      expect(move.title, 'a move does not end in a comma').not.toMatch(/[,;:]$/);
+      // One card per sentence: the 48-hour opening no longer copies a
+      // day-named sentence onto a day it contradicts.
+      expect(plan.moves.filter((m) => m.title === move.title), `one card per sentence: "${move.title.slice(0, 40)}"`).toHaveLength(1);
+      // A move that names its day is dated on that day; the rest within 48 hours.
+      const own = ownDate(move.title, TODAY);
+      if (own) expect(move.scheduledFor).toBe(own);
+      else expect(daysBetween(TODAY, move.scheduledFor!)).toBeLessThanOrEqual(3);
     }
 
     // Two moves may share their sentence on two dates (the 48-hour opening),
@@ -366,6 +399,11 @@ describe.each(built)('$profile.id', (b) => {
     }
 
     expect(plan.milestones.length).toBeGreaterThanOrEqual(2);
+    for (const ms of plan.milestones) {
+      expect(ms.title, 'a milestone title never carries their goal name in another case').not.toContain(goal.title.toLowerCase());
+      expect(ms.title).not.toMatch(/without stopping|toward/i);
+    }
+    expect(plan.milestones[plan.milestones.length - 1]!.title).toBe(goal.targetDate ? 'The date you set' : "The season's end");
     for (const ms of plan.milestones) {
       expect(ms.proof).toBe(monitoring.line);
       expect(ms.proofSourceLineId).toBe(monitoring.id);
@@ -381,14 +419,20 @@ describe.each(built)('$profile.id', (b) => {
   });
 
   it.each([
-    ['as they set it', false],
-    ['in the concern band', true],
-  ])('the dawn brief %s: short, quoting, and never the banned words', (_label, soften) => {
+    ['as they set it', false, 'kept'],
+    ['in the concern band', true, 'kept'],
+    ['on the first morning', false, 'none'],
+    ['after a quiet day', false, 'quiet'],
+  ] as const)('the dawn brief %s: short, quoting, and never the banned words', (_label, soften, yesterdayKind) => {
+    // The first morning has no yesterday; a quiet day has one with nothing
+    // in it. Both used to be told "not a failure" — the banned word, on the
+    // morning it matters most — and neither was on the set.
+    const yesterday = yesterdayKind === 'none' ? null : yesterdayKind === 'quiet' ? { ...yesterdayOf(b), done: 0, evidenceCount: 0, proof: null } : yesterdayOf(b);
     const brief = buildDawnBrief(
       {
         day: TODAY,
         book,
-        yesterday: yesterdayOf(b),
+        yesterday,
         moves,
         analyses: b.analyses,
         persona: p.persona,
@@ -410,6 +454,9 @@ describe.each(built)('$profile.id', (b) => {
     }
     expect(appProse(text, brief.quotedSpans)).not.toMatch(BANNED);
     expect(brief.firstMoveId).toBe(moves[0]!.id);
+    expect(text).not.toMatch(HANGING_CUT);
+    expect(text).not.toMatch(/[,;:]\.|\s\./);
+    expect(text).not.toMatch(STOP_THEN_LOWER);
     // The Now card's move, named. Its first letter is theirs when it is a day or "I".
     expect(contains(brief.today, moves[0]!.title)).toBe(true);
     if (soften) {
@@ -417,8 +464,18 @@ describe.each(built)('$profile.id', (b) => {
       expect(brief.yesterday).not.toMatch(/Consistency \d+/);
       expect(brief.today).not.toContain('No negotiation');
       expect(brief.support).toBeTruthy();
-    } else {
+    } else if (yesterdayKind === 'kept') {
       expect(brief.yesterday).toContain('Consistency 63, up from 59.');
+    } else {
+      expect(brief.yesterday).toBe('Quiet day yesterday. It is in the ledger as a quiet day, and that is all it is.');
+    }
+    // Their opening line is the first thing the morning says, whenever there
+    // is room for it: the app's own flourish goes before their words do.
+    if (brief.today.startsWith('“')) {
+      expect(brief.quotedSpans[0]!.length).toBeGreaterThan(0);
+    } else {
+      expect(brief.today).not.toContain('No negotiation');
+      expect(brief.today).not.toContain("When you're ready");
     }
     report.briefs.built += 1;
     report.briefs.maxWords = Math.max(report.briefs.maxWords, words(text));
@@ -444,6 +501,8 @@ describe.each(built)('$profile.id', (b) => {
         expect(contains(reply.text, span)).toBe(true);
       }
       expect(appProse(reply.text, reply.quotedSpans), `${chip.id}: no banned words`).not.toMatch(BANNED);
+      expect(reply.text, 'the coach never says how they felt (PRD §11.4)').not.toMatch(/you (?:did not|didn['’]t) feel like it/);
+      expect(reply.text).not.toMatch(STOP_THEN_LOWER);
       if (reply.action) {
         expect(moves.some((m) => m.id === reply.action!.moveId && m.title === reply.action!.title)).toBe(true);
       }
@@ -462,6 +521,9 @@ describe.each(built)('$profile.id', (b) => {
     }
     for (const goal of b.goals) expect(contains(letter.body, goal.title)).toBe(false);
     expect(appProse(letter.body, letter.quotes)).not.toMatch(BANNED);
+    expect(letter.body).not.toMatch(STOP_THEN_LOWER);
+    expect(letter.body, 'a cut quotation does not stop on a word that leaves it hanging').not.toMatch(HANGING_CUT_LETTER);
+    if (p.evidence.length === 2) expect(letter.body).not.toMatch(/2 entries[^.]*two of them/);
     // The check is the same one the store runs; a letter it refuses is never shown.
     expect(checkLetter(letter.body, letter.quotes, sources).ok).toBe(true);
     report.letters.built += 1;

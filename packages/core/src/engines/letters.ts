@@ -22,6 +22,15 @@
  */
 import type { Evidence, Goal, Letter, Move } from '../types';
 import { endSentence } from '../ids';
+import { withoutDanglingWord } from './portrait';
+
+/**
+ * Their sentence inside ours: the full stop they ended it with comes off, so
+ * the sentence has one. A sentence that ends in their own quotation mark is
+ * left whole — taking the mark off with the stop left the quotation
+ * unbalanced.
+ */
+const midSentence = (s: string): string => s.replace(/[.!?]+$/, '');
 
 export type LetterTrigger = 'portrait' | 'first-return' | 'milestone' | 'monthly';
 
@@ -239,31 +248,50 @@ interface Piece {
   optional: number;
 }
 
-function middlePieces(first: string, cut: boolean, kept: string[], total: number): Piece[] {
+function middlePieces(first: string, cut: boolean, kept: string[], total: number, theirs: number): Piece[] {
   const pieces: Piece[] = [];
+  const entries = total === 1 ? 'one entry' : `${total} entries`;
   if (first) {
     pieces.push({
       // "began" when the sentence was cut: the quotation is the verbatim
       // start of it, and saying "wrote" of half a sentence is a small lie.
-      text: `You ${cut ? 'began' : 'wrote'} “${first}” and I have thought about that line more than you did.`,
-      quotes: [first],
+      text: `You ${cut ? 'began' : 'wrote'} “${midSentence(first)}” and I have thought about that line more than you did.`,
+      quotes: [midSentence(first)],
       // The last thing to go, and only ever when there is a ledger line to
       // quote instead: a letter that quotes nothing of theirs is not a letter.
       optional: kept.length > 0 ? 1 : 0,
     });
   }
+  // A kept move's row is a plan line and a practice run's is the app's
+  // sentence, so "in your own handwriting" is said only of the rows that
+  // are: what they wrote at a seal, or captured.
   if (kept.length >= 2) {
     pieces.push({
-      text: `Since then the ledger has ${total} entries in your own handwriting, and two of them are “${kept[0]}” and ${endSentence(
+      // "both of them" when the two quoted are every line in their hand.
+      text: `Since then the ledger has ${entries}, and ${theirs === 2 ? 'both' : 'two'} of the ones in your own hand are “${midSentence(kept[0]!)}” and ${endSentence(
         `“${kept[1]}”`,
       )}`,
-      quotes: [kept[0]!, kept[1]!],
+      quotes: [midSentence(kept[0]!), kept[1]!],
       optional: 0,
     });
   } else if (kept.length === 1) {
     pieces.push({
-      text: `The ledger has ${total === 1 ? 'one entry' : `${total} entries`} in your own handwriting so far, and one of them is ${endSentence(`“${kept[0]}”`)}`,
+      text: `The ledger has ${entries} so far, and ${theirs === 1 ? 'the one' : 'one of the ones'} in your own hand is ${endSentence(`“${kept[0]}”`)}`,
       quotes: [kept[0]!],
+      optional: 0,
+    });
+  } else if (theirs > 0) {
+    // Their lines are there and too long to quote whole; the letter says so
+    // rather than calling a ledger with two sentences in it empty.
+    pieces.push({
+      text: `The ledger has ${entries} so far, and what you wrote in it runs longer than a letter has room to quote.`,
+      quotes: [],
+      optional: 0,
+    });
+  } else if (total > 0) {
+    pieces.push({
+      text: `The ledger has ${entries} so far, every one of them a thing done rather than written.`,
+      quotes: [],
       optional: 0,
     });
   } else {
@@ -273,11 +301,13 @@ function middlePieces(first: string, cut: boolean, kept: string[], total: number
       optional: 0,
     });
   }
-  if (kept.length > 0) {
+  if (total > 0) {
     // These two presume a morning in the ledger. With none there yet they
-    // would be describing a life the app has no record of.
+    // would be describing a life the app has no record of — and neither
+    // says how the person felt on any of those mornings, which the app does
+    // not know.
     pieces.push({
-      text: 'None of it was the day you felt like it. That is the part nobody tells you: the feeling arrives afterwards, if it arrives at all, and the work goes first either way.',
+      text: 'Nobody tells you that the feeling arrives afterwards, if it arrives at all, and that the work goes first either way.',
       quotes: [],
       optional: 3,
     });
@@ -293,7 +323,7 @@ function middlePieces(first: string, cut: boolean, kept: string[], total: number
       optional: 3,
     });
     pieces.push({
-      text: 'I am not writing to tell you it gets easier. I am writing because somebody should keep a record of what you decided tonight, and it turns out that somebody is you, later.',
+      text: 'I am not writing to tell you it gets easier. I am writing because somebody should keep a record of what you decided, and it turns out that somebody is you, later.',
       quotes: [],
       optional: 2,
     });
@@ -329,18 +359,24 @@ export interface ComposedLetter {
  */
 export function composeLetter(trigger: LetterTrigger, sources: LetterSources, name?: string): ComposedLetter {
   const who = name?.trim() ? `${name.trim()}, ` : '';
-  const { first, cut } = firstSentenceOf(sources.ideal);
+  // Never a sentence that names the goal or a plan line: the check below
+  // would refuse the letter, and "I deadlift 140 kg for a clean single" is
+  // the Fifteen's second sentence for a goal called "Deadlift 140 kg".
+  const { first, cut } = firstSentenceOf(sources.ideal, [...sources.goals.map((g) => g.title), ...sources.moves.map((m) => m.title)]);
   // The count is the whole ledger; the quotations come only from the rows
   // that are sentences they typed.
   const total = sources.evidence.filter((e) => e.text.trim().length > 0).length;
+  const theirs = freeText(sources.evidence).filter((e) => e.text.trim().length > 0).length;
   const kept = freeText(sources.evidence)
     .map((e) => e.text.trim())
     .filter((t) => t.length > 0 && t.length <= 90)
     .slice(0, 2);
 
-  const opener = `${who}${OPENERS[trigger]}`;
+  // After a name the sentence carries on: "Priya, you came back."
+  const greeting = OPENERS[trigger];
+  const opener = who ? `${who}${/^I\b/.test(greeting) ? greeting : greeting.charAt(0).toLowerCase() + greeting.slice(1)}` : greeting;
   const closer = CLOSERS[trigger];
-  let pieces = middlePieces(first, cut, kept, total);
+  let pieces = middlePieces(first, cut, kept, total, theirs);
 
   const assemble = (ps: Piece[]) => [opener, ...ps.map((p) => p.text), closer].join(' ');
 
@@ -385,14 +421,19 @@ export function composeLetter(trigger: LetterTrigger, sources: LetterSources, na
  * used to yield no quotation at all, so the Portrait letter was refused on
  * every launch for exactly the people who wrote the most.
  */
-function firstSentenceOf(text: string): { first: string; cut: boolean } {
+function firstSentenceOf(text: string, avoid: readonly string[] = []): { first: string; cut: boolean } {
   const t = (text ?? '').replace(/\s+/g, ' ').trim();
   if (!t) return { first: '', cut: false };
+  // The first sentence with something in it. "It's March." is a scene-setter,
+  // and the line the future self has thought about is the next one.
+  const forbidden = avoid.map(normalise).filter((a) => a.length >= 8);
+  const sentences = t.match(/[^.!?]+[.!?]+["'”’)\]]*(?=\s|$)/g)?.map((x) => x.trim()) ?? [];
+  const fuller = sentences.find((x) => x.split(/\s+/).length >= 5 && !forbidden.some((f) => normalise(x).includes(f)));
   const m = t.match(/^.*?[.!?]+["'”’)\]]*(?=\s|$)/);
-  const s = (m?.[0] ?? t).trim();
+  const s = (fuller ?? m?.[0] ?? t).trim();
   if (s.length <= 160) return { first: s, cut: false };
   const window = s.slice(0, 161);
   const lastSpace = window.lastIndexOf(' ');
-  const prefix = (lastSpace > 80 ? window.slice(0, lastSpace) : window.slice(0, 160)).replace(/[\s,;:]+$/, '');
+  const prefix = withoutDanglingWord(lastSpace > 80 ? window.slice(0, lastSpace) : window.slice(0, 160), 80);
   return { first: prefix, cut: true };
 }

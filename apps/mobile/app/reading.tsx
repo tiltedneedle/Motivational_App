@@ -234,8 +234,8 @@ export default function Reading() {
                   </Body>
                   {review.next.slice(0, 3).map((n) => (
                     <Body key={n.goalId} testID={`review-next-${n.goalId}`} style={{ color: paper.ink2, fontSize: 14 }}>
-                      {/* The first milestone's title already names the goal. */}
-                      {n.title.toLowerCase().includes(n.goalTitle.toLowerCase()) ? n.title : `${n.goalTitle}: ${n.title}`} ·{' '}
+                      {/* A milestone's title says how far along it is ("Six weeks in"); the goal's name goes in front. */}
+                      {`${n.goalTitle}: ${n.title}`} ·{' '}
                       {distanceLabel(n.daysAway).toLowerCase()}
                     </Body>
                   ))}

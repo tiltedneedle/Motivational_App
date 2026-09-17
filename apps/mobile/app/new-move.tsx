@@ -44,7 +44,9 @@ export default function NewMove() {
     () => (goalId ? analysesFor(state, goalId).find((a) => a.kind === 'strategies' && a.line.trim()) : undefined),
     [state, goalId],
   );
-  const suggestions = useMemo(() => (source ? splitFirstMoves(source.paragraph?.trim() || source.line) : []), [source]);
+  // Cut from the line, as the Blueprint is: the Full track's paragraph
+  // made sixty-word chips.
+  const suggestions = useMemo(() => (source ? splitFirstMoves(source.line) : []), [source]);
 
   const back = () => (router.canGoBack() ? router.back() : router.dismissTo('/today'));
 

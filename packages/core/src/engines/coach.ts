@@ -87,6 +87,21 @@ export function greeting(instant: Date, name?: string): string {
  */
 export const BRIEF_MAX_WORDS = 90;
 
+/**
+ * The line the morning opens with: their first sentence, unless it is a
+ * scene-setter with nothing in it ("It's March.") and the next one is the
+ * line worth reading back — the first sentence with five words or more.
+ */
+export function openingLine(book: Pick<BookVersion, 'firstSentence' | 'ideal'> | null): string {
+  if (!book) return '';
+  const first = book.firstSentence?.trim() ?? '';
+  const wordsOf = (s: string) => s.trim().split(/s+/).filter(Boolean).length;
+  if (wordsOf(first) >= 5) return first;
+  const sentences = (book.ideal ?? '').replace(/s+/g, ' ').match(/[^.!?]+[.!?]+["'”’)]]*(?=s|$)/g) ?? [];
+  const fuller = sentences.map((s) => s.trim()).find((s) => wordsOf(s) >= 5);
+  return fuller && fuller.length <= 180 ? fuller : first;
+}
+
 const wordsIn = (s: string): number => s.trim().split(/\s+/).filter(Boolean).length;
 
 export function buildDawnBrief(input: BriefInput, newId: (p: string) => string): Brief {
@@ -94,29 +109,30 @@ export function buildDawnBrief(input: BriefInput, newId: (p: string) => string):
   // Concern outranks the persona. Somebody who chose "fierce" in Settings on a
   // good week did not choose to be pushed on this one, and "No negotiation
   // with yourself this morning" is the exact sentence not to print at them.
-  const reg = input.soften ? REGISTER.gentle : REGISTER[persona];
   // Built as written, then a step shorter at a time while it runs over the
-  // budget. `shorten` says how far to go.
-  const compose = (shorten: 0 | 1 | 2 | 3) => {
+  // budget: the opener cut at a word, then yesterday's proof line off, then
+  // the register's own flourish off, and only then the opener. `shorten`
+  // says how far to go.
+  const compose = (shorten: 0 | 1 | 2 | 3 | 4) => {
+    const reg = input.soften ? REGISTER.gentle : shorten >= 3 ? REGISTER.straight : REGISTER[persona];
     const quotes: string[] = [];
 
     // Their first sentence, whole when the budget allows and cut at a word when
     // it does not. Still their words either way; `firstSentence` cuts with an
     // ellipsis and never mid-word.
-    const opener = book?.firstSentence?.trim()
-      ? shorten >= 3
-        ? ''
-        : shorten >= 1
-          ? firstSentence(book.firstSentence, 100)
-          : book.firstSentence.trim()
-      : '';
+    // Their opening sentence — or the first one with something in it, when
+    // the Fifteen opens "It's March." and the line worth reading back is the
+    // next one. The app's own flourish goes before any of their words do.
+    const whole = openingLine(book);
+    const opener = whole ? (shorten >= 4 ? '' : shorten >= 1 ? firstSentence(whole, 100) : whole) : '';
     const quote = opener ? `“${opener}”` : null;
     if (opener) quotes.push(opener.replace(/…$/, ''));
 
     // Yesterday: evidence, never blame.
     let yesterdayLine: string;
     if (!yesterday || (yesterday.done === 0 && yesterday.evidenceCount === 0)) {
-      yesterdayLine = 'Quiet day yesterday. It is still in the ledger as a quiet day, not a failure.';
+      // Never "failure" (PRD §11.4), least of all on the first morning.
+    yesterdayLine = 'Quiet day yesterday. It is in the ledger as a quiet day, and that is all it is.';
     } else {
       const bits: string[] = [];
       bits.push(`${yesterday.done} of ${plural(Math.max(yesterday.planned, yesterday.done), 'move')}`);
@@ -147,13 +163,14 @@ export function buildDawnBrief(input: BriefInput, newId: (p: string) => string):
     // whichever plan's first move came first — with five goals, a different
     // move from the one on the card, and sometimes one dated next week.
     const first = moves.find((m) => m.status === 'todo');
-    // The move is their sentence, cut from their own line; it is quoted so the
-    // screen can set it in their face. Mid-sentence, so its first letter is
-    // lowered unless it is a name — the same string, so the span still matches.
+    // The move is their sentence, cut from their own line, and it is printed
+    // as a quotation: grafted onto "Start with" it read "start with on
+    // payday, £250 goes to the rent account", and a sentence of theirs that
+    // opens with a preposition or a clause is still their sentence.
     const todayLine = first
-      ? reg.push(endSentence(`Start with ${lowerFirst(first.title)}`))
+      ? reg.push(endSentence(`Start with “${first.title.trim()}”`))
       : 'Nothing is scheduled. One small thing, chosen by you, is a whole day.';
-    if (first) quotes.push(lowerFirst(first.title));
+    if (first) quotes.push(first.title.trim());
 
     // If: the user's own if-then, quoted.
     // Only a line the screen let through. replyToText already checked; the
@@ -190,7 +207,7 @@ export function buildDawnBrief(input: BriefInput, newId: (p: string) => string):
   };
 
   let draft = compose(0);
-  for (const step of [1, 2, 3] as const) {
+  for (const step of [1, 2, 3, 4] as const) {
     if (wordsIn(`${draft.yesterday} ${draft.today} ${draft.ifThen}`) <= BRIEF_MAX_WORDS) break;
     draft = compose(step);
   }
@@ -308,7 +325,7 @@ export function replyToChip(chip: ChipId, ctx: ChipContext): CoachReply {
         // print "then I …", and so does this.
         const written = ifThenOf(obstacle.line, obstacle.line2);
         return {
-          text: `You already wrote the answer: ${endSentence(written.sentence)} Do that version, not the big one.`,
+          text: `You already wrote the answer: ${endSentence(written.sentence)} Start there. The move on Today is its two-minute version for now; Undo puts it back.`,
           quotedSpans: written.spans,
           action: next
             ? {
@@ -336,10 +353,16 @@ export function replyToChip(chip: ChipId, ctx: ChipContext): CoachReply {
         .sort((a, b) => (a.day < b.day ? 1 : -1))[0];
       if (wentAnyway?.proof) {
         const when = formatDay(wentAnyway.day, { weekday: true, today: ctx.today });
+        // What the ledger holds, not how they felt. "You did not feel like
+        // it either" was the coach asserting a feeling it has no record of
+        // (PRD §11.4: never claim a memory not in context).
+        // What the ledger holds, and what the reply then does: the move on
+        // Today shrinks to its two-minute version, so the sentence says so
+        // rather than "same size".
         return {
-          text: `On ${when} you did not feel like it either, and you wrote ${endSentence(
+          text: `On ${when} you kept ${wentAnyway.done} of ${plural(Math.max(wentAnyway.planned, wentAnyway.done), 'move')} and wrote ${endSentence(
             `“${wentAnyway.proof.trim()}”`,
-          )} Same size today.`,
+          )} Two minutes of it counts today.`,
           quotedSpans: [wentAnyway.proof.trim()],
           action: next
             ? {
@@ -360,7 +383,10 @@ export function replyToChip(chip: ChipId, ctx: ChipContext): CoachReply {
     }
     case 'changed':
       return {
-        text: 'Tell me what changed and I will lay the week out again tonight. Nothing you built is lost, and nothing you wrote gets overwritten.',
+        // Nothing here replans: the Replan lives on the goal's page and in
+        // the Sunday reading, and the sentence says where rather than
+        // promising a tonight that never comes.
+        text: 'Tell me what changed. Replan, on that goal’s page, lays the week out again whenever you are ready; nothing you built is lost, and nothing you wrote gets overwritten.',
         quotedSpans: [],
         action: null,
       };

@@ -104,11 +104,33 @@ export function firstSentence(text: string, max = FIRST_SENTENCE_MAX): string {
   const window = candidate.slice(0, max + 1);
   const lastSpace = window.lastIndexOf(' ');
   const cut = lastSpace > Math.floor(max * 0.5) ? window.slice(0, lastSpace) : window.slice(0, max);
-  return cut.replace(/[\s,;:]+$/, '') + '…';
+  return withoutDanglingWord(cut, Math.floor(max * 0.5)).replace(/[\s,;:]+$/, '') + '…';
+}
+
+/**
+ * Words a quotation must not stop on. A sentence cut at a hundred and sixty
+ * characters landed on "…and not just watch the”, and the ellipsis after an
+ * article reads as the app losing its place in their sentence rather than
+ * choosing where to stop. Backed off a word at a time, never past `floor`.
+ */
+const DANGLING =
+  /\b(?:the|a|an|and|or|but|nor|so|of|to|in|on|at|for|with|by|from|as|into|onto|than|that|which|who|whom|whose|what|when|where|while|if|not|just|very|my|our|your|his|her|their|its|is|are|was|were|be|been|am|i|i['’]ve|i['’]m|i['’]d|i['’]ll|has|have|had|do|does|did|will|would|can|could|should|may|might|no|any|some|each|every|this|these|those|it|they|we|he|she|you|me|him|them|us|under|over|about|after|before|between|through|during|without|within|against|toward|towards|until|till|across|along|around|behind|beside|near|off|out|up|down|per|one|all|both|more|most|other|another|such|because|then|there|here|only|even|also|still|yet|too|how|whether|although|though|since|unless|whose|much|many|few|less)$/i;
+
+export function withoutDanglingWord(text: string, floor: number): string {
+  let out = text.replace(/[\s,;:]+$/, '');
+  while (out.length > floor) {
+    const space = out.lastIndexOf(' ');
+    if (space <= floor) break;
+    if (!DANGLING.test(out)) break;
+    out = out.slice(0, space).replace(/[\s,;:]+$/, '');
+  }
+  return out;
 }
 
 /** The fixed words the identity clause is set against. Chrome, never the user's. */
 export const IDENTITY_FRAMING = "I'm becoming someone who is";
+/** The same framing for a clause that carries its own verb: "…someone who" + "runs three mornings a week". */
+export const IDENTITY_FRAMING_BARE = "I'm becoming someone who";
 
 export interface IdentityProposal {
   /** The user's own clause, verbatim. Empty when nothing they wrote fits. */
@@ -121,14 +143,23 @@ export interface IdentityProposal {
  * The identity line is the one proposal in the product, and even here the app
  * does not get to write a sentence about someone's life.
  *
- * It looks for a clause the person actually wrote after "I am" or "I'm" — a
- * state, not an action — and hands it back verbatim alongside a fixed framing
- * the interface prints in front of it. The two are kept apart on purpose: the
- * clause is set in the serif because it is theirs, and the framing is not.
+ * It hands back a clause the person actually wrote, verbatim, beside a fixed
+ * framing the interface prints in front of it. The two are kept apart on
+ * purpose: the clause is set in the serif because it is theirs, and the
+ * framing is not. Two shapes qualify, in this order:
  *
- * Requiring the copula is what keeps the result grammatical. An action clause
- * ("I run every morning") would need conjugating to fit the frame, and the
- * moment the app conjugates a verb it is writing, not quoting.
+ *  1. who they said they want to be — "I want to be someone who runs three
+ *     mornings a week", "a woman who is still strong at seventy". The clause
+ *     after "who" is the answer in the words they chose; the framing ends at
+ *     "who" when the clause carries its own verb, and at "who is" when they
+ *     wrote the copula, so the printed line is grammatical either way;
+ *  2. a state they stated — "I am …" at the head of a sentence or clause of
+ *     their own. Requiring the copula keeps it grammatical (an action, "I run
+ *     every morning", would need conjugating, and the moment the app
+ *     conjugates a verb it is writing, not quoting), and requiring the head
+ *     keeps it theirs: "pretend I'm looking at the pictures", "stopped saying
+ *     that I am too old", "asking if I'm alright" all contain an "I am" and
+ *     none is a state to become.
  *
  * From the Fifteen alone (PRD §7.4: "proposed from the Fifteen's text"). The
  * How line used to be searched first, and a schedule that happened to say
@@ -137,18 +168,72 @@ export interface IdentityProposal {
  * cut from the wrong sentence, in front of a portrait of who they mean to be.
  */
 export function proposeIdentity(ideal: string): IdentityProposal {
-  const source = ideal ?? '';
-  const m = source.match(
-    // Up to the end of the clause rather than a fixed number of words. Capped
-    // at eleven it silently cut longer sentences in half and presented the
-    // fragment as something they had written, which is the one thing this
-    // function must not do.
-    /\b[iI]\s*(?:am|'m|’m)\s+((?:not\s+|no\s+longer\s+|already\s+|finally\s+|still\s+)?[a-z][\w'’-]*(?:\s+[\w'’,-]+)*?)(?=\s*[.!?;]|\s+(?:and|but|so|because|which|when|while)\b|$)/,
-  );
-  const clause = m?.[1]?.trim().replace(/[.,;:]+$/, '').replace(/\s+/g, ' ');
-  if (!clause) return { clause: '', framing: null };
-  return { clause, framing: IDENTITY_FRAMING };
+  const source = (ideal ?? '').replace(/\s+/g, ' ').trim();
+  const tidy = (s: string | undefined) => s?.trim().replace(/[.,;:]+$/, '').replace(/\s+/g, ' ') ?? '';
+
+  // First, the sentence the doorway asks for and almost everyone writes: "I
+  // want to be someone who runs three mornings a week", "a woman who is
+  // still strong at seventy", "a dad who is there". The clause after "who"
+  // is who they said they are becoming, in the words they chose for it.
+  const said = source.match(WHO_CLAUSE);
+  if (said) {
+    const clause = tidy(said[2]);
+    if (clause) {
+      // The copula is its own group, so a clause that opens with a name, a
+      // number or a capital ("who is Ana's equal", "who is 10 kg lighter")
+      // cannot push "is" back into the clause and print "who is is".
+      return { clause, framing: said[1] ? IDENTITY_FRAMING : IDENTITY_FRAMING_BARE };
+    }
+  }
+
+  // Failing that, a state they stated: "I am …" at the head of a sentence or
+  // a clause of their own, not inside somebody else's — "pretend I'm looking
+  // at the pictures", "stopped saying that I am too old", "asking if I'm
+  // alright" all have an "I am" in them and none is a state to become.
+  for (const m of source.matchAll(STATE_CLAUSE)) {
+    const before = source.slice(0, m.index ?? 0);
+    // Not inside somebody else's clause: "pretend I'm looking at the
+    // pictures", "stopped saying that I am too old", "asking if I'm alright".
+    if (INSIDE_ANOTHER_CLAUSE.test(before)) continue;
+    const clause = tidy(m[1]);
+    if (clause) return { clause, framing: IDENTITY_FRAMING };
+  }
+  return { clause: '', framing: null };
 }
+
+/**
+ * A word of theirs, with the punctuation a word can carry inside it: "6:40",
+ * "6.40", "1.5x", "e.g.", "Ana's". A clause used to stop at the first bare
+ * ":" or ".", so "out the door at 6:40" was quoted back as "out the door at
+ * 6"; the sentence ends only where the stop is followed by a space or the
+ * end of the text.
+ */
+const WORD = "[\\w'’£$€-]+(?:[.:][\\w'’-]+)*";
+/** The same, after a first letter that is spelled out (`[a-z]` + this). */
+const WORD_REST = "[\\w'’£$€-]*(?:[.:][\\w'’-]+)*";
+const LEAD = '(?:not\\s+|no\\s+longer\\s+|already\\s+|finally\\s+|still\\s+)?';
+/**
+ * Where a clause ends: a stop that ends the sentence; a subordinator; "and",
+ * "but" or "so" only when a new subject follows ("and I mean it"), because
+ * "knows what he earns and what he spends" is one thing they said; ", who"
+ * starting the next relative clause. A contrast stays: "there, not a dad on
+ * the bench with his phone" is the whole of what they meant.
+ */
+const END =
+  '(?=,?\\s*[.!?;:]+(?:\\s|$)|,?\\s+(?:because|which|when|while|whom|unless|although|though)\\b|,\\s+who\\b|,?\\s+(?:and|but|so|or)\\s+(?:i|we|he|she|they|it|you|nobody|no\\s+one|everyone|that|then|now)\\b|$)';
+const WHO_CLAUSE = new RegExp(
+  "\\b[iI]\\s*(?:(?:want|wanted|would\\s+like|['’]d\\s+like|mean|intend)\\s+to\\s+be(?:come)?|am|'m|’m|will\\s+be|am\\s+becoming)\\s+(?:someone|somebody|a\\s+(?:person|man|woman|bloke|mum|dad|mother|father|parent|friend|grandmother|grandfather|nurse|teacher|driver|writer|runner|reader)|the\\s+(?:kind|sort)\\s+of\\s+(?:person|man|woman|dad|mum))\\s+who(['’]s|\\s+is)?\\s+(" +
+    LEAD +
+    WORD +
+    '(?:,?\\s+' +
+    WORD +
+    ')*?)' +
+    END,
+  'i',
+);
+const STATE_CLAUSE = new RegExp("\\b[iI]\\s*(?:am|'m|’m)\\s+(" + LEAD + '[a-z]' + WORD_REST + '(?:,?\\s+' + WORD + ')*?)' + END, 'gi');
+const INSIDE_ANOTHER_CLAUSE =
+  /\b(?:that|if|whether|what|when|where|while|because|how|why|who|which|although|though|as|like|say|says|said|saying|pretend|pretending|think|thinks|thought|wish|hope|know|knows|feel|felt|feels|ask|asks|asked|asking|sure|realise|realize|remember|forget|tell|tells|told|until|till|unless|since|so\s+that)\s+$/i;
 
 /**
  * The whole line as one string, for exports and for the plain-text Book where
@@ -204,8 +289,28 @@ export function buildPortrait(input: PortraitInput): Portrait {
  * three dated moves; a line with one action yields one.
  */
 export function splitFirstMoves(strategyLine: string): string[] {
-  const line = (strategyLine ?? '').trim();
+  // Semicolons and line breaks are the person listing things: "Sunday at 4
+  // pm, batch cook two meals; Monday to Thursday, eat from the fridge at 7
+  // pm" is two moves, and lifting the days out of the whole line made three
+  // copies of both. Each piece is cut on its own. "then" is not a separator:
+  // "one module unit done, then the boys at 12.30" is one sentence, and
+  // splitting it put "the boys at 12.30" on Today as a move.
+  const pieces = (strategyLine ?? '')
+    .split(/[;\n]/)
+    .map((p) => p.trim().replace(/[\s,;:]+$/, ''))
+    .filter((p) => p.length > 6);
+  return pieces.flatMap(movesFromPiece).slice(0, 3);
+}
+
+const DAY_RANGE =
+  /\b(?:mon|tues|wednes|thurs|fri|satur|sun)days?\s*(?:to|through|thru|till|until|or|-|–|—|\/)\s*(?:mon|tues|wednes|thurs|fri|satur|sun)days?\b/i;
+
+function movesFromPiece(line: string): string[] {
   if (!line) return [];
+  // "Monday to Thursday", "Mon–Fri", "Saturday or Sunday" is a span or a
+  // choice of days, not a list of them: one move, as written, dated by the
+  // first day it names.
+  if (DAY_RANGE.test(line)) return [line];
   const dayMentions = line.match(
     // `days?` so a person who writes "Mondays and Wednesdays" is understood to
     // mean one habit on two days, rather than two unrelated moves.
@@ -241,11 +346,7 @@ export function splitFirstMoves(strategyLine: string): string[] {
       return `${day}: ${body}`.trim();
     });
   }
-  const parts = line
-    .split(/[;\n]|\s+then\s+|\s+and then\s+/i)
-    .map((p) => p.trim())
-    .filter((p) => p.length > 6);
-  return parts.slice(0, 3);
+  return [line];
 }
 
 /**

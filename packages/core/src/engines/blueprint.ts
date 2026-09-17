@@ -94,10 +94,16 @@ export function isMinVersionStandIn(text: string | null | undefined): boolean {
 export function minVersionOf(line: string): string {
   const t = line.trim();
   if (!t) return 'Two minutes of it, wherever you are.';
-  const verb = t.match(/\b(run|walk|write|read|stretch|call|save|move|play|practise|practice|cook|clean|sit|breathe)\w*/i);
-  if (verb?.[0]) return `Two minutes: ${verb[0].toLowerCase()}, that's the whole ask.`;
+  // A whole verb, in its base form. `\\w*` on the stem printed "Two minutes:
+  // moved" from "moved from the kitchen table"; a verb list this short is a
+  // list of things that can be done for two minutes, not of stems.
+  const verb = t.match(MIN_VERB);
+  if (verb?.[1]) return `Two minutes: ${verb[1].toLowerCase()}, that's the whole ask.`;
   return 'Two minutes of it, and that counts.';
 }
+
+const MIN_VERB =
+  /\b(run|jog|walk|swim|cycle|stretch|lift|train|write|draft|read|revise|study|practise|practice|play|sing|draw|paint|sew|knit|piece|plant|weed|dig|water|cook|bake|clean|tidy|sit|breathe|meditate|pray|journal|call|ring|phone|text|save|transfer|move|book|list|plan|sort|file|deploy|code|ship|sketch|rehearse)(?:s|es)?\b/i;
 
 export interface BuildInput {
   goal: Goal;
@@ -131,6 +137,10 @@ export function buildPlan(input: BuildInput, opts: BlueprintOptions): Plan {
   // Milestones: the user's Monitoring line is the proof of the first one.
   const horizonDays = goal.targetDate ? Math.max(14, daysBetween(opts.today, goal.targetDate)) : seasonWeeks * 7;
   const milestoneCount = horizonDays < 21 ? 2 : horizonDays < 120 ? 3 : 4;
+  // "The date you set" only when the last milestone lands on it. A target
+  // date sooner than a fortnight, or already past, is stretched to the
+  // fourteen-day floor above, and that is not the date they set.
+  const onTheirDate = Boolean(goal.targetDate) && addDays(opts.today, horizonDays) === goal.targetDate;
   const milestones: Milestone[] = [];
   for (let i = 0; i < milestoneCount; i++) {
     const share = (i + 1) / milestoneCount;
@@ -138,7 +148,7 @@ export function buildPlan(input: BuildInput, opts: BlueprintOptions): Plan {
       id: opts.newId('ms'),
       planId,
       goalId: goal.id,
-      title: i === 0 ? firstMilestoneTitle(goal.title, strategyText) : `Step ${i + 1} toward ${goal.title.toLowerCase()}`,
+      title: milestoneTitle(i, milestoneCount, Math.max(7, Math.round(horizonDays * share)), onTheirDate),
       // Empty when they have not written the Monitoring line yet. It used to
       // fall back to "One entry in the ledger.", which is the app deciding what
       // counts as proof for somebody else's goal — and `validatePlan` then
@@ -155,41 +165,54 @@ export function buildPlan(input: BuildInput, opts: BlueprintOptions): Plan {
   // Moves: cut from the Strategies line. Never more than three in week one.
   const pieces = splitFirstMoves(strategyText);
   const firstMilestone = milestones[0];
-  const scheduledPieces = pieces.slice(0, 3).map((text, i) => {
-    const dayName = text.match(/\b(mon|tues|wednes|thurs|fri|satur|sun)day\b/i)?.[0];
-    return {
-      text,
-      scheduled: dayName ? nextWeekday(opts.today, dayName) : addDays(opts.today, i === 0 ? 1 : 2 + i),
-    };
-  });
-  // "Start with the first move" has to mean the one that comes soonest, not the
-  // one the user happened to name first in their sentence.
-  scheduledPieces.sort((a, b) => (a.scheduled < b.scheduled ? -1 : a.scheduled > b.scheduled ? 1 : 0));
+  // A piece dated by its own words — "Tuesday", "the 28th" — keeps that
+  // date. A piece with no date of its own gets the app's: the first
+  // tomorrow, the rest a day apart after it.
+  const scheduledPieces = pieces.slice(0, 3).map((text, i) => ({
+    text,
+    scheduled: ownDate(text, opts.today) ?? addDays(opts.today, i === 0 ? 1 : 2 + i),
+    effort: effortFor(text),
+  }));
+  const byDate = (a: { scheduled: string }, b: { scheduled: string }) => (a.scheduled < b.scheduled ? -1 : a.scheduled > b.scheduled ? 1 : 0);
+  scheduledPieces.sort(byDate);
 
-  // The repair the PRD asks for (§7.4: "repaired once, then a minimal plan is
-  // built from the user's lines"). Someone who writes "every Saturday" on a
-  // Sunday named a first move six days out, which the 48-hour rule would
-  // reject — and rejecting it means they seal their Book and get no plan at
-  // all. So open with the same line, tomorrow. It is still their sentence and
-  // still their source line; only the date is the app's, and the whole point
-  // of the rule is that the first step is close enough to actually happen.
+  // The 48-hour rule (§7.4) is honoured by the app's own dates, never by
+  // putting the person's sentence on a day it contradicts. When the soonest
+  // piece is dated by their words and more than two days out, a piece with no
+  // date of its own moves to tomorrow; when every piece names its day, the
+  // plan opens on the first of those days, and `validatePlan` knows a move
+  // that carries its own date. The opening copy this used to make — "Sunday
+  // at 4 pm in the kitchen" as a card for Friday — was a move that
+  // contradicted itself in their own words.
   const soonest = scheduledPieces[0];
   if (soonest && daysBetween(opts.today, soonest.scheduled) > 2) {
-    // Without the day it was cut for. "Tuesday: at 6:40, out the back door"
-    // dated a Friday is a move that contradicts itself; the body of it, at
-    // 6:40 out the back door, is still their sentence and is true on Friday.
-    scheduledPieces.unshift({ text: withoutDayPrefix(soonest.text), scheduled: addDays(opts.today, 1) });
+    const undated = scheduledPieces.find((p) => !ownDate(p.text, opts.today));
+    if (undated) {
+      undated.scheduled = addDays(opts.today, 1);
+      scheduledPieces.sort(byDate);
+    }
   }
-  // Never more than three in week one, counted after the repair.
+  // "First move doable in ≤ 30 minutes" (§7.4): when the soonest piece is a
+  // long one and a smaller piece has no date of its own, the smaller one
+  // opens. Their sentences stay whole; only the app's dates move.
+  const opening = scheduledPieces[0];
+  if (opening && opening.effort === 'L') {
+    const smaller = scheduledPieces.find((p) => p !== opening && p.effort !== 'L' && !ownDate(p.text, opts.today));
+    if (smaller) {
+      smaller.scheduled = addDays(opts.today, 1);
+      if (!ownDate(opening.text, opts.today)) opening.scheduled = addDays(opts.today, 2);
+      scheduledPieces.sort((a, b) => byDate(a, b) || (a === smaller ? -1 : b === smaller ? 1 : 0));
+    }
+  }
   const weekOnePieces = scheduledPieces.slice(0, 3);
 
-  const moves: Move[] = weekOnePieces.map(({ text, scheduled }, i) => {
+  const moves: Move[] = weekOnePieces.map(({ text, scheduled, effort }, i) => {
     return {
       id: opts.newId('mv'),
       goalId: goal.id,
       milestoneId: firstMilestone?.id ?? null,
       title: text,
-      effort: i === 0 ? 'S' : effortFor(text),
+      effort,
       energy: energyFor(text),
       ifThen: obstacles?.line2?.trim() ? ifThenOf(obstacles.line, obstacles.line2).sentence.replace(/^if/, 'If') : null,
       scheduledFor: scheduled,
@@ -251,16 +274,57 @@ export function buildPlan(input: BuildInput, opts: BlueprintOptions): Plan {
   return plan;
 }
 
-/** "Tuesday: at 6:40, out the back door" → "at 6:40, out the back door". Only the prefix `splitFirstMoves` put there. */
-function withoutDayPrefix(text: string): string {
-  const body = text.replace(/^(?:Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)day:\s*/, '').trim();
-  return body.length > 6 ? body : text;
+const WEEKDAY = /\b(?:mon|tues|wednes|thurs|fri|satur|sun)day\b/i;
+
+/**
+ * A milestone's title is app chrome and says only how far along it is.
+ *
+ * It used to say "First 45 minutes without stopping" — a running sentence,
+ * put on a deadlift, a raise and a memoir — and "Step 2 toward lisbon with
+ * tom and jay", the person's own name for their goal with its capitals
+ * taken off. The goal's name is already the page's; the milestone's job is
+ * the distance, and the last one is the date they set, when they set one.
+ */
+function milestoneTitle(index: number, count: number, daysIn: number, onTheirDate: boolean): string {
+  if (index === count - 1) return onTheirDate ? 'The date you set' : "The season's end";
+  const weeks = Math.max(1, Math.round(daysIn / 7));
+  return weeks === 1 ? 'One week in' : `${weeksInWords(weeks)} weeks in`;
 }
 
-function firstMilestoneTitle(goalTitle: string, strategy: string): string {
-  const n = strategy.match(/\b(\d+(?:\.\d+)?)\s?(km|k|miles?|mi|min|minutes|words|pages|£|\$|€)\b/i);
-  if (n) return `First ${n[1]}${n[2] ? ` ${n[2]}` : ''} without stopping`;
-  return `First two weeks of ${goalTitle.toLowerCase()}`;
+/** Two … ninety-nine, so a Path never mixes "Thirteen weeks in" with "26 weeks in". */
+function weeksInWords(n: number): string {
+  const ones = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+  const tens = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+  const word = n < 20 ? ones[n] : n < 100 ? `${tens[Math.floor(n / 10)]}${n % 10 ? `-${ones[n % 10]}` : ''}` : String(n);
+  return (word ?? String(n)).replace(/^./, (c) => c.toUpperCase());
+}
+
+/**
+ * The date a piece carries in its own words, if any: a weekday ("Tuesday at
+ * 6:40"), or a day of the month ("on the 28th", "the 1st and 15th" — the
+ * nearest to come). Null when the words name no date, and the app's date is
+ * the only one it has.
+ */
+export function ownDate(text: string, today: string): string | null {
+  const day = text.match(WEEKDAY)?.[0];
+  if (day) return nextWeekday(today, day);
+  // "the 28th", and every ordinal beside it: "the 1st and 15th".
+  if (!/\bthe\s+\d{1,2}(?:st|nd|rd|th)\b/i.test(text)) return null;
+  const ordinals = [...text.matchAll(/\b(\d{1,2})(?:st|nd|rd|th)\b/gi)].map((m) => Number(m[1])).filter((n) => n >= 1 && n <= 31);
+  if (ordinals.length === 0) return null;
+  return ordinals.map((n) => nextDayOfMonth(today, n)).sort()[0] ?? null;
+}
+
+/** The next date on or after tomorrow whose day of the month is `n`. */
+function nextDayOfMonth(from: string, n: number): string {
+  const d = new Date(`${from}T00:00:00Z`);
+  for (let i = 0; i < 3; i++) {
+    const c = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + i, n));
+    if (c.getUTCDate() !== n) continue; // a month without that day
+    const iso = c.toISOString().slice(0, 10);
+    if (iso > from) return iso;
+  }
+  return addDays(from, 1);
 }
 
 export interface ValidateOptions {
@@ -307,8 +371,16 @@ export function validatePlan(
   if (asNewPlan) {
     const first = [...plan.moves].sort((a, b) => a.order - b.order)[0];
     if (first) {
-      if (first.effort === 'L') problems.push('the first move is too big to start tomorrow');
-      if (first.scheduledFor && daysBetween(today, first.scheduledFor) > 2) {
+      // A long first move is a fault only when a smaller one was there to
+      // open with: the app cannot shorten their sentence, and refusing the
+      // plan leaves them with none.
+      if (first.effort === 'L' && plan.moves.some((m) => m.week === 1 && m.effort !== 'L')) {
+        problems.push('the first move is too big to start with when a smaller one is there');
+      }
+      // Within 48 hours, unless the person dated it themselves: a move that
+      // says "Saturday" or "the 28th" is theirs to date, and the app never
+      // puts their sentence on a day it contradicts.
+      if (first.scheduledFor && daysBetween(today, first.scheduledFor) > 2 && !ownDate(first.title, today)) {
         problems.push('the first move is more than 48 hours away');
       }
     }

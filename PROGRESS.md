@@ -50,6 +50,25 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 50. **Say it, in a browser (§7.2), 2026-09-17.** The Fifteen's microphone
+      heard one sentence and stopped: the speech module's web shim starts a
+      fresh recogniser on every `start()` without stopping the last, so the
+      restart after each final stretch aborted the one before it, the abort
+      fired an `end`, the `end` started another, and the room went deaf after
+      its first line. The browser path now drives the Web Speech API itself —
+      one recogniser, every stretch kept, listening again when the browser
+      stops on its own — and the room's Listening chip is a switch (off for a
+      breath, on again) rather than a one-way door to typing; a pause of the
+      clock is a pause of the microphone, and carrying on listens again. Eleven
+      e2e checks drive a scripted recogniser through all of it.
+- [x] 49. **The eval harness, reviewed (2026-09-17).** One adversarial sweep over
+      the harness and the fixes it drove — four code reviewers, two judges
+      reading every artefact the forty profiles produce, a skeptic per finding —
+      ran into the account's spend limit with 33 verdicts unwritten; those were
+      verified by hand. Thirty-one findings fixed, from the identity line cut at
+      "6:40" to the brief's "not a failure" on every first morning to a
+      recogniser that could not hear a second sentence. See "The eval harness,
+      reviewed" below.
 - [x] 48. **The eval harness (§11.8), 2026-09-17.** `pnpm test:eval`: forty synthetic
       profiles — four writers who write nothing alike, five parts of a life, both
       tracks — through the engines the product ships with, every check the PRD
@@ -2120,6 +2139,128 @@ on; the deterministic checks are the floor the product cannot go under with or w
 
 Gate after: 470 core / 48 ui / 8 storage, eval **567/567**, e2e **462/462**, cold 84/84, axe 0 across 37 screens, way-back 33 screens, migration 68 checks, typecheck clean, lint 0 errors.
 
+**The judge's read (2026-09-17).** §11.8 also asks for "LLM-as-judge with Opus 5". Without a
+key the judging was done here, by reading: every artefact the forty profiles produce — the
+Portrait, the plan, both briefs, the four chips, the five letters — dumped to one file and
+read end to end, the way a person would see them. What the reading found, all fixed and each
+now asserted by the eval so it stays fixed:
+- **The identity line was the wrong sentence.** `proposeIdentity` took the first "I am" in
+  the Fifteen wherever it stood, so "I have stopped saying that I am too old for things"
+  became "I'm becoming someone who is too old for things"; "pretend I'm looking at the
+  pictures", "asking if I'm alright for money" and "when I'm coming" did the same. It now
+  takes who they said they want to be — the doorway's own sentence, "I want to be someone
+  who runs three mornings a week without negotiating", "a woman who is still strong at
+  seventy", "a bloke who finishes what he starts" — with the framing ending at "who" when
+  the clause carries its own verb; failing that, an "I am" at the head of a sentence or
+  clause of their own; failing that, nothing, and the person writes it. On the set: 38 of 40
+  are now the sentence they wrote at the doorway; 2 propose nothing.
+- **Milestone titles were a running sentence on every goal.** "First 45 minutes without
+  stopping" on a deadlift, on a raise, on a memoir; "Step 2 toward lisbon with tom and jay"
+  with the person's capitals taken off. A milestone's title now says only how far along it
+  is — "Six weeks in", "Thirteen weeks in", "The date you set" — and the goal's name stays
+  the page's, in their case.
+- **The coach claimed a feeling.** "On Wed 16 Sep you did not feel like it either" is a
+  memory the app does not have (§11.4). It says what the ledger holds: "you kept 2 of 3 moves
+  and wrote “…”".
+- **Their full stop inside the letter's sentence.** "You wrote “…pleased about it.” and I
+  have thought" — two stops in one sentence; the same for the first of two ledger lines. And
+  "the ledger has 2 entries … and two of them are" now says "both".
+- **A cut quotation stopping on "the".** The 160-character cut in the letters and the
+  100-character cut in the brief landed on "…and not just watch the”; both back off a word at
+  a time past articles, prepositions and auxiliaries.
+- **"then" split a sentence into two moves.** "one module unit done, then the boys at 12.30"
+  put "the boys at 12.30" on Today as a move and left the first half ending in a comma.
+  Moves are cut on the person's own separators (semicolons, line breaks) and the days are
+  lifted out of each piece on its own — "Sunday at 4 pm, batch cook; Monday to Thursday, eat
+  from the fridge" is two moves, not three copies of both — and a span of days ("Monday to
+  Thursday") is one move as written.
+- **The 48-hour opening doubled a card.** A piece with no day of its own had the app's date
+  to begin with, so it moves to tomorrow rather than being copied; only a day-named piece is
+  copied, without its day. On the set: 130 moves, no two alike on a date, a sentence repeated
+  only for a day the person named.
+
+Gate after: 477 core / 48 ui / 8 storage, eval **567/567**, e2e **462/462**, cold 84/84, axe 0 across 37 screens, typecheck clean, lint 0 errors.
+
+**The eval harness, reviewed (2026-09-17).** The sweep: four reviewers over the code (the
+engines, the harness itself, the safety screen adversarially, the rest of the app), two judges
+over the dumped output of all forty profiles, 84 findings, a skeptic on each. The account's
+monthly limit stopped the skeptics at 50; the other 33 were read and traced by hand. What
+stood, all fixed:
+
+- **The identity line.** Cut at ":" or "." inside a time — "out the door at 6:40" became "out
+  the door at 6" — and "who is is" whenever the word after "who is" began with a capital or a
+  digit (a name, "10 kg", "OK"); "I am someone who runs" gave "someone who is someone who
+  runs"; "knows what he earns and what he spends" was cut at the "and". A word can carry its
+  own punctuation now, a stop ends a clause only before a space, the copula is its own group,
+  "I am someone who" counts as the doorway's sentence, and "and" cuts only before a new
+  subject. The contrast stays: "there, not a dad on the bench with his phone".
+- **The 48-hour opening.** The copy for tomorrow still carried a day when the day sat
+  mid-sentence — "Sunday at 4 pm in the kitchen" as a card for Friday, six profiles — and the
+  eval check meant to catch it passed any weekday. Decided: the rule is the app's rule for the
+  app's dates. A sentence that names its day ("Tuesday", "the 28th", "the 1st and 15th") is
+  dated by the person and never copied; a piece with no date of its own is what moves to
+  tomorrow; `validatePlan` knows a move that carries its own date. One card per sentence, on
+  the set.
+- **Effort was a label.** The first move was stamped "S" whatever it said, so the eval's "first
+  move ≤ 30 min" asserted nothing. Effort is read off the sentence now; a long piece opens only
+  when every piece is long, and a smaller undated piece opens ahead of it.
+- **"then I we do".** `ifThenOf` put the app's subject on a half that had one. A half that
+  opens with its own subject — "we", "the boys", "nobody", "Ana and I" — keeps it, in the
+  sentence, the Book and the profile alike.
+- **Milestones**: "1 weeks in" for a ten-day share; "The date you set" on a milestone that was
+  not on it (a target sooner than a fortnight is stretched to the floor); "Thirteen weeks in"
+  beside "26 weeks in". One week in; the date only when it lands; words to ninety-nine.
+- **The brief.** "Quiet day yesterday … not a failure" — the banned word, on the first morning
+  of all — never reached the eval because every profile had a kept day; the first morning and a
+  quiet day are on the set now, and the line is "and that is all it is". The trim dropped the
+  person's opening sentence before the app's own flourish; the register's push goes first. The
+  move is printed as a quotation — "Start with “On payday, £250 goes…”" — rather than grafted
+  onto "start with" with its first letter lowered. A two-word opener ("It's March.") gives way
+  to the first sentence with something in it, in the brief and the letters.
+- **The chips.** "Something changed" promised a replan tonight that nothing performs; it now
+  says where the Replan is. "I don't feel like it" said "Same size today" while its action
+  shrank the move; it says "Two minutes of it counts today". The shrink from a chip has an Undo,
+  on the coach screen and on Today.
+- **The letters.** Two ledger lines over ninety characters made "The ledger is still empty";
+  kept moves and practice runs were counted "in your own handwriting"; "None of it was the day
+  you felt like it" was a feeling the app has no record of; "Priya, You came back"; "what you
+  decided tonight" in a letter written a month on; a cut quotation stopped on "the" (the
+  dangling-word list was short); the sentence chosen could name the goal, and the check then
+  refused the letter. Each fixed; the letters say what the ledger holds and nothing of how
+  anyone felt.
+- **The two-minute version** matched stems — "Two minutes: moved" — and knew sixteen verbs; it
+  matches whole verbs now, forty-odd of them, in their base form.
+- **Day ranges**: "Mon–Fri", "Monday to Friday", "Saturday or Sunday", "Mondays to Fridays" are
+  one move as written, not "Monday: -Friday".
+- **The new-move sheet and the practice builder** still cut from the Full track's paragraph;
+  the line, as the plan.
+- **The Horizon Review** printed a milestone without its goal when the goal's name happened to
+  be inside the chrome; every line names the goal.
+- **The safety screen**, adversarially: thirty new shapes. Caught now — "wanna die", "hanging
+  myself", "walking into traffic", "jumping off the bridge", "took all my pills", "OD'd",
+  "rather be dead", "wish I didn't exist", "wish I hadn't been born", "better off if I was
+  gone", "happier if I was dead", "never wake up", "tired of being alive", "life isn't worth
+  living", "want my life to end", "what's the point of living", "taken my own life"; in the
+  concern band "I'm a burden", "feel like a failure", "can't take it anymore", "drunk every
+  night", "relapsed", "a bottle of wine a night". Left alone now — "don't want to wake up at
+  5am", "didn't want to go on the trip", "don't want to live in this flat", "wish I was born in
+  the 90s", "my mum will kill me", "just kill me now", "no point in going on holiday", "hurt
+  myself deadlifting", "cut my leg shaving", "rather die than wear that", "drink too much
+  coffee", "hopeless at parking", "purged my wardrobe", "binged three seasons", "100 kg squat is
+  the goal", "the warranty is worthless", "hate my self-doubt", "cannot face it". The verb
+  clauses that matter end where the clause ends, and the category logged is the pattern's, not
+  a second guess at the text.
+
+Refuted, and left: the authorship-ratio check is "tautological" (it is the floor, and it holds
+by construction — the day something writes into `generated` is the day it fails); the proof
+check "tests the golden author" (it does, and the follow-up the product asks is the product's
+answer); the 0.95 floor "tolerates a named miss" ("I've started cutting again" is a lifter's
+sentence as often as not, and the report names it every run).
+
+Gate after: 483 core / 48 ui / 8 storage, eval **647/647** (the first morning and a quiet day
+for every profile), e2e **473/473** (eleven new: Say it in a browser), cold 84/84, axe 0
+across 37 screens, typecheck clean, lint 0 errors.
+
 Gate after: 416 core / 48 ui / 8 storage, e2e **326/326** (was 317; the new checks seed a live virtues sitting and press both closing-screen buttons on the faults, write a Past line in crisis and change it without the card returning, and read the Interview-only caption), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
 
 Gate after: 416 core / 48 ui / 8 storage, e2e **317/317** (was 311; the new checks relaunch cold mid-Interview and resume, press Begin then Back on the Past doorway and find no sitting behind it, and reread a written Present from Today), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
@@ -2344,6 +2485,10 @@ program's actual prompt text by someone with a licensed copy.
 - 2026-09-11: `Studio` holds one 560 pt column rather than each screen carrying its own max-width. Forty screens each remembering a number is forty chances to forget it, and the ground stays full-bleed so the constraint is on the writing, not on the room.
 - 2026-09-12: the account is a copy of one device, not a merge. A push upserts and then prunes what the device no longer has, so two phones each writing their own Book take turns being the copy; nothing is lost on either phone. The day a merge is built, `pushAll`'s prune is what it replaces.
 - 2026-09-12: the tab bar is Morrow's own pill on every platform for now, not expo-router's `NativeTabs`. The PRD asks for the native bar (glass on iOS 26, Material on Android, §7.14) and that is still the intent; it is native chrome that cannot be seen from this machine, moving Today, Book, Envision, Coach and You into a tab group changes what `dismissTo('/today')` means on every screen, and building it blind would mean shipping a navigation model nobody has run. It is the first thing to do on a Mac (Next steps, 1), with the e2e suite as the net.
+- 2026-09-17: the 48-hour rule (§7.4) is the app's rule for the app's dates. A move whose
+  sentence names its own day — "Saturday at 7am", "on the 28th" — is dated by the person and
+  is never copied onto a day it contradicts; the plan opens on the first day they named, and
+  the mornings before it are Today's "Nothing is scheduled" rather than a card that lies.
 - 2026-09-11: the app's day, not the wall clock's, is what any screen prints. `dayOf(new Date(), boundary)` is the only definition of "today" in the product; a screen that reaches for `new Date()` to display a date is a bug even when it happens to agree.
 
 ## Next steps

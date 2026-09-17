@@ -61,7 +61,7 @@ import {
   type GoalAnalysis,
 } from '../src/index';
 import { dayOf, endSentence, ifThenOf, sequentialIds, thenHalf } from '../src/ids';
-import { firstSentence, restOfIdeal } from '../src/engines/portrait';
+import { firstSentence, restOfIdeal, withoutDanglingWord } from '../src/engines/portrait';
 
 describe('the Interview', () => {
   it('runs entirely on taps and ends with a named goal', () => {
@@ -288,7 +288,7 @@ describe('the dawn brief inside a sentence', () => {
       sequentialIds(),
     );
     expect(brief.firstMoveId).toBe('health1');
-    expect(brief.today.toLowerCase()).toContain('start with out the back door');
+    expect(brief.today).toContain('start with “Out the back door”.');
   });
 
   it('stays within ninety words, and cuts only what is quoted for the ritual', () => {
@@ -609,6 +609,69 @@ describe('safety', () => {
     expect(screen('I purged after dinner and told nobody.').risk).toBe('concern');
   });
 
+  it('catches the sentences the review wrote in the way people write at night', () => {
+    for (const t of [
+      'i wanna die',
+      'I keep thinking about hanging myself',
+      "I've been thinking about walking into traffic",
+      'I keep thinking of jumping off the bridge on the way home',
+      'I took all my pills on Saturday and slept for two days',
+      "I nearly OD'd in April and nobody knows",
+      "I'd rather be dead than do another year of this",
+      "wish I didn't exist",
+      "I wish I hadn't been born",
+      'I wish I had died in the crash',
+      'wish that I was dead',
+      'they would be better off if I was gone',
+      "everyone's better without me",
+      'she would be happier if I was dead',
+      'I hope I never wake up',
+      "tired of being alive",
+      "life isn't worth living",
+      'I want my life to end',
+      "what's the point of living",
+      "I've taken my own life in every version of this I can imagine",
+    ]) {
+      expect(screen(t).risk, t).toBe('crisis');
+    }
+    for (const t of ["I'm a burden to everyone", 'feel like a failure most days', "I can't take it anymore", 'drunk every night this week', "drinking way too much", 'I relapsed on Friday', 'a bottle of wine a night, most nights']) {
+      expect(screen(t).risk, t).toBe('concern');
+    }
+  });
+
+  it('leaves the ordinary sentences the review wrote alone', () => {
+    for (const t of [
+      "I don't want to wake up at 5am any more, it isn't working",
+      "I didn't want to go on the trip but I went",
+      "I don't want to live in this flat next year",
+      "I don't want to carry on with the diploma",
+      'I wish I was born in the 90s',
+      'I wish I was alive in the 70s to see it',
+      'I wish I was here when the kids were small',
+      'my mum will kill me',
+      'the run will kill me',
+      'just kill me now, what a meeting',
+      'no point in going on holiday in October',
+      'no point in carrying on with the diet',
+      'no point in being here at 7 if the doors open at 9',
+      'no reason to live in London on that salary',
+      'I hurt myself deadlifting again',
+      'cut my leg shaving',
+      'cut my arm on the rose bush',
+      "I'd rather die than wear that",
+      'I never wake up before the alarm',
+    ]) {
+      expect(screen(t).risk, t).not.toBe('crisis');
+    }
+    for (const t of ['I drink too much coffee', 'hopeless at parking', 'purged my wardrobe on Sunday', 'binged three seasons in a weekend', '100 kg squat is the goal', 'no one will notice the typo', 'the warranty is worthless', "can't go on the trip after all", 'I hate my self-doubt', 'it is sleeting and I cannot face it']) {
+      expect(screen(t).risk, t).toBe('none');
+    }
+    // The category is the pattern's: "bingo" and a gym "kg" are not disordered eating.
+    expect(screen('I binged last night and hate it').category).toBe('disordered-eating');
+    expect(screen('I feel worthless at the bingo').category).toBe('despair');
+    expect(screen('I drank to forget about the meeting').category).toBe('substance');
+  });
+
   it('does not read gym injuries, idioms or savings as a crisis', () => {
     // Every one of these was flagged by the widened patterns, and a flag now
     // excludes the whole sitting from the Book, so each would have quietly
@@ -904,8 +967,11 @@ describe('helpers', () => {
       ],
       ideal,
     });
-    expect(portrait.identityLine).toBe('');
-    expect(portrait.identityFraming).toBeNull();
+    // …and the sentence the doorway asks for is the one that answers: who
+    // they said they want to be, in the words they chose, with a framing
+    // that ends at "who" because the clause carries its own verb.
+    expect(portrait.identityLine).toBe('calls her mum on Wednesdays');
+    expect(portrait.identityFraming).toBe("I'm becoming someone who");
     expect(proposeIdentity('').clause).toBe('');
     expect(identityLineText(proposeIdentity(''))).toBe('');
   });
@@ -995,37 +1061,87 @@ describe('a plan whose first step the user put a week away', () => {
     expect(validatePlan(plan, analyses as never, '2026-09-06')).toEqual([]);
   });
 
-  it('opens within 48 hours and keeps the day the user actually named', () => {
+  it('keeps the day the user actually named, and opens on it', () => {
+    // The 48-hour rule is the app's rule for the app's dates. A sentence that
+    // says "Saturday" is dated by the person, and it used to be copied onto
+    // Monday as well — "Saturday at 7am, park run with Sam", as a card for a
+    // Monday, contradicting itself in their own words.
     const plan = buildPlan({ goal, analyses } as never, { today: '2026-09-06', newId });
-    const dates = plan.moves.map((m) => m.scheduledFor).sort();
-    expect(dates[0]).toBe('2026-09-07');
-    expect(dates).toContain('2026-09-12');
+    expect(plan.moves.map((m) => m.scheduledFor)).toEqual(['2026-09-12']);
+    expect(plan.moves[0]!.title).toBe('Saturday at 7am, park run with Sam');
+    expect(validatePlan(plan, analyses as never, '2026-09-06')).toEqual([]);
   });
 
   it('puts the user own words in the opening move, not the app own', () => {
     const plan = buildPlan({ goal, analyses } as never, { today: '2026-09-06', newId });
-    const first = plan.moves.find((m) => m.scheduledFor === '2026-09-07');
+    const first = [...plan.moves].sort((a, b) => a.order - b.order)[0];
     expect(first?.title.toLowerCase()).toContain('park run');
     expect(first?.sourceLineId).toBe('a1');
   });
 
-  it('opens with the body of the line, not a day it is not on', () => {
-    // "Tuesday: at 6:40, out the back door" dated a Monday contradicts itself.
-    // The opening copy is the body, which is still their sentence.
+  it('never makes a copy of a day-named move for a day it is not on', () => {
     const days = [{ ...analyses[0]!, line: 'Tuesday, Thursday and Saturday at 6:40, out the back door' }, analyses[1]!];
-    // 2026-09-06 is a Sunday: Tuesday is two days out, so no repair is needed…
+    // 2026-09-06 is a Sunday: Tuesday is two days out.
     expect(buildPlan({ goal, analyses: days } as never, { today: '2026-09-06', newId }).moves.map((m) => m.title)).toEqual([
       'Tuesday: at 6:40, out the back door',
       'Thursday: at 6:40, out the back door',
       'Saturday: at 6:40, out the back door',
     ]);
-    // …and 2026-09-09 is a Wednesday: Thursday is tomorrow, so none either. On
-    // a Saturday evening the soonest is Tuesday, three days out.
+    // On a Saturday evening the soonest is Tuesday, three days out: the plan
+    // opens on Tuesday, and there is no Sunday card that says "Tuesday".
     const fromSaturday = buildPlan({ goal, analyses: days } as never, { today: '2026-09-12', newId });
-    const opening = [...fromSaturday.moves].sort((a, b) => a.order - b.order)[0]!;
-    expect(opening.scheduledFor).toBe('2026-09-13');
-    expect(opening.title).toBe('at 6:40, out the back door');
-    expect(fromSaturday.moves.map((m) => m.title)).toContain('Tuesday: at 6:40, out the back door');
+    const titles = fromSaturday.moves.map((m) => m.title);
+    expect(new Set(titles).size).toBe(titles.length);
+    expect([...fromSaturday.moves].sort((a, b) => a.order - b.order)[0]!.scheduledFor).toBe('2026-09-15');
+    expect(validatePlan(fromSaturday, days as never, '2026-09-12')).toEqual([]);
+  });
+
+  it('dates a move by the day of the month it names', () => {
+    const monthly = [{ ...analyses[0]!, line: 'On the 28th of every month, £300 to the card by bank transfer at the kitchen table' }, analyses[1]!];
+    const plan = buildPlan({ goal, analyses: monthly } as never, { today: '2026-09-06', newId });
+    expect(plan.moves[0]!.scheduledFor).toBe('2026-09-28');
+    expect(validatePlan(plan, monthly as never, '2026-09-06')).toEqual([]);
+    // "the 1st and 15th": the nearer one to come.
+    const twice = [{ ...analyses[0]!, line: '£60 into the Christmas pot on the 1st and 15th of every month' }, analyses[1]!];
+    expect(buildPlan({ goal, analyses: twice } as never, { today: '2026-09-06', newId }).moves[0]!.scheduledFor).toBe('2026-09-15');
+    expect(buildPlan({ goal, analyses: twice } as never, { today: '2026-09-20', newId }).moves[0]!.scheduledFor).toBe('2026-10-01');
+  });
+
+  it('labels effort honestly, and opens with a smaller piece when a long one comes first', () => {
+    const hour = [{ ...analyses[0]!, line: 'One hour of writing at the desk by the window; ten minutes reading the last page back' }, analyses[1]!];
+    const plan = buildPlan({ goal, analyses: hour } as never, { today: '2026-09-06', newId });
+    const ordered = [...plan.moves].sort((a, b) => a.order - b.order);
+    expect(ordered.map((m) => m.effort)).toEqual(['S', 'L']);
+    expect(ordered[0]!.title).toBe('ten minutes reading the last page back');
+    expect(validatePlan(plan, hour as never, '2026-09-06')).toEqual([]);
+    // Their only line is an hour long: the plan is built, and says so.
+    const only = [{ ...analyses[0]!, line: 'One hour of writing at the desk by the window' }, analyses[1]!];
+    const solo = buildPlan({ goal, analyses: only } as never, { today: '2026-09-06', newId });
+    expect(solo.moves[0]!.effort).toBe('L');
+    expect(validatePlan(solo, only as never, '2026-09-06')).toEqual([]);
+  });
+
+  it('moves an undated piece to tomorrow rather than copying it, and titles milestones by distance', () => {
+    // "Book 30 minutes with Dana on the first Tuesday" is dated by its day;
+    // "bring the list" has no day of its own, so its date was the app's, and it
+    // moves to tomorrow instead of appearing twice three days apart.
+    const two = [
+      { ...analyses[0]!, line: 'Book 30 minutes with Dana on the first Tuesday of November at 2 pm; bring the list of the two features and the number' },
+      analyses[1]!,
+    ];
+    // 2026-09-05 is a Saturday: the Tuesday is three days out.
+    const plan = buildPlan({ goal, analyses: two } as never, { today: '2026-09-05', newId });
+    const titles = plan.moves.map((m) => m.title);
+    expect(new Set(titles).size).toBe(titles.length);
+    expect(plan.moves.find((m) => m.title.startsWith('bring the list'))?.scheduledFor).toBe('2026-09-06');
+    expect(plan.moves.find((m) => m.title.startsWith('Book 30'))?.scheduledFor).toBe('2026-09-08');
+    expect(validatePlan(plan, two as never, '2026-09-05')).toEqual([]);
+
+    // Milestone titles say how far along, and never rewrite the goal's name.
+    expect(plan.milestones.map((m) => m.title)).toEqual(['Four weeks in', 'Eight weeks in', "The season's end"]);
+    const dated = buildPlan({ goal: { ...goal, targetDate: '2027-03-14' }, analyses: two } as never, { today: '2026-09-05', newId });
+    expect(dated.milestones[dated.milestones.length - 1]!.title).toBe('The date you set');
+    for (const ms of [...plan.milestones, ...dated.milestones]) expect(ms.title).not.toMatch(/half marathon|without stopping/i);
   });
 
   it('cuts the moves from the How line on the Full track, and leaves the paragraph to the Book', () => {
@@ -1190,6 +1306,26 @@ describe('the if-then as one sentence', () => {
   });
 });
 
+describe('a quotation cut short', () => {
+  it('backs off a word at a time rather than stop on an article or a preposition', () => {
+    expect(withoutDanglingWord('the one with the certificate that means I can do the work and not just watch the', 40)).toBe(
+      'the one with the certificate that means I can do the work and not just watch',
+    );
+    expect(withoutDanglingWord('out the back door before the kettle boils and', 10)).toBe('out the back door before the kettle boils');
+    // Never past the floor: a run of small words near it stays as it is.
+    expect(withoutDanglingWord('one of the', 8)).toBe('one of the');
+    expect(withoutDanglingWord('nothing to trim now', 5)).toBe('nothing to trim now');
+  });
+
+  it('shows in the cut first sentence itself', () => {
+    const long = 'its 18 months from now and I have passed the electrics course, the real one, the one with the certificate that means I can do the work and not just watch the videos, all of them, every night.';
+    const shown = firstSentence(long, 160);
+    expect(shown.endsWith('…')).toBe(true);
+    expect(shown).not.toMatch(/\b(?:the|and|not|just|of|to|a)…$/);
+    expect(long.startsWith(shown.slice(0, -1))).toBe(true);
+  });
+});
+
 describe('the first sentence, at its real end', () => {
   it('takes the whole run of terminators and a decimal point is not an end', () => {
     expect(firstSentence('I want to run every morning... Not just some mornings.')).toBe('I want to run every morning...');
@@ -1233,6 +1369,26 @@ describe('moves cut from a line with days in the middle of it', () => {
     ]);
     expect(splitFirstMoves('Every Monday, Wednesday and Friday I go to the pool at 7')[0]).toBe('Monday: I go to the pool at 7');
   });
+  it('cuts on the person’s own separators before it lifts the days out of a piece', () => {
+    expect(splitFirstMoves('Sunday at 4 pm, batch cook two meals for the week at the flat; Monday to Thursday, eat from the fridge at 7 pm')).toEqual([
+      'Sunday at 4 pm, batch cook two meals for the week at the flat',
+      'Monday to Thursday, eat from the fridge at 7 pm',
+    ]);
+    // A line of days, then a second thing: the days are lifted from their piece only.
+    expect(splitFirstMoves('Tuesday and Thursday at 6:40, out the back door; Sunday, the long one')).toEqual([
+      'Tuesday: at 6:40, out the back door',
+      'Thursday: at 6:40, out the back door',
+      'Sunday, the long one',
+    ]);
+  });
+
+  it('keeps "then" inside the sentence it is in, and leaves no comma hanging', () => {
+    expect(splitFirstMoves('On every day off, at the library on Market Street from 10 am to 12, one module unit done, then the boys at 12.30')).toEqual([
+      'On every day off, at the library on Market Street from 10 am to 12, one module unit done, then the boys at 12.30',
+    ]);
+    expect(splitFirstMoves('Ten minutes of scales, ')).toEqual(['Ten minutes of scales']);
+  });
+
   it('counts a day named twice as one day, so Today never shows the same card twice', () => {
     const line = 'Saturday at 5 pm in the front room with both boys, 20 minutes, the three chords from the sheet, new strings by this Saturday';
     expect(splitFirstMoves(line)).toEqual([line]);

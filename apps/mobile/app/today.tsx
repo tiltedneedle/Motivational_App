@@ -91,6 +91,7 @@ export default function Today() {
   const setToast = useMorrow((s) => s.setToast);
   const setStatus = useMorrow((s) => s.setMoveStatus);
   const removeEvidence = useMorrow((s) => s.removeEvidence);
+  const unshrinkMove = useMorrow((s) => s.unshrinkMove);
   const makeBrief = useMorrow((s) => s.makeBrief);
   const setProfile = useMorrow((s) => s.setProfile);
   const allowNotifications = useMorrow((s) => s.allowNotifications);
@@ -295,9 +296,10 @@ export default function Today() {
             <Toast
               testID="toast"
               text={toast.text}
-              actionLabel={toast.kind === 'park' || toast.kind === 'capture' ? 'Undo' : undefined}
+              actionLabel={toast.kind === 'park' || toast.kind === 'capture' || toast.kind === 'shrink' ? 'Undo' : undefined}
               onAction={() => {
                 if (toast.undoId && toast.kind === 'capture') removeEvidence(toast.undoId);
+                else if (toast.undoId && toast.kind === 'shrink') unshrinkMove(toast.undoId);
                 else if (toast.undoId) setStatus(toast.undoId, 'todo');
                 setToast(null);
               }}

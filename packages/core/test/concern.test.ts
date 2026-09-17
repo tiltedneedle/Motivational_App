@@ -76,7 +76,7 @@ describe('the concern band is a band, not a column in a table', () => {
     expect(softened.today).not.toContain('No negotiation');
     expect(softened.today).toContain("When you're ready");
     // And it is still their move, in their words.
-    expect(softened.today).toContain('out the back door at 6:40');
+    expect(softened.today.toLowerCase()).toContain('out the back door at 6:40');
   });
 
   it('takes the number off the morning', () => {
@@ -255,7 +255,11 @@ describe('the coach quotes their words as written', () => {
     // Not today's own line: they have not had today yet.
     expect(r.text).not.toContain('Out before the kettle');
     expect(r.text).not.toContain('.”.');
-    expect(r.text).toContain('Rained the whole way.” Same size today.');
+    expect(r.text).toContain('Rained the whole way.” Two minutes of it counts today.');
+    // What the ledger holds, never how they felt: "you did not feel like it
+    // either" was a claim about a feeling the app has no record of.
+    expect(r.text).not.toMatch(/feel like it either/);
+    expect(r.text).toMatch(/^On Wed 9 Sep you kept \d+ of \d+ moves? and wrote “/);
   });
 
   it('counts sealed days in the right number', () => {

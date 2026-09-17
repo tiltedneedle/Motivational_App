@@ -81,13 +81,20 @@ export function ifThenOf(line: string, line2: string): { sentence: string; spans
   if (/^i\s+/i.test(act)) {
     act = act.replace(/^i\s+/i, '');
     then = `then I ${act}`;
-  } else if (/^i['’]/i.test(act)) {
+  } else if (/^i['’]/i.test(act) || OWN_SUBJECT.test(act)) {
+    // Their half already has its subject — "I'll", "we do beans on toast",
+    // "the boys and I", "nobody minds" — and "then I we do" is the app's
+    // subject on top of theirs.
     then = `then ${act}`;
   } else {
     then = `then I ${act}`;
   }
   return { sentence: `if ${cond}, ${then}`, spans: [cond, act].filter((s) => s.length > 0) };
 }
+
+/** An act that opens with its own subject, so the framing stops at "then". */
+const OWN_SUBJECT =
+  /^(?:we|they|he|she|it|you|nobody|no\s+one|somebody|someone|everyone|everybody|the|my|our|his|her|their|a|an|this|that|there|[A-Z][a-z]+\s+(?:and|or)\s+I)\b/;
 
 /**
  * The second half of an if-then, for the places that print it on its own
@@ -105,7 +112,7 @@ export function thenHalf(line2: string): { framing: '…then I' | '…then'; act
     act = act.replace(/^i\s+/i, '');
     return { framing: '…then I', act };
   }
-  if (/^i['’]/i.test(act)) return { framing: '…then', act };
+  if (/^i['’]/i.test(act) || OWN_SUBJECT.test(act)) return { framing: '…then', act };
   return { framing: '…then I', act };
 }
 

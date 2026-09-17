@@ -823,6 +823,104 @@ async function main() {
       await page.waitForTimeout(400);
       if (await seen('write-hide-clock')) await tap('write-hide-clock'); // back on, for the sittings that follow
     }
+    // ---- Say it, in a browser. The recogniser is a scripted one: what it
+    // hands the room is what Chrome's hands it — stretches, some final, some
+    // still being heard — and the room must keep every one, listen again
+    // when the browser stops on its own, stop for a pause and listen again
+    // after it, and treat the Listening chip as a switch. Before this the
+    // module's web shim started a second recogniser on every final, each
+    // aborting the last, and the room heard one sentence.
+    await page.addInitScript(() => {
+      window.__recs = [];
+      class ScriptedRecognition {
+        constructor() {
+          this.started = false;
+          this.onresult = null;
+          this.onend = null;
+          this.onerror = null;
+          window.__recs.push(this);
+        }
+        start() {
+          if (this.started) {
+            const e = new Error('already started');
+            e.name = 'InvalidStateError';
+            throw e;
+          }
+          this.started = true;
+        }
+        stop() {
+          this.started = false;
+          setTimeout(() => this.onend && this.onend(), 10);
+        }
+        abort() {
+          this.started = false;
+        }
+      }
+      window.SpeechRecognition = ScriptedRecognition;
+      window.webkitSpeechRecognition = ScriptedRecognition;
+      if (navigator.mediaDevices) navigator.mediaDevices.getUserMedia = () => Promise.resolve({ getTracks: () => [] });
+      window.__hear = (segments) => {
+        const r = window.__recs[window.__recs.length - 1];
+        const results = segments.map(([t, f]) => ({ isFinal: f, 0: { transcript: t }, length: 1 }));
+        results.length = segments.length;
+        if (r && r.onresult) r.onresult({ resultIndex: 0, results });
+      };
+      window.__silence = () => {
+        const r = window.__recs[window.__recs.length - 1];
+        if (r) {
+          r.started = false;
+          if (r.onend) r.onend();
+        }
+      };
+    });
+    await page.goto(`${BASE}/write?kind=addition`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(400);
+    if (await seen('mode-say')) {
+      await tap('mode-say');
+      await tap('write-begin');
+      await page.clock.runFor(800);
+      await page.waitForTimeout(600);
+      const spoken = () => page.locator('[data-testid="write-input"]').inputValue();
+      const recs = () => page.evaluate(() => window.__recs.length);
+      const lastStarted = () => page.evaluate(() => window.__recs[window.__recs.length - 1]?.started === true);
+      check('Say it opens the room listening, with one recogniser', (await text('write-mic')).toLowerCase() === 'listening' && (await recs()) === 1, `chip "${await text('write-mic')}" · ${await recs()} recognisers`);
+      await page.evaluate(() => window.__hear([['I want to run', false]]));
+      await page.waitForTimeout(200);
+      check('a stretch still being heard is on the page', (await spoken()) === 'I want to run', await spoken());
+      await page.evaluate(() => window.__hear([['I want to run every morning.', true]]));
+      await page.evaluate(() => window.__hear([['I want to run every morning.', true], ['and I mean it', false]]));
+      await page.evaluate(() => window.__hear([['I want to run every morning.', true], ['and I mean it this time.', true]]));
+      await page.waitForTimeout(200);
+      check('the stretches after the first sentence are kept', (await spoken()) === 'I want to run every morning. and I mean it this time.', await spoken());
+      check('and still one recogniser: a final does not start another', (await recs()) === 1, `${await recs()} recognisers`);
+      await page.evaluate(() => window.__silence());
+      await page.waitForTimeout(600);
+      check('when the browser stops on its own the room listens again', (await recs()) === 2 && (await lastStarted()), `${await recs()} recognisers`);
+      await page.evaluate(() => window.__hear([['Sam is asleep.', true]]));
+      await page.waitForTimeout(200);
+      check('and what comes next is added, not lost', (await spoken()).endsWith('this time. Sam is asleep.'), await spoken());
+      await tap('write-hold');
+      await page.waitForTimeout(400);
+      check('a pause of the clock is a pause of the microphone', !(await lastStarted()) && (await text('write-mic')).toLowerCase() === 'paused', await text('write-mic'));
+      await tap('write-hold');
+      await page.clock.runFor(600);
+      await page.waitForTimeout(600);
+      check('and carrying on listens again', (await lastStarted()) && (await text('write-mic')).toLowerCase() === 'listening', await text('write-mic'));
+      await page.evaluate(() => window.__hear([['The kettle is on.', true]]));
+      await page.waitForTimeout(200);
+      check('with nothing said before the pause lost', (await spoken()).endsWith('Sam is asleep. The kettle is on.'), await spoken());
+      await tap('write-mic');
+      await page.waitForTimeout(400);
+      check('the Listening chip switches the microphone off', !(await lastStarted()) && (await text('write-mic')).toLowerCase() === 'listen again', await text('write-mic'));
+      await tap('write-mic');
+      await page.clock.runFor(600);
+      await page.waitForTimeout(600);
+      check('and on again', (await lastStarted()) && (await text('write-mic')).toLowerCase() === 'listening', await text('write-mic'));
+    } else {
+      check('Say it is offered on the doorway', false);
+    }
+
     await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
     await page.clock.runFor(1500);
     await page.waitForTimeout(500);
@@ -2441,7 +2539,12 @@ async function main() {
     await page.keyboard.press('Enter');
     await page.waitForTimeout(800);
     check('the new edition is sealed', await seen('seal-open-book'));
-    await tap('seal-open-book');
+    // A seal whose every plan builds opens the Book by itself after 900 ms
+    // on the (fake) clock; one with a goal still needing a line waits for the
+    // tap. Either way the Book is where this goes.
+    await page.clock.runFor(1000);
+    await page.waitForTimeout(300);
+    if (!(await seen('screen-book')) && (await seen('seal-open-book'))) await tap('seal-open-book');
     // The stack's slide runs on the fake clock; until it has run, the new
     // screen is mid-transition and innerText reads only its first line.
     await page.clock.runFor(1500);

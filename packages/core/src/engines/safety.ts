@@ -39,64 +39,118 @@ import type { SafetyRisk } from '../types';
  * (`reconsider` in the store). An automated judgement that is permanent,
  * destructive and unappealable is not a safety feature.
  */
+/**
+ * How a clause ends, for the patterns that must not fire on a sentence that
+ * carries on into something ordinary: "don't want to wake up" is one thing
+ * and "don't want to wake up at 5am" is another. A stop, the end of the
+ * text, or one of the few continuations that keep the meaning.
+ */
+const CLAUSE_END = String.raw`(?=\s*(?:[.,;:!?)\]…—-]|$)|\s+(?:any\s?more|any\s+longer|at\s+all|like\s+this|tomorrow|tonight|today|this\s+(?:morning|week|month|year)|these\s+days|lately|again|because|if|so|honestly|really|sometimes|most\s+days|some\s+days|pretending|as\s+if|with\s+(?:any\s+of\s+)?(?:it|this|life|things))\b)`;
+const re = (source: string) => new RegExp(source, 'i');
+
 const CRISIS = [
   // Inflections only for "myself", which is unambiguous. "kill me" stays in
-  // its bare form: "it killed me", "this deadline is killing me" and "that
-  // joke killed me" are ordinary English, and a card that fires on those
-  // teaches people to dismiss it without reading, which is the one way this
-  // screen can be made worse at its job.
+  // its bare form, and not after a modal: "it killed me", "this deadline is
+  // killing me", "my mum will kill me" and "just kill me now" are ordinary
+  // English, and a card that fires on those teaches people to dismiss it
+  // without reading, which is the one way this screen can be made worse at
+  // its job.
   /\bkill(?:ing|ed|s)?\s+my ?self(?![\w-])/i,
-  /\bkill\s+me\b/i,
+  /(?<!\b(?:will|would|could|might|gonna|to|going\s+to|ll|['’]ll|can|may)\s)\bkill\s+me\b(?!\s+(?:now|if|when|for|with|before|after|already|later)\b)/i,
   /\b(?:end|ending|ended|ends)\s+(?:my|this)\s+(?:own\s+)?life\b/i,
   // "take" only with "own". "Taking my life back" and "took my life savings"
   // are ordinary sentences, and the idiom this list is for says "own life".
-  /\b(?:take|taking|took|takes)\s+(?:my|his|her|their)\s+own\s+life\b/i,
+  /\b(?:take|taking|took|takes|taken)\s+(?:my|his|her|their)\s+own\s+life\b/i,
   /\bend(?:ing|ed)?\s+it\s+all\b/i,
   /\bsuicid\w*/i,
   /\bunalive\w*/i,
   // "die of embarrassment", "die of shame", "die laughing" are idioms, and
-  // the card on them teaches people to dismiss it.
-  /\bwant(?:ed|ing|s)?\s+to\s+(?:die(?!\s+(?:of\s+(?:embarrassment|shame|boredom|laughter|laughing|cringe|the\s+cold|hunger|thirst)|laughing)\b)|be\s+dead|not\s+exist)\b/i,
-  /\brather\s+not\s+(?:exist|be\s+alive)\b/i,
-  /\bthink(?:ing|s)?\s+about\s+(?:stepping|jumping|walking)\s+(?:out\s+)?in\s+front\s+of\b/i,
-  // "do not want", "don't want", "didn't want", "doesn't want".
-  /\b(?:do|does|did)(?:\s+not|n['’]?t)\s+want\s+to\s+(?:be\s+here|be\s+alive|live|wake\s+up|exist|go\s+on|carry\s+on)\b/i,
-  /\bnot\s+want(?:ing)?\s+to\s+(?:be\s+here|be\s+alive|live|wake\s+up|exist)\b/i,
-  /\bwish(?:ed|ing)?\s+(?:i|I)\s+(?:was|were|wasn['’]?t|weren['’]?t)\s+(?:dead|here|alive|born|never\s+born|not\s+(?:alive|here))\b/i,
-  /\bwish(?:ed|ing)?\s+(?:i|I)(?:['’]d|\s+had)\s+never\s+been\s+born\b/i,
-  /\bbetter\s+off\s+(?:without\s+me|dead|if\s+i\s+(?:was|were)n['’]?t)\b/i,
-  /\bself[- ]?harm\w*/i,
-  /\b(?:cut|cutting|cuts|harm|harming|harms|harmed)\s+(?:my ?self|my\s+(?:arms?|legs?|wrists?|thighs?|skin))\b/i,
-  // "hurt my legs" is a gym sentence. "Hurt myself" is not.
-  /\b(?:hurt|hurting|hurts)\s+my ?self(?![\w-])/i,
-  /\bno\s+(?:reason|point)\s+(?:to|in)\s+(?:go(?:ing)?\s+on|carry(?:ing)?\s+on|liv(?:e|ing)|be(?:ing)?\s+here)\b/i,
-  /\bnothing\s+(?:left\s+)?to\s+live\s+for\b/i,
+  // the card on them teaches people to dismiss it. "wanna" is how it is
+  // typed at night.
+  /\b(?:want(?:ed|ing|s)?\s+to|wanna)\s+(?:die(?!\s+(?:of\s+(?:embarrassment|shame|boredom|laughter|laughing|cringe|the\s+cold|hunger|thirst)|laughing)\b)|be\s+dead|not\s+exist|not\s+wake\s+up|kill\s+my ?self(?![\w-])|end\s+it)\b/i,
+  // "rather die than wear that" is hyperbole; "rather die" alone, and
+  // "rather be dead" however it goes on, are not.
+  /\brather\s+(?:not\s+(?:exist|be\s+alive|be\s+here|wake\s+up)|be\s+dead|die(?!\s+than))\b/i,
+  // Methods. Thought about, or stated.
+  /\b(?:think(?:ing|s)?|thought)\s+(?:about|of)\s+(?:stepping|jumping|walking|driving)\s+(?:out\s+)?(?:in\s+front\s+of|into\s+(?:traffic|the\s+(?:road|river|sea|canal|water))|off\s+(?:a|the)\s+(?:bridge|roof|cliff|balcony|building))\b/i,
+  /\b(?:hang|hanging|hung|shoot|shooting|drown|drowning|burn|burning|burnt|burned)\s+my ?self(?![\w-])(?!\s+(?:out\s+to\s+dry|on\s+the\s+(?:oven|iron|pan|hob|stove|kettle)|with\s+the\s+(?:iron|kettle|oven|pan)|making|cooking))/i,
+  /\b(?:took|take|taking|taken)\s+(?:all|too\s+many)\s+(?:of\s+)?(?:my|the)\s+(?:pills|tablets|meds|medication)\b/i,
+  /\bod['’]d\b|\bod['’]?ed\b/i,
   /\boverdos\w*/i,
-  /\b(?:don['’]?t|do\s+not)\s+want\s+to\s+be\s+(?:here|alive)\s+any\s?more\b/i,
+  // "do not want", "don't want", "didn't want", "doesn't want" — and only when
+  // the clause ends there: "don't want to wake up at 5am", "didn't want to go
+  // on the trip", "don't want to live in this flat" are a hard week, not this.
+  re(String.raw`\b(?:do|does|did)(?:\s+not|n['’]?t)\s+(?:want\s+to|wanna)\s+(?:be\s+here|be\s+alive|be\s+around|live|wake\s+up|exist|go\s+on|carry\s+on)` + CLAUSE_END),
+  re(String.raw`\bnot\s+want(?:ing)?\s+to\s+(?:be\s+here|be\s+alive|be\s+around|live|wake\s+up|exist)` + CLAUSE_END),
+  // Wishes. "wish I was here when the kids were small" and "wish I was born in
+  // the 90s" are ordinary; the wish that counts is not to be.
+  /\bwish(?:ed|ing)?\s+(?:that\s+)?(?:i|I)(?:['’]d\s+never\s+been\s+born|\s+(?:(?:was|were)\s+(?:dead|never\s+born|not\s+(?:alive|here|around))|(?:wasn['’]?t|weren['’]?t|was\s+not|were\s+not)\s+(?:here|alive|born|around)|(?:didn['’]?t|did\s+not|don['’]?t|do\s+not)\s+exist|(?:hadn['’]?t|had\s+not|had\s+never|had)\s+(?:never\s+)?been\s+born|had\s+died|(?:would|could)\s+(?:just\s+)?(?:die|disappear|not\s+wake\s+up)))\b/i,
+  /\bbetter\s+(?:off\s+)?(?:without\s+me|dead|if\s+(?:i|I)\s+(?:(?:was|were)(?:n['’]?t)?\s+(?:gone|here|around|dead|alive|born)|wasn['’]?t\s+(?:here|around|alive|born)|died|disappeared))\b/i,
+  /\bhappier\s+(?:without\s+me|if\s+(?:i|I)\s+(?:was|were)\s+(?:gone|dead|not\s+(?:here|around)))\b/i,
+  /\bself[- ]?harm\w*/i,
+  // A body part in the plural, or the reflexive without an accident after it:
+  // "cutting my arms" is this; "cut my arm on the rose bush", "cut myself
+  // shaving" are not.
+  /\b(?:cut|cutting|cuts|harm|harming|harms|harmed)\s+(?:my ?self(?![\w-])(?!\s+(?:shaving|chopping|slicing|cooking|opening|gardening|on\s+the|with\s+the|at\s+work|in\s+the\s+(?:kitchen|garden|garage|workshop)|doing\s+the))|my\s+(?:arms|legs|wrists|thighs)\b|my\s+(?:arm|leg|wrist|thigh|skin)\b(?!\s+(?:on|shaving|while|when|with|at|in|chopping|cooking|gardening|falling|climbing|playing|doing|during|again\s+on)))/i,
+  // "hurt my legs" is a gym sentence; so is "hurt myself deadlifting".
+  // "Hurt myself" with nothing after it is not.
+  /\b(?:hurt|hurting|hurts)\s+my ?self(?![\w-])(?!\s+(?:deadlifting|squatting|lifting|running|training|playing|skiing|climbing|falling|cycling|at\s+(?:the\s+)?(?:gym|work|football|rugby|training|five-a-side)|in\s+the\s+(?:gym|garden)|on\s+the\s+(?:bike|stairs|ice|pitch)|doing\s+(?:the|a|my)|laughing|getting))/i,
+  // "no point in going on holiday", "no point in living in London" carry on
+  // into something; the sentence this is for stops.
+  re(String.raw`\b(?:no\s+(?:reason|point)\s+(?:to|in)|what(?:['’]s|\s+is)\s+the\s+point\s+(?:of|in))\s+(?:go(?:ing)?\s+on|carry(?:ing)?\s+on|liv(?:e|ing)|be(?:ing)?\s+here|be(?:ing)?\s+alive|stay(?:ing)?\s+alive|any\s+of\s+it|it\s+all)` + CLAUSE_END),
+  /\bnothing\s+(?:left\s+)?to\s+live\s+for\b/i,
+  /\blife\s+(?:isn['’]?t|is\s+not|is\s+no\s+longer|ain['’]?t)\s+worth\s+living\b/i,
+  /\bnot\s+worth\s+(?:living|being\s+alive|going\s+on|staying\s+alive)\b/i,
+  re(String.raw`\btired\s+of\s+(?:being\s+alive|living|life)` + CLAUSE_END),
+  /\bwant\s+(?:my\s+)?life\s+to\s+(?:end|be\s+over)\b/i,
+  /\b(?:hope|hoping|hoped|pray|praying|prayed)\s+(?:that\s+)?(?:i|I)\s+(?:don['’]?t|do\s+not|never|won['’]?t|will\s+not)\s+wake\s+up\b/i,
+  re(String.raw`\bnever\s+wake\s+up` + CLAUSE_END),
 ];
 
-const CONCERN = [
-  /\bhat(?:e|ed|ing)\s+my ?self\b/i,
-  /\bworthless\b/i,
-  /\bi(?:['’]| a)?m\s+(?:such\s+a|just\s+a|a)\s+failure\b/i,
-  /\bcan(?:['’]?t|not)\s+(?:cope|go\s+on|carry\s+on|do\s+this\s+any\s?more)\b/i,
-  // "bingeing" keeps its e, and it is the spelling people use. "Starving"
-  // on its own is hungry after a swim; it counts with "myself", "all day"
-  // or a reason. A binge of a series is a Sunday.
-  /\bstarv(?:e|es|ed|ing)\s+(?:my ?self|all\s+day|to\s+(?:fit|lose|get|look)|for\s+(?:a|the)\s+(?:dress|wedding|photo|weigh))/i,
-  /\bpurg(?:e|es|ed|ing)\b(?!\s+(?:the|old|files|data))/i,
-  /\bbing(?:e|es|ed|ing|eing)\b(?![-\s]?watch)(?!\s+(?:of\s+)?(?:the\s+)?(?:last|whole|series|season|episodes?|box))/i,
-  /\brestrict(?:ing|ed)?\s+(?:my\s+)?(?:food|calories|intake)\b/i,
-  /\b\d{2,4}\s?(?:kg|lbs?|pounds|kcal|calories)\b.{0,24}\b(?:lose|lost|losing|target|goal|under|max|fail\w*)\b/i,
-  /\b(?:drink|drinking|drank)\s+(?:too\s+much|every\s?(?:day|night)|to\s+forget)\b/i,
-  /\bpanic\s+attacks?\b/i,
-  /\bhopeless(?:ness)?\b/i,
-  // "nobody would even notice" is the shape people actually write, and the
-  // old form wanted the verb immediately after the modal, so the commonest
-  // phrasing in the band fell straight through it. "No one" too: it is at
-  // least as common as "nobody" and was not matched at all.
-  /\b(?:nobody|no\s?one)\s+(?:would|will|even|really)\s+(?:even\s+|really\s+|actually\s+)?(?:care|cares|notice|notices|miss|misses)\b/i,
-  /\bnumb\s+(?:all\s+the\s+time|most\s+days)\b/i,
+interface ConcernPattern {
+  re: RegExp;
+  category: 'despair' | 'disordered-eating' | 'substance';
+}
+
+const CONCERN: ConcernPattern[] = [
+  // ---- despair
+  { re: /\bhat(?:e|ed|ing)\s+my ?self(?![\w-])/i, category: 'despair' },
+  // "worthless" of themselves: "the warranty is worthless" is not this.
+  { re: /(?:\b(?:i(?:['’]| a)?m|i\s+am|i\s+feel|i\s+felt|feel(?:ing)?|felt|am)\s+(?:so\s+|totally\s+|completely\s+|utterly\s+|just\s+)?worthless\b|^\s*worthless\b)/i, category: 'despair' },
+  { re: /\bi(?:['’]| a)?m\s+(?:such\s+a|just\s+a|a)\s+(?:(?:complete|total|utter|absolute)\s+)?failure\b/i, category: 'despair' },
+  { re: /\b(?:feel|feels|felt|feeling)\s+like\s+(?:such\s+)?a\s+(?:(?:complete|total|utter|absolute)\s+)?failure\b/i, category: 'despair' },
+  // "can't cope" is the emotional sentence; "can't go on" and "can't carry
+  // on" only when the clause ends there ("can't carry on with the diploma"
+  // is a course), "can't take it" and "can't do it" only with "any more".
+  { re: /\bcan(?:['’]?t|not)\s+cope\b/i, category: 'despair' },
+  // "can't carry on with this job" softens the morning; "can't face it" is
+  // the washing up, and stays out.
+  { re: re(String.raw`\bcan(?:['’]?t|not)\s+(?:go\s+on|carry\s+on|keep\s+going)(?:\s+with\s+(?:this|the|my|our|it|them))?` + CLAUSE_END), category: 'despair' },
+  { re: /\bcan(?:['’]?t|not)\s+(?:take\s+(?:it|this)|do\s+(?:it|this)|keep\s+(?:it|this)\s+up)\s+(?:any\s?more|any\s+longer|much\s+longer)\b/i, category: 'despair' },
+  { re: /\bpanic\s+attacks?\b/i, category: 'despair' },
+  { re: /\bhopeless(?:ness)?\b(?!\s+(?:at|with|romantic)\b)/i, category: 'despair' },
+  // "nobody would even notice" is the shape people actually write. "no one
+  // will notice the typo" is a typo.
+  { re: /\b(?:nobody|no\s?one)\s+(?:would|will|even|really)\s+(?:even\s+|really\s+|actually\s+)?(?:care|cares|notice|notices|miss|misses)\b(?!\s+(?:the|a|an|that|it|this|my|about|(?:if|whether)\s+(?:it|the|we|you|they|he|she|there))\b)/i, category: 'despair' },
+  { re: /\bnumb\s+(?:all\s+the\s+time|most\s+days|most\s+of\s+the\s+time|inside)\b/i, category: 'despair' },
+  { re: /\b(?:i(?:['’]| a)?m|i\s+am)\s+(?:just\s+)?a\s+burden\b/i, category: 'despair' },
+  { re: /\bcry(?:ing)?\s+(?:every\s+(?:day|night)|my ?self\s+to\s+sleep)\b/i, category: 'despair' },
+  // ---- disordered eating
+  // "Starving" on its own is hungry after a swim; it counts with "myself",
+  // "all day" or a reason. "bingeing" keeps its e, and it is the spelling
+  // people use; a binge of a series is a Sunday. "purged my wardrobe" is a
+  // tidy-up.
+  { re: /\bstarv(?:e|es|ed|ing)\s+(?:my ?self|all\s+day|on\s+(?:weekdays|purpose)|to\s+(?:fit|lose|get|look)|for\s+(?:a|the)\s+(?:dress|wedding|photo|weigh))/i, category: 'disordered-eating' },
+  { re: /\bpurg(?:e|es|ed|ing)\b(?!\s+(?:the|old|files|data|my|our|your|his|her|their|a|an|through)\b)/i, category: 'disordered-eating' },
+  { re: /\bbing(?:e|es|ed|ing|eing)\b(?![-\s]?watch)(?!\s+(?:\w+\s+){0,4}(?:series|seasons?|episodes?|show|box\s*set|netflix|telly|tv)\b)/i, category: 'disordered-eating' },
+  { re: /\b(?:make|making|made)\s+my ?self\s+(?:sick|throw\s+up)\b/i, category: 'disordered-eating' },
+  { re: /\brestrict(?:ing|ed)?\s+(?:my\s+)?(?:food|calories|intake)\b/i, category: 'disordered-eating' },
+  { re: /\b\d{2,4}\s?(?:kg|lbs?|pounds|kcal|calories)\b(?!\s+(?:squat|deadlift|bench|press|lift|clean|snatch|row|total|pull|for\s+\d))(?:.{0,24})\b(?:lose|lost|losing|target|goal|under|max|fail\w*)\b/i, category: 'disordered-eating' },
+  // ---- substance
+  { re: /\b(?:drink|drinking|drank|drunk)\s+(?:way\s+|far\s+|much\s+)?(?:too\s+much(?!\s+(?:coffee|tea|water|caffeine|milk|juice|pop|soda|red\s+bull|energy))|every\s?(?:day|night)|to\s+forget|to\s+(?:get\s+)?(?:sleep|numb|cope))\b/i, category: 'substance' },
+  { re: /\bdrunk\s+(?:every|most)\s+(?:night|day|evening)s?\b/i, category: 'substance' },
+  { re: /\brelapsed?\b(?!\s+(?:into\s+(?:old\s+)?(?:habits|ways)|on\s+the\s+(?:diet|sugar|snooze)))/i, category: 'substance' },
+  { re: /\ba\s+bottle\s+(?:of\s+\w+\s+)?(?:a|every|each|per)\s+(?:night|day|evening)\b/i, category: 'substance' },
 ];
 
 export interface SafetyResult {
@@ -196,15 +250,11 @@ export function screen(text: string): SafetyResult {
   for (const re of CRISIS) {
     if (re.test(t)) return { risk: 'crisis', category: 'self-harm', action: 'resources' };
   }
-  for (const re of CONCERN) {
-    if (re.test(t)) {
-      const category = /\b(?:starv|purg|bing)\w*|\b(?:kg|lbs|pounds)\b/i.test(t)
-        ? 'disordered-eating'
-        : /\bdrink\w*/i.test(t)
-          ? 'substance'
-          : 'despair';
-      return { risk: 'concern', category, action: 'soften' };
-    }
+  for (const { re, category } of CONCERN) {
+    // The category is the pattern's, not a second guess at the text: a
+    // "kg" in a sentence about the gym, or "bingo", used to file a despair
+    // line under disordered eating.
+    if (re.test(t)) return { risk: 'concern', category, action: 'soften' };
   }
   return { risk: 'none', category: null, action: 'continue' };
 }

@@ -81,6 +81,14 @@ export default function Write() {
    */
   const [listening, setListening] = useState(false);
   const [micNote, setMicNote] = useState<string | null>(null);
+  /**
+   * Whether the person wants the room listening: the Listening chip is a
+   * switch, off for a moment and on again, and a pause of the clock is a
+   * pause of the microphone too. `micTry` counts the times they asked it
+   * to listen again after a problem, so asking again starts it again.
+   */
+  const [micWanted, setMicWanted] = useState(true);
+  const [micTry, setMicTry] = useState(0);
   const anchorRef = useRef('');
   const dictationRef = useRef(dictation());
 
@@ -147,7 +155,7 @@ export default function Write() {
   }, [phase, secondsLeft]);
 
   useEffect(() => {
-    if (phase !== 'writing' || mode === 'type' || held) {
+    if (phase !== 'writing' || mode === 'type' || held || !micWanted) {
       if (listening) {
         dictationRef.current.stop();
         setListening(false);
@@ -155,6 +163,7 @@ export default function Write() {
       return;
     }
     let gone = false;
+    setMicNote(null);
     anchorRef.current = sessionRef.current.body;
     void dictationRef.current
       .start({
@@ -179,7 +188,7 @@ export default function Write() {
       dictationRef.current.stop();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, mode]);
+  }, [phase, mode, held, micWanted, micTry]);
 
   // A sitting may be picked up once. Arriving on a draft that has already been
   // resumed ends it — but what was written still counts, so the person lands on
@@ -355,7 +364,9 @@ export default function Write() {
                 <Label style={{ color: night.ink3, textAlign: 'center' }}>
                   {mode === 'type'
                     ? 'Forward only: the page keeps what you type.'
-                    : 'Saying it uses the microphone and your phone’s own recogniser. Nothing is recorded. Talking counts as writing.'}
+                    : Platform.OS === 'web'
+                      ? 'Saying it uses the microphone and your browser’s own recogniser (Chrome, Edge and Safari have one). Nothing is recorded. Talking counts as writing.'
+                      : 'Saying it uses the microphone and your phone’s own recogniser. Nothing is recorded. Talking counts as writing.'}
                 </Label>
               </>
             )}
@@ -595,21 +606,24 @@ export default function Write() {
         <View style={{ paddingBottom: 16, gap: 10, alignItems: 'center' }}>
           {mode !== 'type' ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              {/* The one sign the room is listening, and the way to stop it. */}
+              {/*
+                The one sign the room is listening, and a switch: off for a
+                moment, on again. It used to turn the room into a typed one
+                on the first tap, and a person who wanted a breath found no
+                way back to the microphone; "Type it" above is the way to
+                type.
+              */}
               <Chip
                 testID="write-mic"
-                label={listening ? 'Listening' : micNote ? 'Type instead' : 'Starting…'}
+                label={listening ? 'Listening' : held ? 'Paused' : micWanted && !micNote ? 'Starting…' : 'Listen again'}
                 selected={listening}
                 role="checkbox"
                 onPress={() => {
                   if (listening) {
-                    dictationRef.current.stop();
-                    setListening(false);
-                    setMode('type');
-                    setTimeout(() => inputRef.current?.focus(), 60);
-                  } else if (micNote) {
-                    setMode('type');
-                    setTimeout(() => inputRef.current?.focus(), 60);
+                    setMicWanted(false);
+                  } else {
+                    setMicWanted(true);
+                    setMicTry((n) => n + 1);
                   }
                 }}
               />

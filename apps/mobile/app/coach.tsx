@@ -33,6 +33,7 @@ export default function Coach() {
   const moves = useTodaysMoves();
   const score = useConsistency();
   const shrinkMove = useMorrow((s) => s.shrinkMove);
+  const unshrinkMove = useMorrow((s) => s.unshrinkMove);
   const toast = useMorrow((s) => s.toast);
   const setToast = useMorrow((s) => s.setToast);
   const noteConcern = useMorrow((s) => s.noteConcern);
@@ -388,7 +389,15 @@ export default function Coach() {
         */}
         {toast ? (
           <View style={{ paddingBottom: 10 }}>
-            <Toast text={toast.text} />
+            <Toast
+              testID="coach-toast"
+              text={toast.text}
+              actionLabel={toast.kind === 'shrink' ? 'Undo' : undefined}
+              onAction={() => {
+                if (toast.undoId && toast.kind === 'shrink') unshrinkMove(toast.undoId);
+                setToast(null);
+              }}
+            />
           </View>
         ) : null}
 

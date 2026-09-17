@@ -45,6 +45,63 @@ describe('what a letter is allowed to say', () => {
     expect(quotes.length).toBeGreaterThan(0);
   });
 
+  it('takes their full stop off inside its own sentence, and says "both" of a ledger of two', () => {
+    // “…kitchen is still blue.” and I have thought — two stops in one sentence.
+    const { body, quotes, check } = composeLetter('monthly', sources);
+    expect(check.ok, check.problems.join('; ')).toBe(true);
+    expect(body).toContain('You wrote “It is 6:40 and the kitchen is still blue” and I have thought');
+    expect(body).not.toMatch(/[.!?]” and /);
+    expect(body).toContain('has 2 entries, and both of the ones in your own hand are “Went anyway. Rained the whole way” and “Ten floors, twice, before work.”');
+    for (const q of quotes) expect(check.problems.join(' ')).not.toContain(q);
+    // Three entries, two quoted: "two of them".
+    const three = { ...sources, evidence: [...sources.evidence, ev('ccc', 'Kept the move.', 'move')] };
+    // A kept move's row is a plan line, not their handwriting: three entries, two of them theirs.
+    expect(composeLetter('monthly', three).body).toContain('has 3 entries, and both of the ones in your own hand are');
+    const four = { ...sources, evidence: [...sources.evidence, ev('ccc', 'Ten floors again.'), ev('dddd', 'Kept the move.', 'move')] };
+    expect(composeLetter('monthly', four).body).toContain('has 4 entries, and two of the ones in your own hand are');
+  });
+
+  it('never calls a ledger with their sentences in it empty, and never counts a kept move as their handwriting', () => {
+    const longLines = {
+      ...sources,
+      evidence: [
+        ev('a', 'Rang Ellie. She told me the plot of a film for eleven minutes; I understood none of it and all of it.'),
+        ev('bb', 'Choir. The alto beside me is called Dorothy and disapproves of the conductor. We shall be friends.'),
+      ],
+    };
+    const { body, check } = composeLetter('monthly', longLines);
+    expect(check.ok, check.problems.join('; ')).toBe(true);
+    expect(body).not.toContain('still empty');
+    expect(body).toContain('The ledger has 2 entries so far, and what you wrote in it runs longer than a letter has room to quote.');
+    const movesOnly = { ...sources, evidence: [ev('a', 'Tuesday: at 6:40, out the back door', 'move'), ev('bb', 'Two minutes of it', 'practice')] };
+    expect(composeLetter('portrait', movesOnly).body).toContain('every one of them a thing done rather than written');
+    // Nothing about how they felt on any of those mornings.
+    expect(body).not.toMatch(/the day you felt like it/);
+    // After a name the sentence carries on.
+    expect(composeLetter('first-return', sources, 'Sam').body.startsWith('Sam, you came back.')).toBe(true);
+    expect(composeLetter('portrait', sources, 'Sam').body.startsWith('Sam, I have been reading')).toBe(true);
+  });
+
+  it('quotes the first sentence with something in it, not a two-word scene-setter', () => {
+    const march = { ...sources, ideal: "It's March. I deadlift 140 kg for a clean single and I don't post about it. Boring, solvent, calm." };
+    const { body, quotes } = composeLetter('portrait', march);
+    expect(quotes[0]).toBe("I deadlift 140 kg for a clean single and I don't post about it");
+    expect(body).toContain('You wrote “I deadlift 140 kg');
+  });
+
+  it('never cuts a long first sentence on a word that leaves it hanging', () => {
+    const long = {
+      ...sources,
+      ideal:
+        'It is 6:40 in the morning and I am already out of the door with my running shoes on, the kitchen is still blue and quiet and nobody else is awake yet, and the cold air is on my face as I head down toward the towpath.',
+      evidence: [],
+    };
+    const { body, quotes } = composeLetter('portrait', long);
+    expect(body).toContain('You began “');
+    expect(quotes[0]).not.toMatch(/\b(?:the|a|an|and|of|to|in|on|at|for|with|that|which|is|are|my|I)$/);
+    expect(long.ideal.startsWith(quotes[0]!)).toBe(true);
+  });
+
   it('refuses one that names a goal', () => {
     const body = `${'word '.repeat(130)} the 5 km race`;
     const out = checkLetter(body, ['It is 6:40 and the kitchen is still blue.'], sources);
