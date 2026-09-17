@@ -2268,8 +2268,11 @@ export function entitlementOf(s: MorrowState, day: string): EntitlementContext {
  * volume used to be told "Nothing to copy yet", and signing it in to an
  * account with a Book on it replaced that Past with the account's nothing.
  */
-function hasWriting(s: Pick<SyncBundle, 'texts' | 'goals' | 'analyses' | 'books' | 'presentPicks' | 'pastEpochs' | 'pastEvents'>): boolean {
+function hasWriting(s: Pick<SyncBundle, 'texts' | 'goals' | 'analyses' | 'books' | 'presentPicks' | 'pastEpochs' | 'pastEvents' | 'memoryEdits'>): boolean {
   return (
+    // A memory line in their own words, or a line forgotten, is theirs and
+    // travels on memory_profiles; a device holding only that is not empty.
+    s.memoryEdits.length > 0 ||
     s.texts.length > 0 ||
     s.goals.length > 0 ||
     s.analyses.length > 0 ||

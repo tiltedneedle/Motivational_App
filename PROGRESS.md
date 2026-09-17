@@ -1946,6 +1946,38 @@ and reads all three fields back, which the first version's check could not have 
 
 Gate after: e2e **452/452**, cold 84/84, axe 0 across 37 screens, way-back 33 screens, 463 core / 48 ui / 8 storage, typecheck clean, lint 0 errors.
 
+**The seams (2026-09-17).** Every commit of the day had its own pass; none had looked at
+where the pieces meet each other and the older app. One sweep with three reviewers on
+three seams — the free plan against Pro, the sync of everything added, a brand-new
+person's path — and a skeptic per finding: seven confirmed, none refuted.
+
+- **A let-go waiting, on a plan that cannot open the sitting.** Today's card said "Seal it,
+  or take it back" and led a Free person to the gated branch, which had Take it back and
+  no seal. Sealing is not Pro's (the docblock said so; the seal builds the diff whatever
+  the plan), so the gated branch seals now — disabled with the same note when no goal is
+  live. Reachable today: `entitled` is never set from the server until a billing webhook
+  exists, so a Pro person who let a goal go and then signs in on a new phone lands Free with
+  the let-go waiting.
+- **The gate stood on the Future door only.** The consent screen and its 16+ affirmation
+  are on the Future path; the Past and Present doors, and the day's own link shapes
+  (`/authoring/quarry`, `/authoring/bench`, a link to nowhere landing on Today's "Or start
+  with your past or present"), reached a full sitting without it. Every door goes through
+  the gate once now: the chooser and the explainer send an unconsented person to
+  `/consent?then=past` or `?then=present` and Continue leads to that door; the two volumes
+  redirect there themselves for a link straight to them; once through, never asked again.
+- **A device whose only writing was a memory line** counted as empty: the pull replaced its
+  edits with the account's and "Keep a copy" refused it. `hasWriting` counts them.
+- **Not now on a consent opened cold** did nothing; it has the arrow's guard.
+- **The memory screen's empty state** could only ever show above "N lines forgotten" and
+  said "Nothing yet"; it says every line is forgotten and how to bring them back.
+- **The notification primer** on a shift day showed only that day's hours while asking
+  consent for every day, and "Nothing else, ever" was not true of the planner (the Sunday
+  reading and the day-three return line). It names both pairs and the two others.
+- **A goal let go, on its own screen**, read as "You may have dropped it". It says it was
+  let go and when, and offers Take it back and the re-authoring.
+
+Gate after: e2e **460/460** (was 452; a link straight to Past or Present unconsented is the gate first, Not now from it goes somewhere, Continue leads to the door that sent them and never asks again; the let-go goal's own screen; the gated re-authoring's seal), cold 84/84, axe 0 across 37 screens, way-back 33 screens, 463 core / 48 ui / 8 storage, typecheck clean, lint 0 errors.
+
 Gate after: 416 core / 48 ui / 8 storage, e2e **326/326** (was 317; the new checks seed a live virtues sitting and press both closing-screen buttons on the faults, write a Past line in crisis and change it without the card returning, and read the Interview-only caption), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
 
 Gate after: 416 core / 48 ui / 8 storage, e2e **317/317** (was 311; the new checks relaunch cold mid-Interview and resume, press Begin then Back on the Past doorway and find no sitting behind it, and reread a written Present from Today), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.

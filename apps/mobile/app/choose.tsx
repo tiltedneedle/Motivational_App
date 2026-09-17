@@ -61,7 +61,10 @@ export default function Choose() {
                   testID={`door-${door.name}`}
                   accessibilityRole="button"
                   accessibilityLabel={`${door.title}. ${CHOOSER_COPY[`${door.name}.line`] ?? ''} ${CHOOSER_COPY[`${door.name}.time`] ?? ''}`}
-                  onPress={() => router.push(door.name === 'future' && consented ? '/interview' : door.route)}
+                  // Every volume's door goes through the gate once (PRD §12: the
+                  // person is asked to write about their own life, whichever
+                  // volume), and never again.
+                  onPress={() => router.push(consented ? (door.name === 'future' ? '/interview' : door.route) : door.name === 'future' ? '/consent' : `/consent?then=${door.name}`)}
                   style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.99 : 1 }] })}
                 >
                 <Card style={{ gap: 6 }}>

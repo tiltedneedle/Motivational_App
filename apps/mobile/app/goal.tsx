@@ -38,7 +38,7 @@ import {
   TopBar,
 } from '@morrow/ui';
 import { analysisPlan } from './stone';
-import { analysesFor, useGoals, useMorrow, cardText } from '../src/store';
+import { analysesFor, pendingLetGo, useGoals, useMorrow, cardText } from '../src/store';
 
 export default function GoalScreen() {
   const router = useRouter();
@@ -49,6 +49,10 @@ export default function GoalScreen() {
   // goal was dropped, and showing a different one in its place attributes
   // somebody's plan and their own sentences to a goal they did not open.
   const goal = id ? goals.find((g) => g.id === id) : goals[0];
+  // A goal let go at the re-authoring and not sealed over: not dropped, and
+  // not gone — it can be taken back until the next edition is sealed.
+  const letGo = id ? pendingLetGo(state).find((g) => g.id === id) : undefined;
+  const takeBack = useMorrow((s) => s.takeBackGoal);
   const goBack = () => (router.canGoBack() ? router.back() : router.replace('/today'));
   const boundary = state.profile.dayBoundaryHour;
   const today = dayOf(new Date(), boundary);
@@ -56,6 +60,25 @@ export default function GoalScreen() {
   const twoColumn = useTwoColumn();
   const picks = useMorrow((s) => s.presentPicks);
   const virtues = id ? virtuesForGoal(picks, id).filter((p) => p.applyLine.trim()) : [];
+
+  if (!goal && letGo) {
+    return (
+      <Studio testID="screen-goal">
+        <SafeAreaView style={{ flex: 1, padding: 22, justifyContent: 'center', gap: 12 }}>
+          <Label>Let go</Label>
+          <Statement testID="goal-let-go">You let this one go.</Statement>
+          <Body>
+            {`On ${formatDay(dayOf(new Date(letGo.letGoAt!), boundary))}. It can be taken back until the next edition is sealed; everything you wrote for it is still in your Book.`}
+          </Body>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            <Chip testID="goal-take-back" label="Take it back" onPress={() => takeBack(letGo.id)} />
+            <Chip testID="goal-reauthor" label="Open the re-authoring" ghost onPress={() => router.push('/reauthor')} />
+          </View>
+          <InkButton label="Back to today" onPress={goBack} style={{ marginTop: 16 }} />
+        </SafeAreaView>
+      </Studio>
+    );
+  }
 
   if (!goal) {
     return (

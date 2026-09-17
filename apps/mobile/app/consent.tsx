@@ -2,7 +2,7 @@
  * The AI consent screen. Required by App Store 5.1.2(i) and by the fact that
  * people are about to write the most honest thing they have written this year.
  */
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -45,10 +45,18 @@ const ROWS: { label: string; body: string; items?: string[] }[] = [
   },
 ];
 
+/** Where Continue may lead besides the three doors: the two other volumes' own doors. */
+const THEN: Record<string, string> = { past: '/past', present: '/present' };
+
 export default function Consent() {
   const router = useRouter();
   useFirstRunStep('consent');
   const consent = useMorrow((s) => s.consent);
+  // The volume that sent the person here, if one did (PRD §12: the gate
+  // stands at every writing door, not only the Future's). Checked against a
+  // shape this app owns, never followed as a free string.
+  const { then } = useLocalSearchParams<{ then?: string }>();
+  const onward = (then && THEN[then]) || '/choose';
   /**
    * The age gate (PRD §12). One tap that the button waits for, rather than a
    * date-of-birth field, which is a form and which a child can fill in as
@@ -106,10 +114,12 @@ export default function Consent() {
               consent();
               // The three doors, not straight into one of them: the source
               // sells its programs separately and tells people to choose.
-              router.push('/choose');
+              // Unless a door sent them here, in which case it is that door.
+              router.replace(onward as never);
             }}
           />
-          <TextButton label="Not now" onPress={() => router.back()} />
+          {/* Opened from a link there is nothing behind this screen: the same guard as the arrow above. */}
+          <TextButton testID="consent-not-now" label="Not now" onPress={() => (router.canGoBack() ? router.back() : router.dismissTo('/'))} />
         </View>
       </SafeAreaView>
     </Studio>

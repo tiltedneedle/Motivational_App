@@ -36,6 +36,7 @@ export default function Explore() {
 
   const open = (name: VolumeName) => {
     if (name === 'future') router.push(consented ? '/interview' : '/consent');
+    else if (!consented) router.push(`/consent?then=${name}`);
     else router.push(name === 'past' ? '/past' : '/present');
   };
 

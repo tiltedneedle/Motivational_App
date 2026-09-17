@@ -2366,6 +2366,13 @@ async function main() {
       (await seen(`reauthor-lesson-${gLast.id}`)) && (await text(`reauthor-lesson-${gLast.id}`)).includes('the evenings') && (await seen(`reauthor-take-back-${gLast.id}`)),
     );
     check('and is archived in the store, not deleted', (await statusOf(gLast.id)) === 'archived', await statusOf(gLast.id));
+    await page.goto(`${BASE}/goal?id=${gLast.id}`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(600);
+    check('the goal’s own screen says it was let go, not dropped, with the way back', (await seen('goal-let-go')) && (await seen('goal-take-back')) && (await seen('goal-reauthor')));
+    await tap('goal-reauthor');
+    await page.waitForTimeout(700);
+    check('and opens the re-authoring', await seen('screen-reauthor'));
     await tap(`reauthor-take-back-${gLast.id}`);
     await page.waitForTimeout(500);
     check('Take it back is exactly that', (await statusOf(gLast.id)) === 'active' && (await seen(`reauthor-let-go-${gLast.id}`)), await statusOf(gLast.id));
@@ -2381,8 +2388,29 @@ async function main() {
     await tap('today-reauthor');
     await page.waitForTimeout(700);
     check('and it opens the re-authoring, with the goal still there to take back', (await seen('screen-reauthor')) && (await seen(`reauthor-take-back-${gLast.id}`)));
+    // On the free plan the same door still seals: the seal is not Pro's.
+    await page.evaluate(() => {
+      const k = 'morrow-v1';
+      const st = JSON.parse(localStorage.getItem(k) ?? '{}');
+      st.state.profile.entitled = false;
+      localStorage.setItem(k, JSON.stringify(st));
+    });
+    await page.goto(`${BASE}/reauthor`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(600);
+    check('on the free plan a let-go waiting can still be sealed, or taken back', (await seen('reauthor-gated')) && (await seen('reauthor-seal')) && (await seen(`reauthor-take-back-${gLast.id}`)));
+    await page.evaluate(() => {
+      const k = 'morrow-v1';
+      const st = JSON.parse(localStorage.getItem(k) ?? '{}');
+      st.state.profile.entitled = true;
+      localStorage.setItem(k, JSON.stringify(st));
+    });
     // Later the same day 90, not its first second: the seal must come after the let-go.
     await page.clock.setSystemTime(new Date(day90.getTime() + 3 * 3_600_000));
+    // Pro again, on a fresh load of the page.
+    await page.goto(`${BASE}/reauthor`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(600);
 
     // The seal, with the hold. Back from it is the re-authoring, nothing lost.
     await tap('reauthor-seal');
@@ -2619,6 +2647,34 @@ async function main() {
     await page.clock.runFor(1200);
     await page.waitForTimeout(500);
     check('the introduction can still be seen again on request', await seen('screen-welcome'));
+
+    // ---- the gate stands at every writing door (PRD 12), and a link straight to a volume goes through it
+    await page.evaluate(() => {
+      const k = 'morrow-v1';
+      const st = JSON.parse(localStorage.getItem(k) ?? '{}');
+      st.state.profile.consentedAt = null;
+      localStorage.setItem(k, JSON.stringify(st));
+    });
+    await page.goto(`${BASE}/past`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(700);
+    check('a link straight to the Past volume, unconsented, is the gate first', (await seen('screen-consent')) && (await seen('consent-age')));
+    await tap('consent-not-now');
+    await page.waitForTimeout(600);
+    check('and Not now from a consent opened cold goes somewhere', !(await seen('screen-consent')));
+    await page.goto(`${BASE}/present`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(700);
+    check('the same for Present', await seen('screen-consent'));
+    await tap('consent-age');
+    await page.waitForTimeout(200);
+    await tap('consent-continue');
+    await page.waitForTimeout(800);
+    check('and through the gate, the door that sent them there', await seen('screen-present'));
+    await page.goto(`${BASE}/present`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(700);
+    check('once through, never asked again', (await seen('screen-present')) && !(await seen('screen-consent')));
 
     check('no uncaught page errors', pageErrors.length === 0, pageErrors.join(' | '));
   } catch (err) {

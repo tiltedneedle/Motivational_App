@@ -13,7 +13,7 @@
  * What is not here, deliberately: any trait name, any factor, any score, any
  * tally per group. The moment a deck counts you it stops being a deck.
  */
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -51,6 +51,7 @@ const NO_LINES: Lines = { story: '', apply: '', framingId: null, goalId: null };
 
 export default function PresentRoute() {
   const params = useLocalSearchParams<{ half?: string }>();
+  const consented = useMorrow((s) => Boolean(s.profile.consentedAt));
   const picks = useMorrow((s) => s.presentPicks);
   const draft = useMorrow((s) => s.presentDraft);
   const depth = useMorrow((s) => s.profile.track);
@@ -71,6 +72,9 @@ export default function PresentRoute() {
    */
   const [opened] = useState<PresentHalf>(() => draft?.half ?? nextHalf(picks, depth));
   const half: PresentHalf = params.half === 'virtues' || params.half === 'faults' ? params.half : opened;
+  // The gate (PRD §12) stands at every writing door. A link straight to
+  // this one goes through it first and comes back here.
+  if (!consented) return <Redirect href={'/consent?then=present' as never} />;
   return <Present key={half} half={half} />;
 }
 

@@ -103,12 +103,33 @@ export default function ReauthorScreen() {
             <Label>{due ? reauthorLabel(due.cycle) : 'Writing it again'}</Label>
             <Statement testID="reauthor-gated">Time to write it again.</Statement>
             <Body>{gate.reason}</Body>
-            {pendingLetGo(state).map((g) => (
-              <View key={g.id} testID={`reauthor-pending-${g.id}`} style={{ gap: 4, alignItems: 'flex-start' }}>
-                <Body style={{ fontSize: 14 }}>A goal was let go and no edition sealed since.</Body>
-                <TextButton testID={`reauthor-take-back-${g.id}`} label={`Take back “${g.title}”`} onPress={() => takeBack(g.id)} />
+            {/*
+              A let-go waiting, on a plan that cannot open the sitting: the
+              seal is not Pro's, so the edition can still be closed from here
+              — the diff with the let-go line is built by the seal whatever the
+              plan — and the goal can still be taken back.
+            */}
+            {pendingLetGo(state).length ? (
+              <View testID="reauthor-pending" style={{ gap: 8, alignItems: 'flex-start' }}>
+                <Body style={{ fontSize: 14 }}>
+                  {pendingLetGo(state).length === 1 ? 'A goal was let go and no edition sealed since.' : `${plural(pendingLetGo(state).length, 'goal')} were let go and no edition sealed since.`}
+                </Body>
+                {pendingLetGo(state).map((g) => (
+                  <TextButton key={g.id} testID={`reauthor-take-back-${g.id}`} label={`Take back “${g.title}”`} onPress={() => takeBack(g.id)} />
+                ))}
+                {activeGoals(state).length === 0 ? (
+                  <Body testID="reauthor-nothing-left" style={{ fontSize: 14, color: day.ink }}>
+                    A Book needs at least one goal. Take one back before sealing.
+                  </Body>
+                ) : null}
+                <InkButton
+                  testID="reauthor-seal"
+                  label={`Seal the ${ordinal(previous.version + 1).toLowerCase()} edition`}
+                  disabled={activeGoals(state).length === 0}
+                  onPress={() => router.push('/seal-book?from=reauthor')}
+                />
               </View>
-            ))}
+            ) : null}
             <InkButton
               testID="reauthor-see-pro"
               label="See Morrow Pro"

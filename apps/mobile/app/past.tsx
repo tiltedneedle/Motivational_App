@@ -14,7 +14,7 @@
  * Book, and a line written in crisis is held out whatever they chose — which
  * the screen says, rather than overriding quietly.
  */
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -39,6 +39,7 @@ const PERIOD_LABEL_CEILING = 60;
 
 export default function Past() {
   const router = useRouter();
+  const consented = useMorrow((s) => Boolean(s.profile.consentedAt));
   const depth = useMorrow((s) => s.profile.track);
   const epochs = useMorrow((s) => s.pastEpochs);
   const events = useMorrow((s) => s.pastEvents);
@@ -262,6 +263,10 @@ export default function Past() {
     <TopBar back={{ onPress: onBack, testID }} where={where} help={{ onPress: showResources }} />
   );
   const leave = () => router.dismissTo('/today');
+
+  // The gate (PRD §12) stands at every writing door. A link straight to
+  // this one goes through it first and comes back here.
+  if (!consented) return <Redirect href={'/consent?then=past' as never} />;
 
   // ---- the doorway: the warning, before anything is asked
   if (!entered) {

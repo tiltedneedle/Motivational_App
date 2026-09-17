@@ -26,7 +26,8 @@ import {
   reauthorDue,
   reauthorLabel,
   clockLabel,
-  timesFor,
+  hourOf,
+  shiftDaysLabel,
 } from '@morrow/core';
 import {
   Body,
@@ -443,9 +444,17 @@ export default function Today() {
           {book && settledIn && state.profile.todayIntroSeen && !state.profile.notificationsAsked && canNotify ? (
             <View testID="today-notify-primer" style={{ marginTop: 16, backgroundColor: day.surface2, borderRadius: radius.card, padding: 18, gap: 10 }}>
               <Label style={{ color: accent.coralText }}>Two notes a day, if you want them</Label>
-              <Body style={{ color: day.ink }}>{`${clockLabel(timesFor(state.profile, today).wakeTime)} — your first move, in your words.`}</Body>
-              <Body style={{ color: day.ink }}>{`${clockLabel(timesFor(state.profile, today).eveningTime)} — a line to close the day.`}</Body>
-              <Body style={{ fontSize: 13 }}>Nothing else, ever. The times are yours to change under You.</Body>
+              <Body style={{ color: day.ink }}>{`${clockLabel(state.profile.wakeTime)} — your first move, in your words.`}</Body>
+              <Body style={{ color: day.ink }}>{`${clockLabel(state.profile.eveningTime)} — a line to close the day.`}</Body>
+              {state.profile.shiftDays.length ? (
+                <Body style={{ color: day.ink }}>
+                  {`On ${shiftDaysLabel(state.profile.shiftDays)}, ${clockLabel(state.profile.shiftWakeTime)} and ${clockLabel(state.profile.shiftEveningTime)}${
+                    (hourOf(state.profile.shiftEveningTime) ?? 24) < 12 ? ', the night after' : ''
+                  }.`}
+                </Body>
+              ) : null}
+              {/* What the planner sends, all of it (PRD §7.11): the two lines, the Sunday reading, one word after three days away. */}
+              <Body style={{ fontSize: 13 }}>The Sunday reading, and one line if you have been away three days, are the only others. The times are yours to change under You.</Body>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                 <Chip testID="today-notify-yes" label="Yes, at those times" onPress={() => void allowNotifications()} />
                 <Chip testID="today-notify-no" label="Not now" ghost onPress={declineNotifications} />
