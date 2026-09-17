@@ -716,14 +716,14 @@ async function main() {
         check('the move lands on Today', await seen('screen-today'));
         const rowsAfter = await page.locator('[data-testid^="row-mv"], [data-testid="now-card"]').count();
         check('as one more stone', rowsAfter > rowsBefore, `${rowsBefore} → ${rowsAfter}`);
-        // "Lands at the top of Later today", as the sheet says: the newest move is the first row.
+        // "First among this goal's moves today", as the sheet says. The walk adds it to the top goal, where that is the top of today.
         const newest = await page.evaluate(() => {
           const st = JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state ?? {};
           const all = (st.plans ?? []).flatMap((pl) => pl.moves);
           return all.sort((a, b) => a.order - b.order)[0]?.title ?? '';
         });
         const topOfToday = await page.locator('[data-testid="now-card"], [data-testid^="row-mv"]').first().innerText().catch(() => '');
-        check('and at the top of today, as the sheet said', newest.length > 0 && topOfToday.includes(newest), `newest "${newest}" · top "${topOfToday.slice(0, 60)}"`);
+        check('and first among its goal’s moves, which for the top goal is the top of today', newest.length > 0 && topOfToday.includes(newest), `newest "${newest}" · top "${topOfToday.slice(0, 60)}"`);
       }
       await tap('new-move-button');
       await tap('new-move-mode-capture');
@@ -2475,6 +2475,11 @@ async function main() {
     await page.clock.runFor(1200);
     await page.waitForTimeout(500);
     check('the Sunday reading opens on the same page', await seen('reading-diff'));
+    // The Book's own "Something moved" opens the reading on the chooser, not on page one.
+    await page.goto(`${BASE}/reading?moved=1`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(500);
+    check('Something moved from the Book lands on the chooser of what moved', await seen('reading-pick-goal'));
 
     await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
     await page.clock.runFor(1500);

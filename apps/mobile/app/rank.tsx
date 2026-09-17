@@ -39,7 +39,7 @@ export default function Rank() {
           <View style={{ gap: 8 }}>
             <Label>The order</Label>
             <Statement>Put your goals in order. The top one matters most.</Statement>
-            <Body style={{ fontSize: 14 }}>{track === 'full' ? 'Every goal gets all five lines.' : 'The top three get all five lines; the rest get the two that make a plan.'}</Body>
+            <Body style={{ fontSize: 14 }}>{track === 'full' || goals.length <= 3 ? 'Every goal gets all five lines.' : 'The top three get all five lines; the rest get the two that make a plan.'}</Body>
           </View>
 
           <View>

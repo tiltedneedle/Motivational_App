@@ -288,7 +288,9 @@ export default function StoneScreen() {
             <Body testID="stone-intro" style={{ fontSize: 14, color: day.ink2 }}>
               {track === 'full'
                 ? 'Each goal gets five short lines in your words — five questions, one line each.'
-                : 'The top three goals get five short lines in your words, one question each; the rest get the two that make a plan.'}{' '}
+                : goals.length > 3
+                  ? 'The top three goals get five short lines in your words, one question each; the rest get the two that make a plan.'
+                  : 'Each goal gets five short lines in your words — five questions, one line each.'}{' '}
               The chips are ways in; the line is yours. Seat one and the next appears.
             </Body>
           ) : null}

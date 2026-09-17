@@ -53,11 +53,21 @@ export default function SealDay() {
     const message = String(count) + (count === 1 ? ' sealed day.' : ' sealed days.') + (iWillLine.trim() ? ' ' + iWillLine.trim() : '') + ' — Morrow';
     try {
       const r = await Share.share({ message, title: 'To ' + witnessName });
-      // iOS says whether the sheet was dismissed; Android cannot, so the note
-      // says only that the sheet had it.
-      setTold(r.action === Share.dismissedAction ? 'Not sent.' : Platform.OS === 'android' ? 'Handed to the share sheet, for ' + witnessName + '.' : 'Sent to ' + witnessName + '.');
-    } catch {
-      setTold('This device would not open the share sheet. Nothing was sent.');
+      // iOS says whether the sheet was dismissed. Android cannot, and the web
+      // answers nothing at all, so both say only that the sheet had it.
+      const action = (r as { action?: string } | undefined)?.action;
+      setTold(
+        action === Share.dismissedAction
+          ? 'Not sent.'
+          : Platform.OS === 'ios' && action !== undefined
+            ? 'Sent to ' + witnessName + '.'
+            : 'Handed to the share sheet, for ' + witnessName + '.',
+      );
+    } catch (err) {
+      // The web's sheet, closed without sending, rejects with AbortError: the
+      // sheet opened; nothing went. Anything else is the sheet not opening.
+      const aborted = err instanceof Error && err.name === 'AbortError';
+      setTold(aborted ? 'Not sent.' : 'This device would not open the share sheet. Nothing was sent.');
     }
   };
   const [listening, setListening] = useState(false);

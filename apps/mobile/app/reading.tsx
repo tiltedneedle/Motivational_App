@@ -33,9 +33,10 @@ export default function Reading() {
   };
 
   const pages = useMemo(() => (book ? bookPages(book) : []), [book]);
-  const [index, setIndex] = useState(0);
-  // Opened straight onto the chooser by the Book's own "Something moved".
+  // Opened straight onto the chooser by the Book's own "Something moved":
+  // the chooser lives on the last page, so that is the page it opens on.
   const { moved } = useLocalSearchParams<{ moved?: string }>();
+  const [index, setIndex] = useState(() => (moved === '1' ? Math.max(0, pages.length - 1) : 0));
   const [choosing, setChoosing] = useState(moved === '1');
 
   /**

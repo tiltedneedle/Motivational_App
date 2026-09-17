@@ -22,6 +22,7 @@ import {
   startRun,
   tickRun,
   type RunnerState,
+  minVersionOf,
 } from '@morrow/core';
 import {
   Body,
@@ -47,6 +48,8 @@ export default function Runner() {
   const practices = useMorrow((s) => s.practices);
   const logRun = useMorrow((s) => s.logRun);
   const practice = practices.find((p) => p.id === params.id);
+  // The line the practice was cut from, to tell Morrow's stand-in from theirs.
+  const sourceText = useMorrow((s) => s.analyses.find((a) => a.id === practice?.sourceLineId)?.line ?? '');
 
   const [run, setRun] = useState<RunnerState | null>(() =>
     practice ? startRun(practice, params.minimal === '1') : null,
@@ -154,13 +157,24 @@ export default function Runner() {
             </Readout>
           </Ring>
 
-          {/* Their words. The step titles were cut from their own line. */}
-          <UserText
-            testID="run-step"
-            style={{ color: night.ink, fontSize: 24, lineHeight: 32, textAlign: 'center' }}
-          >
-            {run.minimal ? practice.minVersion : (step?.text ?? practice.title)}
-          </UserText>
+          {/*
+            Their words. The step titles were cut from their own line. The
+            two-minute version is theirs when they typed it; when they left
+            the field empty it is Morrow's stand-in (the same sentence
+            `minVersionOf` supplies), and that goes in the sans.
+          */}
+          {run.minimal && practice.minVersion === minVersionOf(sourceText) ? (
+            <Body testID="run-step" style={{ color: night.ink, fontSize: 22, lineHeight: 30, textAlign: 'center' }}>
+              {practice.minVersion}
+            </Body>
+          ) : (
+            <UserText
+              testID="run-step"
+              style={{ color: night.ink, fontSize: 24, lineHeight: 32, textAlign: 'center' }}
+            >
+              {run.minimal ? practice.minVersion : (step?.text ?? practice.title)}
+            </UserText>
+          )}
 
           {overrun ? (
             <Body style={{ color: night.ink3, textAlign: 'center', fontSize: 13 }}>

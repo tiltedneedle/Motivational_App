@@ -196,7 +196,7 @@ export default function Account() {
                     ? hasBook
                       ? 'Signed in. The Book has a second home now.'
                       : 'Signed in. Your writing has a copy on the account; the Book will follow when it is sealed.'
-                    : 'Signed in. Nothing to copy yet — the first seal will send it up.'}
+                    : 'Signed in. Nothing to copy yet — once you have written something, it is copied up whenever you leave the app.'}
               </Body>
               <Notice testID="account-problem" kind="error" text={problem} />
               <InkButton testID="account-continue" label="Carry on" onPress={onwards} />

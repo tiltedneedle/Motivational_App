@@ -2021,6 +2021,23 @@ Today and the explainer's three picks have names that begin with what is on the 
 
 Gate after: e2e **461/461** (was 460; the new move at the top of today), cold 84/84, axe 0 across 37 screens, way-back 33 screens, 463 core / 48 ui / 8 storage, typecheck clean, lint 0 errors, copy and authorship clean.
 
+**The sentences, reviewed (2026-09-17).** The pass over that commit: eight confirmed, none
+refuted, three more fixed without one. The Book's "Something moved" sent people to page one
+of the reading — the chooser lives on the last page, so it opens there now, and the walk
+checks it. "Goes to the top of today" was true only for the top goal (Today sorts by rank
+first); the sheet says what happens — first among that goal's moves — and the walk's check
+says which case it proves. On the web the share sheet answers nothing, so "Tell <name>"
+reported the sheet had not opened after it had; it reads the answer where there is one and
+says "handed to the share sheet" where there is not, and a sheet closed without sending is
+"Not sent". The wake line takes the first open move in Today's own order, so it names the
+Now card. Today's "Said this morning, and done" holds no hour either. Morrow's two-minute
+stand-in is set in the sans on the runner, as it is on Today. The sign-in's last line says
+when the copy is made — whenever the app is left, not at the seal. Welcome's account line
+appears only in a build that offers one; the Starter rule is stated only where a fourth goal
+makes it real; the caption reads "for your goal" for one.
+
+Gate after: e2e **462/462** (was 461; Something moved from the Book lands on the chooser), cold 84/84, axe 0 across 37 screens, way-back 33 screens, 463 core / 48 ui / 8 storage, typecheck clean, lint 0 errors.
+
 Gate after: 416 core / 48 ui / 8 storage, e2e **326/326** (was 317; the new checks seed a live virtues sitting and press both closing-screen buttons on the faults, write a Past line in crisis and change it without the card returning, and read the Interview-only caption), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
 
 Gate after: 416 core / 48 ui / 8 storage, e2e **317/317** (was 311; the new checks relaunch cold mid-Interview and resume, press Begin then Back on the Past doorway and find no sitting behind it, and reread a written Present from Today), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.

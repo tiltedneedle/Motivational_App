@@ -555,7 +555,7 @@ export default function Today() {
               <UserText style={{ fontSize: 16, lineHeight: 23, color: day.ink2, textDecorationLine: 'line-through' }}>
                 {intendedMove.title}
               </UserText>
-              <Body style={{ fontSize: 13 }}>Said this morning, and done.</Body>
+              <Body style={{ fontSize: 13 }}>Said today, and done.</Body>
             </View>
           ) : null}
 

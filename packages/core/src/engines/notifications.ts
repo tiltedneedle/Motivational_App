@@ -305,8 +305,9 @@ export function planNotices(input: NoticeInput): Notice[] {
     ];
   }
 
-  // ---- wake: the first open move, in their words
-  const first = [...input.moves].filter((m) => m.status === 'todo').sort((a, b) => a.order - b.order)[0];
+  // ---- wake: the first open move, in their words — in the order Today
+  // shows them, which the store hands in, so the line names the Now card.
+  const first = input.moves.find((m) => m.status === 'todo');
   const wakeAt = outOfQuiet(input.wakeTime, quiet);
   if (wakeAt && first) {
     out.push({

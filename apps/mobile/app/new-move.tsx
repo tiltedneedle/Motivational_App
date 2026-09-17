@@ -192,7 +192,7 @@ export default function NewMove() {
 
               {picked ? (
                 <View style={{ backgroundColor: day.surface2, borderRadius: radius.card, padding: 14, gap: 4 }}>
-                  <Label>Goes to the top of today</Label>
+                  <Label>{`First among ${goals.find((g) => g.id === goalId)?.title ?? 'this goal'}’s moves today`}</Label>
                   <UserText style={{ fontSize: 17, lineHeight: 24 }}>{picked}</UserText>
                 </View>
               ) : null}
