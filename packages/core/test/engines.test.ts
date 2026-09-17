@@ -11,6 +11,7 @@ import {
   answer,
   beginBranches,
   buildDawnBrief,
+  buildPortrait,
   clarity,
   minSecondsToCount,
   canClose,
@@ -289,6 +290,46 @@ describe('the dawn brief inside a sentence', () => {
     expect(brief.firstMoveId).toBe('health1');
     expect(brief.today.toLowerCase()).toContain('start with out the back door');
   });
+
+  it('stays within ninety words, and cuts only what is quoted for the ritual', () => {
+    // PRD §11.8. A thirty-word opening sentence, a long proof line, a long
+    // move and a long if-then run to a hundred and forty words as written.
+    const opener =
+      'It is a Thursday in April and I have swum forty lengths before nine, as I do three mornings a week now, and the bag was by the door the night before.';
+    const move = 'Monday mornings at 10 am at the dining table, one scheme’s paperwork read and one telephone call made, until all four are done';
+    const input = {
+      day: '2026-09-17',
+      book: { firstSentence: opener, iWill: 'I will swim before nine.' },
+      yesterday: {
+        day: '2026-09-16', planned: 3, done: 2, skipped: 0, partial: 0, evidenceCount: 1, sealedAt: 'x', moodWord: null, gladOf: null,
+        proof: 'Read the teachers’ pension statement at the table with my glasses on. It is not as bad as the folder made it look.',
+      },
+      moves: [{ id: 'mv1', goalId: 'g1', milestoneId: null, title: move, effort: 'S', energy: 'low', ifThen: null, scheduledFor: '2026-09-17', week: 1, status: 'todo', completedAt: null, minVersion: null, sourceLineId: 'a1', order: 0 }],
+      analyses: [{ id: 'a2', goalId: 'g1', kind: 'obstacles', track: 'starter', framingId: null, line: 'the telephone menu defeats me', line2: 'then I write the question on the card and ring again on Tuesday at 10', specificity: 0.5, followupShown: false, writtenAt: 'x' }],
+      persona: 'fierce',
+      score: 63,
+      previousScore: 59,
+    };
+    const brief = buildDawnBrief(input as never, sequentialIds());
+    const text = `${brief.yesterday} ${brief.today} ${brief.ifThen}`;
+    expect(text.trim().split(/\s+/).length).toBeLessThanOrEqual(90);
+    // The plan is never cut: the move and the if-then are printed whole.
+    expect(brief.today).toContain(move);
+    expect(brief.ifThen).toContain('then I write the question on the card and ring again on Tuesday at 10');
+    // What went: the opening sentence is cut at a word, the proof line came off.
+    expect(brief.today).toMatch(/^“It is a Thursday in April and I have swum forty lengths before nine, as I do three mornings a week…” Your line\./);
+    expect(brief.yesterday).toBe('2 of 3 moves. Consistency 63, up from 59.');
+    // Every quoted span is still verbatim: the cut opener without its ellipsis.
+    for (const span of brief.quotedSpans) expect(`${opener} ${move} the telephone menu defeats me write the question on the card and ring again on Tuesday at 10`).toContain(span);
+
+    // Within the budget as written, nothing is touched.
+    const short = buildDawnBrief(
+      { ...input, book: { firstSentence: 'The kitchen is still blue.', iWill: 'x' }, yesterday: { ...input.yesterday, proof: 'Read the statement.' } } as never,
+      sequentialIds(),
+    );
+    expect(short.today).toContain('“The kitchen is still blue.” Your line.');
+    expect(short.yesterday).toBe('2 of 3 moves and you wrote “Read the statement.” Consistency 63, up from 59.');
+  });
 });
 
 describe('dates a person can read', () => {
@@ -535,6 +576,37 @@ describe('safety', () => {
     // The cost of the other mistake has no floor, so the negation is not
     // excused.
     expect(screen("I don't want to kill myself, I just want to sleep").risk).toBe('crisis');
+  });
+
+  it('catches the shapes the labelled set found missing', () => {
+    for (const t of [
+      'I harmed myself last week and hid it.',
+      'I wish I were not alive.',
+      "I wish I'd never been born.",
+      'I would rather not exist than do another year of this.',
+      'Sometimes I think about stepping in front of a train.',
+    ]) {
+      expect(screen(t).risk, t).toBe('crisis');
+    }
+    expect(screen("I'm such a failure.").risk).toBe('concern');
+    expect(screen('55 kg by Christmas or I have failed.').risk).toBe('concern');
+  });
+
+  it('leaves the idioms alone: dying of embarrassment, a binge of a series, starving after a swim', () => {
+    for (const t of [
+      'I wanted to die of embarrassment when the mic was on.',
+      'Died laughing at the dragon voice.',
+      'Binge-watched the whole series on the sofa on Sunday.',
+      'A quick binge of the last three episodes and then bed.',
+      'Starving after the swim; ate the whole loaf.',
+      'Purge the old files before the laptop goes back.',
+    ]) {
+      expect(screen(t).risk, t).toBe('none');
+    }
+    // The sentences those patterns are for still land.
+    expect(screen("I've been starving myself to fit the dress.").risk).toBe('concern');
+    expect(screen('I binged again last night and hate it.').risk).toBe('concern');
+    expect(screen('I purged after dinner and told nobody.').risk).toBe('concern');
   });
 
   it('does not read gym injuries, idioms or savings as a crisis', () => {
@@ -821,6 +893,19 @@ describe('helpers', () => {
     // "I run every morning" is an action. Fitting it to the frame would mean
     // conjugating their verb, and the app does not get to write.
     expect(proposeIdentity('I run every morning before work').clause).toBe('');
+    // From the Fifteen alone. A How line that says "every Sunday I am not on
+    // shift" used to become "I'm becoming someone who is not on shift".
+    const ideal = 'It is a Sunday next spring and we are at my mum’s. I want to be someone who calls her mum on Wednesdays.';
+    const portrait = buildPortrait({
+      goal: { id: 'g1', title: 'Sunday dinners', domain: 'people', horizon: 'x', targetDate: null, status: 'authored', rank: 0, createdAt: 'x' },
+      analyses: [
+        { id: 'a1', goalId: 'g1', kind: 'strategies', track: 'starter', framingId: null, line: 'Every Sunday I am not on shift, at Mum’s by 1 pm', specificity: 0.5, followupShown: false, writtenAt: 'x' },
+        { id: 'a2', goalId: 'g1', kind: 'obstacles', track: 'starter', framingId: null, line: 'a run of nights', line2: 'then I go for the meal and leave straight after', specificity: 0.5, followupShown: false, writtenAt: 'x' },
+      ],
+      ideal,
+    });
+    expect(portrait.identityLine).toBe('');
+    expect(portrait.identityFraming).toBeNull();
     expect(proposeIdentity('').clause).toBe('');
     expect(identityLineText(proposeIdentity(''))).toBe('');
   });
@@ -922,6 +1007,43 @@ describe('a plan whose first step the user put a week away', () => {
     const first = plan.moves.find((m) => m.scheduledFor === '2026-09-07');
     expect(first?.title.toLowerCase()).toContain('park run');
     expect(first?.sourceLineId).toBe('a1');
+  });
+
+  it('opens with the body of the line, not a day it is not on', () => {
+    // "Tuesday: at 6:40, out the back door" dated a Monday contradicts itself.
+    // The opening copy is the body, which is still their sentence.
+    const days = [{ ...analyses[0]!, line: 'Tuesday, Thursday and Saturday at 6:40, out the back door' }, analyses[1]!];
+    // 2026-09-06 is a Sunday: Tuesday is two days out, so no repair is needed…
+    expect(buildPlan({ goal, analyses: days } as never, { today: '2026-09-06', newId }).moves.map((m) => m.title)).toEqual([
+      'Tuesday: at 6:40, out the back door',
+      'Thursday: at 6:40, out the back door',
+      'Saturday: at 6:40, out the back door',
+    ]);
+    // …and 2026-09-09 is a Wednesday: Thursday is tomorrow, so none either. On
+    // a Saturday evening the soonest is Tuesday, three days out.
+    const fromSaturday = buildPlan({ goal, analyses: days } as never, { today: '2026-09-12', newId });
+    const opening = [...fromSaturday.moves].sort((a, b) => a.order - b.order)[0]!;
+    expect(opening.scheduledFor).toBe('2026-09-13');
+    expect(opening.title).toBe('at 6:40, out the back door');
+    expect(fromSaturday.moves.map((m) => m.title)).toContain('Tuesday: at 6:40, out the back door');
+  });
+
+  it('cuts the moves from the How line on the Full track, and leaves the paragraph to the Book', () => {
+    const full = [
+      {
+        ...analyses[0]!,
+        track: 'full',
+        line: 'Saturday at 7am, park run with Sam',
+        paragraph:
+          'Saturday is the long one and it gets ten minutes longer every fortnight until March. I lay the kit out on the landing the night before so there is nothing to decide at 6.40, and then I stop scrolling in bed.',
+      },
+      analyses[1]!,
+    ];
+    const plan = buildPlan({ goal, analyses: full } as never, { today: '2026-09-06', newId });
+    for (const m of plan.moves) {
+      expect(m.title.split(/\s+/).length).toBeLessThanOrEqual(12);
+      expect('Saturday at 7am, park run with Sam').toContain(m.title.replace(/^Saturday:\s*/, ''));
+    }
   });
 
   it('never puts more than three moves in the first week', () => {
@@ -1110,5 +1232,10 @@ describe('moves cut from a line with days in the middle of it', () => {
       'Saturday: at 6:40, out the back door',
     ]);
     expect(splitFirstMoves('Every Monday, Wednesday and Friday I go to the pool at 7')[0]).toBe('Monday: I go to the pool at 7');
+  });
+  it('counts a day named twice as one day, so Today never shows the same card twice', () => {
+    const line = 'Saturday at 5 pm in the front room with both boys, 20 minutes, the three chords from the sheet, new strings by this Saturday';
+    expect(splitFirstMoves(line)).toEqual([line]);
+    expect(splitFirstMoves('Tuesday and Thursday at 6:40, and again Tuesday if it rained')).toHaveLength(2);
   });
 });

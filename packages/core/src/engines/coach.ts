@@ -76,11 +76,18 @@ export function greeting(instant: Date, name?: string): string {
   return who ? `${opener}, ${who}.` : `${opener}.`;
 }
 
-/** The line the day opens with: the user's own first sentence, in quotation marks. */
-export function openingQuote(book: BookVersion | null): string | null {
-  const s = book?.firstSentence?.trim();
-  return s ? `“${s}”` : null;
-}
+/**
+ * PRD §11.8: a brief is at most ninety words. The local brief is assembled
+ * from quotations of variable length — a thirty-word opening sentence, a
+ * twenty-five-word move, a twenty-word if-then — so it is trimmed to the
+ * budget in a fixed order, and only ever by shortening or dropping what is
+ * quoted for the ritual: the opening sentence is cut at a word first, then
+ * yesterday's proof line comes off, then the opening quotation. The move and
+ * the if-then are the plan and are never cut.
+ */
+export const BRIEF_MAX_WORDS = 90;
+
+const wordsIn = (s: string): number => s.trim().split(/\s+/).filter(Boolean).length;
 
 export function buildDawnBrief(input: BriefInput, newId: (p: string) => string): Brief {
   const { yesterday, moves, analyses, persona, book } = input;
@@ -88,87 +95,115 @@ export function buildDawnBrief(input: BriefInput, newId: (p: string) => string):
   // good week did not choose to be pushed on this one, and "No negotiation
   // with yourself this morning" is the exact sentence not to print at them.
   const reg = input.soften ? REGISTER.gentle : REGISTER[persona];
-  const quotes: string[] = [];
+  // Built as written, then a step shorter at a time while it runs over the
+  // budget. `shorten` says how far to go.
+  const compose = (shorten: 0 | 1 | 2 | 3) => {
+    const quotes: string[] = [];
 
-  const quote = openingQuote(book);
-  if (book?.firstSentence) quotes.push(book.firstSentence);
+    // Their first sentence, whole when the budget allows and cut at a word when
+    // it does not. Still their words either way; `firstSentence` cuts with an
+    // ellipsis and never mid-word.
+    const opener = book?.firstSentence?.trim()
+      ? shorten >= 3
+        ? ''
+        : shorten >= 1
+          ? firstSentence(book.firstSentence, 100)
+          : book.firstSentence.trim()
+      : '';
+    const quote = opener ? `“${opener}”` : null;
+    if (opener) quotes.push(opener.replace(/…$/, ''));
 
-  // Yesterday: evidence, never blame.
-  let yesterdayLine: string;
-  if (!yesterday || (yesterday.done === 0 && yesterday.evidenceCount === 0)) {
-    yesterdayLine = 'Quiet day yesterday. It is still in the ledger as a quiet day, not a failure.';
-  } else {
-    const bits: string[] = [];
-    bits.push(`${yesterday.done} of ${plural(Math.max(yesterday.planned, yesterday.done), 'move')}`);
-    // Only if the screen did not flag it. The dawn brief is read over
-    // breakfast, and this is exactly the sentence that must not come back.
-    if (yesterday.proof?.trim() && isQuotable(yesterday)) {
-      bits.push(`and you wrote “${yesterday.proof.trim()}”`);
-      quotes.push(yesterday.proof.trim());
+    // Yesterday: evidence, never blame.
+    let yesterdayLine: string;
+    if (!yesterday || (yesterday.done === 0 && yesterday.evidenceCount === 0)) {
+      yesterdayLine = 'Quiet day yesterday. It is still in the ledger as a quiet day, not a failure.';
+    } else {
+      const bits: string[] = [];
+      bits.push(`${yesterday.done} of ${plural(Math.max(yesterday.planned, yesterday.done), 'move')}`);
+      // Only if the screen did not flag it. The dawn brief is read over
+      // breakfast, and this is exactly the sentence that must not come back.
+      if (yesterday.proof?.trim() && isQuotable(yesterday) && shorten < 2) {
+        bits.push(`and you wrote “${yesterday.proof.trim()}”`);
+        quotes.push(yesterday.proof.trim());
+      }
+      const delta = input.score - input.previousScore;
+      // "avoids numeric targets" (PRD 11.6). The score is still computed and
+      // still on Progress if they go looking; it just does not lead the morning.
+      const trend = input.soften
+        ? ''
+        : delta > 0
+          ? `Consistency ${input.score}, up from ${input.previousScore}.`
+          : `Consistency ${input.score}.`;
+      // Their sentence usually ends in a full stop already, and appending another
+      // gave `Rained the whole way.". Consistency 86` — the app's punctuation
+      // landing on top of theirs.
+      yesterdayLine = trend ? `${endSentence(bits.join(' '))} ${trend}` : endSentence(bits.join(' '));
     }
-    const delta = input.score - input.previousScore;
-    // "avoids numeric targets" (PRD 11.6). The score is still computed and
-    // still on Progress if they go looking; it just does not lead the morning.
-    const trend = input.soften
-      ? ''
-      : delta > 0
-        ? `Consistency ${input.score}, up from ${input.previousScore}.`
-        : `Consistency ${input.score}.`;
-    // Their sentence usually ends in a full stop already, and appending another
-    // gave `Rained the whole way.". Consistency 86` — the app's punctuation
-    // landing on top of theirs.
-    yesterdayLine = trend ? `${endSentence(bits.join(' '))} ${trend}` : endSentence(bits.join(' '));
-  }
 
-  // Today: the first move, and why it is first. The caller hands the day's
-  // moves in the order Today shows them (`orderForToday`: the one said this
-  // morning, then the top-ranked goal's), so "start with" and the Now card
-  // name the same move. Sorting here on each plan's own `order` used to pick
-  // whichever plan's first move came first — with five goals, a different
-  // move from the one on the card, and sometimes one dated next week.
-  const first = moves.find((m) => m.status === 'todo');
-  // The move is their sentence, cut from their own line; it is quoted so the
-  // screen can set it in their face. Mid-sentence, so its first letter is
-  // lowered unless it is a name — the same string, so the span still matches.
-  const todayLine = first
-    ? reg.push(endSentence(`Start with ${lowerFirst(first.title)}`))
-    : 'Nothing is scheduled. One small thing, chosen by you, is a whole day.';
-  if (first) quotes.push(lowerFirst(first.title));
+    // Today: the first move, and why it is first. The caller hands the day's
+    // moves in the order Today shows them (`orderForToday`: the one said this
+    // morning, then the top-ranked goal's), so "start with" and the Now card
+    // name the same move. Sorting here on each plan's own `order` used to pick
+    // whichever plan's first move came first — with five goals, a different
+    // move from the one on the card, and sometimes one dated next week.
+    const first = moves.find((m) => m.status === 'todo');
+    // The move is their sentence, cut from their own line; it is quoted so the
+    // screen can set it in their face. Mid-sentence, so its first letter is
+    // lowered unless it is a name — the same string, so the span still matches.
+    const todayLine = first
+      ? reg.push(endSentence(`Start with ${lowerFirst(first.title)}`))
+      : 'Nothing is scheduled. One small thing, chosen by you, is a whole day.';
+    if (first) quotes.push(lowerFirst(first.title));
 
-  // If: the user's own if-then, quoted.
-  // Only a line the screen let through. replyToText already checked; the
-  // brief and the chips did not, and a flagged Obstacles stone was read back
-  // over breakfast in the serif.
-  const obstacle = analyses.find((a) => a.kind === 'obstacles' && a.line.trim() && isQuotable(a));
-  let ifLine: string;
-  if (obstacle?.line2?.trim()) {
-    const written = ifThenOf(obstacle.line, obstacle.line2);
-    quotes.push(...written.spans);
-    // Their half may end in its own full stop; `ifThenOf` took it off so the
-    // sentence gets exactly one, here.
-    ifLine = input.raining
-      ? `You wrote: ${endSentence(written.sentence)} It is raining.`
-      : `You wrote: ${endSentence(written.sentence)}`;
-  } else if (first?.minVersion) {
-    ifLine = `If today gets away from you: ${lowerFirst(first.minVersion)}`;
-  } else {
-    ifLine = 'If today gets away from you, two minutes of it still counts.';
+    // If: the user's own if-then, quoted.
+    // Only a line the screen let through. replyToText already checked; the
+    // brief and the chips did not, and a flagged Obstacles stone was read back
+    // over breakfast in the serif.
+    const obstacle = analyses.find((a) => a.kind === 'obstacles' && a.line.trim() && isQuotable(a));
+    let ifLine: string;
+    if (obstacle?.line2?.trim()) {
+      const written = ifThenOf(obstacle.line, obstacle.line2);
+      quotes.push(...written.spans);
+      // Their half may end in its own full stop; `ifThenOf` took it off so the
+      // sentence gets exactly one, here.
+      ifLine = input.raining
+        ? `You wrote: ${endSentence(written.sentence)} It is raining.`
+        : `You wrote: ${endSentence(written.sentence)}`;
+    } else if (first?.minVersion) {
+      ifLine = `If today gets away from you: ${lowerFirst(first.minVersion)}`;
+    } else {
+      ifLine = 'If today gets away from you, two minutes of it still counts.';
+    }
+
+    return {
+      yesterday: yesterdayLine,
+      today: [
+        input.reauthorDay ? `${input.reauthorDay}: the Book is waiting to be written again.` : '',
+        quote ? `${quote} Your line. ${todayLine}` : todayLine,
+      ]
+        .filter(Boolean)
+        .join(' '),
+      ifThen: ifLine,
+      quotes,
+      firstMoveId: first?.id ?? null,
+    };
+  };
+
+  let draft = compose(0);
+  for (const step of [1, 2, 3] as const) {
+    if (wordsIn(`${draft.yesterday} ${draft.today} ${draft.ifThen}`) <= BRIEF_MAX_WORDS) break;
+    draft = compose(step);
   }
 
   return {
     id: newId('brief'),
     day: input.day,
     kind: 'dawn',
-    yesterday: yesterdayLine,
-    today: [
-      input.reauthorDay ? `${input.reauthorDay}: the Book is waiting to be written again.` : '',
-      quote ? `${quote} Your line. ${todayLine}` : todayLine,
-    ]
-      .filter(Boolean)
-      .join(' '),
-    ifThen: ifLine,
-    quotedSpans: quotes,
-    firstMoveId: first?.id ?? null,
+    yesterday: draft.yesterday,
+    today: draft.today,
+    ifThen: draft.ifThen,
+    quotedSpans: draft.quotes,
+    firstMoveId: draft.firstMoveId,
     support: input.offerSupport ? SUPPORT_LINE : null,
     soften: Boolean(input.soften),
     createdAt: new Date().toISOString(),

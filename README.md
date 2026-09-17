@@ -86,13 +86,30 @@ pnpm verify
 ```
 
 Toolchain guard, date guard, copy guard, typecheck, lint, every unit test, the
-edge-function and SQL guards, the migration against a real Postgres, the serif
-authorship guard, the guard that every screen has a way back at its top,
-the accessibility lint (eslint-plugin-react-native-a11y, thirteen rules),
-the web build (offline: every key blanked), the end-to-end suite and an
-axe-core accessibility pass over every screen. Nothing ships without it passing.
-`npx expo-doctor` in `apps/mobile` checks the native configuration; it
-passes 18/18.
+eval harness, the edge-function and SQL guards, the migration against a real
+Postgres, the serif authorship guard, the guard that every screen has a way
+back at its top, the accessibility lint (eslint-plugin-react-native-a11y,
+thirteen rules), the web build (offline: every key blanked), the end-to-end
+suite and an axe-core accessibility pass over every screen. Nothing ships
+without it passing. `npx expo-doctor` in `apps/mobile` checks the native
+configuration; it passes 18/18.
+
+The eval harness (PRD §11.8) runs on its own too:
+
+```bash
+pnpm test:eval
+```
+
+Forty synthetic profiles — four writers, five parts of a life, both tracks —
+go through the engines the product ships with, and every check the PRD names
+is asserted on each: read-back spans verbatim, the Book sealed at or above the
+authorship floor, the Portrait and the Blueprint valid with every move
+sourced and the first one small, the brief within ninety words and quoting,
+the letters quoting the Book and naming no plan, and the safety screen at or
+above 95% recall on a 200-line labelled set with no card raised on an
+ordinary sentence. It prints the numbers. The profiles are in
+`packages/core/eval/golden.ts`, the labelled lines in `safety-set.ts`; a new
+way of writing belongs there.
 
 To look at the product rather than its tests:
 
@@ -216,7 +233,7 @@ stop with everything kept, and defaults every memory *out* of the Book.
 
 ```
 apps/mobile      the Expo app (expo-router screens in app/, the store in src/)
-packages/core    the engines: every rule, testable without React Native
+packages/core    the engines: every rule, testable without React Native; eval/ is the golden set
 packages/ui      the Studio design system: tokens, stones, rings, the hold
 supabase         the migration and the edge functions
 scripts          the guards and the end-to-end suite

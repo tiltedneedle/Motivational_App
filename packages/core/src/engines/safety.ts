@@ -54,14 +54,19 @@ const CRISIS = [
   /\bend(?:ing|ed)?\s+it\s+all\b/i,
   /\bsuicid\w*/i,
   /\bunalive\w*/i,
-  /\bwant(?:ed|ing|s)?\s+to\s+(?:die|be\s+dead|not\s+exist)\b/i,
+  // "die of embarrassment", "die of shame", "die laughing" are idioms, and
+  // the card on them teaches people to dismiss it.
+  /\bwant(?:ed|ing|s)?\s+to\s+(?:die(?!\s+(?:of\s+(?:embarrassment|shame|boredom|laughter|laughing|cringe|the\s+cold|hunger|thirst)|laughing)\b)|be\s+dead|not\s+exist)\b/i,
+  /\brather\s+not\s+(?:exist|be\s+alive)\b/i,
+  /\bthink(?:ing|s)?\s+about\s+(?:stepping|jumping|walking)\s+(?:out\s+)?in\s+front\s+of\b/i,
   // "do not want", "don't want", "didn't want", "doesn't want".
   /\b(?:do|does|did)(?:\s+not|n['’]?t)\s+want\s+to\s+(?:be\s+here|be\s+alive|live|wake\s+up|exist|go\s+on|carry\s+on)\b/i,
   /\bnot\s+want(?:ing)?\s+to\s+(?:be\s+here|be\s+alive|live|wake\s+up|exist)\b/i,
-  /\bwish(?:ed|ing)?\s+(?:i|I)\s+(?:was|were|wasn['’]?t|weren['’]?t)\s+(?:dead|here|alive|born|never\s+born)\b/i,
+  /\bwish(?:ed|ing)?\s+(?:i|I)\s+(?:was|were|wasn['’]?t|weren['’]?t)\s+(?:dead|here|alive|born|never\s+born|not\s+(?:alive|here))\b/i,
+  /\bwish(?:ed|ing)?\s+(?:i|I)(?:['’]d|\s+had)\s+never\s+been\s+born\b/i,
   /\bbetter\s+off\s+(?:without\s+me|dead|if\s+i\s+(?:was|were)n['’]?t)\b/i,
   /\bself[- ]?harm\w*/i,
-  /\b(?:cut|cutting|cuts|harm|harming|harms)\s+(?:my ?self|my\s+(?:arms?|legs?|wrists?|thighs?|skin))\b/i,
+  /\b(?:cut|cutting|cuts|harm|harming|harms|harmed)\s+(?:my ?self|my\s+(?:arms?|legs?|wrists?|thighs?|skin))\b/i,
   // "hurt my legs" is a gym sentence. "Hurt myself" is not.
   /\b(?:hurt|hurting|hurts)\s+my ?self(?![\w-])/i,
   /\bno\s+(?:reason|point)\s+(?:to|in)\s+(?:go(?:ing)?\s+on|carry(?:ing)?\s+on|liv(?:e|ing)|be(?:ing)?\s+here)\b/i,
@@ -73,11 +78,16 @@ const CRISIS = [
 const CONCERN = [
   /\bhat(?:e|ed|ing)\s+my ?self\b/i,
   /\bworthless\b/i,
-  /\bi(?:['’]| a)?m\s+a\s+failure\b/i,
+  /\bi(?:['’]| a)?m\s+(?:such\s+a|just\s+a|a)\s+failure\b/i,
   /\bcan(?:['’]?t|not)\s+(?:cope|go\s+on|carry\s+on|do\s+this\s+any\s?more)\b/i,
-  // "bingeing" keeps its e, and it is the spelling people use.
-  /\b(?:starv(?:e|es|ed|ing)|purg(?:e|es|ed|ing)|bing(?:e|es|ed|ing|eing)|restrict(?:ing|ed)?\s+(?:my\s+)?(?:food|calories|intake))\b/i,
-  /\b\d{2,4}\s?(?:kg|lbs?|pounds|kcal|calories)\b.{0,24}\b(?:lose|lost|losing|target|goal|under|max)\b/i,
+  // "bingeing" keeps its e, and it is the spelling people use. "Starving"
+  // on its own is hungry after a swim; it counts with "myself", "all day"
+  // or a reason. A binge of a series is a Sunday.
+  /\bstarv(?:e|es|ed|ing)\s+(?:my ?self|all\s+day|to\s+(?:fit|lose|get|look)|for\s+(?:a|the)\s+(?:dress|wedding|photo|weigh))/i,
+  /\bpurg(?:e|es|ed|ing)\b(?!\s+(?:the|old|files|data))/i,
+  /\bbing(?:e|es|ed|ing|eing)\b(?![-\s]?watch)(?!\s+(?:of\s+)?(?:the\s+)?(?:last|whole|series|season|episodes?|box))/i,
+  /\brestrict(?:ing|ed)?\s+(?:my\s+)?(?:food|calories|intake)\b/i,
+  /\b\d{2,4}\s?(?:kg|lbs?|pounds|kcal|calories)\b.{0,24}\b(?:lose|lost|losing|target|goal|under|max|fail\w*)\b/i,
   /\b(?:drink|drinking|drank)\s+(?:too\s+much|every\s?(?:day|night)|to\s+forget)\b/i,
   /\bpanic\s+attacks?\b/i,
   /\bhopeless(?:ness)?\b/i,

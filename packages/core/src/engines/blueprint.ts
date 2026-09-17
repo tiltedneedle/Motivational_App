@@ -119,7 +119,14 @@ export function buildPlan(input: BuildInput, opts: BlueprintOptions): Plan {
 
   const seasonWeeks = opts.seasonWeeks ?? 12;
   const planId = opts.newId('plan');
-  const strategyText = strategies.paragraph?.trim() || strategies.line.trim();
+  // The line, on both tracks. The Full track's paragraph answers four prompts
+  // — the week, the smallest version, the night before, what to stop — and
+  // cutting moves from it put whole paragraphs on Today as a single move
+  // ("days off are the four in the pattern and on each one I'm at the
+  // library…", sixty words, with the reason for the pick-up time in it). The
+  // line is the one sentence with a time and a place that the stone asked
+  // for; the paragraph is the Book's, and the sentence under a move.
+  const strategyText = strategies.line.trim();
 
   // Milestones: the user's Monitoring line is the proof of the first one.
   const horizonDays = goal.targetDate ? Math.max(14, daysBetween(opts.today, goal.targetDate)) : seasonWeeks * 7;
@@ -168,7 +175,10 @@ export function buildPlan(input: BuildInput, opts: BlueprintOptions): Plan {
   // of the rule is that the first step is close enough to actually happen.
   const soonest = scheduledPieces[0];
   if (soonest && daysBetween(opts.today, soonest.scheduled) > 2) {
-    scheduledPieces.unshift({ text: soonest.text, scheduled: addDays(opts.today, 1) });
+    // Without the day it was cut for. "Tuesday: at 6:40, out the back door"
+    // dated a Friday is a move that contradicts itself; the body of it, at
+    // 6:40 out the back door, is still their sentence and is true on Friday.
+    scheduledPieces.unshift({ text: withoutDayPrefix(soonest.text), scheduled: addDays(opts.today, 1) });
   }
   // Never more than three in week one, counted after the repair.
   const weekOnePieces = scheduledPieces.slice(0, 3);
@@ -239,6 +249,12 @@ export function buildPlan(input: BuildInput, opts: BlueprintOptions): Plan {
   const problems = validatePlan(plan, analyses, opts.today);
   if (problems.length) throw new BlueprintInvalid(problems);
   return plan;
+}
+
+/** "Tuesday: at 6:40, out the back door" → "at 6:40, out the back door". Only the prefix `splitFirstMoves` put there. */
+function withoutDayPrefix(text: string): string {
+  const body = text.replace(/^(?:Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)day:\s*/, '').trim();
+  return body.length > 6 ? body : text;
 }
 
 function firstMilestoneTitle(goalTitle: string, strategy: string): string {

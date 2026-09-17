@@ -15,9 +15,10 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 1. packages/core: domain model, stores (zustand + persist), engines
 - [x] 2. packages/ui: Studio tokens, Stone/Socket/Ring, HoldBar, Chip, Field, Sheet, text primitives
 - [x] 3. apps/mobile screens (all 16 routes)
-- [x] 4. Tests, as of 2026-09-16: 421 core + 48 ui + 8 storage unit tests, 53 real-Postgres
-      checks, **339 Playwright e2e checks**, 70 cold-open checks, axe 0 across 34 screens,
-      the account round-trip 45/45 against the live project — all green, all in `pnpm verify`
+- [x] 4. Tests, as of 2026-09-17: 470 core + 48 ui + 8 storage unit tests, the eval harness
+      (567 checks over forty profiles and two hundred labelled lines), 68 real-Postgres
+      checks, **462 Playwright e2e checks**, 84 cold-open checks, axe 0 across 37 screens,
+      the account round-trip 46/46 against the live project — all green, all in `pnpm verify`
 - [x] 5. supabase/: migrations with RLS and three structural authorship guards, edge functions
 - [x] 6. Hardening: the eight-lens audit's findings, worst first (see below) — 95 of 95
 - [x] 7. Research pass: libraries/versions; the migration against a real Postgres; prebuild
@@ -49,6 +50,17 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 48. **The eval harness (§11.8), 2026-09-17.** `pnpm test:eval`: forty synthetic
+      profiles — four writers who write nothing alike, five parts of a life, both
+      tracks — through the engines the product ships with, every check the PRD
+      names asserted on each, and a 200-line labelled set for the safety screen.
+      It found seven things on its first run, all fixed: the Full track's plan was
+      cut from the paragraph, so a sixty-word move sat on Today; the 48-hour opening
+      copy said "Tuesday:" on a Friday; a day named twice made the same card twice;
+      the brief ran to 149 words against the PRD's 90; the identity line was lifted
+      from the How line ("someone who is not on shift"); the screen missed seven shapes
+      of the sentences it is for and flagged "starving after the swim". See "The eval
+      harness" below.
 - [x] 47. **Every sentence true of the code, and every name beginning with its label,
       2026-09-17.** Two rules the day's reviews kept finding on old screens, swept
       across all thirty-eight: twenty sentences that promised what the code did
@@ -2048,6 +2060,65 @@ promises only what always holds, "On Today, under <goal>", and the store's comme
 the exception again. Dry.
 
 Gate after: e2e **462/462**, cold 84/84, axe 0 across 37 screens, way-back 33 screens, 464 core / 48 ui / 8 storage, typecheck clean, lint 0 errors.
+
+**The eval harness (2026-09-17).** PRD §11.8 asks for "a golden set of 40 synthetic
+profiles (personas × domains × both tracks) with authored Books" and seven checks over
+them, plus "safety recall ≥ 0.95 on a 200-item labelled set", and §14.8 counts "the prompt
+eval green" in the definition of done. Nothing of it existed: the authorship rules had unit
+tests, but no set of people. Now `packages/core/eval/` holds four writers — a nurse on nights
+who writes in long commas and dotted times, a developer in short lines and numbers, a
+retired teacher in semicolons with no contractions, a driver in run-ons and ellipses — each
+across health, money, craft, mind and people, each on both tracks (the Full cut adds the
+paragraphs and the shadow): forty profiles, two goals apiece, five stones a goal, a ledger
+line or two. Every word invented. `golden.test.ts` runs each through the offline extractor,
+the seal, the Portrait, the Blueprint, the dawn brief in the person's register and again in
+the concern band, the four chips, the four letters, the Returns letter and the Full-track
+invitation, and asserts what the PRD asks: spans verbatim (246/246), the authorship floor
+(40/40 at 1.0), the schemas, every move sourced with its sentence under it and the first one
+small, at most three in week one, proofs the person can point at, briefs ≤ 90 words with a
+quoted span and none of the banned words in the app's own prose, letters 120–180 words
+quoting the Fifteen or the ledger and naming no goal or move. `safety-set.ts` is two
+hundred labelled lines — seventy that must raise the card, sixty that must soften the
+morning, seventy ordinary sentences that share their words (the gym, the deadline, the
+joke, the van, a binge of a series) — and the screen is measured both ways. It prints the
+numbers, and `pnpm verify` runs it after the unit tests, so a pattern or a builder cannot
+change without it passing.
+
+What the first run found, in the engines, all fixed:
+- **The Full track's plan was cut from the paragraph.** `buildPlan` preferred
+  `strategies.paragraph` to the line, and the paragraph answers four prompts in prose, so a
+  single move read "days off are the four in the pattern and on each one I'm at the library
+  on Market Street at 10 when it opens with the laptop and the folder, until 12 and no
+  later, because I pick the boys up at 12.30 from Ana's mum. One unit of the module per
+  session…" — sixty words, on a card. The plan is cut from the line on both tracks; the
+  paragraph is the Book's and the sentence under a move.
+- **The 48-hour opening copy carried a day it was not on.** "Tuesday: at 6:40, out the back
+  door" dated a Friday. The copy is the body of the line, which is still their sentence.
+- **A day named twice was two moves on one date.** "Saturday at 5 pm … new strings by this
+  Saturday" made the same card twice. Each day counts once.
+- **The brief ran to 149 words.** The PRD's ninety is now a budget: the opening sentence is
+  cut at a word first, then yesterday's proof line comes off, then the opening quotation; the
+  move and the if-then are the plan and are never cut. Longest brief on the set: 90.
+- **The identity line came from the How line.** `proposeIdentity` searched the Strategies
+  line before the Fifteen, so "every Sunday I am not on shift" became "I'm becoming someone
+  who is not on shift". From the Fifteen alone, as §7.4 says.
+- **Seven shapes the screen missed** — five of the worst sentence, two of the concern
+  band — each now caught: "harmed myself", "wish I were not
+  alive", "wish I'd never been born", "rather not exist", "think about stepping in front of
+  a train", "I'm such a failure", "55 kg by Christmas or I have failed". One it still misses,
+  and the report says so: "I've started cutting again" — a lifter's sentence as often as
+  not, and a local screen has no way to tell.
+- **Four ordinary sentences it flagged**: "wanted to die of embarrassment" raised the card;
+  "binge-watched", "a binge of the last three episodes" and "starving after the swim"
+  softened the morning. "Starving" now needs "myself", "all day" or a reason; a binge of a
+  series is a Sunday; the idioms are named. On the set: recall 98.6% crisis, 100% concern;
+  0 of 70 ordinary lines raise the card, 0 soften the morning.
+
+What the eval does not do, and why: §11.8's "LLM-as-judge with Opus 5 plus human review of
+20%" needs a model behind the edge function, which is the same key everything else waits
+on; the deterministic checks are the floor the product cannot go under with or without one.
+
+Gate after: 470 core / 48 ui / 8 storage, eval **567/567**, e2e **462/462**, cold 84/84, axe 0 across 37 screens, way-back 33 screens, migration 68 checks, typecheck clean, lint 0 errors.
 
 Gate after: 416 core / 48 ui / 8 storage, e2e **326/326** (was 317; the new checks seed a live virtues sitting and press both closing-screen buttons on the faults, write a Past line in crisis and change it without the card returning, and read the Interview-only caption), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
 

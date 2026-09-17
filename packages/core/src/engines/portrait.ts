@@ -129,9 +129,15 @@ export interface IdentityProposal {
  * Requiring the copula is what keeps the result grammatical. An action clause
  * ("I run every morning") would need conjugating to fit the frame, and the
  * moment the app conjugates a verb it is writing, not quoting.
+ *
+ * From the Fifteen alone (PRD §7.4: "proposed from the Fifteen's text"). The
+ * How line used to be searched first, and a schedule that happened to say
+ * "every Sunday I am not on shift" or "so I am not doing anything else"
+ * became "I'm becoming someone who is not on shift" — the person's own words,
+ * cut from the wrong sentence, in front of a portrait of who they mean to be.
  */
-export function proposeIdentity(ideal: string, strategies?: string): IdentityProposal {
-  const source = `${strategies ?? ''} ${ideal ?? ''}`;
+export function proposeIdentity(ideal: string): IdentityProposal {
+  const source = ideal ?? '';
   const m = source.match(
     // Up to the end of the clause rather than a fixed number of words. Capped
     // at eleven it silently cut longer sentences in half and presented the
@@ -175,7 +181,7 @@ export function buildPortrait(input: PortraitInput): Portrait {
   // The if-then's two halves are quoted too, so the Portrait can set them in
   // the person's face and the "If … then I" around them in the app's.
   const quoted = [opener, why, strategies?.line ?? '', ...(written ? written.spans : [obstacleText])].filter((s) => s.trim().length > 0);
-  const identity = proposeIdentity(ideal, strategies?.line);
+  const identity = proposeIdentity(ideal);
 
   return {
     goalId: goal.id,
@@ -200,12 +206,16 @@ export function buildPortrait(input: PortraitInput): Portrait {
 export function splitFirstMoves(strategyLine: string): string[] {
   const line = (strategyLine ?? '').trim();
   if (!line) return [];
-  const days = line.match(
+  const dayMentions = line.match(
     // `days?` so a person who writes "Mondays and Wednesdays" is understood to
     // mean one habit on two days, rather than two unrelated moves.
     /\b(mon|tues|wednes|thurs|fri|satur|sun)days?\b/gi,
   );
-  if (days && days.length >= 2) {
+  // Each day once. "Saturday at 5 pm … new strings by this Saturday" names
+  // one day twice, and two moves with the same title on the same date is a
+  // duplicate card on Today, not a schedule.
+  const days = [...new Set((dayMentions ?? []).map((d) => d.toLowerCase()))];
+  if (days.length >= 2) {
     // "Tuesday, Thursday, Saturday at 6:40, out the back door" is one habit on
     // three days, so the day names come out of the body and become the
     // schedule — but only when they lead the sentence. Lifted from the middle
