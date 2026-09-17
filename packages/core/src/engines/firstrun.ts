@@ -9,6 +9,7 @@
  * the next step is, so Welcome and Today can both point at it.
  */
 import { ANALYSIS_ORDER, CORE_ANALYSES, type AnalysisKind, type BookVersion, type DepthTrack, type Goal, type GoalAnalysis } from '../types';
+import { plural } from '../ids';
 
 /** Which analyses a goal gets, on this track, at this rank (PRD §7.2). */
 export function analysisPlan(rank: number, track: DepthTrack): AnalysisKind[] {
@@ -85,7 +86,7 @@ export function firstRunCaption(s: FirstRunStep, goalCount: number): string {
       return 'The Fifteen is written. Next: put the goals in order and give the Book its name, then the stones.';
     case 'stones':
       return s.written === 0
-        ? 'The Fifteen is written. Now the stones: five short lines for each goal, in your words.'
+        ? `The Fifteen is written. Now the stones: ${plural(s.total, 'short line')} across your goals, in your words.`
         : `${s.written} of ${s.total} stones are written. The rest are where you left them.`;
     case 'seal':
       return 'Every stone is written. The Portrait is ready, and the Book seals after it.';

@@ -716,6 +716,14 @@ async function main() {
         check('the move lands on Today', await seen('screen-today'));
         const rowsAfter = await page.locator('[data-testid^="row-mv"], [data-testid="now-card"]').count();
         check('as one more stone', rowsAfter > rowsBefore, `${rowsBefore} → ${rowsAfter}`);
+        // "Lands at the top of Later today", as the sheet says: the newest move is the first row.
+        const newest = await page.evaluate(() => {
+          const st = JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state ?? {};
+          const all = (st.plans ?? []).flatMap((pl) => pl.moves);
+          return all.sort((a, b) => a.order - b.order)[0]?.title ?? '';
+        });
+        const topOfToday = await page.locator('[data-testid="now-card"], [data-testid^="row-mv"]').first().innerText().catch(() => '');
+        check('and at the top of today, as the sheet said', newest.length > 0 && topOfToday.includes(newest), `newest "${newest}" · top "${topOfToday.slice(0, 60)}"`);
       }
       await tap('new-move-button');
       await tap('new-move-mode-capture');

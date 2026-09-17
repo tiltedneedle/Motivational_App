@@ -49,6 +49,7 @@ export default function Envision() {
   const router = useRouter();
   const goals = useGoals();
   const scenes = useMorrow((s) => s.scenes);
+  const track = useMorrow((s) => s.profile.track);
   const makeScene = useMorrow((s) => s.makeScene);
   const hasShadow = useMorrow((s) => s.texts.some((t) => t.kind === 'shadow' && t.body.trim().length > 0));
   const goBack = () => (router.canGoBack() ? router.back() : router.replace('/today'));
@@ -157,7 +158,7 @@ export default function Envision() {
                   <Label style={{ color: night.ink3 }}>{title}</Label>
                   <View style={{ borderWidth: 1, borderColor: night.line, borderRadius: 22, padding: 18, gap: 6 }}>
                     <Body style={{ color: night.ink2 }}>
-                      Nothing is drawn here until you have written it. Eight minutes, the same distance ahead, and the
+                      Nothing is drawn here until you have written it. {track === 'full' ? 'Fifteen' : 'Eight'} minutes, the same distance ahead, and the
                       habits won.
                     </Body>
                     <TextButton

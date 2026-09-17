@@ -441,7 +441,8 @@ export default function BookScreen() {
                   router.dismissTo('/today');
                 }}
               />
-              <Chip testID="book-moved" label="Something moved" onPress={() => router.dismissTo('/today')} />
+              {/* The reading's own verdict, which opens the chooser of what moved. */}
+              <Chip testID="book-moved" label="Something moved" onPress={() => router.push('/reading?moved=1')} />
             </View>
           )}
           {/* The ways out of the app: quieter than the ways through it. */}

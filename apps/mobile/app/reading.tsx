@@ -9,7 +9,7 @@
  * at the start of one. The Sunday notification points here, and until this
  * screen existed it pointed at nothing in particular.
  */
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -34,7 +34,9 @@ export default function Reading() {
 
   const pages = useMemo(() => (book ? bookPages(book) : []), [book]);
   const [index, setIndex] = useState(0);
-  const [choosing, setChoosing] = useState(false);
+  // Opened straight onto the chooser by the Book's own "Something moved".
+  const { moved } = useLocalSearchParams<{ moved?: string }>();
+  const [choosing, setChoosing] = useState(moved === '1');
 
   /**
    * The Horizon Review (PRD §7.9), on the last page: the week in four facts

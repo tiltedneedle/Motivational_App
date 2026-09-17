@@ -267,7 +267,7 @@ export default function Coach() {
                     <UserText style={{ fontSize: 18, lineHeight: 25, color: day.ink }}>{firstMove.title}</UserText>
                     {intended === firstMove.id ? (
                       <Body testID="intention-set" style={{ fontSize: 13 }}>
-                        Said this morning. Nothing is counting; it is on Today when you want it.
+                        Said today. Nothing is counting; it is on Today when you want it.
                       </Body>
                     ) : (
                       <Chip

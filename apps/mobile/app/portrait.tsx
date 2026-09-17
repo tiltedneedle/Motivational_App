@@ -186,7 +186,9 @@ export default function PortraitScreen() {
 
           {portrait.firstMoves.length ? (
             <Rise index={4} reducedMotion={reduced} style={{ gap: 6 }}>
-              <Label>The first three, out of your own line</Label>
+              <Label>
+                {portrait.firstMoves.length === 1 ? 'The first move, out of your own line' : `The first ${portrait.firstMoves.length === 2 ? 'two' : 'three'}, out of your own line`}
+              </Label>
               {portrait.firstMoves.map((m, i) => (
                 <UserText key={`${m}-${i}`} style={{ fontSize: 16, lineHeight: 24, color: day.ink2 }}>
                   {m}

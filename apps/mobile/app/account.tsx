@@ -72,6 +72,9 @@ export default function Account() {
   };
 
   const [pulled, setPulled] = useState(false);
+  /** What the sign-in moved, so the line under it is true of it. */
+  const [moved, setMoved] = useState<'pushed' | 'pulled' | 'nothing'>('nothing');
+  const hasBook = useMorrow((s) => s.books.length > 0);
 
   /** Signed in: the copy, one way or the other, with the button held busy throughout. */
   const settle = async (method: 'email' | 'apple') => {
@@ -85,6 +88,7 @@ export default function Account() {
     } else {
       setProblem(null);
       setPulled(synced.pulled);
+      setMoved(synced.pulled ? 'pulled' : synced.moved);
     }
     setStage('done');
   };
@@ -186,7 +190,13 @@ export default function Account() {
             <View testID="account-done" style={{ gap: 10 }}>
               <Rule />
               <Body style={{ color: day.ink }}>
-                {pulled ? 'Signed in. Your Book is back on this phone.' : 'Signed in. The Book has a second home now.'}
+                {pulled
+                  ? 'Signed in. Your Book is back on this phone.'
+                  : moved === 'pushed'
+                    ? hasBook
+                      ? 'Signed in. The Book has a second home now.'
+                      : 'Signed in. Your writing has a copy on the account; the Book will follow when it is sealed.'
+                    : 'Signed in. Nothing to copy yet — the first seal will send it up.'}
               </Body>
               <Notice testID="account-problem" kind="error" text={problem} />
               <InkButton testID="account-continue" label="Carry on" onPress={onwards} />

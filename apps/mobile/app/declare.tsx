@@ -112,7 +112,10 @@ export default function Declare() {
         how === 'save'
           ? await saveWallpaper(printRef, 'morrow-declaration.png', square)
           : await shareWallpaper(printRef, 'morrow-declaration.png', 'Your Declaration', square);
-      if (out.ok && !declaredAt) {
+      // Made when it is kept. The share sheet cannot say whether anything
+      // was sent, or to whom, so a share alone is not a Declaration made and
+      // the note says only what is known.
+      if (out.ok && out.how !== 'shared' && !declaredAt) {
         setProfile({ declaredAt: new Date().toISOString() });
         track({ name: 'declaration_made', with_photo: photo !== null, witness: witness.trim().length > 0 });
       }
@@ -122,9 +125,7 @@ export default function Declare() {
             ? 'Saved to Photos. Yours to keep, or to send.'
             : out.how === 'downloaded'
               ? 'Downloaded.'
-              : witness.trim()
-                ? 'Sent. ' + witness.trim() + ' has it now.'
-                : 'Shared.'
+              : 'The share sheet opened. It goes wherever you sent it; keep it in Photos to mark it made.'
           : out.error,
       );
     } finally {
@@ -200,7 +201,7 @@ export default function Declare() {
               onPress={() => void run('save')}
             />
             {Platform.OS !== 'web' ? (
-              <TextButton testID="declare-share" label={witness.trim() ? 'Send it to ' + witness.trim() : 'Share it'} onPress={() => void run('share')} />
+              <TextButton testID="declare-share" label={witness.trim() ? 'Share it — for ' + witness.trim() : 'Share it'} onPress={() => void run('share')} />
             ) : null}
           </View>
           {note ? (

@@ -77,7 +77,7 @@ export default function Explore() {
                   key={v.name}
                   testID={`explore-pick-${v.name}`}
                   accessibilityRole="button"
-                  accessibilityLabel={`Start with ${v.title}`}
+                  accessibilityLabel={`${v.title}. Start with it`}
                   onPress={() => open(v.name)}
                   style={({ pressed }) => ({
                     minHeight: 44,

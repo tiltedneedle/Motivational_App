@@ -192,7 +192,7 @@ export default function NewMove() {
 
               {picked ? (
                 <View style={{ backgroundColor: day.surface2, borderRadius: radius.card, padding: 14, gap: 4 }}>
-                  <Label>Lands at the top of Later today</Label>
+                  <Label>Goes to the top of today</Label>
                   <UserText style={{ fontSize: 17, lineHeight: 24 }}>{picked}</UserText>
                 </View>
               ) : null}
@@ -207,7 +207,7 @@ export default function NewMove() {
           ) : mode === 'capture' ? (
             <>
               <Statement style={{ fontSize: 22, lineHeight: 28 }}>A thought, a thing that happened, a question.</Statement>
-              <Body style={{ fontSize: 14 }}>It goes in the ledger under today, in your words, and nowhere else.</Body>
+              <Body style={{ fontSize: 14 }}>It goes in the ledger under today, in your words. A letter from later may quote it back to you.</Body>
               <UserField
                 testID="capture-text"
                 label="What to keep"

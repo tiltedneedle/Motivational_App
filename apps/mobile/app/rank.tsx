@@ -16,6 +16,7 @@ export default function Rank() {
   const router = useRouter();
   useFirstRunStep('order');
   const goals = useGoals();
+  const track = useMorrow((s) => s.profile.track);
   const rankGoals = useMorrow((s) => s.rankGoals);
 
   const move = (id: string, dir: -1 | 1) => {
@@ -38,7 +39,7 @@ export default function Rank() {
           <View style={{ gap: 8 }}>
             <Label>The order</Label>
             <Statement>Put your goals in order. The top one matters most.</Statement>
-            <Body style={{ fontSize: 14 }}>The top three get all five lines; the rest get the two that make a plan.</Body>
+            <Body style={{ fontSize: 14 }}>{track === 'full' ? 'Every goal gets all five lines.' : 'The top three get all five lines; the rest get the two that make a plan.'}</Body>
           </View>
 
           <View>

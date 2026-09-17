@@ -327,7 +327,7 @@ export default function Today() {
             <Pressable
               testID="today-book-line"
               accessibilityRole="button"
-              accessibilityLabel={`Open your Book: “${book.firstSentence}”`}
+              accessibilityLabel={`“${book.firstSentence}” — You, in the Book. Opens your Book`}
               onPress={() => router.push('/book')}
               style={{ marginTop: 8 }}
             >

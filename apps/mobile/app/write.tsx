@@ -343,7 +343,7 @@ export default function Write() {
                         if (answer !== 'granted') {
                           chosen = 'type';
                           setMode('type');
-                          setMicNote(answer === 'refused' ? 'The microphone was not allowed, so this is a typed room. It can be allowed under You.' : 'This device cannot listen, so this is a typed room.');
+                          setMicNote(answer === 'refused' ? 'The microphone was not allowed, so this is a typed room. It can be allowed in your phone’s own Settings.' : 'This device cannot listen, so this is a typed room.');
                         }
                       }
                       setSession(startWriting(kind, track, chosen));
@@ -519,7 +519,7 @@ export default function Write() {
           <Pressable
             testID="write-hold"
             accessibilityRole="button"
-            accessibilityLabel={held ? 'Carry on: start the clock again' : 'Pause the clock'}
+            accessibilityLabel={held ? 'Paused — tap to carry on. Starts the clock again' : 'Pause the clock'}
             onPress={() => setHeld((h) => !h)}
             hitSlop={8}
             style={({ pressed }) => ({ minHeight: 44, justifyContent: 'center', paddingHorizontal: 12, opacity: pressed ? 0.6 : 1 })}

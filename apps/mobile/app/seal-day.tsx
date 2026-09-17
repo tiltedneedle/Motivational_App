@@ -4,7 +4,7 @@
  */
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ScrollView, Share, View } from 'react-native';
+import { Platform, ScrollView, Share, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Chip, HoldBar, Label, Quoted, Statement, Stone, Studio, TopBar, UserField, night, useReducedMotion } from '@morrow/ui';
 import { dayOf } from '@morrow/core';
@@ -52,8 +52,10 @@ export default function SealDay() {
     const count = sealedCount;
     const message = String(count) + (count === 1 ? ' sealed day.' : ' sealed days.') + (iWillLine.trim() ? ' ' + iWillLine.trim() : '') + ' — Morrow';
     try {
-      await Share.share({ message, title: 'To ' + witnessName });
-      setTold('Sent to ' + witnessName + '.');
+      const r = await Share.share({ message, title: 'To ' + witnessName });
+      // iOS says whether the sheet was dismissed; Android cannot, so the note
+      // says only that the sheet had it.
+      setTold(r.action === Share.dismissedAction ? 'Not sent.' : Platform.OS === 'android' ? 'Handed to the share sheet, for ' + witnessName + '.' : 'Sent to ' + witnessName + '.');
     } catch {
       setTold('This device would not open the share sheet. Nothing was sent.');
     }

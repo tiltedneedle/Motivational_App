@@ -294,7 +294,7 @@ export default function PracticeBuilder() {
               label="The two-minute version"
               value={minVersion}
               onChangeText={setMinVersion}
-              placeholder={source ? 'Leave it and one gets cut from your line' : 'Just the first bit'}
+              placeholder={source ? 'Leave it and Morrow supplies a two-minute stand-in' : 'Just the first bit'}
             />
           </View>
 

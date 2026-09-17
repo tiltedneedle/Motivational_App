@@ -73,7 +73,7 @@ export default function Title() {
         <View style={{ paddingTop: 10, paddingBottom: 18 }}>
           <InkButton
             testID="title-continue"
-            label={bookTitle.trim() ? 'Write five lines per goal' : 'Leave it for now · write five lines per goal'}
+            label={bookTitle.trim() ? 'Write the stones' : 'Leave it for now · write the stones'}
             disabled={goals.length === 0}
             onPress={() => {
               const first = goals[0];

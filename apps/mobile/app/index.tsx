@@ -187,7 +187,7 @@ export default function Welcome() {
               {hasSupabase && !account ? (
                 <TextButton testID="welcome-bring-back" label="Bring my Book back from my account" onPress={() => router.push('/account')} />
               ) : null}
-              <Label style={{ textAlign: 'center', marginTop: 4 }}>No sign-up until your Book exists</Label>
+              <Label style={{ textAlign: 'center', marginTop: 4 }}>No sign-up wall. An account is offered once, after the Portrait, and you can say no</Label>
             </>
           )}
         </View>

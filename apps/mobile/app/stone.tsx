@@ -286,8 +286,10 @@ export default function StoneScreen() {
         <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18, gap: 16 }}>
           {stepIndex === 0 && goals.findIndex((g) => g.id === goalId) === 0 && !existing ? (
             <Body testID="stone-intro" style={{ fontSize: 14, color: day.ink2 }}>
-              Each goal gets {plan.length} short lines in your words — five questions, one line each. The chips are ways in;
-              the line is yours. Seat one and the next appears.
+              {track === 'full'
+                ? 'Each goal gets five short lines in your words — five questions, one line each.'
+                : 'The top three goals get five short lines in your words, one question each; the rest get the two that make a plan.'}{' '}
+              The chips are ways in; the line is yours. Seat one and the next appears.
             </Body>
           ) : null}
           <Statement testID="stone-question">{set.question}</Statement>
@@ -420,10 +422,11 @@ export default function StoneScreen() {
             label={ready ? (!returnTo && stepIndex + 1 < plan.length ? 'Keep this line · next' : 'Keep this line') : kind === 'obstacles' ? 'Write both lines' : 'Write your line'}
             disabled={!ready}
             onPress={() => {
-              if (needsFollowUp) {
-                setFollowUpAsked(true);
-                return;
-              }
+              // The follow-up is already on the screen when it is due; the
+              // button keeps the line as it stands, with the when and where
+              // if they wrote one. It used to close the box and stop there,
+              // so the first press of "Keep this line" kept nothing.
+              if (needsFollowUp) setFollowUpAsked(true);
               // The follow-up's words join the line: "… — Tuesdays at 7, in the kitchen".
               if (whenWhere.trim()) {
                 const joined = `${line.trim()} — ${whenWhere.trim()}`;

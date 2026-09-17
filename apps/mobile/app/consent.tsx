@@ -20,7 +20,6 @@ const ROWS: { label: string; body: string; items?: string[] }[] = [
     body: 'Only when a screen needs it, and never for advertising:',
     items: [
       'when you ask for your own phrases to be read back to you;',
-      'when your plan is built from the lines you wrote;',
       'when a sitting is checked for signs you may need a person rather than an app;',
       'when you ask for a scene drawn from a detail you wrote.',
     ],

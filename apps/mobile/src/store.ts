@@ -534,7 +534,7 @@ export interface MorrowState {
    * Right after signing in: a device with writing pushes it up; an empty
    * device pulls the account's copy down. Never a merge — see src/sync.ts.
    */
-  afterSignIn: () => Promise<{ ok: true; pulled: boolean } | { ok: false; error: string }>;
+  afterSignIn: () => Promise<{ ok: true; pulled: boolean; moved: 'pushed' | 'pulled' | 'nothing' } | { ok: false; error: string }>;
   /** Everything on the device, up. Safe to call on every launch. */
   pushToAccount: () => Promise<{ ok: true } | { ok: false; error: string }>;
   signOutAccount: () => Promise<void>;
@@ -1442,6 +1442,10 @@ const store = create<MorrowState>()(
           set({ toast: { text: 'Write how you’ll do this goal first — the How stone.', kind: 'info' } });
           return false;
         }
+        // "Goes to the top of today", as the sheet says: ordered before every
+        // move the plan already has, so it is the Now card, or first under an
+        // intention already said this morning.
+        const topOrder = Math.min(0, ...plan.moves.map((m) => m.order)) - 1;
         const move = {
           id: newId('mv'),
           goalId,
@@ -1456,7 +1460,7 @@ const store = create<MorrowState>()(
           completedAt: null,
           minVersion: opts?.minVersion ?? null,
           sourceLineId: source.id,
-          order: plan.moves.length,
+          order: topOrder,
         };
         set((st) => ({
           plans: st.plans.map((p) => (p.id === plan.id ? { ...p, moves: [...p.moves, move] } : p)),
@@ -1643,6 +1647,11 @@ const store = create<MorrowState>()(
 
         // The day's own hours: a shift day keeps the shift's (PRD §7.12).
         const times = timesFor(s.profile, day);
+        // A milestone falling due today, from the goals in play: Settings
+        // promised "a milestone when one lands" and nothing ever passed one.
+        const dueMilestone = livePlans(s)
+          .flatMap((p) => p.milestones)
+          .find((m) => m.targetDate === day && !m.reachedAt);
         const planned = planNotices({
           day,
           wakeTime: times.wakeTime,
@@ -1657,6 +1666,7 @@ const store = create<MorrowState>()(
           moves: todaysMoves(s),
           yesterday: s.days[day] ?? null,
           daysSinceAnything,
+          milestone: dueMilestone ? { title: dueMilestone.title, proof: dueMilestone.proof } : null,
           muted: s.profile.notificationsOff === true,
         });
 
@@ -1890,12 +1900,12 @@ const store = create<MorrowState>()(
         const s = get();
         if (hasWriting(s)) {
           const pushed = await get().pushToAccount();
-          return pushed.ok ? { ok: true, pulled: false } : pushed;
+          return pushed.ok ? { ok: true, pulled: false, moved: 'pushed' as const } : pushed;
         }
         const pulled = await pullAll(false);
         if (!pulled.ok) return { ok: false, error: pulled.error };
         const b = pulled.bundle;
-        if (!hasWriting(b)) return { ok: true, pulled: false };
+        if (!hasWriting(b)) return { ok: true, pulled: false, moved: 'nothing' as const };
         // A new phone, handed the same shape back. The profile merges over
         // the defaults the same way a rehydrate does, so a field this build
         // added since the copy was made is not undefined.
@@ -1921,7 +1931,7 @@ const store = create<MorrowState>()(
           pastListed: b.pastListed,
           memoryEdits: b.memoryEdits,
         });
-        return { ok: true, pulled: true };
+        return { ok: true, pulled: true, moved: 'pulled' as const };
       },
 
       pushToAccount: async () => {

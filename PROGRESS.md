@@ -49,6 +49,16 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 47. **Every sentence true of the code, and every name beginning with its label,
+      2026-09-17.** Two rules the day's reviews kept finding on old screens, swept
+      across all thirty-eight: twenty sentences that promised what the code did
+      not do, or denied what it did, each made true — by the code where the
+      promise was the right one (a milestone notice the settings named and the
+      planner never sent; a new move that "lands at the top" and was appended
+      to the bottom; a "Keep this line" that kept nothing on its first press),
+      by the words where the code was right (a capture a letter may quote; a
+      share sheet that cannot say what was sent; the account ask that comes
+      before the Book). See "The sentences" below.
 - [x] 46. **The shift calendar (§7.12), 2026-09-17.** The weekdays that keep other
       hours, and the hours they keep, under Your day: ticked days, then the
       shift's morning (a midday, if that is the morning) and evening (a small
@@ -1977,6 +1987,39 @@ person's path — and a skeptic per finding: seven confirmed, none refuted.
   let go and when, and offers Take it back and the re-authoring.
 
 Gate after: e2e **460/460** (was 452; a link straight to Past or Present unconsented is the gate first, Not now from it goes somewhere, Continue leads to the door that sent them and never asks again; the let-go goal's own screen; the gated re-authoring's seal), cold 84/84, axe 0 across 37 screens, way-back 33 screens, 463 core / 48 ui / 8 storage, typecheck clean, lint 0 errors.
+
+**The sentences (2026-09-17).** Two rules the day's reviews kept finding in older screens —
+an accessible name must begin with its visible label, and a sentence must be literally true
+of the code — swept across every screen by three readers with a skeptic per finding: twelve
+confirmed, eight more concrete enough to fix without the pass, none refuted. Where the
+promise was the right one the code changed; where the code was right the words did.
+
+The code changed: the planner now receives the milestone falling due today from the goals in
+play, so Settings' "a milestone when one lands" is sent; a new move is ordered before every
+move the plan has, so it goes to the top of today (the Now card, or first under an intention
+already said) — the sheet says "Goes to the top of today" and the walk checks it; "Keep this
+line" keeps the line on its first press whether or not the follow-up is showing, with the
+when and where if they wrote one — it used to close the box and stop; the Book's "Something
+moved" opens the reading's own chooser of what moved instead of going back to Today; the
+sign-in's last line says what moved — the Book back, the writing up with the Book to follow,
+or nothing yet; the seal's "Tell <name>" reads the share sheet's answer and says "Not sent"
+when the sheet was dismissed (Android cannot say, and the line says only that the sheet had
+it); the Declaration is marked made when it is kept, not when a share sheet opened, and
+"Send it to Sam" is "Share it — for Sam".
+
+The words changed: a capture "goes in the ledger … and nowhere else" — a letter may quote it,
+and now says so; "No sign-up until your Book exists" — the account is offered after the
+Portrait, before the seal, and can be declined, and now says that; consent listed the plan
+among what is sent to an AI service, and the planner is local; the order screen's "the rest
+get two" is Starter's rule alone; the microphone note pointed at You for a switch that is in
+the phone's own Settings; "Eight minutes" for the other road is fifteen on Full; "Said this
+morning" is "Said today", the store holding no hour; the practice's placeholder promised a
+line cut from theirs and Morrow supplies a stand-in; "The first three" counts what is there;
+"Write five lines per goal" is "Write the stones", since Starter's fourth goal gets two, and
+the stone's intro and the first-run caption count the plan the same way. The Book line on
+Today and the explainer's three picks have names that begin with what is on the screen.
+
+Gate after: e2e **461/461** (was 460; the new move at the top of today), cold 84/84, axe 0 across 37 screens, way-back 33 screens, 463 core / 48 ui / 8 storage, typecheck clean, lint 0 errors, copy and authorship clean.
 
 Gate after: 416 core / 48 ui / 8 storage, e2e **326/326** (was 317; the new checks seed a live virtues sitting and press both closing-screen buttons on the faults, write a Past line in crisis and change it without the card returning, and read the Interview-only caption), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
 
