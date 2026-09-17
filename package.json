@@ -18,6 +18,7 @@
     "test:eval": "pnpm --filter @morrow/core test:eval",
     "build:web": "node scripts/build-web.mjs",
     "build:web:offline": "node scripts/build-web.mjs --offline",
+    "build:web:demo": "node scripts/build-web.mjs --demo",
     "db:push": "node scripts/db-push.mjs",
     "db:find": "node scripts/db-find.mjs",
     "test:account": "node scripts/account-e2e.mjs",

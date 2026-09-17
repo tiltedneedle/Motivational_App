@@ -15,6 +15,17 @@ export const STARTER_MIN_SECONDS = 10 * 60;
 export const IDLE_NUDGE_AFTER_MS = 8_000;
 export const DRAFT_LOCK_HOURS = 24;
 
+/**
+ * Every writing clock, scaled. 1 in the product: fifteen minutes is the
+ * studied mechanism and is what is asked. A demo build sets it once at
+ * launch (`apps/mobile/src/demo.ts`) so a room can be shown in two minutes
+ * with everything else — the ring, the nudges, the close, the minimum to
+ * count — behaving exactly as it does at fifteen. Nothing else reads it.
+ */
+export const WRITING_CLOCK = { scale: 1 };
+
+const scaled = (seconds: number): number => Math.max(10, Math.round(seconds * WRITING_CLOCK.scale));
+
 export const NUDGES: string[] = [
   'Keep going. Say the next true thing.',
   'What is on the table in front of you?',
@@ -65,13 +76,13 @@ export const DOORWAY: Record<WritingKind, { eyebrow: string; prompt: string; not
 };
 
 export function targetSeconds(kind: WritingKind, track: DepthTrack): number {
-  if (kind === 'shadow') return track === 'full' ? SHADOW_SECONDS_FULL : SHADOW_SECONDS_STARTER;
-  if (kind === 'memory_start' || kind === 'memory_broke') return 10 * 60;
-  return IDEAL_SECONDS;
+  if (kind === 'shadow') return scaled(track === 'full' ? SHADOW_SECONDS_FULL : SHADOW_SECONDS_STARTER);
+  if (kind === 'memory_start' || kind === 'memory_broke') return scaled(10 * 60);
+  return scaled(IDEAL_SECONDS);
 }
 
 export function minSecondsToCount(kind: WritingKind, track: DepthTrack): number {
-  if (kind === 'ideal') return track === 'full' ? IDEAL_SECONDS : STARTER_MIN_SECONDS;
+  if (kind === 'ideal') return scaled(track === 'full' ? IDEAL_SECONDS : STARTER_MIN_SECONDS);
   return Math.round(targetSeconds(kind, track) * 0.6);
 }
 

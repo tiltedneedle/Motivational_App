@@ -9,6 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { hourOf, boundaryFor, HELPLINES, bookToText, formatDay, plural, sealedOn, type Moment, CHRONOTYPES, DAY_ENDS, EVENING_TIMES, MORNING_TIMES, SUNDAY_HOURS, chronotypeOf, clockLabel, type Profile, SHIFT_EVENINGS, SHIFT_MORNINGS, WEEKDAY_NAMES, WEEK_ORDER, shiftDaysLabel } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, accent, day, TopBar } from '@morrow/ui';
 import { manageSubscriptionUrl } from '../src/billing';
+import { hasDemo } from '../src/demo';
 import { useLatestBook, useMorrow } from '../src/store';
 import { hasSupabase } from '../src/supabase';
 
@@ -190,6 +191,8 @@ export default function Settings() {
           {/* PRD §7.9, §7.12: the memory profile, line by line, theirs to change or forget. */}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             <Chip testID="settings-memory" label="Every line, and what to forget" ghost onPress={() => router.push('/memory')} />
+            {/* A demo build only: lived-in stores to open, and a new phone. */}
+            {hasDemo ? <Chip testID="settings-demo" label="Demo scenarios" ghost onPress={() => router.push('/demo')} /> : null}
           </View>
 
           <View style={{ gap: 10 }}>

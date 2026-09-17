@@ -50,6 +50,25 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 52. **The demo build (§14.7), 2026-09-17.** `pnpm build:web:demo`: the web
+      build with `EXPO_PUBLIC_DEMO=1`, which shortens every writing clock (the
+      Fifteen to two minutes, the shadow to one, the minimum to count to eighty
+      seconds — one scale on `WRITING_CLOCK`, nothing else changed) and opens a
+      `/demo` screen (from Welcome and from You) with the lived-in stores the
+      screenshot and axe sweeps already use — the first morning, five goals, three
+      months in, a week away, day ninety, all three volumes — every date moved so
+      the fixture's today is the day of the demo, a Pro switch for the device, and
+      "A new phone". The product build has none of it: the fixtures are copied
+      beside the site rather than bundled, and `/demo` is Today. `docs/DEMO.md` is
+      the twelve-minute walk for a room that has never seen it, with the words to
+      say. Walked in the browser: day ninety opens on "Time to write it again" with
+      81 sealed days; a week away opens on "7 days. Nothing reset"; the doorway
+      says "Begin · 2 minutes".
+- [x] 51. **The home screen is not behind the introduction, 2026-09-17.** "Have a
+      look around first" on Welcome's last page opens Today, honestly empty —
+      the path and its doors — and Back is Welcome with the name kept. The full
+      Today still comes with the Book, as the PRD has it; nobody is made to
+      write before seeing the room they are writing for.
 - [x] 50. **Say it, in a browser (§7.2), 2026-09-17.** The Fifteen's microphone
       heard one sentence and stopped: the speech module's web shim starts a
       fresh recogniser on every `start()` without stopping the last, so the
@@ -2475,6 +2494,11 @@ program's actual prompt text by someone with a licensed copy.
 - Crash reporting: Sentry's React Native SDK is a native dependency and a DSN; not added until there is a project to send to. Analytics is a seam already (PostHog key).
 - Sound on the seal: an asset decision. Haptics are in; a placeholder click is worse than silence.
 - The privacy policy and terms (§12): nothing in the app links to them because there is no text and no URL yet; a placeholder page would be worse than the gap. One row in Settings and one on Consent, the day the client's URL exists.
+
+## Showing it
+`pnpm build:web:demo && pnpm demo`, then `docs/DEMO.md`. The demo build is the only
+build with short clocks and seeded stores; `pnpm verify` tests the product build, where
+`/demo` is Today and the fixtures are not served.
 
 ## Decisions log
 - 2026-09-09: start. Stones via react-native-svg (works on web for Playwright tests) rather than Skia; Skia can replace later for grain.
