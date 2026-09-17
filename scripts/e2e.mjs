@@ -2470,6 +2470,29 @@ async function main() {
     await tap('memory-keep-you.name');
     await page.waitForTimeout(300);
     check('and Keep this with nothing changed is not an edit', !(await seen('memory-restore-you.name')) && !(await text('memory-line-you.name')).toLowerCase().includes('in your words'));
+    // A goal from the bank: Change starts empty, and the bank's title typed back is not an edit either.
+    // The walk's goal was typed by hand; a goal from the bank is seeded for this, the way the Interview names one.
+    await page.evaluate(() => {
+      const k = 'morrow-v1';
+      const st = JSON.parse(localStorage.getItem(k) ?? '{}');
+      const live = st.state.goals.filter((g) => g.status !== 'archived').length;
+      st.state.goals = [...st.state.goals, { id: 'goal_e2e_bank', title: 'Get fit', domain: 'health', horizon: 'Three months', targetDate: null, status: 'named', rank: live, titleAuthored: false, createdAt: new Date().toISOString() }];
+      localStorage.setItem(k, JSON.stringify(st));
+    });
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(600);
+    const bankGoalId = 'goal_e2e_bank';
+    check('there is a bank-titled goal on the profile', bankGoalId.length > 0 && (await seen(`memory-line-goal.${bankGoalId}`)));
+    await tap(`memory-change-goal.${bankGoalId}`);
+    await page.waitForTimeout(300);
+    check('a bank title seeds nothing', (await page.locator(`[data-testid="memory-field-goal.${bankGoalId}"]`).inputValue()) === '');
+    const bankTitle = await text(`memory-quote-goal.${bankGoalId}`);
+    await page.locator(`[data-testid="memory-field-goal.${bankGoalId}"]`).fill(bankTitle);
+    await page.waitForTimeout(200);
+    await tap(`memory-keep-goal.${bankGoalId}`);
+    await page.waitForTimeout(300);
+    check('and the bank title typed back is not an edit', !(await seen(`memory-restore-goal.${bankGoalId}`)) && !(await text(`memory-line-goal.${bankGoalId}`)).toLowerCase().includes('in your words'));
     await tap('memory-change-you.register');
     await page.waitForTimeout(300);
     check('a line that is all Morrow’s framing starts empty: Change means in your words, never Morrow’s', (await page.locator('[data-testid="memory-field-you.register"]').inputValue()) === '');

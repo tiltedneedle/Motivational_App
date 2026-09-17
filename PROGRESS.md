@@ -1883,9 +1883,19 @@ rounds before, which is the point of running the pass again:
 - The unsealed card's accessible name did not begin with its visible label, and the letters
   card two blocks up had the same shape. Both begin with the word on the card now.
 
-Three passes, thirty-one findings, none refuted. The next pass is the next body of work's.
+**The fourth pass (2026-09-17).** Over the third round's commit: one reviewer came back
+empty, the other with two, both in the memory screen's Change. A bank title typed back
+verbatim had become an edit (the unchanged check compared against the seed alone, and a bank
+title seeds nothing); `unchangedOf` counts the title itself as Morrow's. And a decision,
+recorded because the reviewer argued it both ways: an if-then the person edits and keeps is
+theirs entire, framing included — a whole-line edit is one sentence they read and submitted,
+and there is no honest way to hand half of it back to the app. That is the one place the
+app's "if" and "then I" reach the serif, and it is by their hand; the comments say so.
 
-Gate after: e2e **443/443**, cold 84/84, axe 0 across 37 screens, way-back 33 screens, 461 core / 48 ui / 8 storage, typecheck clean, lint 0 errors.
+Four passes, thirty-three findings, none refuted, the last round down to two. Dry enough:
+the next pass is the next body of work's.
+
+Gate after: e2e **446/446** (was 443; a bank title seeds nothing and typed back is not an edit), cold 84/84, axe 0 across 37 screens, way-back 33 screens, 461 core / 48 ui / 8 storage, typecheck clean, lint 0 errors.
 
 Gate after: 416 core / 48 ui / 8 storage, e2e **326/326** (was 317; the new checks seed a live virtues sitting and press both closing-screen buttons on the faults, write a Past line in crisis and change it without the card returning, and read the Interview-only caption), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
 

@@ -25,13 +25,26 @@ import { Body, Chip, Label, Rule, Statement, Studio, TextButton, TopBar, UserFie
 import { memoryLines, useMorrow } from '../src/store';
 
 /**
- * What Change starts from: their words, and both halves of an if-then with
- * the app's framing between them, so editing one half never drops the other.
+ * What Change starts from: their words. For an if-then, both halves with the
+ * app's framing between them, so editing one half never drops the other —
+ * and a line they then keep is theirs entire, framing included: a whole-line
+ * edit is one sentence the person read and submitted, and there is no honest
+ * way to hand half of it back to the app. That is the one place the app's
+ * "if" and "then I" end up in the serif, and it is by their hand.
  * A bank title is the app's words and seeds nothing.
  */
 function seedOf(l: MemoryLine): string {
   if (!l.quote || l.quoteAuthored === false) return '';
   return l.quote2 ? `if ${l.quote}, ${l.quote2Framing ?? 'then I'} ${l.quote2}` : l.quote;
+}
+
+/**
+ * What counts as the line left as Morrow had it: the seed, and — for a bank
+ * title, which seeds nothing — the title itself typed back, which is still
+ * the app's words and never becomes a quote in the serif.
+ */
+function unchangedOf(l: MemoryLine): string[] {
+  return [seedOf(l), l.quoteAuthored === false ? (l.quote ?? '') : ''].filter(Boolean);
 }
 
 const ABOUT_LABEL: Record<MemoryLine['about'], string> = {
@@ -167,9 +180,10 @@ export default function MemoryScreen() {
                             selected
                             onPress={() => {
                               // Their words, or nothing: a line left as Morrow
-                              // had it is not an edit, and the app's own
-                              // sentence never becomes a quote in the serif.
-                              if (!draft.trim() || draft.trim() === seedOf(l)) {
+                              // had it — the seed, or a bank title typed back —
+                              // is not an edit, and the app's own sentence never
+                              // becomes a quote in the serif by that route.
+                              if (!draft.trim() || unchangedOf(l).includes(draft.trim())) {
                                 setMemoryDraft(null);
                                 setChanging(null);
                                 return;
@@ -194,9 +208,10 @@ export default function MemoryScreen() {
                           testID={`memory-change-${l.key}`}
                           label="Change"
                           onPress={() => {
-                            // Seeded with their words only. A line that is all
-                            // the app's framing starts empty: Change means
-                            // "say it in your words", never "edit Morrow's".
+                            // Seeded with their words (an if-then's two halves
+                            // with the framing between, see seedOf). A line that
+                            // is all the app's framing starts empty: Change
+                            // means "say it in your words", never "edit Morrow's".
                             setChanging(l.key);
                             setMemoryDraft(seedOf(l) ? { key: l.key, text: seedOf(l) } : null);
                           }}
