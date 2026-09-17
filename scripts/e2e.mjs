@@ -1491,6 +1491,16 @@ async function main() {
     check('one time moved on its own leaves the preset', (await page.locator('[data-testid="day-type-lark"]').getAttribute('aria-checked')) !== 'true' && (await text('day-times')).includes('22:00'));
     await tap('day-ends-4');
     await page.waitForTimeout(300);
+    // The shift calendar (PRD 7.12): a day ticked keeps other hours.
+    await tap('day-shift-3');
+    await page.waitForTimeout(300);
+    check('a shift day ticked shows the hours it keeps', (await seen('day-shift-times')) && (await text('day-times')).includes('On Wednesdays'), await text('day-times'));
+    await tap('day-shift-morning-13:00');
+    await page.waitForTimeout(300);
+    check('and the shift’s morning is its own', (await text('day-times')).includes('On Wednesdays, the morning line at 13:00'), await text('day-times'));
+    await tap('day-shift-3');
+    await page.waitForTimeout(300);
+    check('unticked, every day is the same again', !(await seen('day-shift-times')) && !(await text('day-times')).includes('On Wednesdays'));
     const savedTimes = await page.evaluate(() => {
       const p = JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.profile ?? {};
       return [p.wakeTime, p.eveningTime, p.sundayHour, p.dayBoundaryHour].join(' ');

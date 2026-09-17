@@ -18,6 +18,8 @@ import {
   clockLabel,
   fewer,
   quietFor,
+  shiftDaysLabel,
+  timesFor,
   isQuiet,
   outOfQuiet,
   planNotices,
@@ -93,6 +95,26 @@ describe('quiet hours', () => {
     expect(quietFor({ wakeTime: '01:00', eveningTime: '00:15' })).toEqual(DEFAULT_QUIET);
     // Rubbish falls back too.
     expect(quietFor({ wakeTime: 'dawn', eveningTime: '21:30' })).toEqual(DEFAULT_QUIET);
+  });
+
+  it('keeps the shift’s hours on the shift’s days, and the day’s own quiet with them (PRD §7.12)', () => {
+    const profile = { wakeTime: '07:00', eveningTime: '21:30', shiftDays: [2, 3], shiftWakeTime: '13:00', shiftEveningTime: '02:00' };
+    // 2026-09-16 is a Wednesday (3); the 17th a Thursday (4).
+    expect(timesFor(profile, '2026-09-16')).toEqual({ wakeTime: '13:00', eveningTime: '02:00', shift: true });
+    expect(timesFor(profile, '2026-09-17')).toEqual({ wakeTime: '07:00', eveningTime: '21:30', shift: false });
+    // A night-shift Wednesday's quiet runs from three in the morning to one in
+    // the afternoon; the Sunday hour is a Sunday's business.
+    expect(quietFor({ ...timesFor(profile, '2026-09-16'), sundayHour: 10, onSunday: false })).toEqual({ from: 3, to: 13 });
+    expect(quietFor({ ...timesFor(profile, '2026-09-16'), sundayHour: 10, onSunday: true })).toEqual({ from: 3, to: 10 });
+    // The planner hears the shift's morning line at the shift's morning.
+    const shiftDay = timesFor(profile, '2026-09-16');
+    const notices = planNotices({ ...base, day: '2026-09-16', wakeTime: shiftDay.wakeTime, eveningTime: shiftDay.eveningTime, quiet: quietFor({ ...shiftDay, sundayHour: 10, onSunday: false }) });
+    expect(notices.find((n) => n.moment === 'wake')?.at).toBe('2026-09-16T13:00:00');
+    // No shift days: every day the same.
+    expect(timesFor({ wakeTime: '07:00', eveningTime: '21:30' }, '2026-09-16').shift).toBe(false);
+    expect(shiftDaysLabel([1, 2, 5])).toBe('Mondays, Tuesdays and Fridays');
+    expect(shiftDaysLabel([0])).toBe('Sundays');
+    expect(shiftDaysLabel([])).toBe('');
   });
 
   it('names the chronotype only when every time matches it', () => {

@@ -235,6 +235,11 @@ ${one}`;
   check("the screen's word on the line is kept (0010)", riskRow.rows[0]?.lesson_risk === 'none');
   await asRejects('and a word the screen does not use is refused', ALICE, `update public.goals set lesson_risk = 'high' where id = $1`, [goalId], 'goals_lesson_risk_check');
 
+  // ---- the shift calendar (0011): on the profile, under its policy
+  await as(ALICE, `update public.profiles set shift_days = '[2,3]'::jsonb, shift_wake_time = '13:00', shift_evening_time = '02:00' where id = $1`, [ALICE]);
+  const shifts = await as(ALICE, 'select shift_days, shift_wake_time from public.profiles where id = $1', [ALICE]);
+  check('the shift calendar is kept on the profile', JSON.stringify(shifts.rows[0]?.shift_days) === '[2,3]' && shifts.rows[0]?.shift_wake_time === '13:00');
+
   // ---- the memory profile (0009): one row, the person's alone
   await as(
     ALICE,

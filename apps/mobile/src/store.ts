@@ -20,6 +20,8 @@ import {
   LocalProvider,
   buildBookVersion,
   quietFor,
+  timesFor,
+  weekdayOf,
   reauthorDue,
   reauthorLabel,
   diffBooks,
@@ -1639,14 +1641,16 @@ const store = create<MorrowState>()(
           .pop();
         const daysSinceAnything = lastActive ? daysBetween(lastActive, day) : 0;
 
+        // The day's own hours: a shift day keeps the shift's (PRD §7.12).
+        const times = timesFor(s.profile, day);
         const planned = planNotices({
           day,
-          wakeTime: s.profile.wakeTime,
-          eveningTime: s.profile.eveningTime,
+          wakeTime: times.wakeTime,
+          eveningTime: times.eveningTime,
           sundayHour: s.profile.sundayHour,
           // Quiet hours are the person's own, not the default's: a lark's
           // morning line at 05:30 used to be moved to seven.
-          quiet: quietFor(s.profile),
+          quiet: quietFor({ ...times, sundayHour: s.profile.sundayHour, onSunday: weekdayOf(day) === 0 }),
           reauthorDay: reauthorLabelFor(s, day),
           persona: s.profile.persona,
           book: s.books[s.books.length - 1] ?? null,

@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Linking, Platform, Pressable, ScrollView, Share, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { HELPLINES, bookToText, formatDay, plural, sealedOn, type Moment, CHRONOTYPES, DAY_ENDS, EVENING_TIMES, MORNING_TIMES, SUNDAY_HOURS, chronotypeOf, clockLabel, type Profile } from '@morrow/core';
+import { HELPLINES, bookToText, formatDay, plural, sealedOn, type Moment, CHRONOTYPES, DAY_ENDS, EVENING_TIMES, MORNING_TIMES, SUNDAY_HOURS, chronotypeOf, clockLabel, type Profile, SHIFT_EVENINGS, SHIFT_MORNINGS, WEEKDAY_NAMES, WEEK_ORDER, shiftDaysLabel } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, accent, day, TopBar } from '@morrow/ui';
 import { manageSubscriptionUrl } from '../src/billing';
 import { useLatestBook, useMorrow } from '../src/store';
@@ -39,7 +39,7 @@ export default function Settings() {
   const restore = useMorrow((s) => s.restore);
   const syncNotifications = useMorrow((s) => s.syncNotifications);
   /** A time changed is a schedule changed; the notices move with it. */
-  const setTimes = (patch: Partial<Pick<Profile, 'wakeTime' | 'eveningTime' | 'sundayHour' | 'dayBoundaryHour'>>) => {
+  const setTimes = (patch: Partial<Pick<Profile, 'wakeTime' | 'eveningTime' | 'sundayHour' | 'dayBoundaryHour' | 'shiftDays' | 'shiftWakeTime' | 'shiftEveningTime'>>) => {
     setProfile(patch);
     void syncNotifications();
   };
@@ -259,7 +259,11 @@ export default function Settings() {
           <View style={{ gap: 12 }}>
             <Label>Your day</Label>
             <Body testID="day-times" style={{ fontSize: 14 }}>
-              {`The morning line at ${clockLabel(state.profile.wakeTime)}, the evening line at ${clockLabel(state.profile.eveningTime)}, the Sunday reading at ${state.profile.sundayHour}. Quiet from an hour after the evening line until the morning one.`}
+              {`The morning line at ${clockLabel(state.profile.wakeTime)}, the evening line at ${clockLabel(state.profile.eveningTime)}, the Sunday reading at ${state.profile.sundayHour}. Quiet from an hour after the evening line until the morning one.${
+                state.profile.shiftDays.length
+                  ? ` On ${shiftDaysLabel(state.profile.shiftDays)}, the morning line at ${clockLabel(state.profile.shiftWakeTime)} and the evening line at ${clockLabel(state.profile.shiftEveningTime)}.`
+                  : ''
+              }`}
             </Body>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {CHRONOTYPES.map((c) => (
@@ -304,6 +308,53 @@ export default function Settings() {
                 ))}
               </View>
               <Body style={{ fontSize: 13 }}>A night that runs past midnight still belongs to the evening before, until then.</Body>
+            </View>
+            {/*
+              The shift calendar (PRD §7.12). Some days keep other hours: the
+              days are ticked, and the hours they keep sit under them. The
+              planner, the brief and the quiet hours all ask for the day's own
+              pair, so a night-shift Tuesday hears its morning line at one in
+              the afternoon and its quiet runs through the morning.
+            */}
+            <View style={{ gap: 6 }}>
+              <Label style={{ fontSize: 11 }}>Shift days</Label>
+              <Body style={{ fontSize: 13 }}>Days that keep other hours.</Body>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {WEEK_ORDER.map((d) => (
+                  <Chip
+                    key={d}
+                    testID={`day-shift-${d}`}
+                    label={WEEKDAY_NAMES[d].slice(0, 3)}
+                    accessibilityLabel={`${WEEKDAY_NAMES[d].slice(0, 3)}, ${WEEKDAY_NAMES[d]} keeps the shift's hours`}
+                    role="checkbox"
+                    selected={state.profile.shiftDays.includes(d)}
+                    minHeight={40}
+                    onPress={() =>
+                      setTimes({
+                        shiftDays: state.profile.shiftDays.includes(d)
+                          ? state.profile.shiftDays.filter((x) => x !== d)
+                          : [...state.profile.shiftDays, d].sort((a, b) => a - b),
+                      })
+                    }
+                  />
+                ))}
+              </View>
+              {state.profile.shiftDays.length ? (
+                <View testID="day-shift-times" style={{ gap: 6, marginTop: 4 }}>
+                  <Label style={{ fontSize: 11 }}>On those days, morning</Label>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                    {SHIFT_MORNINGS.map((t) => (
+                      <Chip key={t} testID={`day-shift-morning-${t}`} label={clockLabel(t)} selected={state.profile.shiftWakeTime === t} minHeight={40} onPress={() => setTimes({ shiftWakeTime: t })} />
+                    ))}
+                  </View>
+                  <Label style={{ fontSize: 11 }}>And evening</Label>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                    {SHIFT_EVENINGS.map((t) => (
+                      <Chip key={t} testID={`day-shift-evening-${t}`} label={clockLabel(t)} selected={state.profile.shiftEveningTime === t} minHeight={40} onPress={() => setTimes({ shiftEveningTime: t })} />
+                    ))}
+                  </View>
+                </View>
+              ) : null}
             </View>
           </View>
 

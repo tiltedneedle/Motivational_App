@@ -457,6 +457,23 @@ describe('the Past and Present volumes on the wire', () => {
     expect(fromOlder.profile.declaredAt).toBeNull();
   });
 
+  it('carries the shift calendar, and reads its absence as every day the same', () => {
+    const shifted = { ...bundle, profile: { ...bundle.profile, shiftDays: [2, 3], shiftWakeTime: '13:00', shiftEveningTime: '02:00' } };
+    const tables = toRows(shifted, USER, 'UTC');
+    const byTable = Object.fromEntries(tables.map((t) => [t.table, t.rows]));
+    expect(byTable.profiles![0]!.shift_days).toEqual([2, 3]);
+    expect(byTable.profiles![0]!.shift_wake_time).toBe('13:00');
+    const back = fromRows(byTable as Parameters<typeof fromRows>[0], bundle.profile);
+    expect(back.profile.shiftDays).toEqual([2, 3]);
+    expect(back.profile.shiftEveningTime).toBe('02:00');
+    const older = { ...byTable, profiles: [Object.fromEntries(Object.entries(byTable.profiles![0]!).filter(([k]) => !k.startsWith('shift_')))] };
+    const fromOlder = fromRows(older as Parameters<typeof fromRows>[0], bundle.profile);
+    expect(fromOlder.profile.shiftDays).toEqual([]);
+    // A row with rubbish in the column keeps only real weekdays.
+    const odd = { ...byTable, profiles: [{ ...byTable.profiles![0]!, shift_days: [1, 9, 'x', 6] }] };
+    expect(fromRows(odd as Parameters<typeof fromRows>[0], bundle.profile).profile.shiftDays).toEqual([1, 6]);
+  });
+
   it('carries a goal let go with the line it taught, and reads a goal from before 0008 as still in play', () => {
     const g0 = bundle.goals[0]!;
     const letGo = {

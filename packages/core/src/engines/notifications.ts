@@ -56,7 +56,7 @@ export const DEFAULT_QUIET: QuietHours = { from: 22, to: 7 };
  * the morning to 05:30 hears the morning line at 05:30 rather than at seven,
  * and an owl's 22:30 evening line is not pushed to the next morning.
  */
-export function quietFor(times: { wakeTime: string; eveningTime: string; sundayHour?: number }): QuietHours {
+export function quietFor(times: { wakeTime: string; eveningTime: string; sundayHour?: number; onSunday?: boolean }): QuietHours {
   const wake = hourOf(times.wakeTime);
   const evening = hourOf(times.eveningTime);
   if (wake === null || evening === null) return DEFAULT_QUIET;
@@ -66,7 +66,12 @@ export function quietFor(times: { wakeTime: string; eveningTime: string; sundayH
   // A Sunday hour before the morning line ends the quiet earlier; one after
   // it is outside the quiet already; one that is not an hour at all is
   // ignored. It only ever shortens the window, never to nothing.
-  const sunday = times.sundayHour !== undefined && Number.isInteger(times.sundayHour) && times.sundayHour >= 0 && times.sundayHour <= 23 ? times.sundayHour : wake;
+  // The Sunday reading is only sent on a Sunday, so its hour shortens the
+  // quiet on a Sunday alone; a night-shift Wednesday keeps its whole morning.
+  const sunday =
+    times.onSunday !== false && times.sundayHour !== undefined && Number.isInteger(times.sundayHour) && times.sundayHour >= 0 && times.sundayHour <= 23
+      ? times.sundayHour
+      : wake;
   // Only a Sunday hour that falls inside the window can end it early; one
   // outside it (before an after-midnight evening line, or after the morning)
   // leaves the window alone, so it can never wrap round over the morning.
@@ -97,6 +102,48 @@ export type ChronotypeId = (typeof CHRONOTYPES)[number]['id'];
 /** Which chronotype the times match exactly, if any. */
 export function chronotypeOf(times: { wakeTime: string; eveningTime: string; sundayHour: number }): ChronotypeId | null {
   return CHRONOTYPES.find((c) => c.wakeTime === times.wakeTime && c.eveningTime === times.eveningTime && c.sundayHour === times.sundayHour)?.id ?? null;
+}
+
+/**
+ * The shift calendar (PRD §7.12). A person on shifts keeps other hours on
+ * some weekdays; the planner, the brief and the quiet all ask for the day's
+ * own pair rather than the profile's one pair.
+ */
+export interface DayTimes {
+  wakeTime: string;
+  eveningTime: string;
+  /** Whether this day keeps the shift's hours. */
+  shift: boolean;
+}
+
+export function weekdayOf(day: string): number {
+  return new Date(`${day}T00:00:00Z`).getUTCDay();
+}
+
+export function timesFor(
+  profile: { wakeTime: string; eveningTime: string; shiftDays?: readonly number[]; shiftWakeTime?: string; shiftEveningTime?: string },
+  day: string,
+): DayTimes {
+  const shift = (profile.shiftDays ?? []).includes(weekdayOf(day));
+  if (shift && profile.shiftWakeTime && profile.shiftEveningTime) {
+    return { wakeTime: profile.shiftWakeTime, eveningTime: profile.shiftEveningTime, shift: true };
+  }
+  return { wakeTime: profile.wakeTime, eveningTime: profile.eveningTime, shift: false };
+}
+
+export const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
+/** Monday first, the way a week is written down. */
+export const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0] as const;
+/** The shift's hours: a morning that may be a midday, an evening that may be a small hour. */
+export const SHIFT_MORNINGS = ['05:30', '07:00', '09:00', '11:00', '13:00', '15:00', '17:00'] as const;
+export const SHIFT_EVENINGS = ['20:00', '22:00', '23:00', '00:30', '02:00', '04:00'] as const;
+
+/** "Mondays, Tuesdays and Fridays", in the week's order. */
+export function shiftDaysLabel(days: readonly number[]): string {
+  const names = WEEK_ORDER.filter((d) => days.includes(d)).map((d) => `${WEEKDAY_NAMES[d]}s`);
+  if (names.length === 0) return '';
+  if (names.length === 1) return names[0]!;
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }
 
 export const MORNING_TIMES = ['05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00'] as const;

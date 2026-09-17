@@ -579,6 +579,13 @@ export const Profile = z.object({
   eveningTime: z.string(),
   dayBoundaryHour: z.number().int().min(0).max(6),
   sundayHour: z.number().int(),
+  /**
+   * The shift calendar (PRD §7.12): the weekdays (0 = Sunday) that keep
+   * other hours, and the hours they keep. Empty means every day is the same.
+   */
+  shiftDays: z.array(z.number().int().min(0).max(6)).default([]),
+  shiftWakeTime: z.string().default('13:00'),
+  shiftEveningTime: z.string().default('23:00'),
   soundOn: z.boolean(),
   hapticsOn: z.boolean(),
   reducedMotion: z.boolean(),
@@ -646,6 +653,9 @@ export const DEFAULT_PROFILE: Profile = {
   eveningTime: '21:30',
   dayBoundaryHour: 3,
   sundayHour: 10,
+  shiftDays: [],
+  shiftWakeTime: '13:00',
+  shiftEveningTime: '23:00',
   soundOn: true,
   hapticsOn: true,
   reducedMotion: false,

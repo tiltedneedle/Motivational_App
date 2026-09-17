@@ -26,6 +26,7 @@ import {
   reauthorDue,
   reauthorLabel,
   clockLabel,
+  timesFor,
 } from '@morrow/core';
 import {
   Body,
@@ -442,8 +443,8 @@ export default function Today() {
           {book && settledIn && state.profile.todayIntroSeen && !state.profile.notificationsAsked && canNotify ? (
             <View testID="today-notify-primer" style={{ marginTop: 16, backgroundColor: day.surface2, borderRadius: radius.card, padding: 18, gap: 10 }}>
               <Label style={{ color: accent.coralText }}>Two notes a day, if you want them</Label>
-              <Body style={{ color: day.ink }}>{`${clockLabel(state.profile.wakeTime)} — your first move, in your words.`}</Body>
-              <Body style={{ color: day.ink }}>{`${clockLabel(state.profile.eveningTime)} — a line to close the day.`}</Body>
+              <Body style={{ color: day.ink }}>{`${clockLabel(timesFor(state.profile, today).wakeTime)} — your first move, in your words.`}</Body>
+              <Body style={{ color: day.ink }}>{`${clockLabel(timesFor(state.profile, today).eveningTime)} — a line to close the day.`}</Body>
               <Body style={{ fontSize: 13 }}>Nothing else, ever. The times are yours to change under You.</Body>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                 <Chip testID="today-notify-yes" label="Yes, at those times" onPress={() => void allowNotifications()} />

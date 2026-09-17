@@ -49,6 +49,15 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 46. **The shift calendar (§7.12), 2026-09-17.** The weekdays that keep other
+      hours, and the hours they keep, under Your day: ticked days, then the
+      shift's morning (a midday, if that is the morning) and evening (a small
+      hour, if that is the evening). `timesFor(profile, day)` is the day's own
+      pair, and the planner, the brief, the quiet hours and Today's primer all
+      ask for it; a night-shift Wednesday hears its morning line at one in the
+      afternoon and its quiet runs through the morning. Migration 0011, applied
+      live. The Sunday hour shortens the quiet on a Sunday only, which the
+      shift test found it had not been.
 - [x] 45. **The review of the day's five commits, 2026-09-17.** One adversarial sweep
       over the diff since 5a7de00 (five reviewers, a skeptic per finding, a
       completeness critic): 14 findings confirmed, 12 gaps. All fixed, the two
@@ -1897,6 +1906,29 @@ the next pass is the next body of work's.
 
 Gate after: e2e **446/446** (was 443; a bank title seeds nothing and typed back is not an edit), cold 84/84, axe 0 across 37 screens, way-back 33 screens, 461 core / 48 ui / 8 storage, typecheck clean, lint 0 errors.
 
+**The shift calendar (2026-09-17).** §7.12's list of settings ends "day boundary, chronotype,
+shift calendar"; the entry above declared the last of them out of scope. It is a small
+feature after all: three fields on the profile — the weekdays that keep other hours, and
+the two hours they keep — and one function, `timesFor(profile, day)`, that every reader of
+the single pair now asks instead. The planner plans the day's own morning and evening
+lines; the quiet hours are the day's own, so a night-shift day's quiet runs from an hour
+after its small-hours evening line to its midday morning; Today's primer names today's
+times; the memory profile says which days keep which hours. Under Your day: the seven days
+as checkboxes in the week's order, and, once one is ticked, the shift's morning and evening
+as rows of chips whose hours reach where a shift's do. Migration 0011 (three columns on the
+profile, under its policy), applied live; the sync carries them and reads their absence as
+every day the same, keeping only real weekdays from a row that carries anything else.
+
+Found on the way: the Sunday hour shortened the quiet on every day of the week, so a
+night-shift Wednesday's morning quiet ended at ten. `quietFor` takes `onSunday` now and
+the store passes the day's weekday; the reading is a Sunday's business.
+
+Still not built, and now the only §7.12 item that is not: strings externalized for a second
+language, which is a mechanical pass over ninety files with nothing a person can see until
+there is a second language to show.
+
+Gate after: e2e **449/449** (was 446; a shift day ticked shows the hours it keeps, the shift's morning is its own, unticked every day is the same), cold 84/84, axe 0 across 37 screens, way-back 33 screens, migration **68 checks** with 0011, the live account round-trip **46/46**, 463 core / 48 ui / 8 storage, typecheck clean, lint 0 errors.
+
 Gate after: 416 core / 48 ui / 8 storage, e2e **326/326** (was 317; the new checks seed a live virtues sitting and press both closing-screen buttons on the faults, write a Past line in crisis and change it without the card returning, and read the Interview-only caption), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
 
 Gate after: 416 core / 48 ui / 8 storage, e2e **317/317** (was 311; the new checks relaunch cold mid-Interview and resume, press Begin then Back on the Past doorway and find no sitting behind it, and reread a written Present from Today), axe 0 across 33 screens, way-back 30 screens, typecheck clean, lint 0 errors.
@@ -2100,7 +2132,7 @@ program's actual prompt text by someone with a licensed copy.
 - A model endpoint (`pnpm sb secrets set LLM_BASE_URL=… LLM_API_KEY=… LLM_MODEL=…`, any
   OpenAI-compatible provider, or `ANTHROPIC_API_KEY`), a fal.ai key, RevenueCat keys: needed
   to test real providers. Everything runs on local fallbacks without them. The Supabase
-  project itself is connected and live (schema through 0010, four functions, the account
+  project itself is connected and live (schema through 0011, four functions, the account
   round-trip in `pnpm test:account`).
 - Supabase Pro, or custom SMTP, before the six-digit-code email template can be pushed; the
   free tier refuses template changes, so the email carries a link and the app signs in from it.
@@ -2111,7 +2143,6 @@ program's actual prompt text by someone with a licensed copy.
 - Crash reporting: Sentry's React Native SDK is a native dependency and a DSN; not added until there is a project to send to. Analytics is a seam already (PostHog key).
 - Sound on the seal: an asset decision. Haptics are in; a placeholder click is worse than silence.
 - The privacy policy and terms (§12): nothing in the app links to them because there is no text and no URL yet; a placeholder page would be worse than the gap. One row in Settings and one on Consent, the day the client's URL exists.
-- The shift calendar (§7.12): per-day wake and evening times. The planner takes one pair; a per-weekday override on the profile is a feature of its own and is not started.
 
 ## Decisions log
 - 2026-09-09: start. Stones via react-native-svg (works on web for Playwright tests) rather than Skia; Skia can replace later for grain.

@@ -23,7 +23,7 @@ import type { BookVersion, DaySummary, Goal, GoalAnalysis, MemoryEdit, Profile, 
 import { formatDay, ifThenOf, ordinal, plural, sealedOn, thenHalf } from '../ids';
 import { ANALYSIS_TITLES } from './framings';
 import { detectReturns } from './consistency';
-import { clockLabel } from './notifications';
+import { clockLabel, shiftDaysLabel } from './notifications';
 import { isQuotable } from './safety';
 
 export type MemoryAbout = 'you' | 'your goals' | 'your lines' | 'the Book' | 'your days';
@@ -101,6 +101,9 @@ export function buildMemory(input: MemoryInput): MemoryLine[] {
     'you.times',
     `Your morning is ${clockLabel(profile.wakeTime)}, your evening ${clockLabel(profile.eveningTime)}, and a day ends at ${hourInWords(profile.dayBoundaryHour)}.`,
   );
+  if (profile.shiftDays?.length) {
+    you('you.shifts', `On ${shiftDaysLabel(profile.shiftDays)} your morning is ${clockLabel(profile.shiftWakeTime)} and your evening ${clockLabel(profile.shiftEveningTime)}.`);
+  }
   if (profile.witnessName?.trim()) you('you.witness', 'Your witness is', profile.witnessName.trim());
 
   // ---- your goals, and the lines under each
