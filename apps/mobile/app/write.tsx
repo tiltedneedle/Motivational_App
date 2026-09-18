@@ -361,13 +361,12 @@ export default function Write() {
                     })();
                   }}
                 />
-                <Label style={{ color: night.ink3, textAlign: 'center' }}>Close it whenever you are done; every word is kept.</Label>
                 <Label style={{ color: night.ink3, textAlign: 'center' }}>
                   {mode === 'type'
-                    ? 'Forward only: the page keeps what you type.'
+                    ? 'Forward only: the page keeps what you type. Close it whenever you are done.'
                     : Platform.OS === 'web'
-                      ? 'Saying it uses the microphone and your browser’s own recogniser (Chrome, Edge and Safari have one). Nothing is recorded. Talking counts as writing.'
-                      : 'Saying it uses the microphone and your phone’s own recogniser. Nothing is recorded. Talking counts as writing.'}
+                      ? 'Your browser’s own recogniser; nothing is recorded. Talking counts as writing. Close it whenever you are done.'
+                      : 'Your phone’s own recogniser; nothing is recorded. Talking counts as writing. Close it whenever you are done.'}
                 </Label>
               </>
             )}

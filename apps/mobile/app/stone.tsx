@@ -334,7 +334,14 @@ export default function StoneScreen() {
           ) : null}
 
           <View style={{ gap: 6 }}>
-            <Label>{before ? 'Now, in your words' : 'In your words'}</Label>
+            {/*
+              A tapped chip is a way in, not an answer, and the label says so
+              at the moment it matters — a person who had tapped one and
+              found the button still waiting read it as a form left blank.
+            */}
+            <Label testID="stone-line-label">
+              {framingId && !line.trim() ? 'That is the way in. Now the line, in your words' : before ? 'Now, in your words' : 'In your words'}
+            </Label>
             <UserField
               testID="stone-line"
               labelHidden

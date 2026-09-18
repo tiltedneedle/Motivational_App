@@ -15,9 +15,9 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 1. packages/core: domain model, stores (zustand + persist), engines
 - [x] 2. packages/ui: Studio tokens, Stone/Socket/Ring, HoldBar, Chip, Field, Sheet, text primitives
 - [x] 3. apps/mobile screens (all 16 routes)
-- [x] 4. Tests, as of 2026-09-17: 470 core + 48 ui + 8 storage unit tests, the eval harness
-      (567 checks over forty profiles and two hundred labelled lines), 68 real-Postgres
-      checks, **462 Playwright e2e checks**, 84 cold-open checks, axe 0 across 37 screens,
+- [x] 4. Tests, as of 2026-09-18: 483 core + 48 ui + 8 storage unit tests, the eval harness
+      (647 checks over forty profiles and two hundred labelled lines), 68 real-Postgres
+      checks, **488 Playwright e2e checks**, 84 cold-open checks, axe 0 across 37 screens,
       the account round-trip 46/46 against the live project — all green, all in `pnpm verify`
 - [x] 5. supabase/: migrations with RLS and three structural authorship guards, edge functions
 - [x] 6. Hardening: the eight-lens audit's findings, worst first (see below) — 95 of 95
@@ -50,6 +50,20 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 53. **The web shell (§7.14, §9.1), 2026-09-18.** `apps/mobile/public/index.html`
+      replaces Expo's template: the studio ground as the first paint in both
+      schemes (no white flash on a dark phone), `viewport-fit=cover`, a
+      description, and the manifest and icons that let a phone keep the site
+      on its home screen as an app (standalone, portrait, 192/512/maskable and
+      an Apple touch icon, generated from the app icon). The two static
+      servers serve `.webmanifest` with its type. Walked: the manifest loads
+      as `application/manifest+json`, the icons answer, both theme-colours are
+      in the head, the body is the ground before the bundle. Also today: the
+      doorway's eyebrow is "The Fifteen" (it wrapped), its two notes are one,
+      and a tapped chip on a stone says "That is the way in. Now the line, in
+      your words" while the button still waits — the thing a first user read
+      as a form left blank. The whole walk, frame by frame (`pnpm journey`,
+      262 frames), read through: nothing broken on any screen.
 - [x] 52. **Done for now (§7.2), 2026-09-18.** The writing room's floor is a length,
       not a lock. Before the ten minutes the only door was "Leave for now", which
       kept a draft and went nowhere, behind a countdown ("N min before this

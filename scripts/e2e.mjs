@@ -423,6 +423,19 @@ async function main() {
 
     // ---- the five stones
     check('stone screen', await seen('screen-stone'));
+    // A chip is a way in, not an answer, and the label says so the moment one
+    // is tapped with nothing written: the button still waits for the line.
+    {
+      const chip = await page.locator('[data-testid^="framing-"]').first().getAttribute('data-testid');
+      if (chip) {
+        await tap(chip);
+        await page.waitForTimeout(200);
+        check('a tapped chip says it is the way in, not the line', (await text('stone-line-label')).toLowerCase().includes('the way in'), await text('stone-line-label'));
+        check('and the button still asks for the line', (await text('stone-seat')).toLowerCase().includes('write your line'), await text('stone-seat'));
+        await tap(chip); // off again; the walk fills the line below
+        await page.waitForTimeout(150);
+      }
+    }
     const seenKinds = [];
     for (let i = 0; i < 12; i++) {
       if (!(await seen('screen-stone'))) break;

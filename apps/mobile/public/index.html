@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="%LANG_ISO_CODE%">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <!--
+      The web shell (Expo reads this in place of its own template). What it
+      adds over the default: the studio ground as the first paint in both
+      schemes rather than a white flash, the manifest and icons that let a
+      phone keep the site on its home screen as an app, and `viewport-fit`
+      so the studio runs under an iPhone's notch when it does.
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
+    <meta name="description" content="Write your future in your own words, then live by it, one ordinary day at a time." />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F1F0EC" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#17181C" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Morrow" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <title>%WEB_TITLE%</title>
+    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      /* These styles make the body full-height */
+      html,
+      body {
+        height: 100%;
+      }
+      /* These styles disable body scrolling if you are using <ScrollView> */
+      body {
+        overflow: hidden;
+        /* The ground, before the bundle arrives: no white flash on a dark phone. */
+        background: #f1f0ec;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          background: #17181c;
+        }
+      }
+      /* These styles make the root element full-height */
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+  </head>
+
+  <body>
+    <noscript>Morrow needs JavaScript turned on to run.</noscript>
+    <!-- The root element for your Expo app. -->
+    <div id="root"></div>
+  </body>
+</html>

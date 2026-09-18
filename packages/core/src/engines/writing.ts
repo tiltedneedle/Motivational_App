@@ -35,7 +35,7 @@ export function nextNudge(previous: string | null): string {
 
 export const DOORWAY: Record<WritingKind, { eyebrow: string; prompt: string; note: string }> = {
   ideal: {
-    eyebrow: 'The Fifteen · the ideal',
+    eyebrow: 'The Fifteen',
     prompt:
       "It is three to five years from now and things went as well as they could. You looked after yourself. Tell me what a Tuesday looks like: where you wake, what you do, who is there, what you have made, what is no longer a problem.",
     note: 'Write or talk. Spelling can wait. Keep moving forward. If you run out, say the next true thing.',
