@@ -17,7 +17,7 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 3. apps/mobile screens (all 16 routes)
 - [x] 4. Tests, as of 2026-09-18: 483 core + 48 ui + 8 storage unit tests, the eval harness
       (647 checks over forty profiles and two hundred labelled lines), 68 real-Postgres
-      checks, **488 Playwright e2e checks**, 84 cold-open checks, axe 0 across 37 screens,
+      checks, **496 Playwright e2e checks**, 84 cold-open checks, axe 0 across 37 screens,
       the account round-trip 46/46 against the live project — all green, all in `pnpm verify`
 - [x] 5. supabase/: migrations with RLS and three structural authorship guards, edge functions
 - [x] 6. Hardening: the eight-lens audit's findings, worst first (see below) — 95 of 95
@@ -50,6 +50,25 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 54. **Offline, awake, and walking (§7.5, §10.4), 2026-09-18.** A service
+      worker (`apps/mobile/public/sw.js`): the page is network-first so a new
+      deploy is picked up on the next open, the hashed statics, icons and
+      manifest are cache-first, and the app opens with no connection once it
+      has loaded once — checked with the server stopped. Playwright's walks
+      skip the worker (`navigator.webdriver`), so the tests see the server,
+      not a cache. The practice runner keeps the screen awake (§7.5: "the
+      runner keeps the screen awake"), and so does a room being spoken into —
+      nobody is touching the screen, and a phone that locked would take the
+      microphone with it. `expo-keep-awake` behind one component
+      (`KeepAwake`), mounted for the runner and for a spoken sitting only;
+      on the web it asks for the lock again when the tab comes back, which
+      the module alone does not. "Walk and say it" is now a different room
+      from "Say it": the words are set at 24/36 for a phone held at arm's
+      length. e2e: the lock is scripted and counted — the runner holds one
+      and lets it go on the way out, a spoken room holds one and Done for
+      now lets it go, a typed room asks for none, the walk holds one and
+      sets its words larger, and its doorway says so ("The screen stays on and
+      the words are set large").
 - [x] 53. **The web shell (§7.14, §9.1), 2026-09-18.** `apps/mobile/public/index.html`
       replaces Expo's template: the studio ground as the first paint in both
       schemes (no white flash on a dark phone), `viewport-fit=cover`, a
@@ -283,29 +302,29 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 
 ## In flight
 
-Nothing is half-done. Four audits are closed — 95, 37, 47, then 43 — and the
-app has been walked end to end in a browser on the built bundle rather than
-only tested. What is left needs a machine or a key this one does not have;
-see "Next steps".
+Nothing is half-done. Four audits are closed — 95, 37, 47, then 43 — the
+eval harness has been run and reviewed, and the app has been walked end to
+end in a browser on the built bundle, frame by frame, rather than only
+tested. What is left needs a machine or a key this one does not have; see
+"Next steps".
 
-- The tree is green and committed: `pnpm verify` runs the toolchain guard,
-  typecheck, lint, 374 core tests, 48 ui tests (contrast, the quoted-span
-  split, the type that fits a long line), 8 storage tests, the edge-function
-  guards, the SQL structural guards, 37 checks against a real Postgres, the
-  serif authorship guard, the way-back guard, the accessibility lint (13
-  rules), the web build (offline), 191 end-to-end checks and the axe pass
-  over 26 screens. Against the real
-  project: `pnpm test:account`, 30 more.
+- The tree is green and committed. `pnpm verify` runs the toolchain guard,
+  the date guard, the copy guard, typecheck, lint, 483 core tests, 48 ui
+  tests, 8 storage tests, the eval harness (647 checks), the edge-function
+  guards, the SQL structural guards, 68 checks against a real Postgres, the
+  serif authorship guard, the way-back guard (33 screens), the web build
+  (offline), 496 end-to-end checks, the axe pass over 37 screens and 84
+  cold-open checks. Against the real project: `pnpm test:account`, 46 more.
 - **The account's spend limit is the month's, not the run's.** The fourth
   audit was ten agents and 1.59M tokens and tripped the monthly limit with
-  two verifiers still running; their lenses' findings were verified by hand.
-  No more fan-outs this month — the remaining loop is solo.
-- The account is wired end to end but has never talked to a real Supabase:
-  `hasSupabase` is false in every build so far, so the account screen, the
-  Settings row and the launch-time push are all present and all dormant. The
-  moment `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` exist
-  they come on, and the edge functions are called through the same host with
-  the session's token.
+  two verifiers still running; a review workflow did it again on 2026-09-17.
+  No more fan-outs; the loop is solo, and findings are verified by hand.
+- The account is wired end to end and has talked to the real project: the
+  round-trip (`pnpm test:account`) signs in, writes, reads back and deletes
+  against the live Supabase. In every test build `hasSupabase` is false, so
+  the account screen, the Settings row and the launch-time push are present
+  and dormant until `EXPO_PUBLIC_SUPABASE_URL` and
+  `EXPO_PUBLIC_SUPABASE_ANON_KEY` exist.
 - Three findings were **withdrawn, not fixed**: buildPlan does not construct
   plans its own validator rejects (verified across 560 combinations of strategy
   line, weekday and target date), and splitFirstMoves no longer eats the first
@@ -2524,7 +2543,7 @@ program's actual prompt text by someone with a licensed copy.
 
 Everything that can be done on this machine, without a key, is done. Seven
 audits are closed (the last four on the three volumes, each adversarially
-verified), the built app is walked end to end by 311 checks, and the account
+verified), the built app is walked end to end by 496 checks, and the account
 round-trips against the live project. What remains needs either hardware, a
 credential, or a product call.
 

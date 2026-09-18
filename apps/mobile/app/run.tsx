@@ -39,6 +39,7 @@ import {
   night,
 } from '@morrow/ui';
 import { useMorrow } from '../src/store';
+import { KeepAwake } from '../src/components/KeepAwake';
 
 const TICK_MS = 250;
 
@@ -124,6 +125,8 @@ export default function Runner() {
 
   return (
     <Studio dark testID="screen-run">
+      {/* PRD §7.5: the runner keeps the screen awake. */}
+      <KeepAwake tag="run" />
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22, justifyContent: 'space-between' }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12 }}>
           <TextButton

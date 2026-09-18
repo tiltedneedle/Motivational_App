@@ -32,6 +32,7 @@ import { Body, Chip, InkButton, Label, Question, Ring, Statement, Stone, Studio,
 import { useGoals, latestText, useMorrow } from '../src/store';
 import { useFirstRunStep } from '../src/analytics';
 import { dictation } from '../src/dictation';
+import { KeepAwake } from '../src/components/KeepAwake';
 
 const TICK_MS = 250;
 
@@ -364,9 +365,9 @@ export default function Write() {
                 <Label style={{ color: night.ink3, textAlign: 'center' }}>
                   {mode === 'type'
                     ? 'Forward only: the page keeps what you type. Close it whenever you are done.'
-                    : Platform.OS === 'web'
-                      ? 'Your browser’s own recogniser; nothing is recorded. Talking counts as writing. Close it whenever you are done.'
-                      : 'Your phone’s own recogniser; nothing is recorded. Talking counts as writing. Close it whenever you are done.'}
+                    : `${Platform.OS === 'web' ? 'Your browser’s' : 'Your phone’s'} own recogniser; nothing is recorded. Talking counts as writing.${
+                        mode === 'walk' ? ' The screen stays on and the words are set large.' : ''
+                      } Close it whenever you are done.`}
                 </Label>
               </>
             )}
@@ -486,6 +487,12 @@ export default function Write() {
 
   return (
     <Studio dark testID="screen-write">
+      {/*
+        A room being spoken into is a room nobody is touching: on a phone
+        the screen would lock and take the microphone with it. Walking, the
+        phone is in a hand at arm's length, so the words are set larger.
+      */}
+      {mode !== 'type' ? <KeepAwake tag="write" /> : null}
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
         {/*
           Leaving mid-sitting keeps the draft — the autosave already does, and
@@ -556,8 +563,8 @@ export default function Write() {
               accessibilityLabel="Your writing"
               style={{
                 fontFamily: fonts.serif,
-                fontSize: 19,
-                lineHeight: 29,
+                fontSize: mode === 'walk' ? 24 : 19,
+                lineHeight: mode === 'walk' ? 36 : 29,
                 color: '#F3E6D3',
                 minHeight: 260,
                 textAlignVertical: 'top',

@@ -53,5 +53,14 @@
     <noscript>Morrow needs JavaScript turned on to run.</noscript>
     <!-- The root element for your Expo app. -->
     <div id="root"></div>
+    <script>
+      // Offline after the first load (sw.js). Not under an automated browser:
+      // the walks must see the server, not a cache.
+      if ('serviceWorker' in navigator && !navigator.webdriver) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('/sw.js').catch(function () {});
+        });
+      }
+    </script>
   </body>
 </html>

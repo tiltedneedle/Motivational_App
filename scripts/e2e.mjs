@@ -104,6 +104,33 @@ async function main() {
   const context = await browser.newContext({ viewport: { width: 420, height: 900 } });
   const page = await context.newPage();
 
+  // The screen wake lock, scripted: the runner and a spoken room must ask
+  // for one (PRD §7.5) and give it back on the way out. Headless Chromium
+  // may or may not carry the real API; this one records every ask.
+  await page.addInitScript(() => {
+    window.__wake = { asked: 0, held: 0 };
+    Object.defineProperty(navigator, 'wakeLock', {
+      configurable: true,
+      value: {
+        request: async () => {
+          window.__wake.asked += 1;
+          window.__wake.held += 1;
+          const sentinel = { type: 'screen', released: false, onrelease: null };
+          sentinel.release = async () => {
+            if (sentinel.released) return;
+            sentinel.released = true;
+            window.__wake.held -= 1;
+            if (sentinel.onrelease) sentinel.onrelease({});
+          };
+          sentinel.addEventListener = () => {};
+          sentinel.removeEventListener = () => {};
+          return sentinel;
+        },
+      },
+    });
+  });
+  const wake = () => page.evaluate(() => window.__wake);
+
   const pageErrors = [];
   page.on('pageerror', (e) => pageErrors.push(String(e.message).slice(0, 300)));
 
@@ -940,6 +967,7 @@ async function main() {
       const recs = () => page.evaluate(() => window.__recs.length);
       const lastStarted = () => page.evaluate(() => window.__recs[window.__recs.length - 1]?.started === true);
       check('Say it opens the room listening, with one recogniser', (await text('write-mic')).toLowerCase() === 'listening' && (await recs()) === 1, `chip "${await text('write-mic')}" · ${await recs()} recognisers`);
+      check('a spoken room holds the screen awake', (await wake()).held === 1, JSON.stringify(await wake()));
       await page.evaluate(() => window.__hear([['I want to run', false]]));
       await page.waitForTimeout(200);
       check('a stretch still being heard is on the page', (await spoken()) === 'I want to run', await spoken());
@@ -972,8 +1000,35 @@ async function main() {
       await page.clock.runFor(600);
       await page.waitForTimeout(600);
       check('and on again', (await lastStarted()) && (await text('write-mic')).toLowerCase() === 'listening', await text('write-mic'));
+      // Ended the way a person ends it, so the draft is not waiting at the
+      // next doorway — and the screen is let go with the room.
+      await tap('write-done-early');
+      await page.waitForTimeout(400);
+      check('a spoken sitting can be closed with Done for now', await seen('screen-write-closed'));
+      check('and closing the room lets the screen sleep', (await wake()).held === 0, JSON.stringify(await wake()));
+      await tap('write-continue');
+      await page.waitForTimeout(800);
     } else {
       check('Say it is offered on the doorway', false);
+    }
+
+    // Walk and say it: the same room, the words set larger for a phone held
+    // at arm's length, and the lock on the screen just the same.
+    await page.goto(`${BASE}/write?kind=addition`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(400);
+    if (await seen('mode-walk')) {
+      await tap('mode-walk');
+      await page.waitForTimeout(200);
+      check('the doorway says what the walk changes', (await page.locator('body').innerText()).toLowerCase().includes('the screen stays on and the words are set large'));
+      await tap('write-begin');
+      await page.clock.runFor(800);
+      await page.waitForTimeout(600);
+      const size = await page.locator('[data-testid="write-input"]').evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+      check('walking, the words are set larger than sitting', size >= 24, `font-size ${size}px`);
+      check('and the walk holds the screen awake', (await wake()).held === 1, JSON.stringify(await wake()));
+    } else {
+      check('Walk and say it is offered on the doorway', false);
     }
 
     await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
@@ -1074,6 +1129,7 @@ async function main() {
         await stone.click();
         await page.waitForTimeout(600);
         check('the runner opens', await seen('screen-run'));
+        check('the runner keeps the screen awake', (await wake()).held === 1, JSON.stringify(await wake()));
 
         if (await seen('screen-run')) {
           const stepText = await text('run-step');
@@ -1099,6 +1155,7 @@ async function main() {
           await tap('run-close');
           await page.waitForTimeout(600);
           check('finishing a run returns to today', await seen('screen-today'));
+          check('and lets the screen sleep again', (await wake()).held === 0, JSON.stringify(await wake()));
         }
       }
     }
