@@ -33,31 +33,39 @@ allowBuilds:
 
 # pnpm 11 waits a day before it will install a freshly published version, as
 # a guard against a poisoned release. Expo ships its SDK patches in one go and
-# `expo doctor` wants them the day they land, so `expo install --fix` lists
-# them here. Entries are harmless once they are older than the wait.
+# `expo doctor` wants them the day they land, so the install lists them here
+# (pnpm appends the entries itself when the picks are approved). One entry per
+# package: pnpm reads the first rule whose name matches and stops, so a second
+# entry for the same package is never seen — which is how a day-old
+# `expo@57.0.22` once shadowed `expo@57.0.24` and every install failed the
+# lockfile check. `minimumReleaseAgeExcludePrune` drops the entries the
+# lockfile no longer resolves, so the list does not grow into that again.
+minimumReleaseAgeExcludePrune: true
 minimumReleaseAgeExclude:
-  - '@expo/cli@57.0.24'
+  - '@expo/cli@57.0.26'
+  - '@expo/metro-runtime@57.0.16'
   - '@expo/fingerprint@0.20.13'
   - '@expo/prebuild-config@57.0.16'
-  - expo-asset@57.0.17
-  - expo-constants@57.0.18
+  - expo-asset@57.0.18
+  - expo-constants@57.0.19
   - expo-file-system@57.0.7
   - expo-font@57.0.4
   - expo-keep-awake@57.0.2
   - expo-modules-autolinking@57.0.13
   - expo-modules-core@57.0.18
-  - expo@57.0.22
-  - '@expo/ui@57.0.18'
+  - expo@57.0.24
+  - '@expo/ui@57.0.19'
   - expo-apple-authentication@57.0.2
   - expo-application@57.0.3
   - expo-glass-effect@57.0.3
   - expo-haptics@57.0.3
   - expo-linking@57.0.10
-  - expo-notifications@57.0.18
+  - expo-notifications@57.0.20
   - expo-print@57.0.2
-  - expo-router@57.0.21
-  - expo-sharing@57.0.19
+  - expo-router@57.0.22
+  - expo-sharing@57.0.21
   - expo-splash-screen@57.0.9
   - expo-symbols@57.0.3
   - expo-system-ui@57.0.4
   - expo-media-library@57.0.5
+  - expo-image-picker@57.0.19

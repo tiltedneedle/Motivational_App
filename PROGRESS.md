@@ -2642,3 +2642,10 @@ Worth keeping on the next resume, because each cost an hour to learn:
 - **After a fan-out, check `git status` and file mtimes before staging.** The
   first audit's subagents edited twelve product files they had been told not to
   touch.
+- **pnpm reads the first `minimumReleaseAgeExclude` rule whose name matches and
+  stops.** A second entry for the same package is never seen. pnpm appends the
+  entries itself when a fresh pick is approved, so after two rounds of Expo
+  patches `expo@57.0.22` sat above `expo@57.0.24` and every install — even
+  `--frozen-lockfile` — failed the lockfile policy check for eight packages
+  that were all, by name, on the list. One entry per package, and
+  `minimumReleaseAgeExcludePrune` so the list cannot grow into it again.
