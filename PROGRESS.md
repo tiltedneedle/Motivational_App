@@ -2632,6 +2632,10 @@ Worth keeping on the next resume, because each cost an hour to learn:
 - **Heredocs mangle escapes on this machine.** `\b` became a literal backspace
   byte (0x08) in the coach engine and a fix silently did nothing. Patch scripts
   go through the Write tool; `cat -A` finds the damage.
+- **The browser pane is a real Chromium, not a webdriver**: the service worker
+  registers in it, the wake lock and the fonts are real, and the microphone is
+  blocked outright — which makes it the one place on this machine to see the
+  refused-microphone path as a person would. It found the missing line.
 - **The browser pane is hidden**, so screenshots can show a stale frame and
   pointer actions can time out. Read the DOM to confirm state; drive presses by
   dispatching the full pointer sequence, and use `history.pushState` +
