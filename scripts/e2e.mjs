@@ -1012,6 +1012,72 @@ async function main() {
       check('Say it is offered on the doorway', false);
     }
 
+    // The microphone refused on the doorway: a typed room, and the one line
+    // that says why. The line used to live only in the microphone row, which
+    // a typed room does not have, so the person was moved without a word.
+    await page.addInitScript(() => {
+      // The flag lives in sessionStorage so it outlives the navigations below.
+      if (navigator.mediaDevices) {
+        navigator.mediaDevices.getUserMedia = () =>
+          sessionStorage.getItem('refuse-mic') === '1' ? Promise.reject(Object.assign(new Error('denied'), { name: 'NotAllowedError' })) : Promise.resolve({ getTracks: () => [] });
+      }
+    });
+    await page.evaluate(() => sessionStorage.setItem('refuse-mic', '1'));
+    await page.goto(`${BASE}/write?kind=addition`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(400);
+    if (await seen('mode-say')) {
+      await tap('mode-say');
+      await tap('write-begin');
+      await page.clock.runFor(800);
+      await page.waitForTimeout(600);
+      check('a refused microphone opens a typed room', (await seen('screen-write')) && !(await seen('write-mic')));
+      check('and the room says why', (await seen('write-mic-note')) && (await text('write-mic-note')).toLowerCase().includes('not allowed'), (await seen('write-mic-note')) ? await text('write-mic-note') : 'no note');
+      check('and asks for no screen lock', (await wake()).held === 0, JSON.stringify(await wake()));
+      await page.locator('[data-testid="write-input"]').fill('Typed, then.');
+      await page.clock.runFor(1000);
+      await page.waitForTimeout(300);
+      await tap('write-done-early');
+      await page.waitForTimeout(300);
+      await tap('write-continue');
+      await page.waitForTimeout(800);
+    } else {
+      check('Say it is offered on the doorway', false);
+    }
+    await page.evaluate(() => sessionStorage.removeItem('refuse-mic'));
+
+    // A sitting left with nothing on the page. The clock is what comes back
+    // (PRD: "the timer resumes once"), and the doorway says so instead of
+    // "0 words are still here".
+    await page.goto(`${BASE}/write?kind=addition`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(400);
+    check('a fresh doorway after the typed room was closed', await seen('write-begin'));
+    if (await seen('write-begin')) {
+      await tap('write-begin');
+      await page.clock.runFor(30 * 1000);
+      await page.waitForTimeout(300);
+      await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
+      await page.clock.runFor(800);
+      await page.goto(`${BASE}/write?kind=addition`, { waitUntil: 'networkidle' });
+      await page.clock.runFor(1200);
+      await page.waitForTimeout(400);
+      check('an empty sitting is offered back for its clock', await seen('write-resume'));
+      const body = (await page.locator('body').innerText()).toLowerCase();
+      check('and the doorway says nothing was written, not "0 words"', body.includes('nothing was written yet') && !body.includes('0 words'), body.slice(0, 200));
+      await tap('write-resume');
+      await page.waitForTimeout(400);
+      const left = (await text('write-remaining')).toLowerCase();
+      check('carrying on picks the clock up where it stopped', /^14:[0-3]\d left$/.test(left), left);
+      await page.locator('[data-testid="write-input"]').fill('Now a line.');
+      await page.clock.runFor(1000);
+      await page.waitForTimeout(300);
+      await tap('write-done-early');
+      await page.waitForTimeout(300);
+      await tap('write-continue');
+      await page.waitForTimeout(800);
+    }
+
     // Walk and say it: the same room, the words set larger for a phone held
     // at arm's length, and the lock on the screen just the same.
     await page.goto(`${BASE}/write?kind=addition`, { waitUntil: 'networkidle' });

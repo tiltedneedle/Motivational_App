@@ -17,7 +17,7 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 3. apps/mobile screens (all 16 routes)
 - [x] 4. Tests, as of 2026-09-18: 483 core + 48 ui + 8 storage unit tests, the eval harness
       (647 checks over forty profiles and two hundred labelled lines), 68 real-Postgres
-      checks, **496 Playwright e2e checks**, 84 cold-open checks, 7 service-worker checks, axe 0 across 37 screens,
+      checks, **503 Playwright e2e checks**, 84 cold-open checks, 7 service-worker checks, axe 0 across 37 screens,
       the account round-trip 46/46 against the live project — all green, all in `pnpm verify`
 - [x] 5. supabase/: migrations with RLS and three structural authorship guards, edge functions
 - [x] 6. Hardening: the eight-lens audit's findings, worst first (see below) — 95 of 95
@@ -50,6 +50,20 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 55. **Two lines the room owed, 2026-09-19.** Say it chosen and the
+      microphone refused: the room became a typed one without a word, because
+      the line that says why lived only in the microphone row, which a typed
+      room does not have. Found in the desktop app's own browser pane, where
+      the microphone is blocked outright — the first real browser to refuse
+      it. The line now stands on its own under the page, and on the web it
+      says where to allow the microphone ("Allow it for this site in your
+      browser, then choose Say it again"). And a sitting left with nothing
+      on the page came back as "0 words are still here"; the clock is what
+      comes back (PRD: "the timer resumes once"), and the doorway says so:
+      "Nothing was written yet; the clock picks up where it stopped." e2e:
+      the refused microphone (typed room, the line, no screen lock), the empty
+      sitting offered back for its clock with the honest line, Carry on
+      picking the clock up where it stopped. 503/503.
 - [x] 54. **Offline, awake, and walking (§7.5, §10.4), 2026-09-18.** A service
       worker (`apps/mobile/public/sw.js`): the page is network-first so a new
       deploy is picked up on the next open, the hashed statics, icons and
@@ -318,7 +332,7 @@ tested. What is left needs a machine or a key this one does not have; see
   tests, 8 storage tests, the eval harness (647 checks), the edge-function
   guards, the SQL structural guards, 68 checks against a real Postgres, the
   serif authorship guard, the way-back guard (33 screens), the web build
-  (offline), 496 end-to-end checks, the axe pass over 37 screens and 84
+  (offline), 503 end-to-end checks, the axe pass over 37 screens and 84
   cold-open checks. Against the real project: `pnpm test:account`, 46 more.
 - **The account's spend limit is the month's, not the run's.** The fourth
   audit was ten agents and 1.59M tokens and tripped the monthly limit with
@@ -2548,7 +2562,7 @@ program's actual prompt text by someone with a licensed copy.
 
 Everything that can be done on this machine, without a key, is done. Seven
 audits are closed (the last four on the three volumes, each adversarially
-verified), the built app is walked end to end by 496 checks, and the account
+verified), the built app is walked end to end by 503 checks, and the account
 round-trips against the live project. What remains needs either hardware, a
 credential, or a product call.
 

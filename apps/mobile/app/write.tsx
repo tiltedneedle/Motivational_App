@@ -334,7 +334,9 @@ export default function Write() {
                   }}
                 />
                 <Label style={{ color: night.ink3, textAlign: 'center' }}>
-                  {wordCount(draft.body)} words are still here. You can pick this up once.
+                  {wordCount(draft.body) > 0
+                    ? `${wordCount(draft.body)} words are still here. You can pick this up once.`
+                    : 'Nothing was written yet; the clock picks up where it stopped. You can pick this up once.'}
                 </Label>
               </>
             ) : (
@@ -353,7 +355,13 @@ export default function Write() {
                         if (answer !== 'granted') {
                           chosen = 'type';
                           setMode('type');
-                          setMicNote(answer === 'refused' ? 'The microphone was not allowed, so this is a typed room. It can be allowed in your phone’s own Settings.' : 'This device cannot listen, so this is a typed room.');
+                          setMicNote(
+                            answer === 'refused'
+                              ? Platform.OS === 'web'
+                                ? 'The microphone was not allowed, so this is a typed room. Allow it for this site in your browser, then choose Say it again.'
+                                : 'The microphone was not allowed, so this is a typed room. It can be allowed in your phone’s own Settings.'
+                              : 'This device cannot listen, so this is a typed room.',
+                          );
                         }
                       }
                       setSession(startWriting(kind, track, chosen));
@@ -642,6 +650,14 @@ export default function Write() {
                 </Label>
               ) : null}
             </View>
+          ) : micNote ? (
+            // Say it was chosen and the microphone refused: the room is a
+            // typed one, and this is the one line that says why. It used to
+            // live only in the microphone row, which a typed room does not
+            // have, so the person was moved to a typed room without a word.
+            <Label testID="write-mic-note" style={{ color: night.ink3, textAlign: 'center' }}>
+              {micNote}
+            </Label>
           ) : null}
           <Label testID="write-nudge" style={{ color: night.ink3, textAlign: 'center', minHeight: 16 }}>
             {session.nudge ?? ''}
