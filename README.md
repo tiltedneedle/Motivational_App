@@ -56,8 +56,10 @@ thing to the real product without a native build. A fresh visitor lands on
 Welcome; to start over, clear the site's storage in the browser. On a phone,
 "Add to Home Screen" keeps it as an app (its own icon, no browser chrome), and
 once it has loaded it opens without a connection: a service worker keeps the
-bundle, and the writing was always on the device. "Say it" needs Chrome, Edge
-or Safari and, off this machine, HTTPS.
+bundle, and the writing was always on the device. On an iPhone, add it to the
+Home Screen before writing: the installed app keeps its own storage, separate
+from Safari's, so a Book written in the browser tab does not follow it. "Say
+it" needs Chrome, Edge or Safari and, off this machine, HTTPS.
 
 What a web demo shows honestly and what it does not: every screen and every
 flow, the three volumes, the account sign-in against the live project, the
