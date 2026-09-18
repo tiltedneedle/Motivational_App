@@ -15,6 +15,7 @@
     "test:authorship": "node scripts/check-authorship.mjs",
     "test:back": "node scripts/check-back.mjs",
     "test:cold": "node scripts/check-cold.mjs",
+    "test:sw": "node scripts/check-sw.mjs",
     "test:eval": "pnpm --filter @morrow/core test:eval",
     "build:web": "node scripts/build-web.mjs",
     "build:web:offline": "node scripts/build-web.mjs --offline",
@@ -27,7 +28,7 @@
     "test:a11y": "node scripts/a11y.mjs",
     "shots": "node scripts/shots.mjs",
     "journey": "node scripts/journey.mjs",
-    "verify": "pnpm test:deps && pnpm test:dates && pnpm test:copy && pnpm typecheck && pnpm lint && pnpm test && pnpm test:eval && pnpm test:functions && pnpm test:sql && pnpm test:migration && pnpm test:authorship && pnpm test:back && pnpm build:web:offline && pnpm test:e2e && pnpm test:a11y && pnpm test:cold",
+    "verify": "pnpm test:deps && pnpm test:dates && pnpm test:copy && pnpm typecheck && pnpm lint && pnpm test && pnpm test:eval && pnpm test:functions && pnpm test:sql && pnpm test:migration && pnpm test:authorship && pnpm test:back && pnpm build:web:offline && pnpm test:e2e && pnpm test:a11y && pnpm test:cold && pnpm test:sw",
     "web": "pnpm --filter mobile web",
     "demo": "node scripts/serve-web.mjs",
     "lint": "pnpm -r lint"

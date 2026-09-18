@@ -17,7 +17,7 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 3. apps/mobile screens (all 16 routes)
 - [x] 4. Tests, as of 2026-09-18: 483 core + 48 ui + 8 storage unit tests, the eval harness
       (647 checks over forty profiles and two hundred labelled lines), 68 real-Postgres
-      checks, **496 Playwright e2e checks**, 84 cold-open checks, axe 0 across 37 screens,
+      checks, **496 Playwright e2e checks**, 84 cold-open checks, 7 service-worker checks, axe 0 across 37 screens,
       the account round-trip 46/46 against the live project — all green, all in `pnpm verify`
 - [x] 5. supabase/: migrations with RLS and three structural authorship guards, edge functions
 - [x] 6. Hardening: the eight-lens audit's findings, worst first (see below) — 95 of 95
@@ -56,7 +56,12 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
       manifest are cache-first, and the app opens with no connection once it
       has loaded once — checked with the server stopped. Playwright's walks
       skip the worker (`navigator.webdriver`), so the tests see the server,
-      not a cache. The practice runner keeps the screen awake (§7.5: "the
+      not a cache; `pnpm test:sw` drives the worker itself in a Chromium that
+      does not say it is automated — first load, a second deploy under a new
+      hashed name (the old statics' cache dropped, the new one kept), then
+      the server gone and the app still opening. The statics live in a cache
+      named for the shell that loaded them, so a deploy does not leave four
+      megabytes behind for good. The practice runner keeps the screen awake (§7.5: "the
       runner keeps the screen awake"), and so does a room being spoken into —
       nobody is touching the screen, and a phone that locked would take the
       microphone with it. `expo-keep-awake` behind one component
