@@ -18,13 +18,7 @@
 import { spawnSync } from 'node:child_process';
 
 const offline = process.argv.includes('--offline');
-// --demo: the demo build (PRD §14.7). EXPO_PUBLIC_DEMO=1 turns on the short
-// clocks and the /demo screen, and the fixtures the scenarios load are
-// copied beside the site once the export is done.
-const demo = process.argv.includes('--demo');
 const env = { ...process.env };
-if (demo) env.EXPO_PUBLIC_DEMO = '1';
-else if (env.EXPO_PUBLIC_DEMO === undefined) env.EXPO_PUBLIC_DEMO = '';
 if (offline) {
   for (const key of ['EXPO_PUBLIC_SUPABASE_URL', 'EXPO_PUBLIC_SUPABASE_ANON_KEY', 'EXPO_PUBLIC_MORROW_API', 'EXPO_PUBLIC_POSTHOG_KEY', 'EXPO_PUBLIC_RC_IOS', 'EXPO_PUBLIC_RC_ANDROID']) {
     // Blank, not deleted: dotenv fills in only what is absent.
@@ -35,14 +29,4 @@ if (offline) {
 // transform cache does not key on them, so a build after the other mode's
 // build would ship the other mode's values. A cold transform costs a minute.
 const r = spawnSync('pnpm', ['--filter', 'mobile', 'export:web', '--', '--clear'], { stdio: 'inherit', env, shell: true });
-if (r.status === 0 && demo) {
-  const { cpSync, mkdirSync } = await import('node:fs');
-  const { join } = await import('node:path');
-  const out = join('apps', 'mobile', 'dist', 'demo');
-  mkdirSync(out, { recursive: true });
-  for (const name of ['seeded-state', 'many-goals', 'long-game', 'filled']) {
-    cpSync(join('scripts', 'fixtures', `${name}.json`), join(out, `${name}.json`));
-  }
-  console.log(`demo fixtures copied to ${out}`);
-}
 process.exit(r.status ?? 1);

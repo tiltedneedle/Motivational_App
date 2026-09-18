@@ -13,7 +13,6 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Body, Chip, InkButton, Label, Rise, Statement, Stone, Studio, TextButton, UserField, announce, day, useReducedMotion } from '@morrow/ui';
-import { hasDemo } from '../src/demo';
 import { useFirstRun, useLatestBook, useMorrow, useHasBegun } from '../src/store';
 import { useFirstRunStep } from '../src/analytics';
 import { hasSupabase } from '../src/supabase';
@@ -186,7 +185,6 @@ export default function Welcome() {
                 says "begin" and nothing else. Nobody is made to write before
                 they have seen the room they are writing for.
               */}
-              {hasDemo ? <TextButton testID="welcome-demo" label="Demo scenarios" onPress={() => router.push('/demo')} /> : null}
               {!(book || begun) ? (
                 <TextButton
                   testID="welcome-look"

@@ -18,10 +18,6 @@ import { armAnalytics, track } from '../src/analytics';
 import { SafetyGate } from '../src/components/SafetyGate';
 import { StorageWarning } from '../src/components/StorageWarning';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
-import { installDemoClock } from '../src/demo';
-
-// A demo build's clocks, set before any room is opened. A no-op elsewhere.
-installDemoClock();
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useOutfit({

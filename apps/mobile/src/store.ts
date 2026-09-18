@@ -608,12 +608,6 @@ export interface MorrowState {
   reconsiderLatestFlag: () => void;
   inviteFullTrack: () => void;
   reset: () => void;
-  /**
-   * A demo build only (`src/demo.ts`): a whole store, as a fixture holds it,
-   * in place of this one. Keys the store does not know are dropped; the
-   * profile merges over the defaults as a rehydrate does.
-   */
-  loadState: (state: Record<string, unknown>) => void;
 }
 
 /**
@@ -2178,19 +2172,6 @@ const store = create<MorrowState>()(
 
       clearSafety: () => set({ safetyPause: null }),
       reset: () => set({ profile: DEFAULT_PROFILE, ...EMPTY }),
-      loadState: (state) => {
-        const known = new Set(Object.keys(EMPTY));
-        const picked = Object.fromEntries(Object.entries(state).filter(([k, v]) => known.has(k) && v !== undefined && v !== null)) as Partial<MorrowState>;
-        const profile = (state.profile ?? {}) as Partial<Profile>;
-        set({
-          ...EMPTY,
-          ...picked,
-          profile: { ...DEFAULT_PROFILE, ...profile },
-          ...(Array.isArray(picked.goals) ? { goals: denseRanks(picked.goals) } : {}),
-          toast: null,
-          safetyPause: null,
-        });
-      },
     }),
     {
       name: STORE_KEY,

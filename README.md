@@ -121,17 +121,6 @@ renders every screen from a seeded store at phone size into `scripts/shots/`
 (`DARK=1` for the night studio, `W=375 H=667` for a smaller phone), and
 `pnpm test:a11y` runs the same screens through axe (`DARK=1` there too).
 
-## Showing it
-
-```bash
-pnpm build:web:demo && pnpm demo
-```
-
-The demo build: two-minute writing rooms and a `/demo` screen of lived-in stores (the
-first morning, three months in, a week away, day ninety), every date moved to the day of
-the demo, and a Pro switch for the device. `docs/DEMO.md` is the twelve-minute walk with
-the words to say. The product build has none of it.
-
 ## What needs a key
 
 Everything runs on local fallbacks without one. To go beyond them:
