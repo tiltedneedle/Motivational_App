@@ -69,7 +69,7 @@ export default function Write() {
   // out of it for a moment, for whoever needs one.
   const [held, setHeld] = useState(false);
   // How the room closed: by the clock, by the person, or by the day catching up.
-  const [closedBy, setClosedBy] = useState<'clock' | 'person' | null>(null);
+  const [closedBy, setClosedBy] = useState<'clock' | 'person' | 'early' | null>(null);
   const typingRef = useRef(false);
   const inputRef = useRef<TextInput>(null);
   /**
@@ -361,6 +361,7 @@ export default function Write() {
                     })();
                   }}
                 />
+                <Label style={{ color: night.ink3, textAlign: 'center' }}>Close it whenever you are done; every word is kept.</Label>
                 <Label style={{ color: night.ink3, textAlign: 'center' }}>
                   {mode === 'type'
                     ? 'Forward only: the page keeps what you type.'
@@ -385,12 +386,14 @@ export default function Write() {
         <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 22, justifyContent: 'center', gap: 24 }} showsVerticalScrollIndicator={false}>
           <Stone size={132} domain="health" polish={polish(words)} seated style={{ alignSelf: 'center' }} />
           <Statement style={{ color: night.ink, textAlign: 'center', fontSize: 28, lineHeight: 34 }}>
-            {endedEarly ? 'The room closed while you were away.' : 'That is the most you have said about this in one go.'}
+            {endedEarly ? 'The room closed while you were away.' : closedBy === 'early' ? 'Closed here, for now.' : 'That is the most you have said about this in one go.'}
           </Statement>
           <Body style={{ color: night.ink2, textAlign: 'center' }}>
             {endedEarly
               ? `Every word you wrote is here — ${words} of them. A sitting can be picked up once, and this one already was, so it counts as it stands.`
-              : 'Sealed as a draft for a day. You can read it, not edit it.'}
+              : closedBy === 'early'
+                ? `Every word is kept — ${words} of them — and it goes on to the read-back like any sitting. Sealed as a draft for a day; the whole ${Math.round(targetSeconds(kind, track) / 60)} minutes is there whenever you want it.`
+                : 'Sealed as a draft for a day. You can read it, not edit it.'}
           </Body>
           {paused ? (
             <View style={{ gap: 10 }}>
@@ -648,9 +651,29 @@ export default function Write() {
               style={{ alignSelf: 'stretch' }}
             />
           ) : (
-            <Label style={{ color: night.ink3 }}>
-              {Math.max(0, Math.ceil((minSecondsToCount(kind, track) - session.elapsed) / 60))} min before this counts
-            </Label>
+            <>
+              {/*
+                The floor is a length, not a lock. "N min before this counts"
+                used to be the only thing here, so a person who had said what
+                they had to say sat behind a countdown with no door but "Leave
+                for now", which kept a draft and went nowhere. Done is done:
+                the words are kept and go on to the read-back like any sitting.
+              */}
+              {session.body.trim().length > 0 ? (
+                <InkButton
+                  testID="write-done-early"
+                  label="Done for now"
+                  onPress={() => {
+                    setClosedBy('early');
+                    setPhase('closed');
+                  }}
+                  style={{ alignSelf: 'stretch', backgroundColor: 'transparent', borderWidth: 1.5, borderColor: night.line }}
+                />
+              ) : null}
+              <Label testID="write-floor" style={{ color: night.ink3, textAlign: 'center' }}>
+                {Math.max(0, Math.ceil((minSecondsToCount(kind, track) - session.elapsed) / 60))} min more is a full sitting
+              </Label>
+            </>
           )}
         </View>
       </SafeAreaView>

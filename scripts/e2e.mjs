@@ -359,6 +359,12 @@ async function main() {
     await page.waitForTimeout(300);
     check('and Carry on starts it again', (await text('write-remaining')) !== heldAt, await text('write-remaining'));
 
+    // Before the floor: "Done for now" is a door, not a countdown to wait
+    // behind. Pressed later in the walk, on an addition; here only that it is
+    // offered, and what the room says about the floor.
+    check('before the floor the room says how much more is a full sitting', (await text('write-floor')).toLowerCase().endsWith('min more is a full sitting'), await text('write-floor'));
+    check('and offers Done for now once there are words', await seen('write-done-early'));
+
     // fast-forward past the ten-minute floor
     await page.clock.runFor(11 * 60 * 1000);
     await page.waitForTimeout(400);
@@ -817,6 +823,30 @@ async function main() {
     // The countdown can be put away for the next sitting, from the doorway.
     // The digits go; the minutes stay in the accessible name; the room still
     // closes on time.
+    // ---- Done for now: a door before the floor, not a countdown to wait behind
+    await page.goto(`${BASE}/write?kind=addition`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(400);
+    if (await seen('write-begin')) {
+      await tap('write-begin');
+      await page.waitForTimeout(400);
+      check('with nothing written there is no Done for now, only Leave', !(await seen('write-done-early')) && (await seen('write-leave')));
+      await page.locator('[data-testid="write-input"]').fill('One more thing about the kitchen: the window sticks, and I have stopped minding.');
+      await page.clock.runFor(1000);
+      await page.waitForTimeout(300);
+      check('and Done for now once there are words', await seen('write-done-early'));
+      await tap('write-done-early');
+      check('Done for now closes the room', await seen('screen-write-closed'));
+      check('and says the words are kept', (await page.locator('body').innerText()).includes('Every word is kept'));
+      check('with no five more minutes, which is the clock’s door', !(await seen('write-extend')));
+      check('and goes on like any sitting', await seen('write-continue'));
+      await tap('write-continue');
+      await page.waitForTimeout(600);
+      check('an addition closed early is in the Book', await seen('screen-book'));
+    } else {
+      check('the addition room opens from its doorway', false);
+    }
+
     await page.goto(`${BASE}/write?kind=addition`, { waitUntil: 'networkidle' });
     await page.clock.runFor(1200);
     await page.waitForTimeout(400);

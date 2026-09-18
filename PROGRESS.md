@@ -50,6 +50,21 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 52. **Done for now (§7.2), 2026-09-18.** The writing room's floor is a length,
+      not a lock. Before the ten minutes the only door was "Leave for now", which
+      kept a draft and went nowhere, behind a countdown ("N min before this
+      counts"). Once there are words, "Done for now" closes the room and the
+      sitting goes on like any other — the read-back, the Book — with a closed
+      card that says what happened: every word kept, the whole fifteen there
+      whenever they want it. The doorway says so before the clock starts. A
+      separate demo build with short clocks was built and reverted the same day:
+      the user wants the prototype itself to be the thing shown, so the door is
+      in the product. Eight e2e checks.
+- [x] 51. **The home screen is not behind the introduction, 2026-09-17.** "Have a
+      look around first" on Welcome's last page opens Today, honestly empty —
+      the path and its doors — and Back is Welcome with the name kept. The full
+      Today still comes with the Book, as the PRD has it; nobody is made to
+      write before seeing the room they are writing for.
 - [x] 50. **Say it, in a browser (§7.2), 2026-09-17.** The Fifteen's microphone
       heard one sentence and stopped: the speech module's web shim starts a
       fresh recogniser on every `start()` without stopping the last, so the
