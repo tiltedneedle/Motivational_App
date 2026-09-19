@@ -109,6 +109,11 @@ async function main() {
   // may or may not carry the real API; this one records every ask.
   await page.addInitScript(() => {
     window.__wake = { asked: 0, held: 0 };
+    // As the browser does: every lock is let go the moment the page is hidden.
+    const sentinels = [];
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') for (const s of sentinels.splice(0)) s.release();
+    });
     Object.defineProperty(navigator, 'wakeLock', {
       configurable: true,
       value: {
@@ -124,6 +129,7 @@ async function main() {
           };
           sentinel.addEventListener = () => {};
           sentinel.removeEventListener = () => {};
+          sentinels.push(sentinel);
           return sentinel;
         },
       },
@@ -948,6 +954,11 @@ async function main() {
             throw e;
           }
           this.started = true;
+          // On request, a regional English the browser turns down.
+          if (sessionStorage.getItem('gb-unsupported') === '1' && this.lang === 'en-GB') {
+            this.started = false;
+            setTimeout(() => this.onerror && this.onerror({ error: 'language-not-supported' }), 0);
+          }
         }
         stop() {
           this.started = false;
@@ -960,6 +971,9 @@ async function main() {
       window.SpeechRecognition = ScriptedRecognition;
       window.webkitSpeechRecognition = ScriptedRecognition;
       if (navigator.mediaDevices) navigator.mediaDevices.getUserMedia = () => Promise.resolve({ getTracks: () => [] });
+      // The browser's language, on request (the room listens in the person's own English).
+      const spoken = sessionStorage.getItem('lang');
+      if (spoken) Object.defineProperty(navigator, 'language', { configurable: true, get: () => spoken });
       window.__hear = (segments) => {
         const r = window.__recs[window.__recs.length - 1];
         const results = segments.map(([t, f]) => ({ isFinal: f, 0: { transcript: t }, length: 1 }));
@@ -988,6 +1002,7 @@ async function main() {
       check('Say it opens the room listening, with one recogniser', (await text('write-mic')).toLowerCase() === 'listening' && (await recs()) === 1, `chip "${await text('write-mic')}" · ${await recs()} recognisers`);
       check('with a pulse beside the word', await seen('write-pulse'));
       check('and asks the browser to keep the sound on the device where it can', await page.evaluate(() => window.__recs[0]?.processLocally === true));
+      check('in the browser’s own English', await page.evaluate(() => window.__recs[0]?.lang === (/^en-[A-Za-z]{2}$/.test(navigator.language) ? navigator.language : 'en-US')), await page.evaluate(() => window.__recs[0]?.lang));
       check('a spoken room holds the screen awake', (await wake()).held === 1, JSON.stringify(await wake()));
       await page.evaluate(() => window.__hear([['I want to run', false]]));
       await page.waitForTimeout(200);
@@ -1022,6 +1037,25 @@ async function main() {
       await page.clock.runFor(600);
       await page.waitForTimeout(600);
       check('and on again', (await lastStarted()) && (await text('write-mic')).toLowerCase() === 'listening', await text('write-mic'));
+      // Away — another app, another tab — the microphone rests; back, it
+      // listens again, and the words said before are still there.
+      const before = await spoken();
+      await page.evaluate(() => {
+        Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+        Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+      await page.waitForTimeout(400);
+      check('away from the screen the microphone rests', !(await lastStarted()) && (await text('write-mic')).toLowerCase() !== 'listening', await text('write-mic'));
+      await page.evaluate(() => {
+        Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' });
+        Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+      await page.clock.runFor(600);
+      await page.waitForTimeout(600);
+      check('and back, it listens again with every word kept', (await lastStarted()) && (await text('write-mic')).toLowerCase() === 'listening' && (await spoken()) === before, `${await text('write-mic')} · ${await spoken()}`);
+      check('and holds the screen awake again, once', (await wake()).held === 1, JSON.stringify(await wake()));
       // Ended the way a person ends it, so the draft is not waiting at the
       // next doorway — and the screen is let go with the room.
       await tap('write-done-early');
@@ -1033,6 +1067,33 @@ async function main() {
     } else {
       check('Say it is offered on the doorway', false);
     }
+
+    // The room asks for the browser's own English; a browser that turns the
+    // regional one down is asked again in en-US, once, and the room listens.
+    await page.evaluate(() => {
+      sessionStorage.setItem('lang', 'en-GB');
+      sessionStorage.setItem('gb-unsupported', '1');
+    });
+    await page.goto(`${BASE}/write?kind=addition`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(400);
+    if (await seen('mode-say')) {
+      await tap('mode-say');
+      await tap('write-begin');
+      await page.clock.runFor(1200);
+      await page.waitForTimeout(600);
+      const langs = await page.evaluate(() => window.__recs.map((r) => r.lang));
+      check('the room asks first in the browser’s own English', langs[0] === 'en-GB', langs.join(','));
+      check('and, turned down, listens in en-US instead', langs.length === 2 && langs[1] === 'en-US' && (await page.evaluate(() => window.__recs[1]?.started === true)) && (await text('write-mic')).toLowerCase() === 'listening', `${langs.join(',')} · ${await text('write-mic')}`);
+      await tap('write-leave');
+      await page.waitForTimeout(600);
+    } else {
+      check('Say it is offered on the doorway', false);
+    }
+    await page.evaluate(() => {
+      sessionStorage.removeItem('lang');
+      sessionStorage.removeItem('gb-unsupported');
+    });
 
     // A browser that cannot listen: no spoken doors on the doorway, and the
     // line that says why, rather than a chip that leads to an apology.

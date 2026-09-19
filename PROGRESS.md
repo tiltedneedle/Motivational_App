@@ -17,7 +17,7 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 3. apps/mobile screens (all 16 routes)
 - [x] 4. Tests, as of 2026-09-18: 483 core + 48 ui + 8 storage unit tests, the eval harness
       (647 checks over forty profiles and two hundred labelled lines), 68 real-Postgres
-      checks, **511 Playwright e2e checks**, 84 cold-open checks, 7 service-worker checks, axe 0 across 37 screens,
+      checks, **517 Playwright e2e checks**, 84 cold-open checks, 7 service-worker checks, axe 0 across 37 screens,
       the account round-trip 46/46 against the live project — all green, all in `pnpm verify`
 - [x] 5. supabase/: migrations with RLS and three structural authorship guards, edge functions
 - [x] 6. Hardening: the eight-lens audit's findings, worst first (see below) — 95 of 95
@@ -50,6 +50,17 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 57. **The microphone rests when you do, and hears your own English, 2026-09-20.**
+      Away from the screen — a call, another tab — the recogniser used to fail in
+      the background and report "the microphone was not allowed" to a person who
+      had only looked away; now it rests on `AppState` and listens again on
+      return, every word kept, the screen lock asked for again once (the old one
+      released on this side first, so the module's map never holds two). In a
+      browser the room asks in the browser's own English — en-GB, en-IN, en-AU —
+      with en-US behind it: a browser that turns the regional one down
+      (`language-not-supported`) is asked again in en-US, once. e2e: away and
+      back with the words kept and one lock held; the browser's English; en-GB
+      turned down and en-US listening. 517/517.
 - [x] 56. **The front door, one screen; the voice doorway honest, 2026-09-20.** The
       client read Welcome's three pages as a wall ("they can't even reach the main
       page"). Welcome is one screen now: the stone, what this is, a first name if
@@ -350,7 +361,7 @@ tested. What is left needs a machine or a key this one does not have; see
   tests, 8 storage tests, the eval harness (647 checks), the edge-function
   guards, the SQL structural guards, 68 checks against a real Postgres, the
   serif authorship guard, the way-back guard (33 screens), the web build
-  (offline), 511 end-to-end checks, the axe pass over 37 screens and 84
+  (offline), 517 end-to-end checks, the axe pass over 37 screens and 84
   cold-open checks. Against the real project: `pnpm test:account`, 46 more.
 - **The account's spend limit is the month's, not the run's.** The fourth
   audit was ten agents and 1.59M tokens and tripped the monthly limit with
@@ -2587,7 +2598,7 @@ program's actual prompt text by someone with a licensed copy.
 
 Everything that can be done on this machine, without a key, is done. Seven
 audits are closed (the last four on the three volumes, each adversarially
-verified), the built app is walked end to end by 511 checks, and the account
+verified), the built app is walked end to end by 517 checks, and the account
 round-trips against the live project. What remains needs either hardware, a
 credential, or a product call.
 

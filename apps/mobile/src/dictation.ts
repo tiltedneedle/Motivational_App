@@ -76,7 +76,18 @@ type WebRecognitionClass = (new () => WebRecognition) & {
   available?: (opts: { langs: string[]; processLocally?: boolean; quality?: 'command' | 'dictation' | 'conversation' }) => Promise<string>;
 };
 
-const LANG = 'en-US';
+/**
+ * The recogniser's language: the browser's own English where it has one —
+ * en-GB, en-IN, en-AU hear their own vowels better than en-US does — and
+ * en-US otherwise. A browser that turns the regional one down
+ * (`language-not-supported`) is asked again in en-US, once.
+ */
+const FALLBACK_LANG = 'en-US';
+function browserEnglish(): string {
+  const tag = (globalThis as unknown as { navigator?: { language?: string } }).navigator?.language ?? '';
+  return /^en-[A-Za-z]{2}$/.test(tag) ? tag : FALLBACK_LANG;
+}
+let lang = browserEnglish();
 
 /**
  * Whether this browser can recognise the language on the device itself.
@@ -96,7 +107,7 @@ async function checkOnDevice(): Promise<void> {
     return;
   }
   try {
-    onDevice = (await R.available({ langs: [LANG], processLocally: true, quality: 'dictation' })) === 'available';
+    onDevice = (await R.available({ langs: [lang], processLocally: true, quality: 'dictation' })) === 'available';
   } catch {
     onDevice = false;
   }
@@ -163,7 +174,7 @@ function webDictation(): Dictation {
     }
     const r = new R();
     rec = r;
-    r.lang = LANG;
+    r.lang = lang;
     if (onDevice) r.processLocally = true;
     r.continuous = true;
     r.interimResults = true;
@@ -227,9 +238,11 @@ function webDictation(): Dictation {
         return;
       }
       // The browser said it could recognise on the device and then could
-      // not: once more, the ordinary way, and no more asking.
-      if (code === 'language-not-supported' && onDevice) {
+      // not, or turned the regional English down: once more, the ordinary
+      // way, in en-US, and no more asking.
+      if (code === 'language-not-supported' && (onDevice || lang !== FALLBACK_LANG)) {
         onDevice = false;
+        lang = FALLBACK_LANG;
         rec = null;
         r.onend = null;
         later(200);

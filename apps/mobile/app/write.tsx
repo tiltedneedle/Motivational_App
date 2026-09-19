@@ -230,8 +230,21 @@ export default function Write() {
       .then((ok) => {
         if (!gone) setListening(ok);
       });
+    // Away from the screen — another app, another tab — the recogniser
+    // rests rather than failing in the background and reporting "not
+    // allowed" to a person who only took a call. Back, it listens again.
+    const away = AppState.addEventListener('change', (next) => {
+      if (gone) return;
+      if (next === 'active') {
+        setMicTry((n) => n + 1);
+      } else {
+        dictationRef.current.stop();
+        setListening(false);
+      }
+    });
     return () => {
       gone = true;
+      away.remove();
       dictationRef.current.stop();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

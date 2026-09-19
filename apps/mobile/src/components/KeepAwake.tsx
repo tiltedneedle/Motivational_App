@@ -12,7 +12,7 @@
  * given back on return, so this asks again when the page comes back into
  * view. On a phone the operating system holds the lock itself.
  */
-import { activateKeepAwakeAsync, useKeepAwake } from 'expo-keep-awake';
+import { activateKeepAwakeAsync, deactivateKeepAwake, useKeepAwake } from 'expo-keep-awake';
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
 
@@ -22,7 +22,13 @@ export function KeepAwake({ tag }: { tag: string }) {
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof document === 'undefined') return;
     const back = () => {
-      if (document.visibilityState === 'visible') activateKeepAwakeAsync(tag).catch(() => undefined);
+      if (document.visibilityState !== 'visible') return;
+      // The lock the browser let go of is released on this side too before a
+      // new one is asked for, so the module's map never holds a lock twice.
+      deactivateKeepAwake(tag)
+        .catch(() => undefined)
+        .then(() => activateKeepAwakeAsync(tag))
+        .catch(() => undefined);
     };
     document.addEventListener('visibilitychange', back);
     return () => document.removeEventListener('visibilitychange', back);
