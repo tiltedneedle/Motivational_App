@@ -62,6 +62,8 @@ type WebRecognition = {
   continuous: boolean;
   interimResults: boolean;
   maxAlternatives: number;
+  /** Chrome 139+: keep the sound on the device. Unknown to older browsers. */
+  processLocally?: boolean;
   onresult: ((ev: { resultIndex: number; results: ArrayLike<{ isFinal: boolean; 0?: { transcript: string } }> }) => void) | null;
   onend: (() => void) | null;
   onerror: ((ev: { error?: string }) => void) | null;
@@ -69,7 +71,36 @@ type WebRecognition = {
   stop(): void;
   abort(): void;
 };
-type WebRecognitionClass = new () => WebRecognition;
+type WebRecognitionClass = (new () => WebRecognition) & {
+  /** Chrome 139+: whether the language can be recognised, and where. */
+  available?: (opts: { langs: string[]; processLocally?: boolean; quality?: 'command' | 'dictation' | 'conversation' }) => Promise<string>;
+};
+
+const LANG = 'en-US';
+
+/**
+ * Whether this browser can recognise the language on the device itself.
+ * Asked once per page, on the doorway; `null` until then. Where it can,
+ * the sound never leaves the phone or the laptop — the same rule the phone
+ * app keeps with `requiresOnDeviceRecognition`. Nothing is downloaded to
+ * make it so: a language pack the browser offers but has not fetched is
+ * left where it is.
+ */
+let onDevice: boolean | null = null;
+
+async function checkOnDevice(): Promise<void> {
+  if (onDevice !== null) return;
+  const R = webRecognitionClass();
+  if (!R?.available) {
+    onDevice = false;
+    return;
+  }
+  try {
+    onDevice = (await R.available({ langs: [LANG], processLocally: true, quality: 'dictation' })) === 'available';
+  } catch {
+    onDevice = false;
+  }
+}
 
 function webRecognitionClass(): WebRecognitionClass | null {
   const w = globalThis as unknown as { webkitSpeechRecognition?: WebRecognitionClass; SpeechRecognition?: WebRecognitionClass };
@@ -132,7 +163,8 @@ function webDictation(): Dictation {
     }
     const r = new R();
     rec = r;
-    r.lang = 'en-US';
+    r.lang = LANG;
+    if (onDevice) r.processLocally = true;
     r.continuous = true;
     r.interimResults = true;
     r.maxAlternatives = 1;
@@ -194,6 +226,15 @@ function webDictation(): Dictation {
         later(3000);
         return;
       }
+      // The browser said it could recognise on the device and then could
+      // not: once more, the ordinary way, and no more asking.
+      if (code === 'language-not-supported' && onDevice) {
+        onDevice = false;
+        rec = null;
+        r.onend = null;
+        later(200);
+        return;
+      }
       strikes += 1;
       if (strikes >= 3) {
         wanted = false;
@@ -217,6 +258,7 @@ function webDictation(): Dictation {
 
     async permission() {
       if (!webRecognitionClass()) return 'unavailable';
+      await checkOnDevice();
       // The browser asks for the microphone on the first `start()`, which
       // would be on the clock. Asking through getUserMedia here brings the
       // dialog forward to the doorway, and the stream is closed at once:

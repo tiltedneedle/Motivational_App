@@ -131,6 +131,19 @@ async function main() {
   });
   const wake = () => page.evaluate(() => window.__wake);
 
+  // A browser that cannot listen at all (Firefox), on request: the doorway
+  // must not offer the spoken doors, and must say why.
+  await page.addInitScript(() => {
+    if (sessionStorage.getItem('no-voice') === '1') {
+      delete window.SpeechRecognition;
+      delete window.webkitSpeechRecognition;
+      // A setter that ignores writes: the scripted recogniser installed below
+      // must not throw when it tries to put itself here.
+      Object.defineProperty(window, 'SpeechRecognition', { configurable: true, get: () => undefined, set: () => {} });
+      Object.defineProperty(window, 'webkitSpeechRecognition', { configurable: true, get: () => undefined, set: () => {} });
+    }
+  });
+
   const pageErrors = [];
   page.on('pageerror', (e) => pageErrors.push(String(e.message).slice(0, 300)));
 
@@ -195,27 +208,29 @@ async function main() {
 
     check('welcome renders', await seen('screen-welcome'));
 
-    // ---- Welcome is three screens (PRD 7.1), each with a way back and a way past
-    check('the first page says what this is', await seen('welcome-page-0'));
-    await tap('welcome-next');
-    check('the second says what three evenings make', await seen('welcome-page-1'));
-    await tap('welcome-back');
-    check('and Back goes back a page', await seen('welcome-page-0'));
-    await tap('welcome-skip');
-    check('Skip lands on the last page', await seen('welcome-page-2'));
+    // ---- Welcome is one screen (client, 2026-09-20): what this is, a name if
+    // you want to give one, and two doors. No pages, no Skip, no dots.
+    check('Welcome says what this is', await seen('welcome-page-0'));
+    check('with no pages to get through', !(await seen('welcome-next')) && !(await seen('welcome-skip')) && !(await seen('welcome-page-count')));
+    check('and both doors on the one screen', (await seen('welcome-begin')) && (await seen('welcome-look')));
+    check('Begin says how long tonight takes', (await text('welcome-begin')).toLowerCase().includes('30 minutes'), await text('welcome-begin'));
     await page.locator('[data-testid="welcome-name"]').fill('Sam');
 
     // ---- the home screen is not behind the introduction
     // Somebody who wants to see the room before writing for it can: Today,
-    // honestly empty, with the path and its doors, and Back to Welcome.
+    // which says hello, what the room is for and what three evenings make,
+    // with the first evening as its one button, and Back to Welcome.
     await tap('welcome-look');
     check('Welcome opens onto Today for a look around', await seen('screen-today'));
-    check('which says what is there, and what three evenings make', (await text('today-path')).startsWith('Nothing here yet') && (await text('today-begin')).length > 0, await text('today-path'));
+    check('which greets by the name just given', (await text('today-path')) === 'Hello, Sam.', await text('today-path'));
+    check('says what the room is for', (await text('today-path-caption')).toLowerCase().includes('home screen'), await text('today-path-caption'));
+    await page.waitForTimeout(700); // the card rises in after the greeting
+    check('and what three evenings make, with their lengths', (await seen('today-evenings')) && (await text('today-evenings')).toLowerCase().includes('25–35 min'), (await seen('today-evenings')) ? await text('today-evenings') : 'no card');
+    check('with the first evening as the one button', (await text('today-begin')).toLowerCase().includes('begin tonight'), await text('today-begin'));
     check('with the other volumes one tap away', await seen('today-other-volumes'));
     await page.goBack({ waitUntil: 'commit' }).catch(() => {});
     await page.waitForTimeout(600);
     check('and Back is Welcome again, name kept', (await seen('screen-welcome')) && (await page.locator('[data-testid="welcome-name"]').inputValue()) === 'Sam');
-    if (!(await seen('welcome-page-2'))) await tap('welcome-skip');
 
     // ---- Interview
     await tap('welcome-begin');
@@ -915,6 +930,10 @@ async function main() {
     await page.addInitScript(() => {
       window.__recs = [];
       class ScriptedRecognition {
+        // Chrome 139+: the language can be recognised on the device.
+        static available() {
+          return Promise.resolve('available');
+        }
         constructor() {
           this.started = false;
           this.onresult = null;
@@ -967,6 +986,8 @@ async function main() {
       const recs = () => page.evaluate(() => window.__recs.length);
       const lastStarted = () => page.evaluate(() => window.__recs[window.__recs.length - 1]?.started === true);
       check('Say it opens the room listening, with one recogniser', (await text('write-mic')).toLowerCase() === 'listening' && (await recs()) === 1, `chip "${await text('write-mic')}" · ${await recs()} recognisers`);
+      check('with a pulse beside the word', await seen('write-pulse'));
+      check('and asks the browser to keep the sound on the device where it can', await page.evaluate(() => window.__recs[0]?.processLocally === true));
       check('a spoken room holds the screen awake', (await wake()).held === 1, JSON.stringify(await wake()));
       await page.evaluate(() => window.__hear([['I want to run', false]]));
       await page.waitForTimeout(200);
@@ -986,6 +1007,7 @@ async function main() {
       await tap('write-hold');
       await page.waitForTimeout(400);
       check('a pause of the clock is a pause of the microphone', !(await lastStarted()) && (await text('write-mic')).toLowerCase() === 'paused', await text('write-mic'));
+      check('and the pulse beside Listening is gone while paused', !(await seen('write-pulse')));
       await tap('write-hold');
       await page.clock.runFor(600);
       await page.waitForTimeout(600);
@@ -1011,6 +1033,16 @@ async function main() {
     } else {
       check('Say it is offered on the doorway', false);
     }
+
+    // A browser that cannot listen: no spoken doors on the doorway, and the
+    // line that says why, rather than a chip that leads to an apology.
+    await page.evaluate(() => sessionStorage.setItem('no-voice', '1'));
+    await page.goto(`${BASE}/write?kind=addition`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(600);
+    check('a browser that cannot listen is not offered Say it', (await seen('mode-type')) && !(await seen('mode-say')) && !(await seen('mode-walk')));
+    check('and the doorway says which browsers can', (await seen('write-no-voice')) && (await text('write-no-voice')).toLowerCase().includes('chrome, edge or safari'), (await seen('write-no-voice')) ? await text('write-no-voice') : 'no line');
+    await page.evaluate(() => sessionStorage.removeItem('no-voice'));
 
     // The microphone refused on the doorway: a typed room, and the one line
     // that says why. The line used to live only in the microphone row, which

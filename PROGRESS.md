@@ -17,7 +17,7 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 3. apps/mobile screens (all 16 routes)
 - [x] 4. Tests, as of 2026-09-18: 483 core + 48 ui + 8 storage unit tests, the eval harness
       (647 checks over forty profiles and two hundred labelled lines), 68 real-Postgres
-      checks, **503 Playwright e2e checks**, 84 cold-open checks, 7 service-worker checks, axe 0 across 37 screens,
+      checks, **511 Playwright e2e checks**, 84 cold-open checks, 7 service-worker checks, axe 0 across 37 screens,
       the account round-trip 46/46 against the live project — all green, all in `pnpm verify`
 - [x] 5. supabase/: migrations with RLS and three structural authorship guards, edge functions
 - [x] 6. Hardening: the eight-lens audit's findings, worst first (see below) — 95 of 95
@@ -50,6 +50,24 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 56. **The front door, one screen; the voice doorway honest, 2026-09-20.** The
+      client read Welcome's three pages as a wall ("they can't even reach the main
+      page"). Welcome is one screen now: the stone, what this is, a first name if
+      they like, and two real buttons — Begin tonight · about 30 minutes, and Look
+      around first (a new `GhostButton`: the ink button's size and edge, outlined).
+      No pages, no Skip, no dots; the persona lives in You. Today's empty state is
+      the introduction it used to be: "Hello, Sam.", what the room is for, a card of
+      the three evenings with their lengths, the first evening as the one button,
+      everything rising in on the standard stagger. Voice: a browser that cannot
+      listen (Firefox) is not offered Say it — one line names the browsers that can
+      — instead of a chip that led to a typed room with an apology; a coral pulse
+      breathes beside "Listening" and is still under reduced motion; and on Chrome
+      139+ the recogniser is asked to keep the sound on the device
+      (`processLocally`, only where `SpeechRecognition.available` says it can, no
+      language pack downloaded) with a fallback to the ordinary way if the browser
+      then says it cannot. e2e: Welcome's one screen and both doors, Today's
+      greeting, card and button, the no-voice doorway, the pulse on and off, the
+      on-device ask. 511/511.
 - [x] 55. **Two lines the room owed, 2026-09-19.** Say it chosen and the
       microphone refused: the room became a typed one without a word, because
       the line that says why lived only in the microphone row, which a typed
@@ -332,7 +350,7 @@ tested. What is left needs a machine or a key this one does not have; see
   tests, 8 storage tests, the eval harness (647 checks), the edge-function
   guards, the SQL structural guards, 68 checks against a real Postgres, the
   serif authorship guard, the way-back guard (33 screens), the web build
-  (offline), 503 end-to-end checks, the axe pass over 37 screens and 84
+  (offline), 511 end-to-end checks, the axe pass over 37 screens and 84
   cold-open checks. Against the real project: `pnpm test:account`, 46 more.
 - **The account's spend limit is the month's, not the run's.** The fourth
   audit was ten agents and 1.59M tokens and tripped the monthly limit with
@@ -2557,12 +2575,19 @@ program's actual prompt text by someone with a licensed copy.
   is never copied onto a day it contradicts; the plan opens on the first day they named, and
   the mornings before it are Today's "Nothing is scheduled" rather than a card that lies.
 - 2026-09-11: the app's day, not the wall clock's, is what any screen prints. `dayOf(new Date(), boundary)` is the only definition of "today" in the product; a screen that reaches for `new Date()` to display a date is a bug even when it happens to agree.
+- 2026-09-20: Welcome is one screen, not three (client: "seems very complex as a new
+  person… don't force people through a long intro that they can't even reach the main
+  page"). PRD §7.1 asked for three screens with the sittings and a persona; the sittings
+  now stand on Today's empty state, which is the room they are for, and the persona lives
+  in You with its default. Two doors on Welcome, both real buttons: Begin tonight, and
+  Look around first. Nothing a person must read before the first tap is more than one
+  screen long.
 
 ## Next steps
 
 Everything that can be done on this machine, without a key, is done. Seven
 audits are closed (the last four on the three volumes, each adversarially
-verified), the built app is walked end to end by 503 checks, and the account
+verified), the built app is walked end to end by 511 checks, and the account
 round-trips against the live project. What remains needs either hardware, a
 credential, or a product call.
 

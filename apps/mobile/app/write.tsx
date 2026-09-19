@@ -36,6 +36,33 @@ import { KeepAwake } from '../src/components/KeepAwake';
 
 const TICK_MS = 250;
 
+/**
+ * The one sign, beside the word, that the room is hearing: a coral dot that
+ * breathes. Still under reduced motion.
+ */
+function Pulse({ reduced }: { reduced: boolean }) {
+  const [opacity] = useState(() => new Animated.Value(1));
+  useEffect(() => {
+    if (reduced) return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, { toValue: 0.25, duration: 700, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 1, duration: 700, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [opacity, reduced]);
+  return (
+    <Animated.View
+      testID="write-pulse"
+      aria-hidden
+      importantForAccessibility="no"
+      style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: accent.coral, opacity }}
+    />
+  );
+}
+
 export default function Write() {
   const router = useRouter();
   useFirstRunStep('fifteen');
@@ -82,6 +109,25 @@ export default function Write() {
    */
   const [listening, setListening] = useState(false);
   const [micNote, setMicNote] = useState<string | null>(null);
+  // Whether this browser or phone can listen at all, asked once on the
+  // doorway. Where it cannot — Firefox, a phone without the module — the
+  // spoken doors are not offered, and one line says why, rather than a chip
+  // that leads to a typed room with an apology.
+  const [canListen, setCanListen] = useState<boolean | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void dictation()
+      .available()
+      .then((ok) => {
+        if (alive) setCanListen(ok);
+      })
+      .catch(() => {
+        if (alive) setCanListen(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
   /**
    * Whether the person wants the room listening: the Listening chip is a
    * switch, off for a moment and on again, and a pause of the clock is a
@@ -292,7 +338,7 @@ export default function Write() {
             </Question>
             <Body style={{ color: night.ink2, textAlign: 'center' }}>{doorway.note}</Body>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
-              {(['type', 'say', 'walk'] as const).map((m) => (
+              {(canListen === false ? (['type'] as const) : (['type', 'say', 'walk'] as const)).map((m) => (
                 <Chip
                   key={m}
                   testID={`mode-${m}`}
@@ -302,6 +348,11 @@ export default function Write() {
                 />
               ))}
             </View>
+            {canListen === false ? (
+              <Label testID="write-no-voice" style={{ color: night.ink3, textAlign: 'center' }}>
+                {Platform.OS === 'web' ? 'Saying it needs Chrome, Edge or Safari. This browser cannot listen, so this is a typed room.' : 'This phone cannot listen, so this is a typed room.'}
+              </Label>
+            ) : null}
             {/*
               The countdown can be put away. It is still there for a screen
               reader and the room still closes at the end; the digits were
@@ -630,6 +681,7 @@ export default function Write() {
                 way back to the microphone; "Type it" above is the way to
                 type.
               */}
+              {listening ? <Pulse reduced={reduced} /> : null}
               <Chip
                 testID="write-mic"
                 label={listening ? 'Listening' : held ? 'Paused' : micWanted && !micNote ? 'Starting…' : 'Listen again'}

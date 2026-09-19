@@ -629,6 +629,72 @@ export function InkButton({
 }
 
 /**
+ * The second button on a screen: the same size and edge as the ink one, an
+ * outline instead of a fill. For the door beside the main door — "Look
+ * around first" under "Begin" — where a text link read as small print and
+ * a second ink button read as two firsts.
+ */
+export function GhostButton({
+  label,
+  onPress,
+  disabled = false,
+  testID,
+  style,
+}: {
+  label: string;
+  onPress?: () => void;
+  disabled?: boolean;
+  testID?: string;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const { p, dark } = usePalette();
+  const { hovered, hoverProps } = useHover();
+  const EDGE = 3;
+  const lift = hovered && !disabled ? 1 : 0;
+  return (
+    <Pressable
+      testID={testID}
+      onPress={disabled ? undefined : onPress}
+      {...hoverProps}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      disabled={disabled}
+      style={style}
+    >
+      {({ pressed }) => (
+        <View
+          style={{
+            borderRadius: radius.chip,
+            backgroundColor: disabled ? 'transparent' : dark ? inkEdge.night : inkEdge.day,
+            paddingBottom: pressed && !disabled ? 0 : EDGE + lift,
+            marginTop: -lift,
+            ...(Platform.OS === 'web' ? webHover.transition : {}),
+          }}
+        >
+          <View
+            style={{
+              minHeight: 56,
+              paddingVertical: 14,
+              paddingHorizontal: 22,
+              borderRadius: radius.chip,
+              backgroundColor: p.surface,
+              borderWidth: 1,
+              borderColor: disabled ? p.line : p.ink,
+              alignItems: 'center',
+              justifyContent: 'center',
+              transform: [{ translateY: pressed && !disabled ? EDGE + lift : 0 }],
+              ...(Platform.OS === 'web' ? webHover.transition : {}),
+            }}
+          >
+            <Text style={{ fontFamily: fonts.sansSemi, fontSize: 17, lineHeight: 22, textAlign: 'center', color: disabled ? p.ink2 : p.ink }}>{label}</Text>
+          </View>
+        </View>
+      )}
+    </Pressable>
+  );
+}
+
+/**
  * Spread onto a ScrollView whose content has nothing focusable in it, so a
  * keyboard on the web build can still reach it and scroll (WCAG 2.1.1). On
  * the phones the scroll view is reachable already; the prop is web's.

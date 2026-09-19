@@ -73,6 +73,13 @@ import {
 import { scheduler } from '../src/notify';
 
 /** "07:00" as a person says it. */
+/** The first three sittings, with their real lengths (PRD §7.1). */
+const FIRST_EVENINGS: { when: string; what: string; long: string }[] = [
+  { when: 'Tonight', what: 'Find your goals by tapping, then write for fifteen minutes', long: '25–35 min' },
+  { when: 'Morning', what: 'Put the goals in order and start the stones: one short line per question', long: '15–20 min' },
+  { when: 'Evening', what: 'Finish the stones, see the plan cut from your words, and seal the Book', long: '20–30 min' },
+];
+
 export default function Today() {
   const router = useRouter();
   const reduced = useReducedMotion();
@@ -245,24 +252,53 @@ export default function Today() {
     no Now, no way to the stones.
   */
   if (!book) {
+    // Nothing begun anywhere: the first screen a new person reads, so it says
+    // what this room is for and what the three evenings make, and its one
+    // button is the first evening. It used to open with "Nothing here yet"
+    // and a button that said "Begin the Interview" — true, and a wall.
+    const fresh = firstRun.step === 'interview' && !elsewhere;
+    const name = state.profile.displayName.trim();
     return (
       <Studio testID="screen-today">
         <SafeAreaView style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 22, justifyContent: 'center', gap: 14 }} showsVerticalScrollIndicator={false}>
-          <Stone size={96} domain={goals[0]?.domain ?? 'health'} polish={firstRun.step === 'interview' ? 0.4 : 0.7} sweep={!reduced && focused} style={{ alignSelf: 'center', marginBottom: 10 }} />
-          <Statement testID="today-path">
-            {firstRun.step !== 'interview' ? 'Your Book is not finished yet.' : elsewhere ? whatIsThere() : 'Nothing here yet, and that is the right starting point.'}
-          </Statement>
-          <Body testID="today-path-caption">
-            {firstRun.step !== 'interview'
-              ? firstRunCaption(firstRun, goals.length)
-              : elsewhere
-                ? interviewKept(interviewDraft)
-                  ? 'Your answers so far are kept. Begin picks the Interview up at the question you were on; Today itself comes at the end of Future, once the Book is sealed.'
-                  : 'It joins your Book when the Book is sealed, at the end of Future. Today itself comes from Future, so the Interview is next.'
-                : 'Three evenings from now there will be a Book, a plan, and a first move for the morning.'}
-          </Body>
-          <InkButton testID="today-begin" label={firstRun.label} onPress={() => router.push(firstRun.route)} />
+          <Rise index={0} reducedMotion={reduced} style={{ gap: 14 }}>
+            <Stone size={96} domain={goals[0]?.domain ?? 'health'} polish={firstRun.step === 'interview' ? 0.4 : 0.7} sweep={!reduced && focused} style={{ alignSelf: 'center', marginBottom: 10 }} />
+            <Statement testID="today-path">
+              {firstRun.step !== 'interview' ? 'Your Book is not finished yet.' : elsewhere ? whatIsThere() : name ? `Hello, ${name}.` : 'Hello.'}
+            </Statement>
+            <Body testID="today-path-caption">
+              {firstRun.step !== 'interview'
+                ? firstRunCaption(firstRun, goals.length)
+                : elsewhere
+                  ? interviewKept(interviewDraft)
+                    ? 'Your answers so far are kept. Begin picks the Interview up at the question you were on; Today itself comes at the end of Future, once the Book is sealed.'
+                    : 'It joins your Book when the Book is sealed, at the end of Future. Today itself comes from Future, so the Interview is next.'
+                  : 'This is your home screen. Once your Book is written, your day lives here: one move each morning, a seal each evening.'}
+            </Body>
+          </Rise>
+          {fresh ? (
+            <Rise index={1} reducedMotion={reduced}>
+              <Card testID="today-evenings" style={{ gap: 4 }}>
+                <Label style={{ marginBottom: 6 }}>Three evenings make the Book</Label>
+                {FIRST_EVENINGS.map((e, i) => (
+                  <View key={e.when} style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start', paddingVertical: 9, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: day.line2 }}>
+                    <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: day.ink, alignItems: 'center', justifyContent: 'center', marginTop: 1 }}>
+                      <Text style={{ fontFamily: fonts.sansSemi, fontSize: 13, color: day.onInk }}>{i + 1}</Text>
+                    </View>
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <Body style={{ color: day.ink, fontSize: 15, lineHeight: 21 }}>{e.what}</Body>
+                      <Label>{`${e.when} · ${e.long}`}</Label>
+                    </View>
+                  </View>
+                ))}
+              </Card>
+            </Rise>
+          ) : null}
+          <Rise index={fresh ? 2 : 1} reducedMotion={reduced} style={{ gap: 14 }}>
+            <InkButton testID="today-begin" label={fresh ? 'Begin tonight · about 30 minutes' : firstRun.label} onPress={() => router.push(firstRun.route)} />
+            {fresh ? <Label style={{ textAlign: 'center' }}>Nothing is written for you. Every word is yours</Label> : null}
+          </Rise>
           {carryOnRow}
           {/* A finished volume is one tap away, not two taps and a door mark away. */}
           {volumes.past === 'done' ? <TextButton testID="today-reread-past" label="Reread your past" onPress={() => router.push('/past')} /> : null}
