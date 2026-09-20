@@ -95,11 +95,16 @@ export const BRIEF_MAX_WORDS = 90;
 export function openingLine(book: Pick<BookVersion, 'firstSentence' | 'ideal'> | null): string {
   if (!book) return '';
   const first = book.firstSentence?.trim() ?? '';
-  const wordsOf = (s: string) => s.trim().split(/s+/).filter(Boolean).length;
+  const wordsOf = (s: string) => s.trim().split(/\s+/).filter(Boolean).length;
   if (wordsOf(first) >= 5) return first;
-  const sentences = (book.ideal ?? '').replace(/s+/g, ' ').match(/[^.!?]+[.!?]+["'”’)]]*(?=s|$)/g) ?? [];
-  const fuller = sentences.map((s) => s.trim()).find((s) => wordsOf(s) >= 5);
-  return fuller && fuller.length <= 180 ? fuller : first;
+  // A sentence ends at a full stop, or at a line break: a Fifteen said into
+  // a browser arrives with no full stops, one breath to a line. (The two
+  // regexes here once lost their backslashes to a shell and split on the
+  // letter s; the fallback was dead and nothing noticed, because a
+  // sentence with its s's turned to spaces never had five words.)
+  const sentences = (book.ideal ?? '').split(/(?<=[.!?]["'”’)\]]*)\s+|\n+/).map((s) => s.trim());
+  const fuller = sentences.find((s) => wordsOf(s) >= 5 && s.length <= 180);
+  return fuller ?? first;
 }
 
 const wordsIn = (s: string): number => s.trim().split(/\s+/).filter(Boolean).length;

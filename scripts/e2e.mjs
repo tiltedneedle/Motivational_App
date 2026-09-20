@@ -1032,6 +1032,11 @@ async function main() {
       await page.evaluate(() => window.__hear([['The kettle is on.', true]]));
       await page.waitForTimeout(200);
       check('with nothing said before the pause lost', (await spoken()).endsWith('Sam is asleep. The kettle is on.'), await spoken());
+      // Breaths without full stops go on their own lines; sentences run on.
+      await page.evaluate(() => window.__hear([['The kettle is on.', true], ['no full stop here', true]]));
+      await page.evaluate(() => window.__hear([['The kettle is on.', true], ['no full stop here', true], ['and another breath', true]]));
+      await page.waitForTimeout(200);
+      check('a breath with no full stop starts its own line', (await spoken()).endsWith('The kettle is on. no full stop here\nand another breath'), JSON.stringify((await spoken()).slice(-60)));
       await tap('write-mic');
       await page.waitForTimeout(400);
       check('the Listening chip switches the microphone off', !(await lastStarted()) && (await text('write-mic')).toLowerCase() === 'listen again', await text('write-mic'));

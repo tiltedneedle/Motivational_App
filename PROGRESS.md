@@ -15,9 +15,9 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 1. packages/core: domain model, stores (zustand + persist), engines
 - [x] 2. packages/ui: Studio tokens, Stone/Socket/Ring, HoldBar, Chip, Field, Sheet, text primitives
 - [x] 3. apps/mobile screens (all 16 routes)
-- [x] 4. Tests, as of 2026-09-18: 483 core + 48 ui + 8 storage unit tests, the eval harness
-      (647 checks over forty profiles and two hundred labelled lines), 68 real-Postgres
-      checks, **519 Playwright e2e checks**, 84 cold-open checks, 7 service-worker checks, axe 0 across 37 screens,
+- [x] 4. Tests, as of 2026-09-18: 489 core + 48 ui + 8 storage unit tests, the eval harness
+      (687 checks over forty profiles and two hundred labelled lines), 68 real-Postgres
+      checks, **520 Playwright e2e checks**, 84 cold-open checks, 7 service-worker checks, axe 0 across 37 screens,
       the account round-trip 46/46 against the live project — all green, all in `pnpm verify`
 - [x] 5. supabase/: migrations with RLS and three structural authorship guards, edge functions
 - [x] 6. Hardening: the eight-lens audit's findings, worst first (see below) — 95 of 95
@@ -50,6 +50,30 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 58. **A spoken Fifteen gives stones, 2026-09-20.** The loophole that would
+      have ended a voice demo: a browser's recogniser hands back fifteen minutes
+      with no full stops in it, and the read-back — which cut at full stops —
+      offered the whole as one stone of a hundred and thirty words and then asked
+      "What did you leave out on purpose?" Nothing downstream (naming, the
+      stones, the Book) could begin. Now a clause longer than a breath is cut
+      at its spoken joins — "and I", "but we", "so the", "because it" — and
+      before a sentence that simply starts ("still blue I lace the left shoe"),
+      only where the word before would not carry it on ("that I", "when I"
+      stay); "bread and butter" stays together. Every piece is still an exact
+      substring. The probe went from one span to seven. In the room, a final
+      stretch with no full stop goes on its own line — the pause is the only
+      full stop the person gave, and the read-back reads a line break as one —
+      while a recogniser that punctuates runs on as prose. The eval harness now
+      says every profile spoken — lower-case, no stops — still gives three to
+      nine stones, none longer than two breaths (687 checks, was 647). Unit
+      tests: the spoken transcript, and the join rule. Found on the way: the
+      coach's `openingLine` had two regexes that had lost their backslashes to
+      a shell — `/s+/` split on the letter s — so its fallback (skip a
+      scene-setter like "It's March." for the first sentence worth reading)
+      was dead and nothing noticed, because it had no test. Fixed, tested
+      (four cases, one of them a spoken Fifteen), and the copy guard now fails
+      on any regex literal with a bare class letter where a class was meant,
+      across the product, the scripts and the edge functions. e2e 520/520.
 - [x] 57. **The microphone rests when you do, and hears your own English, 2026-09-20.**
       Away from the screen — a call, another tab — the recogniser used to fail in
       the background and report "the microphone was not allowed" to a person who
@@ -359,11 +383,11 @@ tested. What is left needs a machine or a key this one does not have; see
 "Next steps".
 
 - The tree is green and committed. `pnpm verify` runs the toolchain guard,
-  the date guard, the copy guard, typecheck, lint, 483 core tests, 48 ui
-  tests, 8 storage tests, the eval harness (647 checks), the edge-function
+  the date guard, the copy guard, typecheck, lint, 489 core tests, 48 ui
+  tests, 8 storage tests, the eval harness (687 checks), the edge-function
   guards, the SQL structural guards, 68 checks against a real Postgres, the
   serif authorship guard, the way-back guard (33 screens), the web build
-  (offline), 519 end-to-end checks, the axe pass over 37 screens and 84
+  (offline), 520 end-to-end checks, the axe pass over 37 screens and 84
   cold-open checks. Against the real project: `pnpm test:account`, 46 more.
 - **The account's spend limit is the month's, not the run's.** The fourth
   audit was ten agents and 1.59M tokens and tripped the monthly limit with
@@ -2600,7 +2624,7 @@ program's actual prompt text by someone with a licensed copy.
 
 Everything that can be done on this machine, without a key, is done. Seven
 audits are closed (the last four on the three volumes, each adversarially
-verified), the built app is walked end to end by 519 checks, and the account
+verified), the built app is walked end to end by 520 checks, and the account
 round-trips against the live project. What remains needs either hardware, a
 credential, or a product call.
 

@@ -88,6 +88,42 @@ export function domainOf(text: string): DomainId {
   return bestScore === 0 || tied ? 'custom' : best;
 }
 
+/**
+ * Where spoken text breaks. A browser's recogniser hands back fifteen minutes
+ * with no full stops in it — one clause of a hundred and thirty words, which
+ * the read-back offered whole, as one stone, and then asked what had been
+ * left out. Speech breaks at its joins instead: "and I", "but we", "so the",
+ * "because it". Only a join followed by a subject counts, so "bread and
+ * butter" stays together. And a new sentence that simply starts — "still
+ * blue i lace the left shoe" — is cut before its "I" when the word before
+ * it is not one that would carry the sentence on ("that I", "when I").
+ */
+const SPOKEN_JOIN =
+  /\s+(?:and then|and|but|so|because|then)\s+(?=(?:i|i'm|i've|i'll|i'd|we|we're|we'll|my|our|the|there|there's|it|it's|she|he|they|you|a|an|nobody|everyone|someone)\b)|(?<!\b(?:and|but|so|because|then|that|if|when|where|which|while|as|than|or|what|how|why|whether|unless|until|before|after|once|since|though|although|like|says?|said|think|thought|know|knew|hope|wish|suppose|guess|mean|meant))\s+(?=(?:i|i'm|i've|i'll|i'd|there's|that's)\b)/gi;
+
+/** Clauses longer than this are spoken, or breathless, and are cut at their joins. */
+const SPOKEN_WORDS = 26;
+
+/** Cut one long clause at its spoken joins; offsets stay exact. */
+function cutSpoken(text: string, start: number): { text: string; start: number; end: number }[] {
+  const pieces: { text: string; start: number; end: number }[] = [];
+  let at = 0;
+  let m: RegExpExecArray | null;
+  SPOKEN_JOIN.lastIndex = 0;
+  const push = (from: number, to: number) => {
+    const piece = text.slice(from, to).trim().replace(/[.!?;,:]+$/, '');
+    if (piece.length < 12) return;
+    const lead = text.slice(from, to).length - text.slice(from, to).trimStart().length;
+    pieces.push({ text: piece, start: start + from + lead, end: start + from + lead + piece.length });
+  };
+  while ((m = SPOKEN_JOIN.exec(text)) !== null) {
+    push(at, m.index);
+    at = m.index + m[0].length;
+  }
+  push(at, text.length);
+  return pieces;
+}
+
 /** Split into clauses while keeping exact offsets, so every span stays verbatim. */
 export function clauses(text: string): { text: string; start: number; end: number }[] {
   const out: { text: string; start: number; end: number }[] = [];
@@ -103,6 +139,15 @@ export function clauses(text: string): { text: string; start: number; end: numbe
     const trimmed = raw.trim().replace(/[.!?;,:]+$/, '');
     if (trimmed.length < 12) continue;
     const start = m.index + lead;
+    // Spoken, or breathless: a clause too long to be one want is offered in
+    // its pieces, never whole.
+    if (trimmed.split(/\s+/).length > SPOKEN_WORDS) {
+      const pieces = cutSpoken(trimmed, start);
+      if (pieces.length > 1) {
+        out.push(...pieces);
+        continue;
+      }
+    }
     out.push({ text: trimmed, start, end: start + trimmed.length });
     // Long clauses often hold two wants joined by "and": offer the halves too.
     const andIdx = trimmed.search(/\s+and\s+(?=i|we|the|my)/i);

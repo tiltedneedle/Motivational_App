@@ -268,6 +268,23 @@ describe.each(built)('$profile.id', (b) => {
     report.spans.max = Math.max(report.spans.max, local.spans.length);
   });
 
+  // The same Fifteen said rather than typed: a browser's recogniser hands it
+  // back lower-case with no full stops. The read-back must still find the
+  // wants in it, in pieces a person can name, never the whole as one stone.
+  it('read-back: the same Fifteen spoken — no full stops, no capitals — still gives stones to name', () => {
+    const spoken = p.ideal.toLowerCase().replace(/[.!?;:]+(\s+|$)/g, ' ').replace(/\s+/g, ' ').trim();
+    const local = extractSpansLocally(spoken);
+    expect(local.spans.length, 'spoken: 3..9 spans').toBeGreaterThanOrEqual(3);
+    expect(local.spans.length).toBeLessThanOrEqual(9);
+    for (const sp of local.spans) {
+      expect(spoken.slice(sp.start, sp.end)).toBe(sp.text);
+      // Typed prose with its full stops stripped is the worst case: a real
+      // recogniser also breaks the text where the speaker paused. Two
+      // breaths, not one, is the ceiling here.
+      expect(words(sp.text), 'no stone longer than two breaths').toBeLessThanOrEqual(40);
+    }
+  });
+
   const book = buildBookVersion(
     {
       version: 1,

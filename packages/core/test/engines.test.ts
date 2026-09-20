@@ -12,6 +12,7 @@ import {
   beginBranches,
   buildDawnBrief,
   buildPortrait,
+  openingLine,
   clarity,
   minSecondsToCount,
   canClose,
@@ -1393,5 +1394,29 @@ describe('moves cut from a line with days in the middle of it', () => {
     const line = 'Saturday at 5 pm in the front room with both boys, 20 minutes, the three chords from the sheet, new strings by this Saturday';
     expect(splitFirstMoves(line)).toEqual([line]);
     expect(splitFirstMoves('Tuesday and Thursday at 6:40, and again Tuesday if it rained')).toHaveLength(2);
+  });
+});
+
+describe('the line the morning opens with', () => {
+  it('is the first sentence when it has five words or more', () => {
+    const first = 'It is 6:40 and the kitchen is still blue.';
+    expect(openingLine({ firstSentence: first, ideal: first + ' I lace the left shoe first.' })).toBe(first);
+  });
+
+  it('skips a scene-setter for the first sentence worth reading back', () => {
+    // The two regexes here once split on the letter s, and this fallback
+    // was dead: it returned "It's March." every time.
+    const ideal = "It's March. The kitchen is still blue and I lace the left shoe first, like always. Rent went out on the first.";
+    expect(openingLine({ firstSentence: "It's March.", ideal })).toBe('The kitchen is still blue and I lace the left shoe first, like always.');
+  });
+
+  it('reads a breath on its own line as a sentence, for a Fifteen said into a browser', () => {
+    const ideal = 'tuesday\nthe kitchen is still blue and i lace the left shoe first\nrent went out on the first';
+    expect(openingLine({ firstSentence: 'tuesday', ideal })).toBe('the kitchen is still blue and i lace the left shoe first');
+  });
+
+  it('never opens with a sentence longer than the brief can carry', () => {
+    const long = 'word '.repeat(60).trim() + '.';
+    expect(openingLine({ firstSentence: 'Short.', ideal: 'Short. ' + long })).toBe('Short.');
   });
 });

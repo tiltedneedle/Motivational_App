@@ -217,7 +217,14 @@ export default function Write() {
         onText: (text, final) => {
           if (gone) return;
           typingRef.current = true;
-          const joined = [anchorRef.current.trim(), text.trim()].filter(Boolean).join(' ');
+          // A recogniser that punctuates (a phone, Safari) hands back
+          // sentences, and they run on as prose. One that does not (Chrome)
+          // hands back breaths, and each goes on its own line — the pause is
+          // the only full stop the person gave, and the read-back reads a
+          // line break as one.
+          const kept = anchorRef.current.trim();
+          const sep = !kept ? '' : /[.!?…]["'”’)]*$/.test(kept) ? ' ' : '\n';
+          const joined = kept + sep + text.trim();
           setSession((s) => ({ ...s, body: joined, idleMs: 0, nudge: null }));
           if (final) anchorRef.current = joined;
         },

@@ -105,6 +105,30 @@ describe('local read-back', () => {
     const domains = spans.map((s) => s.domain);
     expect(domains).toContain('money');
   });
+
+  // A browser's recogniser hands back the Fifteen with no full stops in it.
+  // This used to come out as one stone of a hundred and thirty words and the
+  // question "What did you leave out on purpose?"
+  it('cuts a spoken, unpunctuated Fifteen at its joins rather than offering it whole', () => {
+    const spoken =
+      "it's 6:40 and the kitchen is still blue i lace the left shoe first like always and the door is already open before i've decided anything and i want to run every morning before the kettle boils and i want to be out the back door by seven and rent went out on the first and i didn't look at the balance because i already knew and i want to have three months put by so a bad month is only a bad month and sam is asleep upstairs and the guitar is on the wall where i can see it from the table and i want to play it on tuesdays again and i want to call my mother every sunday and i want to be someone who finishes what he starts";
+    const out = extractSpansLocally(spoken);
+    expect(out.spans.length).toBeGreaterThanOrEqual(5);
+    expect(out.leftOutQuestion).toBeUndefined();
+    for (const s of out.spans) {
+      expect(spoken.slice(s.start, s.end)).toBe(s.text);
+      expect(s.text.split(/\s+/).length).toBeLessThanOrEqual(26);
+      expect(s.text).not.toMatch(/^(and|but|so|because|then)\b/i);
+    }
+    expect(out.spans.map((s) => s.text)).toContain('i want to call my mother every sunday');
+  });
+
+  it('leaves "bread and butter" together: a join cuts only before a subject', () => {
+    const { spans } = extractSpansLocally(
+      'i want to sell bread and butter at the market every saturday morning and i want the stall to pay the rent by the spring and my father to see it once before he stops travelling',
+    );
+    expect(spans.some((s) => s.text.includes('bread and butter'))).toBe(true);
+  });
 });
 
 describe('guarded provider', () => {
