@@ -89,11 +89,21 @@ const cached = (name) =>
 
 await page.goto(`${BASE}/`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(1500);
-check('the worker is active after the first load', await page.evaluate(() => navigator.serviceWorker.ready.then((r) => !!r.active)));
+check(
+  'the worker is active after the first load',
+  await page.evaluate(() => Promise.race([navigator.serviceWorker.ready.then((r) => !!r.active), new Promise((resolve) => setTimeout(() => resolve(false), 8000))])),
+);
+
+// After the first load alone — before any second navigation — the shell
+// has fetched the scripts it names, so the app would open offline now.
+let keys = await cacheKeys();
+const statics0 = keys.find((k) => k.startsWith('morrow-static-'));
+const held0 = statics0 ? await cached(statics0) : [];
+check('the first load alone puts the entry bundle in the cache', held0.some((p) => p.endsWith(entry)), held0.join(',') || 'nothing cached');
 
 await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(1500);
-let keys = await cacheKeys();
+keys = await cacheKeys();
 const statics1 = keys.find((k) => k.startsWith('morrow-static-'));
 check('one shell cache and one statics cache', keys.includes('morrow-shell-v2') && !!statics1 && keys.length === 2, keys.join(','));
 const shell = await cached('morrow-shell-v2');
@@ -117,5 +127,5 @@ const opened = await page.locator('[data-testid="screen-today"], [data-testid="s
 check('with no server the app still opens', opened > 0, (await page.locator('body').innerText().catch(() => '')).slice(0, 120));
 
 await browser.close();
-console.log(failures ? `${failures} failed` : '7/7 service-worker checks passed');
+console.log(failures ? `${failures} failed` : '8/8 service-worker checks passed');
 process.exit(failures ? 1 : 0);

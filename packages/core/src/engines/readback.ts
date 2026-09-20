@@ -111,12 +111,15 @@ function cutSpoken(text: string, start: number): { text: string; start: number; 
   let m: RegExpExecArray | null;
   SPOKEN_JOIN.lastIndex = 0;
   const push = (from: number, to: number) => {
-    const piece = text.slice(from, to).trim().replace(/[.!?;,:]+$/, '');
+    const piece = text.slice(from, to).trim().replace(/[\s.!?;,:]+$/, '');
     if (piece.length < 12) return;
     const lead = text.slice(from, to).length - text.slice(from, to).trimStart().length;
     pieces.push({ text: piece, start: start + from + lead, end: start + from + lead + piece.length });
   };
   while ((m = SPOKEN_JOIN.exec(text)) !== null) {
+    // "my wife and I want…", "the bike and the fence": a join this close to
+    // the start of a piece is a compound subject, not a seam between wants.
+    if (text.slice(at, m.index).trim().split(/\s+/).length < 4) continue;
     push(at, m.index);
     at = m.index + m[0].length;
   }
@@ -136,7 +139,7 @@ export function clauses(text: string): { text: string; start: number; end: numbe
     // “I am out the back door before the kettle boils,” reads as a bug in the
     // app rather than as their sentence. Trimming the tail leaves a verbatim
     // substring, so nothing about the authorship rule changes.
-    const trimmed = raw.trim().replace(/[.!?;,:]+$/, '');
+    const trimmed = raw.trim().replace(/[\s.!?;,:]+$/, '');
     if (trimmed.length < 12) continue;
     const start = m.index + lead;
     // Spoken, or breathless: a clause too long to be one want is offered in

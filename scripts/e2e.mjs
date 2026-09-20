@@ -1063,6 +1063,20 @@ async function main() {
       await page.waitForTimeout(600);
       check('and back, it listens again with every word kept', (await lastStarted()) && (await text('write-mic')).toLowerCase() === 'listening' && (await spoken()) === before, `${await text('write-mic')} · ${await spoken()}`);
       check('and holds the screen awake again, once', (await wake()).held === 1, JSON.stringify(await wake()));
+      // Typed over a stretch still being heard: what is on the page is theirs,
+      // and the stretch's final is not added again. And a breath after typed
+      // words runs on — typed words are not a breath.
+      await page.evaluate(() => window.__hear([['half a', false]]));
+      await page.waitForTimeout(150);
+      const typed = (await spoken()) + ' sentence I typed';
+      await page.locator('[data-testid="write-input"]').fill(typed);
+      await page.waitForTimeout(150);
+      await page.evaluate(() => window.__hear([['half a sentence', true]]));
+      await page.waitForTimeout(150);
+      check('a stretch typed over is not added again when its final arrives', (await spoken()) === typed, JSON.stringify((await spoken()).slice(-60)));
+      await page.evaluate(() => window.__hear([['half a sentence', true], ['spoken after typing', true]]));
+      await page.waitForTimeout(150);
+      check('after typed words a breath runs on, not on a new line', (await spoken()) === typed + ' spoken after typing', JSON.stringify((await spoken()).slice(-60)));
       // Ended the way a person ends it, so the draft is not waiting at the
       // next doorway — and the screen is let go with the room.
       await tap('write-done-early');
@@ -1071,6 +1085,40 @@ async function main() {
       check('and closing the room lets the screen sleep', (await wake()).held === 0, JSON.stringify(await wake()));
       await tap('write-continue');
       await page.waitForTimeout(800);
+    } else {
+      check('Say it is offered on the doorway', false);
+    }
+
+    // A spoken draft picked up after a reload goes through the same
+    // microphone gate as Begin: the on-device check runs, so the sound stays
+    // on the device where it can.
+    await page.goto(`${BASE}/write?kind=addition`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(400);
+    if (await seen('mode-say')) {
+      await tap('mode-say');
+      await tap('write-begin');
+      await page.clock.runFor(800);
+      await page.waitForTimeout(400);
+      await page.evaluate(() => window.__hear([['A draft to come back to.', true]]));
+      // Twenty seconds and an autosave tick: enough of a sitting to be offered back.
+      await page.clock.runFor(24000);
+      await page.waitForTimeout(300);
+      await page.goto(`${BASE}/write?kind=addition`, { waitUntil: 'networkidle' });
+      await page.clock.runFor(1200);
+      await page.waitForTimeout(400);
+      check('a spoken draft is offered back after a reload', await seen('write-resume'));
+      if (await seen('write-resume')) {
+        await tap('write-resume');
+        await page.clock.runFor(800);
+        await page.waitForTimeout(600);
+        check('Carry on opens a listening room', (await seen('write-mic')) && (await text('write-mic')).toLowerCase() === 'listening', (await seen('write-mic')) ? await text('write-mic') : 'no chip');
+        check('and asks the browser to keep the sound on the device, as Begin does', await page.evaluate(() => window.__recs[window.__recs.length - 1]?.processLocally === true), await page.evaluate(() => JSON.stringify(window.__recs.map((r) => [r.lang, r.processLocally, r.started]))));
+        await tap('write-done-early');
+        await page.waitForTimeout(300);
+        await tap('write-continue');
+        await page.waitForTimeout(800);
+      }
     } else {
       check('Say it is offered on the doorway', false);
     }

@@ -58,7 +58,14 @@ export default function Welcome() {
   return (
     <Studio testID="screen-welcome">
       <SafeAreaView style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 22, justifyContent: 'center', gap: 22, paddingVertical: 24 }} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 22, justifyContent: 'center', gap: 22, paddingVertical: 24 }}
+          showsVerticalScrollIndicator={false}
+          // With the keyboard up for the name, the first tap on Begin is the
+          // tap, not a dismissal of the keyboard.
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        >
           <Rise index={0} reducedMotion={reduced} style={{ alignItems: 'center', gap: 18 }}>
             <Stone size={124} domain="health" polish={1} sweep={!reduced && focused} testID="welcome-stone" />
             <Statement style={{ fontSize: 48, lineHeight: 52, textAlign: 'center' }}>Morrow</Statement>

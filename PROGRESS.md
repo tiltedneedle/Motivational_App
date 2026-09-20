@@ -17,7 +17,7 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 3. apps/mobile screens (all 16 routes)
 - [x] 4. Tests, as of 2026-09-18: 489 core + 48 ui + 8 storage unit tests, the eval harness
       (687 checks over forty profiles and two hundred labelled lines), 68 real-Postgres
-      checks, **520 Playwright e2e checks**, 84 cold-open checks, 7 service-worker checks, axe 0 across 37 screens,
+      checks, **525 Playwright e2e checks**, 84 cold-open checks, 8 service-worker checks, axe 0 across 37 screens,
       the account round-trip 46/46 against the live project — all green, all in `pnpm verify`
 - [x] 5. supabase/: migrations with RLS and three structural authorship guards, edge functions
 - [x] 6. Hardening: the eight-lens audit's findings, worst first (see below) — 95 of 95
@@ -50,6 +50,35 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 59. **The body of work reviewed, sixteen findings, thirteen fixed, 2026-09-20.**
+      One sweep (four lenses, each finding refuted once; 21 agents, 1.5M tokens —
+      the last one this month), then every finding read by hand. Fixed: on a
+      phone, `stop()`'s deferred listener clear removed the listeners a following
+      `start()` had just registered — every return to the app — so the room said
+      Listening and heard nothing (a generation counter now); Carry on skipped the
+      microphone gate, so a spoken draft picked up after a reload opened with the
+      OS dialog on the clock and without the on-device check (one `gate()` for
+      both doors); a phone with no recogniser kept the mode at Say it under a
+      caption about its recogniser (the mode is typed, and `permission()` says
+      unavailable before asking the OS for a microphone it could not use); typing
+      over a stretch still being heard duplicated it when its final arrived
+      (absorbed, not added again); a breath after typed words started a new line
+      (typed words are not a breath); a join two words into a piece cut "my wife
+      and I" in half (a join needs four words before it); a trimmed stop left its
+      space in a stone; the worker kept a navigation to sw.js as the shell (only
+      HTML is a shell), served the manifest and icons cache-first for ever
+      (network-first now), and cached nothing on the first load (the shell's own
+      scripts are fetched on install, so offline works after one load, not two);
+      check-sw hung rather than failed when the worker did not register; the
+      refused-microphone line promised a choice the typed room does not offer;
+      Welcome's scroll view swallowed the first tap on Begin with the keyboard up.
+      Accepted, not fixed: a final that arrives in the 800 ms after Pause is
+      dropped — the unpunctuated interim is what stays, no words are lost, and
+      taking late finals would race the next start; and the bare-"I" cut can take
+      a fronted adverbial off a want ("every morning" | "I run…") in a clause
+      already longer than a breath — the piece is still theirs, and the whole
+      was the alternative. e2e: typed over a stretch, a breath after typing,
+      Carry on through the gate; check-sw 8/8.
 - [x] 58. **A spoken Fifteen gives stones, 2026-09-20.** The loophole that would
       have ended a voice demo: a browser's recogniser hands back fifteen minutes
       with no full stops in it, and the read-back — which cut at full stops —
@@ -387,7 +416,7 @@ tested. What is left needs a machine or a key this one does not have; see
   tests, 8 storage tests, the eval harness (687 checks), the edge-function
   guards, the SQL structural guards, 68 checks against a real Postgres, the
   serif authorship guard, the way-back guard (33 screens), the web build
-  (offline), 520 end-to-end checks, the axe pass over 37 screens and 84
+  (offline), 525 end-to-end checks, the axe pass over 37 screens and 84
   cold-open checks. Against the real project: `pnpm test:account`, 46 more.
 - **The account's spend limit is the month's, not the run's.** The fourth
   audit was ten agents and 1.59M tokens and tripped the monthly limit with
@@ -2624,7 +2653,7 @@ program's actual prompt text by someone with a licensed copy.
 
 Everything that can be done on this machine, without a key, is done. Seven
 audits are closed (the last four on the three volumes, each adversarially
-verified), the built app is walked end to end by 520 checks, and the account
+verified), the built app is walked end to end by 525 checks, and the account
 round-trips against the live project. What remains needs either hardware, a
 credential, or a product call.
 

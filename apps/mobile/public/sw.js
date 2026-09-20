@@ -19,7 +19,10 @@
  */
 const SHELL = 'morrow-shell-v2';
 const MARKER = '/__shell-version';
-const STATIC = /^\/(?:_expo\/static\/|assets\/|icons\/|manifest\.webmanifest$|favicon\.ico$)/;
+// Hashed: their names change when their contents do, so cache-first.
+const STATIC = /^\/(?:_expo\/static\/|assets\/)/;
+// Unhashed and small: network-first, the cache behind it for offline.
+const NAMED = /^\/(?:icons\/|manifest\.webmanifest$|favicon\.ico$)/;
 
 function hash(text) {
   let h = 5381;
@@ -37,8 +40,14 @@ async function statics() {
   return caches.open(`morrow-static-${await version()}`);
 }
 
-/** A fresh shell: keep it, and if it is a new deploy, let the old statics go. */
+/**
+ * A fresh shell: keep it, and if it is a new deploy, let the old statics go
+ * and fetch the scripts this shell names, so the app opens offline after
+ * its first load and not only after its second. Only a page is a shell: a
+ * navigation that lands on the worker file or the manifest is not kept.
+ */
 async function keepShell(res) {
+  if (!/text\/html/i.test(res.headers.get('content-type') || '')) return;
   const html = await res.text();
   const next = hash(html);
   const shell = await caches.open(SHELL);
@@ -48,6 +57,11 @@ async function keepShell(res) {
   await shell.put(MARKER, new Response(next));
   const keys = await caches.keys();
   await Promise.all(keys.filter((k) => k.startsWith('morrow-static-') && k !== `morrow-static-${next}`).map((k) => caches.delete(k)));
+  const scripts = [...html.matchAll(/(?:src|href)="(\/_expo\/static\/[^"]+)"/g)].map((m) => m[1]);
+  if (scripts.length) {
+    const cache = await caches.open(`morrow-static-${next}`);
+    await cache.addAll(scripts).catch(() => undefined);
+  }
 }
 
 self.addEventListener('install', (event) => {
@@ -99,6 +113,20 @@ self.addEventListener('fetch', (event) => {
               return res;
             }),
         ),
+      ),
+    );
+    return;
+  }
+
+  if (NAMED.test(url.pathname)) {
+    event.respondWith(
+      statics().then((cache) =>
+        fetch(req)
+          .then((res) => {
+            if (res.ok) cache.put(req, res.clone()).catch(() => undefined);
+            return res;
+          })
+          .catch(() => cache.match(req).then((hit) => hit ?? Response.error())),
       ),
     );
   }

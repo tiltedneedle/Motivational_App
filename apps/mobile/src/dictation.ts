@@ -363,6 +363,12 @@ function nativeDictation(): Dictation {
   // When the recogniser was last started, so an `end` that belongs to the
   // one just replaced does not start a third.
   let startedAt = 0;
+  // Which start() the current listeners belong to. A stop() clears its own
+  // listeners a moment later, after the last result has had time to arrive;
+  // a start() that came in between — every return to the app does this —
+  // must not have its fresh listeners taken away by the old stop's timer.
+  // That is exactly what happened: the room said Listening and heard nothing.
+  let generation = 0;
 
   const clear = () => {
     for (const s of subs) s.remove();
@@ -409,6 +415,13 @@ function nativeDictation(): Dictation {
       const m = await module();
       if (!m) return 'unavailable';
       try {
+        // No recogniser on this phone: say so before the OS is asked for a
+        // microphone the room could not use.
+        if (!m.ExpoSpeechRecognitionModule.isRecognitionAvailable()) return 'unavailable';
+      } catch {
+        return 'unavailable';
+      }
+      try {
         const allowed = await m.ExpoSpeechRecognitionModule.requestPermissionsAsync();
         return allowed?.granted ? 'granted' : 'refused';
       } catch {
@@ -435,6 +448,7 @@ function nativeDictation(): Dictation {
       current = handlers;
       listening = true;
       strikes = 0;
+      generation += 1;
       clear();
       const mod = m.ExpoSpeechRecognitionModule;
       subs.push(
@@ -490,14 +504,18 @@ function nativeDictation(): Dictation {
 
     stop() {
       listening = false;
+      const mine = generation;
       void module().then((m) => {
         try {
           m?.ExpoSpeechRecognitionModule.stop();
         } catch {
           // Already stopped.
         }
-        // After the final result has had a moment to arrive.
-        setTimeout(clear, 800);
+        // After the final result has had a moment to arrive — and only if no
+        // start() has registered new listeners since.
+        setTimeout(() => {
+          if (generation === mine) clear();
+        }, 800);
       });
     },
   };

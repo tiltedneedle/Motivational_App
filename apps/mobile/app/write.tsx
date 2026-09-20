@@ -119,10 +119,16 @@ export default function Write() {
     void dictation()
       .available()
       .then((ok) => {
-        if (alive) setCanListen(ok);
+        if (!alive) return;
+        setCanListen(ok);
+        // The typed room is the only room, so the mode says so — the chip
+        // used to sit unselected under a caption about the phone's recogniser.
+        if (!ok) setMode('type');
       })
       .catch(() => {
-        if (alive) setCanListen(false);
+        if (!alive) return;
+        setCanListen(false);
+        setMode('type');
       });
     return () => {
       alive = false;
@@ -137,6 +143,12 @@ export default function Write() {
   const [micWanted, setMicWanted] = useState(true);
   const [micTry, setMicTry] = useState(0);
   const anchorRef = useRef('');
+  // Whether the last words on the page came from the recogniser (a breath)
+  // or the keyboard; whether a stretch is still being heard; and whether the
+  // person typed over that stretch, so its final must not be added again.
+  const spokenLastRef = useRef(false);
+  const heardRef = useRef(false);
+  const absorbedRef = useRef(false);
   const dictationRef = useRef(dictation());
 
   /**
@@ -217,16 +229,28 @@ export default function Write() {
         onText: (text, final) => {
           if (gone) return;
           typingRef.current = true;
+          // A stretch the person typed over while it was still being heard
+          // is already on the page, in their hand: its final is not added
+          // again.
+          if (absorbedRef.current) {
+            if (final) absorbedRef.current = false;
+            return;
+          }
           // A recogniser that punctuates (a phone, Safari) hands back
           // sentences, and they run on as prose. One that does not (Chrome)
           // hands back breaths, and each goes on its own line — the pause is
           // the only full stop the person gave, and the read-back reads a
-          // line break as one.
+          // line break as one. Typed words are not a breath: what follows
+          // them runs on.
           const kept = anchorRef.current.trim();
-          const sep = !kept ? '' : /[.!?…]["'”’)]*$/.test(kept) ? ' ' : '\n';
+          const sep = !kept ? '' : /[.!?…]["'”’)]*$/.test(kept) || !spokenLastRef.current ? ' ' : '\n';
           const joined = kept + sep + text.trim();
+          heardRef.current = !final;
           setSession((s) => ({ ...s, body: joined, idleMs: 0, nudge: null }));
-          if (final) anchorRef.current = joined;
+          if (final) {
+            anchorRef.current = joined;
+            spokenLastRef.current = true;
+          }
         },
         onProblem: (message) => {
           if (gone) return;
@@ -299,8 +323,15 @@ export default function Write() {
 
   const onChange = useCallback((body: string) => {
     typingRef.current = true;
-    // Typed over a transcript: what is on screen is the whole of it now.
+    // Typed over a transcript: what is on screen is the whole of it now,
+    // including any stretch still being heard — whose final is then not
+    // added a second time.
     anchorRef.current = body;
+    spokenLastRef.current = false;
+    if (heardRef.current) {
+      absorbedRef.current = true;
+      heardRef.current = false;
+    }
     setSession((s) => ({ ...s, body, idleMs: 0, nudge: null }));
   }, []);
 
@@ -337,6 +368,27 @@ export default function Write() {
       return;
     }
     router.replace(after());
+  };
+
+  /**
+   * The microphone is asked for here, on the doorway, so the OS dialog is not
+   * the first thing to happen on the clock. Refused, or on a device that
+   * cannot listen, the room is a typed one and says so. Begin and Carry on
+   * both go through it.
+   */
+  const gate = async (wanted: WritingMode): Promise<WritingMode> => {
+    if (wanted === 'type' || canListen === false) return 'type';
+    const answer = await dictation().permission();
+    if (answer === 'granted') return wanted;
+    setMode('type');
+    setMicNote(
+      answer === 'refused'
+        ? Platform.OS === 'web'
+          ? 'The microphone was not allowed, so this is a typed room. Allow it for this site in your browser, and the next room can listen.'
+          : 'The microphone was not allowed, so this is a typed room. It can be allowed in your phone’s own Settings.'
+        : 'This device cannot listen, so this is a typed room.',
+    );
+    return 'type';
   };
 
   if (phase === 'doorway') {
@@ -402,10 +454,17 @@ export default function Write() {
                     Math.max(0, targetSeconds(kind, track) - draft.elapsed),
                   )} left`}
                   onPress={() => {
-                    setSession(resumeWriting(draft));
-                    setMode(draft.mode);
-                    setPhase('writing');
-                    setTimeout(() => inputRef.current?.focus(), 60);
+                    // Through the same microphone gate as Begin: a spoken
+                    // draft picked up after a reload used to open its room
+                    // with the OS dialog on the clock, and without the
+                    // on-device check that keeps the sound on the device.
+                    void (async () => {
+                      const chosen = await gate(draft.mode);
+                      setSession({ ...resumeWriting(draft), mode: chosen });
+                      setMode(chosen);
+                      setPhase('writing');
+                      setTimeout(() => inputRef.current?.focus(), 60);
+                    })();
                   }}
                 />
                 <Label style={{ color: night.ink3, textAlign: 'center' }}>
@@ -420,25 +479,8 @@ export default function Write() {
                   testID="write-begin"
                   label={`Begin · ${Math.round(targetSeconds(kind, track) / 60)} minutes`}
                   onPress={() => {
-                    // The microphone is asked for here, on the doorway, so
-                    // the OS dialog is not the first thing to happen on the
-                    // clock. Refused, the room is a typed one and says so.
                     void (async () => {
-                      let chosen = mode;
-                      if (mode !== 'type') {
-                        const answer = await dictation().permission();
-                        if (answer !== 'granted') {
-                          chosen = 'type';
-                          setMode('type');
-                          setMicNote(
-                            answer === 'refused'
-                              ? Platform.OS === 'web'
-                                ? 'The microphone was not allowed, so this is a typed room. Allow it for this site in your browser, then choose Say it again.'
-                                : 'The microphone was not allowed, so this is a typed room. It can be allowed in your phone’s own Settings.'
-                              : 'This device cannot listen, so this is a typed room.',
-                          );
-                        }
-                      }
+                      const chosen = await gate(mode);
                       setSession(startWriting(kind, track, chosen));
                       setPhase('writing');
                       setTimeout(() => inputRef.current?.focus(), 60);
