@@ -441,7 +441,7 @@ export default function Settings() {
           {/* Welcome, again. It never comes back on its own once it has been seen. */}
           <View style={{ gap: 6 }}>
             <Label>The introduction</Label>
-            <Body style={{ fontSize: 14 }}>The three pages from the first launch: what this is, the three evenings, and how you want to be spoken to.</Body>
+            <Body style={{ fontSize: 14 }}>The screen from the first launch: what this is, and the two doors in.</Body>
             <Chip testID="settings-intro" label="See the introduction again" ghost onPress={() => router.push('/?intro=1')} />
           </View>
 

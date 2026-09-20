@@ -95,7 +95,9 @@ export function buildMemory(input: MemoryInput): MemoryLine[] {
 
   // ---- you
   if (profile.displayName.trim()) you('you.name', 'You asked to be called', profile.displayName.trim());
-  you('you.register', `You asked to be spoken to ${REGISTER[profile.persona]}.`);
+  // "You are", not "you asked": since Welcome became one screen the register
+  // starts as a default and is chosen, if at all, in You.
+  you('you.register', `You are spoken to ${REGISTER[profile.persona]}; it can be changed in You.`);
   you('you.track', `You write on the ${profile.track === 'full' ? 'Full' : 'Starter'} track.`);
   you(
     'you.times',
