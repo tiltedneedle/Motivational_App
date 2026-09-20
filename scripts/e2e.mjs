@@ -140,6 +140,8 @@ async function main() {
   // A browser that cannot listen at all (Firefox), on request: the doorway
   // must not offer the spoken doors, and must say why.
   await page.addInitScript(() => {
+    // A plain-http address, on request: the browser will not listen there.
+    if (sessionStorage.getItem('insecure') === '1') Object.defineProperty(window, 'isSecureContext', { configurable: true, get: () => false });
     if (sessionStorage.getItem('no-voice') === '1') {
       delete window.SpeechRecognition;
       delete window.webkitSpeechRecognition;
@@ -1104,6 +1106,14 @@ async function main() {
     check('a browser that cannot listen is not offered Say it', (await seen('mode-type')) && !(await seen('mode-say')) && !(await seen('mode-walk')));
     check('and the doorway says which browsers can', (await seen('write-no-voice')) && (await text('write-no-voice')).toLowerCase().includes('chrome, edge or safari'), (await seen('write-no-voice')) ? await text('write-no-voice') : 'no line');
     await page.evaluate(() => sessionStorage.removeItem('no-voice'));
+    // The same doorway over plain http: the line names the real reason.
+    await page.evaluate(() => sessionStorage.setItem('insecure', '1'));
+    await page.goto(`${BASE}/write?kind=addition`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(600);
+    check('over plain http the spoken doors are not offered either', !(await seen('mode-say')));
+    check('and the doorway says it is the address, not the browser', (await seen('write-no-voice')) && (await text('write-no-voice')).toLowerCase().includes('https'), (await seen('write-no-voice')) ? await text('write-no-voice') : 'no line');
+    await page.evaluate(() => sessionStorage.removeItem('insecure'));
 
     // The microphone refused on the doorway: a typed room, and the one line
     // that says why. The line used to live only in the microphone row, which

@@ -113,6 +113,17 @@ async function checkOnDevice(): Promise<void> {
   }
 }
 
+/**
+ * Whether the page is on an address a browser will let listen: https, or
+ * localhost. Over plain http on a Wi-Fi address the recogniser and the
+ * microphone are both refused before anyone is asked, and the room should
+ * say so on the doorway rather than after Begin.
+ */
+export function secureEnough(): boolean {
+  const w = globalThis as unknown as { isSecureContext?: boolean };
+  return w.isSecureContext !== false;
+}
+
 function webRecognitionClass(): WebRecognitionClass | null {
   const w = globalThis as unknown as { webkitSpeechRecognition?: WebRecognitionClass; SpeechRecognition?: WebRecognitionClass };
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
@@ -266,7 +277,7 @@ function webDictation(): Dictation {
 
   return {
     async available() {
-      return webRecognitionClass() !== null;
+      return webRecognitionClass() !== null && secureEnough();
     },
 
     async permission() {
