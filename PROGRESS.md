@@ -50,6 +50,16 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 61. **Live, 2026-09-21.** https://selfauthoring00.vercel.app — Vercel from
+      `main` with the root `vercel.json` (root directory, framework Other), the
+      Supabase URL and publishable key and the PostHog host in the project's
+      environment. The origin is on the auth allow-list
+      (`additional_redirect_urls`, pushed), so the sign-in link lands. Walked in
+      a real Chromium against the live address: the shell, the product's fonts,
+      https (so Say it is offered), the account wired, the worker registered and
+      the bundle cached after one load, the manifest with its type and id, a
+      first run on the real clock from Look around through the read-back, the
+      account screen with its sign-in field; no page errors, no failed requests.
 - [x] 60. **The pulse follows the voice, 2026-09-21.** Where the recogniser can
       say how loud the room is, the coral dot beside "Listening" grows with the
       voice and settles in the quiet instead of breathing on its own: on a phone

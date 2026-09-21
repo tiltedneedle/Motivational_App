@@ -43,6 +43,10 @@ installs for seven days; a developer account makes it permanent.
 
 ## Show it in a browser (the web demo)
 
+It is live at **https://selfauthoring00.vercel.app** (Vercel, from `main`, the
+root `vercel.json`; the Supabase values are set in the project's environment,
+and the origin is on the sign-in allow-list). Every push to `main` deploys.
+
 The whole app runs as a web build, and it is the build every check runs
 against — the end-to-end suite (five hundred and more checks), every route
 opened cold, the axe pass, the service worker driven through two deploys.
