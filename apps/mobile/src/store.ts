@@ -2676,6 +2676,7 @@ export const useTodaysPractices = () => useMorrow(useShallow(todaysPractices));
 export function firstRunOf(s: MorrowState): FirstRunStep {
   return firstRunStep({
     goals: activeGoals(s),
+    hasWarmup: latestText(s.texts, 'warmup') !== null,
     hasIdeal: latestText(s.texts, 'ideal') !== null,
     hasTitle: s.bookTitle.trim().length > 0,
     consented: Boolean(s.profile.consentedAt),
@@ -2696,8 +2697,11 @@ export const useFirstRun = () => useMorrow(useShallow(firstRunOf));
  */
 export function hasBegunOf(s: MorrowState): boolean {
   const v = volumesOf(s);
+  // Set-up done (consent given) is begun: the person answered four questions
+  // and should come back to Today's path card, not to Welcome.
   return (
-    firstRunOf(s).step !== 'interview' ||
+    Boolean(s.profile.consentedAt) ||
+    !['setup', 'warmup', 'interview'].includes(firstRunOf(s).step) ||
     v.present !== 'untouched' ||
     v.past !== 'untouched' ||
     s.presentDraft !== null ||

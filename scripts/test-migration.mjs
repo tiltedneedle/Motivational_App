@@ -240,6 +240,11 @@ ${one}`;
   const shifts = await as(ALICE, 'select shift_days, shift_wake_time from public.profiles where id = $1', [ALICE]);
   check('the shift calendar is kept on the profile', JSON.stringify(shifts.rows[0]?.shift_days) === '[2,3]' && shifts.rows[0]?.shift_wake_time === '13:00');
 
+  // ---- the first write (0012): a text of its own kind, kept like the rest
+  const warm = await as(ALICE, `insert into public.authoring_texts (user_id, kind, body) values ($1, 'warmup', 'Get to bed before midnight.') returning id`, [ALICE]);
+  check('the warm-up text is kept under its own kind (0012)', warm.rows.length === 1);
+  await asRejects('and a kind the app does not write is still refused', ALICE, `insert into public.authoring_texts (user_id, kind, body) values ($1, 'poem', 'x')`, [ALICE], 'authoring_texts_kind_check');
+
   // ---- the memory profile (0009): one row, the person's alone
   await as(
     ALICE,

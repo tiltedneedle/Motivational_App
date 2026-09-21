@@ -27,6 +27,7 @@ type Enumish =
   | 'addition'
   | 'memory_start'
   | 'memory_broke'
+  | 'warmup'
   | 'type'
   | 'say'
   | 'walk'
@@ -51,6 +52,9 @@ export type Event =
       name: 'first_run_step';
       step:
         | 'welcome'
+        | 'setup'
+        | 'first-write'
+        | 'mirror'
         | 'choose'
         | 'explore'
         | 'consent'

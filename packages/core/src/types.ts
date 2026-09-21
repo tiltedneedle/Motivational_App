@@ -35,6 +35,12 @@ export const WritingKind = z.enum([
   'addition',
   'memory_start',
   'memory_broke',
+  /**
+   * The first write (the rebuild, 2026-09-21): two minutes on one of the
+   * source's warm-up prompts, before anything else. Kept like every text;
+   * never enters the Book, never read back as goals.
+   */
+  'warmup',
 ]);
 export type WritingKind = z.infer<typeof WritingKind>;
 
@@ -590,7 +596,19 @@ export const Profile = z.object({
   hapticsOn: z.boolean(),
   reducedMotion: z.boolean(),
   /** PRD 7.14: the day studio, the night studio, or whichever the system is in. */
-  appearance: z.enum(['system', 'light', 'dark']).default('system'),
+  /**
+   * Light by default (the rebuild, 2026-09-21): the day studio is the
+   * product's face, and a first open on a phone in dark mode showed the
+   * night studio to somebody who had chosen nothing. System and Night stay
+   * one tap away in You.
+   */
+  appearance: z.enum(['system', 'light', 'dark']).default('light'),
+  /**
+   * When they said they have a quiet moment (set-up, the rebuild): it
+   * phrases the path card ("tonight" or "this morning") and which of the
+   * two daily moments the primer offers first. Not a schedule.
+   */
+  writeWhen: z.enum(['morning', 'evening', 'any']).default('evening'),
   consentedAt: z.string().nullable(),
   entitled: z.boolean(),
   /**
@@ -659,7 +677,8 @@ export const DEFAULT_PROFILE: Profile = {
   soundOn: true,
   hapticsOn: true,
   reducedMotion: false,
-  appearance: 'system',
+  appearance: 'light',
+  writeWhen: 'evening',
   consentedAt: null,
   entitled: false,
   supportOfferedAt: null,

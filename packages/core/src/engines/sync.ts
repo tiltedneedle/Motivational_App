@@ -159,6 +159,7 @@ export function toRows(bundle: SyncBundle, userId: string, timezone: string): Ta
           haptics_on: p.hapticsOn,
           reduced_motion: p.reducedMotion,
           appearance: p.appearance ?? 'system',
+          write_when: p.writeWhen ?? 'evening',
           // A push from a signed-in device is a person still here: a soft
           // delete inside its week is undone by it.
           deleted_at: null,
@@ -568,6 +569,7 @@ export function fromRows(tables: Partial<Record<(typeof TABLE_ORDER)[number], Ro
         declaredAt: typeof pr.declared_at === 'string' ? pr.declared_at : null,
         reducedMotion: bool(pr.reduced_motion, defaults.reducedMotion),
         appearance: (['system', 'light', 'dark'] as const).find((a) => a === pr.appearance) ?? defaults.appearance,
+        writeWhen: (['morning', 'evening', 'any'] as const).find((w) => w === pr.write_when) ?? defaults.writeWhen,
         consentedAt: strOrNull(pr.consented_at),
         entitled: pr.entitlement === 'pro',
         supportOfferedAt: strOrNull(pr.support_offered_at),

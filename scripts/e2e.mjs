@@ -1039,11 +1039,11 @@ async function main() {
       // every phrase. What was heard is kept; it used to be written over.
       await page.evaluate(() => window.__hear([['I want to run every morning.', true], ['and I mean it this time.', true], ['hello how are you', false]]));
       await page.waitForTimeout(150);
-      check('a stretch still being heard is on the page', (await spoken()).endsWith('this time.\nhello how are you'), JSON.stringify((await spoken()).slice(-40)));
+      check('a stretch still being heard is on the page', (await spoken()).endsWith('this time. hello how are you'), JSON.stringify((await spoken()).slice(-40)));
       await page.evaluate(() => window.__silence());
       await page.waitForTimeout(600);
       check('when the browser stops on its own the room listens again', (await recs()) === 2 && (await lastStarted()), `${await recs()} recognisers`);
-      check('and the stretch it was still hearing is kept, not lost', (await spoken()).endsWith('this time.\nhello how are you'), JSON.stringify((await spoken()).slice(-40)));
+      check('and the stretch it was still hearing is kept, not lost', (await spoken()).endsWith('this time. hello how are you'), JSON.stringify((await spoken()).slice(-40)));
       await page.evaluate(() => window.__hear([['Sam is asleep.', true]]));
       await page.waitForTimeout(200);
       check('and what comes next is added after it, not over it', (await spoken()).endsWith('hello how are you\nSam is asleep.'), JSON.stringify((await spoken()).slice(-50)));

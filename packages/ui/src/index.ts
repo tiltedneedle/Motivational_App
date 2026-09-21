@@ -6,3 +6,4 @@ export * from './primitives';
 export * from './motion';
 export * from './quoted';
 export * from './fit';
+export * from './shell';

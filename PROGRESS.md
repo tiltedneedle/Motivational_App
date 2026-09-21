@@ -68,7 +68,7 @@ in build order — tick as done, and if resuming, continue from the first untick
 - [x] 3. apps/mobile screens (all 16 routes)
 - [x] 4. Tests, as of 2026-09-18: 489 core + 48 ui + 8 storage unit tests, the eval harness
       (687 checks over forty profiles and two hundred labelled lines), 68 real-Postgres
-      checks, **527 Playwright e2e checks**, 84 cold-open checks, 8 service-worker checks, 8 motion checks, axe 0 across 37 screens,
+      checks, **529 Playwright e2e checks**, 84 cold-open checks, 8 service-worker checks, 8 motion checks, axe 0 across 37 screens,
       the account round-trip 46/46 against the live project — all green, all in `pnpm verify`
 - [x] 5. supabase/: migrations with RLS and three structural authorship guards, edge functions
 - [x] 6. Hardening: the eight-lens audit's findings, worst first (see below) — 95 of 95
@@ -577,7 +577,7 @@ tested. What is left needs a machine or a key this one does not have; see
   tests, 8 storage tests, the eval harness (687 checks), the edge-function
   guards, the SQL structural guards, 68 checks against a real Postgres, the
   serif authorship guard, the way-back guard (33 screens), the web build
-  (offline), 527 end-to-end checks, the axe pass over 37 screens, 84
+  (offline), 529 end-to-end checks, the axe pass over 37 screens, 84
   cold-open checks and 8 service-worker checks. Against the real project: `pnpm test:account`, 46 more.
 - **The account's spend limit is the month's, not the run's.** The fourth
   audit was ten agents and 1.59M tokens and tripped the monthly limit with
@@ -623,7 +623,7 @@ pnpm test:sql                   # RLS on every table, the three authorship guard
 pnpm test:migration             # 68 checks against a real Postgres, via PGlite
 pnpm test:authorship            # nothing but the user's words in the serif
 pnpm test:back                  # every screen but the roots has a way back at its top
-pnpm build:web:offline && pnpm test:e2e   # 527 end-to-end checks, serves dist itself
+pnpm build:web:offline && pnpm test:e2e   # 529 end-to-end checks, serves dist itself
 pnpm test:a11y                  # axe over 37 screens (SEED=, DARK= as for shots)
 pnpm test:cold                  # 84 routes opened cold on both stores
 pnpm test:sw                    # the service worker: first load, a second deploy, an outage
@@ -2825,7 +2825,7 @@ program's actual prompt text by someone with a licensed copy.
 
 Everything that can be done on this machine, without a key, is done. Seven
 audits are closed (the last four on the three volumes, each adversarially
-verified), the built app is walked end to end by 527 checks, and the account
+verified), the built app is walked end to end by 529 checks, and the account
 round-trips against the live project. What remains needs either hardware, a
 credential, or a product call.
 

@@ -62,15 +62,25 @@ export const DOORWAY: Record<WritingKind, { eyebrow: string; prompt: string; not
     prompt: 'A time you tried this, or something like it, and it did not last. What happened, honestly, and what you decided about yourself afterwards.',
     note: 'Then one line: what you would tell that version of you, now that you know more.',
   },
+  warmup: {
+    eyebrow: 'A first line',
+    prompt: 'If you could do one thing better this year, what would it be?',
+    note: 'Two minutes is plenty. A sentence counts.',
+  },
 };
 
+/** The warm-up is two minutes and has no floor: a sentence counts. */
+export const WARMUP_SECONDS = 2 * 60;
+
 export function targetSeconds(kind: WritingKind, track: DepthTrack): number {
+  if (kind === 'warmup') return WARMUP_SECONDS;
   if (kind === 'shadow') return track === 'full' ? SHADOW_SECONDS_FULL : SHADOW_SECONDS_STARTER;
   if (kind === 'memory_start' || kind === 'memory_broke') return 10 * 60;
   return IDEAL_SECONDS;
 }
 
 export function minSecondsToCount(kind: WritingKind, track: DepthTrack): number {
+  if (kind === 'warmup') return 0;
   if (kind === 'ideal') return track === 'full' ? IDEAL_SECONDS : STARTER_MIN_SECONDS;
   return Math.round(targetSeconds(kind, track) * 0.6);
 }
