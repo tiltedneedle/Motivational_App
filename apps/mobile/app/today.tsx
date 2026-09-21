@@ -3,7 +3,7 @@
  * Every goal is a stone; the stone is the check control.
  */
 import { useIsFocused, useRouter } from 'expo-router';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -175,6 +175,9 @@ export default function Today() {
   // with nothing behind it.
   const settledIn = Object.values(state.days).some((d) => Boolean(d.sealedAt));
 
+  // Read for its change, not its value: the layout ticks it on foreground
+  // and at the boundary, and this screen renders again on the new day.
+  useMorrow((s) => s.clockDay);
   const today = dayOf(new Date(), state.profile.dayBoundaryHour);
   const reauthor = reauthorDue(state.books, today, state.profile.dayBoundaryHour);
   const entitled = state.profile.entitled === true;
@@ -189,7 +192,7 @@ export default function Today() {
   useEffect(() => {
     if (!state.hydrated) return;
     catchUpLetters();
-  }, [state.hydrated, catchUpLetters]);
+  }, [state.hydrated, catchUpLetters, today]);
   const unreadLetters = state.letters.filter((l) => !l.readAt && l.deliverAt.slice(0, 10) <= today).length;
 
   /**
@@ -214,9 +217,14 @@ export default function Today() {
     ? state.plans.flatMap((p) => p.moves).find((m) => m.id === intendedMoveId)
     : undefined;
   const days = useMemo(() => Object.values(state.days), [state.days]);
-  const sealedKeys = new Set(days.filter((d) => d.sealedAt).map((d) => d.day));
-  const streak = streakOf(sealedKeys, today);
-  const week = weekOf(today, sealedKeys);
+  // A day counts when something happened on it: closed with the hold, a move
+  // kept, a line of proof. The hold is the ritual, not the only evidence —
+  // counting held days alone, one evening asleep before the hold reset the
+  // run to zero while the Returns card, reading the same day, called it
+  // active. The same rule Returns uses (consistency.ts, `isReturning`).
+  const activeKeys = new Set(days.filter((d) => d.sealedAt || d.done > 0 || d.evidenceCount > 0).map((d) => d.day));
+  const streak = streakOf(activeKeys, today);
+  const week = weekOf(today, activeKeys);
   const goTab = (tab: TabName) => {
     if (tab === 'book') router.push('/book');
     else if (tab === 'envision') router.push('/envision');
@@ -236,16 +244,25 @@ export default function Today() {
     return lines[h % lines.length] ?? null;
   })();
 
-  // The return card is decided once, on arrival: a person who reads it and
-  // starts small should not have it come back as the day's state changes.
-  const [returnCard, setReturnCard] = useState<{ body: string; quotes: string[] } | null>(() => {
+  // The return card is decided once per day, on arrival: a person who reads
+  // it and starts small should not have it come back as the day's state
+  // changes — but a new day is a new arrival, so it is decided again then.
+  const decideReturn = (): { body: string; quotes: string[] } | null => {
     const r = isReturning(days, today);
     if (!r.returning) return null;
     // "Return #n" is the nth time they came back from a gap, not the
     // number of sealed days — and this one is not in the ledger yet.
     const letter = returnsLetter(book, r.gapDays, returnNumberToday(days, today));
     return { body: letter.body, quotes: letter.quotes };
-  });
+  };
+  const [returnCard, setReturnCard] = useState<{ body: string; quotes: string[] } | null>(decideReturn);
+  const decidedFor = useRef(today);
+  useEffect(() => {
+    if (decidedFor.current === today) return;
+    decidedFor.current = today;
+    setReturnCard(decideReturn());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [today]);
 
   useEffect(() => {
     makeBrief();

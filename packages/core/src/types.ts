@@ -252,6 +252,8 @@ export const Move = z.object({
   week: z.number().int().nullable(),
   status: MoveStatus,
   completedAt: z.string().nullable(),
+  /** The app's day the move was finished on, stamped at the time. Device-only; older rows have none. */
+  completedOn: z.string().nullable().optional(),
   minVersion: z.string().nullable(),
   /**
    * True when the person said they were stuck and took the smaller version.

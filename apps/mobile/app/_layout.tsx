@@ -70,6 +70,48 @@ export default function RootLayout() {
   }, [hydrated, syncNotifications]);
 
   /**
+   * The day, kept current. Ticked on foreground, when a tab comes back into
+   * view on the web, and at the boundary hour itself while the app is open
+   * — so a screen left up overnight is on the new day by morning.
+   */
+  const tickClock = useMorrow((s) => s.tickClock);
+  const boundaryHour = useMorrow((s) => s.profile.dayBoundaryHour);
+  useEffect(() => {
+    if (!hydrated) return;
+    tickClock();
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') tickClock();
+    });
+    const onVisible = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') tickClock();
+    };
+    if (Platform.OS === 'web' && typeof document !== 'undefined') document.addEventListener('visibilitychange', onVisible);
+    // A timer for the next boundary. Re-armed after each firing (and each
+    // foreground, through the effect's dependencies staying the same but the
+    // timeout being recomputed on tick) — a timer set for tomorrow's boundary
+    // survives a laptop lid closed and reopened, because it is checked
+    // against the clock rather than counted.
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const arm = () => {
+      const now = new Date();
+      const next = new Date(now);
+      next.setHours(boundaryHour, 0, 5, 0);
+      if (next.getTime() <= now.getTime()) next.setDate(next.getDate() + 1);
+      const wait = Math.min(next.getTime() - now.getTime(), 6 * 60 * 60 * 1000);
+      timer = setTimeout(() => {
+        tickClock();
+        arm();
+      }, wait);
+    };
+    arm();
+    return () => {
+      sub.remove();
+      if (Platform.OS === 'web' && typeof document !== 'undefined') document.removeEventListener('visibilitychange', onVisible);
+      if (timer) clearTimeout(timer);
+    };
+  }, [hydrated, tickClock, boundaryHour]);
+
+  /**
    * The copy, kept current (PRD §7.12). Once the disk has been read and the
    * session is known, and again whenever the app goes to the background —
    * the moment the process can be reaped is the moment the copy should be

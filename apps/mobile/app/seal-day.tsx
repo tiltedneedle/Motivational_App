@@ -192,11 +192,14 @@ export default function SealDay() {
             done={sealed}
             reducedMotion={reduced}
             onComplete={() => {
-              sealDay({ moodWord: word, proof, gladOf });
+              // The day this screen opened for. A hold a minute past the
+              // boundary used to close the next day instead, with tonight's
+              // words on it, and leave tonight open.
+              sealDay({ moodWord: word, proof, gladOf, day });
               clearDraft();
               feelSealed();
               {
-                const d = useMorrow.getState().days[dayOf(new Date(), useMorrow.getState().profile.dayBoundaryHour)];
+                const d = useMorrow.getState().days[day];
                 track({ name: 'day_sealed', planned: d?.planned ?? 0, done: d?.done ?? 0, wrote_proof: proof.trim().length > 0 });
                 if (Object.values(useMorrow.getState().days).filter((x) => x.sealedAt).length <= 1) track({ name: 'first_value', kind: 'first_day_sealed' });
               }

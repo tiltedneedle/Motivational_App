@@ -10,6 +10,7 @@ import { useSyncExternalStore } from 'react';
 import { isDark, setDark, subscribeDark } from '@morrow/ui';
 import { STORE_KEY, failureReason, guardedStorage, hasFailed, onStorageFailure } from './storage';
 import { scheduler, syncNotices } from './notify';
+import type { Notice } from '@morrow/core';
 import { billing, type BillingResult, type PlanId } from './billing';
 import { FUNCTIONS_URL, deleteAccount, functionHeaders, hasSupabase, sessionState, signOut } from './supabase';
 import { pullAll, pushAll } from './sync';
@@ -269,6 +270,14 @@ export interface MorrowState {
   storageError: boolean;
   /** What the OS says, fed in by the root layout. Not persisted. */
   systemDark: boolean;
+  /**
+   * The app's day, as of the last tick. Not persisted. Every screen works
+   * out "today" from the clock in render; nothing re-rendered them when the
+   * day changed underneath, so a phone left on Today overnight woke up on
+   * yesterday. The root layout ticks this on foreground and at the boundary,
+   * and a screen that reads it is rendered again on the new day.
+   */
+  clockDay: string;
   books: BookVersion[];
   portraits: Portrait[];
   plans: Plan[];
@@ -495,7 +504,8 @@ export interface MorrowState {
   addEvidence: (text: string, goalId?: string) => void;
   /** Take a captured line back out of the ledger — the toast's Undo. */
   removeEvidence: (id: string) => void;
-  sealDay: (input: { moodWord: string; proof: string; gladOf: string }) => void;
+  /** `day` is the one the screen opened for: a hold a minute past the boundary still closes that evening. */
+  sealDay: (input: { moodWord: string; proof: string; gladOf: string; day?: string }) => void;
   /** PRD §7.10: the move they pointed at in the dawn brief this morning. */
   setIntention: (moveId: string) => void;
   noteConcern: () => void;
@@ -583,6 +593,8 @@ export interface MorrowState {
   setPastJoinsBook: (id: string, joins: boolean) => void;
 
   setToast: (t: ToastState | null) => void;
+  /** Note the day the clock says. A change re-renders every screen that reads `clockDay`. */
+  tickClock: () => void;
   clearSafety: () => void;
   /** The helplines card, asked for. No pause, no "not about me". */
   showResources: () => void;
@@ -664,6 +676,7 @@ const EMPTY = {
   drafts: {} as Record<string, WritingDraft>,
   storageError: false,
   systemDark: false,
+  clockDay: '',
   books: [] as BookVersion[],
   portraits: [] as Portrait[],
   plans: [] as Plan[],
@@ -1304,7 +1317,13 @@ const store = create<MorrowState>()(
         // account is the same row updated and not a second one the server's
         // (practice, day) constraint refuses.
         const existing = s.practiceLogs.find((l) => l.practiceId === practice.id && l.day === day);
-        const log = logOf(runner, practice, day, existing ? () => existing.id : newId);
+        const fresh = logOf(runner, practice, day, existing ? () => existing.id : newId);
+        // Never lower than what the day already holds. The runner writes on
+        // every backgrounding, so a routine finished in the morning and opened
+        // again at night — then interrupted by a notification on step one —
+        // used to be recorded as step one, and the day lost its credit.
+        if (existing && practiceValue(existing) >= practiceValue(fresh)) return;
+        const log = fresh;
         const logs = [...s.practiceLogs.filter((l) => l.id !== existing?.id), log];
 
         // A finished practice is proof, and proof belongs in the ledger in the
@@ -1407,6 +1426,11 @@ const store = create<MorrowState>()(
                 ...m,
                 status,
                 completedAt: status === 'done' ? new Date().toISOString() : null,
+                // The day, as the app counted it here and now. Worked out
+                // again later from the instant, a move kept at 22:00 in
+                // New York belonged to the next day once the phone was in
+                // London, and the day's count could take it twice.
+                completedOn: status === 'done' ? day : null,
               };
             }),
           }));
@@ -1545,36 +1569,42 @@ const store = create<MorrowState>()(
           return { evidence, days: recomputeDay(s, livePlans(s), evidence, row.day), toast: null };
         }),
 
-      sealDay: ({ moodWord, proof, gladOf }) =>
+      sealDay: ({ moodWord, proof, gladOf, day: forDay }) =>
         set((s) => {
-          const day = dayOf(new Date(), s.profile.dayBoundaryHour);
+          const day = forDay ?? dayOf(new Date(), s.profile.dayBoundaryHour);
           // The proof line is typed at night, is free text, and the coach reads
           // it back the next morning as "and you wrote …". It gets the same
           // screen as everything else the app quotes.
           const wrote = proof.trim().length > 0 || gladOf.trim().length > 0;
           const risk = screen([proof, gladOf].join(' '));
           const text = proof.trim();
-          // A second seal of the same day is an edit of the first, and an
-          // edit never destroys: the same sentence twice is one ledger row,
-          // a different sentence is a second entry, and a blank field keeps
-          // what was written before rather than nulling it. The first
-          // version of this replaced the day's earlier proof line outright,
-          // which is the one kind of loss this store exists to prevent.
-          const already = text ? s.evidence.some((e) => e.kind === 'seal' && e.day === day && e.text === text) : true;
-          const evidence = already
+          // A second close of the same day is an edit of the first: the
+          // screen opens on what was written, so a changed sentence is the
+          // same line corrected, and the day's one proof row takes the new
+          // words under its own id (the account copy updates rather than
+          // doubling). A blank field keeps what was written before rather
+          // than nulling it. The first version of this replaced the day's
+          // earlier proof line outright, which is the one kind of loss this
+          // store exists to prevent; the second appended a row per edit, so
+          // a typo fixed a minute later was two entries in the ledger for
+          // good, and a letter could quote the discarded one.
+          const mine = s.evidence.find((e) => e.kind === 'seal' && e.day === day);
+          const evidence = !text
             ? s.evidence
-            : [
-                ...s.evidence,
-                {
-                  id: newId('ev'),
-                  goalId: null,
-                  kind: 'seal' as const,
-                  text,
-                  day,
-                  safetyRisk: risk.risk,
-                  createdAt: new Date().toISOString(),
-                },
-              ];
+            : mine
+              ? s.evidence.map((e) => (e.id === mine.id ? { ...e, text, safetyRisk: risk.risk } : e))
+              : [
+                  ...s.evidence,
+                  {
+                    id: newId('ev'),
+                    goalId: null,
+                    kind: 'seal' as const,
+                    text,
+                    day,
+                    safetyRisk: risk.risk,
+                    createdAt: new Date().toISOString(),
+                  },
+                ];
           const days = recomputeDay(s, livePlans(s), evidence, day);
           const existing = days[day];
           if (existing) {
@@ -1667,32 +1697,51 @@ const store = create<MorrowState>()(
           .map((d) => d.day)
           .sort()
           .pop();
-        const daysSinceAnything = lastActive ? daysBetween(lastActive, day) : 0;
 
-        // The day's own hours: a shift day keeps the shift's (PRD §7.12).
-        const times = timesFor(s.profile, day);
-        // A milestone falling due today, from the goals in play: Settings
-        // promised "a milestone when one lands" and nothing ever passed one.
-        const dueMilestone = livePlans(s)
-          .flatMap((p) => p.milestones)
-          .find((m) => m.targetDate === day && !m.reachedAt);
-        const planned = planNotices({
-          day,
-          wakeTime: times.wakeTime,
-          eveningTime: times.eveningTime,
-          sundayHour: s.profile.sundayHour,
-          // Quiet hours are the person's own, not the default's: a lark's
-          // morning line at 05:30 used to be moved to seven.
-          quiet: quietFor({ ...times, sundayHour: s.profile.sundayHour, onSunday: weekdayOf(day) === 0 }),
-          reauthorDay: reauthorLabelFor(s, day),
-          persona: s.profile.persona,
-          book: s.books[s.books.length - 1] ?? null,
-          moves: todaysMoves(s),
-          yesterday: s.days[day] ?? null,
-          daysSinceAnything,
-          milestone: dueMilestone ? { title: dueMilestone.title, proof: dueMilestone.proof } : null,
-          muted: s.profile.notificationsOff === true,
-        });
+        // A week ahead, not just today. The sync runs when the app is opened,
+        // and a person who closes Monday at 22:00 and puts the phone down has
+        // no Tuesday morning line unless Tuesday was planned on Monday night:
+        // planned for the day of the open only, the morning line, the Sunday
+        // reading and the day-three word never reached anybody. Each day is
+        // planned as if nothing happens between now and then — the next open
+        // replans, and whatever it no longer wants is cancelled below.
+        const plans = livePlans(s);
+        const all = plans.flatMap((p) => p.moves);
+        const boundary = s.profile.dayBoundaryHour;
+        const rankOf = (goalId: string) => s.goals.find((g) => g.id === goalId)?.rank ?? Number.MAX_SAFE_INTEGER;
+        const planned: Notice[] = [];
+        for (let ahead = 0; ahead <= NOTICE_HORIZON_DAYS; ahead++) {
+          const d = shiftDay(day, ahead);
+          const daysSinceAnything = lastActive ? daysBetween(lastActive, d) : 0;
+          // The day's own hours: a shift day keeps the shift's (PRD §7.12).
+          const times = timesFor(s.profile, d);
+          // A milestone falling due that day, from the goals in play: Settings
+          // promised "a milestone when one lands" and nothing ever passed one.
+          const dueMilestone = plans.flatMap((p) => p.milestones).find((m) => m.targetDate === d && !m.reachedAt);
+          // Today's list is Today's; a later day gets what will be open on it,
+          // in the order Today would show it, so the morning line names the
+          // move that will be on the Now card.
+          const moves = ahead === 0 ? todaysMoves(s) : orderForToday(movesOpenOn(all, d, boundary), rankOf, null);
+          planned.push(
+            ...planNotices({
+              day: d,
+              wakeTime: times.wakeTime,
+              eveningTime: times.eveningTime,
+              sundayHour: s.profile.sundayHour,
+              // Quiet hours are the person's own, not the default's: a lark's
+              // morning line at 05:30 used to be moved to seven.
+              quiet: quietFor({ ...times, sundayHour: s.profile.sundayHour, onSunday: weekdayOf(d) === 0 }),
+              reauthorDay: reauthorLabelFor(s, d),
+              persona: s.profile.persona,
+              book: s.books[s.books.length - 1] ?? null,
+              moves,
+              yesterday: s.days[d] ?? null,
+              daysSinceAnything,
+              milestone: dueMilestone ? { title: dueMilestone.title, proof: dueMilestone.proof } : null,
+              muted: s.profile.notificationsOff === true,
+            }),
+          );
+        }
 
         const out = await syncNotices(planned, (s.profile.mutedMoments ?? []) as Moment[]);
         return { scheduled: out.scheduled.length, cancelled: out.cancelled.length, silent: out.silent };
@@ -2127,6 +2176,10 @@ const store = create<MorrowState>()(
         })),
 
       setToast: (t) => set({ toast: t }),
+      tickClock: () => {
+        const day = dayOf(new Date(), get().profile.dayBoundaryHour);
+        if (day !== get().clockDay) set({ clockDay: day });
+      },
       showResources: () => set({ safetyPause: { risk: 'none', at: new Date().toISOString(), source: null, voluntary: true } }),
       saveStoneDraft: (draft) => set({ stoneDraft: { ...draft, updatedAt: new Date().toISOString() } }),
       clearStoneDraft: () => set({ stoneDraft: null }),
@@ -2193,7 +2246,7 @@ const store = create<MorrowState>()(
       // recovery path was the thing destroying the data. See src/storage.ts.
       storage: createJSONStorage(() => guardedStorage),
       partialize: (s) => {
-        const { hydrated: _h, toast: _t, storageError: _e, systemDark: _d, ...rest } = s as MorrowState & Record<string, unknown>;
+        const { hydrated: _h, toast: _t, storageError: _e, systemDark: _d, clockDay: _c, ...rest } = s as MorrowState & Record<string, unknown>;
         return rest as Partial<MorrowState>;
       },
       /**
@@ -2359,6 +2412,9 @@ function framingLabelFor(id: string | null): string | null {
 function pauseOn(risk: SafetyRisk, kind: NonNullable<SafetyPause['source']>['kind'] | null, id?: string): SafetyPause {
   return { risk, at: new Date().toISOString(), source: kind && id ? { kind, id } : null };
 }
+
+/** How many days ahead the notification planner looks on every open. */
+const NOTICE_HORIZON_DAYS = 7;
 
 /** `YYYY-MM-DD`, moved by whole days. UTC arithmetic on a UTC-anchored date. */
 function shiftDay(day: string, by: number): string {
@@ -2628,17 +2684,25 @@ export function todaysMoves(s: MorrowState) {
   // one was seated, so the day never read as finished and there was always one
   // more thing waiting. A day you can finish is the entire point of the screen,
   // and the seal at the end of it only means something if the work stops.
-  if (due.length > 0) {
+  //
+  // Only a day that asked something, though. A move parked "not today" stays
+  // open on every later day (that is what parking means), but yesterday's
+  // "not today" is not today's answer: with nothing else on the list it used
+  // to close every following morning — "Today is closed" over a move never
+  // done, and the next scheduled one invisible until its own day.
+  const askedToday = due.some((m) => m.status === 'done' || !m.scheduledFor || m.scheduledFor === day || closedOn(m, boundary) === day);
+  if (due.length > 0 && askedToday) {
     return orderForToday(due, rankOf, said);
   }
 
   // Nothing was scheduled for today at all — the evening the Book is sealed,
   // for instance, when the first move is dated tomorrow. Bringing the next one
-  // forward is what keeps that evening from looking empty.
+  // forward is what keeps that evening from looking empty. Anything parked
+  // earlier stays on the list under it, with its "Put it back".
   const next = all
     .filter((m) => m.status === 'todo' && m.scheduledFor && m.scheduledFor > day)
     .sort((a, b) => (a.scheduledFor! < b.scheduledFor! ? -1 : 1))[0];
-  return next ? [next] : [];
+  return orderForToday(next ? [...due, next] : due, rankOf, said);
 }
 
 /**

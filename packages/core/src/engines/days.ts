@@ -28,11 +28,16 @@ export interface DayMove {
   status: MoveStatus;
   scheduledFor: string | null;
   completedAt: string | null;
+  /** The day it was finished on, as the app counted it then. Preferred over the instant when present. */
+  completedOn?: string | null;
 }
 
 /** The day a finished move was actually closed on, honouring the boundary. */
 export function closedOn(m: DayMove, boundaryHour: number): string | null {
   if (m.status !== 'done' || !m.completedAt) return null;
+  // Stamped at the time, the day survives a change of time zone; only a
+  // move finished before the stamp existed is worked out from the instant.
+  if (m.completedOn) return m.completedOn;
   const at = new Date(m.completedAt);
   if (Number.isNaN(at.getTime())) return null;
   return dayOf(at, boundaryHour);

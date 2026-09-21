@@ -15,9 +15,21 @@
 import { Platform } from 'react-native';
 import { toSchedule, withoutMuted, type Moment, type Notice } from '@morrow/core';
 
+/**
+ * One notification the OS is holding: its id, and when and what it will say
+ * if the scheduler can tell. Both are carried in the notification's own data
+ * so the answer is the same on every platform; a scheduler that cannot say
+ * leaves them out and the notice is trusted as it stands.
+ */
+export interface Scheduled {
+  id: string;
+  at?: string;
+  body?: string;
+}
+
 /** What a scheduler has to be able to do. Deliberately tiny. */
 export interface Scheduler {
-  ids(): Promise<string[]>;
+  ids(): Promise<Scheduled[]>;
   /** Whether the person has said yes. Never asks: that is `request()`, from the primer. */
   allowed(): Promise<boolean>;
   /** Raise the OS dialog. Only ever called from the primer's own "Yes". */
@@ -68,7 +80,11 @@ export async function scheduler(): Promise<Scheduler> {
     resolved = {
       async ids() {
         const all = await mod.getAllScheduledNotificationsAsync();
-        return (all ?? []).map((n: { identifier: string }) => n.identifier);
+        return (all ?? []).map((n: { identifier: string; content?: { body?: string; data?: { at?: string } } }) => ({
+          id: n.identifier,
+          at: typeof n.content?.data?.at === 'string' ? n.content.data.at : undefined,
+          body: typeof n.content?.body === 'string' ? n.content.body : undefined,
+        }));
       },
       async allowed() {
         // Never asks. The OS dialog used to be raised from inside the
@@ -90,7 +106,9 @@ export async function scheduler(): Promise<Scheduler> {
       async schedule(notice) {
         await mod.scheduleNotificationAsync({
           identifier: notice.id,
-          content: { title: notice.title, body: notice.body, data: { route: notice.route } },
+          // `at` rides along so a later sync can tell a moved notice from
+          // one that is exactly what was asked for.
+          content: { title: notice.title, body: notice.body, data: { route: notice.route, at: notice.at } },
           // A wall-clock date, in the device's own zone, which is what the
           // planner produces and what "07:30 on the 14th" has to mean whatever
           // zone the person is in that morning.
@@ -191,9 +209,9 @@ export async function syncNotices(
   const sched = await scheduler();
   const silent = sched === noScheduler;
   const wanted = withoutMuted(planned, muted);
-  const wantedIds = new Set(wanted.map((n) => n.id));
+  const wantedById = new Map(wanted.map((n) => [n.id, n]));
 
-  let existing: string[] = [];
+  let existing: Scheduled[] = [];
   try {
     existing = await sched.ids();
   } catch {
@@ -203,20 +221,30 @@ export async function syncNotices(
   }
 
   const cancelled: string[] = [];
-  for (const id of existing) {
-    // Only ours, and only the ones no longer wanted. An id shaped `day:moment`
-    // is this app's; anything else belongs to something we did not put there.
-    if (!/^\d{4}-\d{2}-\d{2}:[a-z]+$/.test(id)) continue;
-    if (wantedIds.has(id)) continue;
+  // The ids the OS already holds exactly as planned. One it holds at another
+  // time or with other words — the evening moved in Settings, the Now move
+  // parked after the morning line was queued, the phone in a new time zone —
+  // is cancelled here and queued again below with the new time and words.
+  const unchanged: string[] = [];
+  for (const have of existing) {
+    // Only ours. An id shaped `day:moment` is this app's; anything else
+    // belongs to something we did not put there.
+    if (!/^\d{4}-\d{2}-\d{2}:[a-z]+$/.test(have.id)) continue;
+    const want = wantedById.get(have.id);
+    const same = want && (have.at == null || have.at === want.at) && (have.body == null || have.body === want.body);
+    if (same) {
+      unchanged.push(have.id);
+      continue;
+    }
     try {
-      await sched.cancel(id);
-      cancelled.push(id);
+      await sched.cancel(have.id);
+      cancelled.push(have.id);
     } catch {
       // Nothing to do about it, and it is not worth failing a launch over.
     }
   }
 
-  const due = toSchedule(wanted, now, existing);
+  const due = toSchedule(wanted, now, unchanged);
   // Only ask when there is something to schedule. On iOS a schedule call
   // without permission is silently dropped, so without this the app would
   // have looked like it was scheduling and never shown a single one.
