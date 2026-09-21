@@ -313,6 +313,7 @@ async function main() {
     check('and one question', (await text('mirror-question')).trim().endsWith('?'), await text('mirror-question'));
     check('and the five-step path with the first step ticked', (await seen('mirror-path')) && (await text('mirror-path')).includes('Find your goals'), await text('mirror-path'));
     check('whose button is the Interview', (await text('mirror-continue')).toLowerCase().includes('find your goals'), await text('mirror-continue'));
+    await page.waitForTimeout(900); // the card rises in last; axe reads contrast through a fade
     await accessible('the mirror');
     await tap('mirror-continue');
 

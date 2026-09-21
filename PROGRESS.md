@@ -141,7 +141,10 @@ by hand before it was acted on. What was confirmed and fixed:
 - [x] 1. packages/core: domain model, stores (zustand + persist), engines
 - [x] 2. packages/ui: Studio tokens, Stone/Socket/Ring, HoldBar, Chip, Field, Sheet, text primitives
 - [x] 3. apps/mobile screens (all 16 routes)
-- [x] 4. Tests, as of 2026-09-18: 489 core + 48 ui + 8 storage unit tests, the eval harness
+- [x] 4. Tests, as of 2026-09-21 (the rebuild): 508 core + 48 ui + 8 storage unit tests, the eval
+      harness (687 checks), 71 real-Postgres checks, **558 Playwright e2e checks**, 94 cold-open
+      checks, 8 service-worker checks, 8 motion checks, axe 0 across 42 screens — all green.
+      Was, as of 2026-09-18: 489 core + 48 ui + 8 storage unit tests, the eval harness
       (687 checks over forty profiles and two hundred labelled lines), 68 real-Postgres
       checks, **529 Playwright e2e checks**, 84 cold-open checks, 8 service-worker checks, 8 motion checks, axe 0 across 37 screens,
       the account round-trip 46/46 against the live project — all green, all in `pnpm verify`
