@@ -63,7 +63,10 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
       is not installed; the phones keep it. 2.56 MB, 507 KB over the wire. The
       web build prints both and fails over 2.9 MB, so a dependency that creeps
       back is a failed build, not a slower demo. `BASE=https://… pnpm test:cold`
-      opens every route and link shape cold against a deployed site.
+      opens every route and link shape cold against a deployed site — run against
+      the live address: 84/84, on an empty store and a seeded one, and the
+      account round-trip against the live project with the on-demand client,
+      46/46.
 - [x] 61. **Live, 2026-09-21.** https://selfauthoring00.vercel.app — Vercel from
       `main` with the root `vercel.json` (root directory, framework Other), the
       Supabase URL and publishable key and the PostHog host in the project's

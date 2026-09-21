@@ -137,7 +137,10 @@ async function walk(label, seed) {
     errors.length = 0;
     // A live site never goes network-idle for long (the worker, the CDN's
     // keep-alives); 'load' and a real-time beat instead.
-    await page.goto(`${BASE}${path}`, { waitUntil: LIVE ? 'load' : 'networkidle', timeout: 45000 });
+    await page.goto(`${BASE}${path}`, { waitUntil: LIVE ? 'load' : 'networkidle', timeout: 90000 });
+    // On a live site the first load is the bundle over a real network: wait
+    // for the boot splash to give way before judging the screen.
+    if (LIVE) await page.waitForFunction(() => !document.querySelector('[data-testid="boot"]'), null, { timeout: 90000 }).catch(() => undefined);
     await page.clock.runFor(2500);
     await page.waitForTimeout(LIVE ? 2500 : 500);
     const state = await page.evaluate(() => {
