@@ -183,9 +183,9 @@ export const FAULT_COPY: Record<string, string> = {
   "deckNoteFull": "Tick everything that is plainly true; you narrow it to the nine that matter most next. These are habits, not a verdict on you.",
   "narrowPrompt": "Which of these matter most?",
   "narrowNote": "Keep up to nine. Take one off to let another through.",
-  "done": "Each one has a sign to watch for and an answer to it now. They join your Book when it is next sealed, and each answer is offered on a goal’s Obstacles stone, for you to put under the goal it belongs to.",
-  "doneNoBook": "There is no Book yet. One is sealed at the end of Future, and these go into it.",
-  "doneNextEdition": "Your Book is sealed already, so these wait for the next edition — one hold away.",
+  "done": "Each one has a sign to watch for and an answer to it now. They join your Book when it is next finished, and each answer is offered on a goal’s “What gets in the way” question, for you to put under the goal it belongs to.",
+  "doneNoBook": "There is no Book yet. One is finished at the end of Future, and these go into it.",
+  "doneNextEdition": "Your Book is finished already, so these wait for the next edition — one hold away.",
   "heldNote": "This one stays on your phone and out of the Book. It is still yours, and it still exports.",
 };
 
@@ -199,9 +199,9 @@ export const VIRTUE_COPY: Record<string, string> = {
   "deckNoteFull": "Tick everything that is plainly true, not what sounds good; you narrow it to the nine that matter most next.",
   "narrowPrompt": "Which of these matter most?",
   "narrowNote": "Keep up to nine. Take one off to let another through.",
-  "done": "Each one has a time it mattered and a place to use it next week. They join your Book when it is next sealed, and each sits on the page of the goal you paired it with.",
-  "doneNoBook": "There is no Book yet. One is sealed at the end of Future, and these go into it.",
-  "doneNextEdition": "Your Book is sealed already, so these wait for the next edition — one hold away.",
+  "done": "Each one has a time it mattered and a place to use it next week. They join your Book when it is next finished, and each sits on the page of the goal you paired it with.",
+  "doneNoBook": "There is no Book yet. One is finished at the end of Future, and these go into it.",
+  "doneNextEdition": "Your Book is finished already, so these wait for the next edition — one hold away.",
   "doneNoGoal": "When you name your goals in Future, each of these can be paired with the one that needs it.",
   "writeTwoPromptNoGoal": "Where will you use this next week?",
   "heldNote": "This one stays on your phone and out of the Book. It is still yours, and it still exports.",
@@ -240,13 +240,13 @@ export const PAST_COPY: Record<string, string> = {
   "analyse.three.prompt": "One line to close it. What you took from that and still believe, or what you would say to the version of you who was there.",
   "analyse.three.hint": "One sentence, in your own words — it does not have to be tidy.",
   "analyse.framings": "What that moment taught me | What I decided about myself that day | What I would tell the person I was | What I know now that would have helped then",
-  "join.question": "Does this one join your Book? It stays yours either way, and you can change this before the Book is sealed.",
+  "join.question": "Does this one join your Book? It stays yours either way, and you can change this before the Book is finished.",
   "join.yes": "Let it join the Book",
   "join.no": "Keep this one to myself",
   "join.parts": "All three parts go in as they are written here.",
   "join.change": "Change this",
-  "join.noBook": "There is no Book yet. One is sealed at the end of Future, and what you let join goes into the first one.",
-  "join.nextEdition": "Your Book is sealed already, so what you let join waits for the next edition — one hold away.",
+  "join.noBook": "There is no Book yet. One is finished at the end of Future, and what you let join goes into the first one.",
+  "join.nextEdition": "Your Book is finished already, so what you let join waits for the next edition — one hold away.",
 };
 
 /** The ways in to the last line of an analysed event. */

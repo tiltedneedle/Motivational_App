@@ -15,8 +15,7 @@
  */
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View } from 'react-native';
 import {
   FAULT_CARDS_FULL,
   FAULT_CARDS_STARTER,
@@ -35,7 +34,7 @@ import {
   type PresentHalf,
   halfDone,
 } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Notice, Statement, Studio, TextButton, TopBar, UserField, announce, day, UserText } from '@morrow/ui';
+import { Body, Card, Chip, Heading, Label, Notice, OptionTile, Screen, Statement, TextButton, UserField, announce, day, UserText } from '@morrow/ui';
 import { usePlatformBack } from '../src/platform-back';
 import { useGoals, useMorrow, cardText } from '../src/store';
 import { useFirstRunStep } from '../src/analytics';
@@ -266,31 +265,11 @@ function Present({ half }: { half: PresentHalf }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [finished, writingOpen, writingId, narrowing, half]);
 
-  const cardRow = (c: PresentCard, prefix: string) => {
-    const on = selected.includes(c.id);
-    return (
-      <Pressable
-        key={c.id}
-        testID={prefix + c.id}
-        accessibilityRole="checkbox"
-        aria-checked={on}
-        accessibilityLabel={c.text}
-        onPress={() => toggle(c.id)}
-        style={({ pressed }) => ({
-          minHeight: 54,
-          paddingVertical: 12,
-          paddingHorizontal: 16,
-          borderRadius: 18,
-          backgroundColor: on ? day.ink : day.surface,
-          borderWidth: 1,
-          borderColor: on ? day.ink : day.line2,
-          transform: [{ scale: pressed ? 0.985 : 1 }],
-        })}
-      >
-        <Body style={{ color: on ? day.onInk : day.ink, fontSize: 16 }}>{c.text}</Body>
-      </Pressable>
-    );
-  };
+  // A card is a tile to tick (the shell): a plain sentence, ink when on.
+  const cardRow = (c: PresentCard, prefix: string) => (
+    <OptionTile key={c.id} testID={prefix + c.id} title={c.text} role="checkbox" selected={selected.includes(c.id)} onPress={() => toggle(c.id)} compact accessibilityLabel={c.text} />
+  );
+  const whereHalf = half === 'faults' ? 'Present · the faults' : 'Present · the virtues';
 
   // ---- this half is written
   if (finished) {
@@ -304,59 +283,27 @@ function Present({ half }: { half: PresentHalf }) {
     // says so under its own lines rather than in a list of its own.
     const lines = [...mine].filter((p) => p.storyLine.trim() && p.applyLine.trim()).sort((a, b) => a.rank - b.rank);
     return (
-      <Studio testID="screen-present-done">
-        <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-          <TopBar back={{ onPress: () => router.dismissTo('/today'), testID: 'present-back' }} where="Present" help={{ onPress: showResources }} />
-          {/* Scrolls: at 200% type, or a phone on its side, the two buttons were off the bottom with no way to them. */}
-          <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', gap: 16 }} showsVerticalScrollIndicator={false}>
-            <Statement testID="present-done">
-              {half === 'faults' ? 'That is what gets in your way, in your words.' : 'That is what you are good at, in your words.'}
-            </Statement>
-            <Body>{copy.done}</Body>
-            {/* "They join your Book" is one of two very different things, and this says which. */}
-            <Body testID="present-done-book" style={{ fontSize: 14 }}>
-              {editions ? copy.doneNextEdition : copy.doneNoBook}
-            </Body>
-            {half === 'virtues' && goals.length === 0 ? <Body testID="present-done-no-goal">{copy.doneNoGoal}</Body> : null}
-            <View testID="present-done-lines" style={{ gap: 12, marginTop: 4 }}>
-              {lines.map((p) => (
-                <View key={p.id} style={{ gap: 3, borderTopWidth: 1, borderTopColor: day.line, paddingTop: 10 }}>
-                  <Body style={{ fontSize: 15 }}>
-                    {cardText(p.cardId) +
-                      (half === 'faults'
-                        ? framings.find((f) => f.id === p.framingId)?.label
-                          ? ' · ' + framings.find((f) => f.id === p.framingId)!.label
-                          : ''
-                        : goals.find((g) => g.id === p.goalId)?.title
-                          ? ' · ' + goals.find((g) => g.id === p.goalId)!.title
-                          : '')}
-                  </Body>
-                  <UserText style={{ fontSize: 16, lineHeight: 24, color: day.ink }}>{p.storyLine}</UserText>
-                  <UserText italic style={{ fontSize: 15, lineHeight: 23, color: day.ink2 }}>
-                    {p.applyLine}
-                  </UserText>
-                  {p.safetyRisk === 'crisis' ? (
-                    <Body testID={'present-held-' + p.cardId} style={{ fontSize: 13 }}>
-                      {copy.heldNote}
-                    </Body>
-                  ) : null}
-                </View>
-              ))}
-            </View>
-            <InkButton
-              testID="present-next-half"
-              label={otherDone ? 'Back to Today' : half === 'faults' ? 'Now what you are good at' : 'Now what gets in your way'}
-              onPress={() => {
-                // Nothing to clear here: this half's draft went when the
-                // writing ran out, and the store's one slot may now be holding
-                // the other half's sitting, which is not ours to touch.
-                if (otherDone) {
-                  router.dismissTo('/today');
-                  return;
-                }
-                router.replace('/present?half=' + other);
-              }}
-            />
+      <Screen
+        testID="screen-present-done"
+        back={{ onPress: () => router.dismissTo('/today'), testID: 'present-back' }}
+        where="Present"
+        help={{ onPress: showResources }}
+        cta={{
+          label: otherDone ? 'Back to Today' : half === 'faults' ? 'Now what you are good at' : 'Now what gets in your way',
+          testID: 'present-next-half',
+          onPress: () => {
+            // Nothing to clear here: this half's draft went when the
+            // writing ran out, and the store's one slot may now be holding
+            // the other half's sitting, which is not ours to touch.
+            if (otherDone) {
+              router.dismissTo('/today');
+              return;
+            }
+            router.replace('/present?half=' + other);
+          },
+        }}
+        footer={
+          <View style={{ gap: 6, alignItems: 'center' }}>
             {otherDone ? (
               <TextButton
                 testID="present-other-half"
@@ -364,17 +311,43 @@ function Present({ half }: { half: PresentHalf }) {
                 onPress={() => router.replace('/present?half=' + other)}
               />
             ) : null}
-            {editions ? <TextButton testID="present-seal" label="Seal a new edition now" onPress={() => router.push('/seal-book')} /> : null}
-            {otherDone ? null : (
-              <TextButton
-                testID="present-later"
-                label="Another time"
-                onPress={() => router.dismissTo('/today')}
-              />
-            )}
-          </ScrollView>
-        </SafeAreaView>
-      </Studio>
+            {editions ? <TextButton testID="present-seal" label="Finish a new edition now" onPress={() => router.push('/seal-book')} /> : null}
+            {otherDone ? null : <TextButton testID="present-later" label="Another time" onPress={() => router.dismissTo('/today')} />}
+          </View>
+        }
+      >
+        <Heading title={half === 'faults' ? 'That is what gets in your way, in your words.' : 'That is what you are good at, in your words.'} testID="present-done" line={copy.done} />
+        {/* "They join your Book" is one of two very different things, and this says which. */}
+        <Body testID="present-done-book" style={{ fontSize: 14 }}>
+          {editions ? copy.doneNextEdition : copy.doneNoBook}
+        </Body>
+        {half === 'virtues' && goals.length === 0 ? <Body testID="present-done-no-goal">{copy.doneNoGoal}</Body> : null}
+        <View testID="present-done-lines" style={{ gap: 10, marginTop: 4 }}>
+          {lines.map((p) => (
+            <Card key={p.id} style={{ gap: 6, padding: 16 }}>
+              <Label>
+                {cardText(p.cardId) +
+                  (half === 'faults'
+                    ? framings.find((f) => f.id === p.framingId)?.label
+                      ? ' · ' + framings.find((f) => f.id === p.framingId)!.label
+                      : ''
+                    : goals.find((g) => g.id === p.goalId)?.title
+                      ? ' · ' + goals.find((g) => g.id === p.goalId)!.title
+                      : '')}
+              </Label>
+              <UserText style={{ fontSize: 17, lineHeight: 25, color: day.ink }}>{p.storyLine}</UserText>
+              <UserText italic style={{ fontSize: 15, lineHeight: 23, color: day.ink2 }}>
+                {p.applyLine}
+              </UserText>
+              {p.safetyRisk === 'crisis' ? (
+                <Body testID={'present-held-' + p.cardId} style={{ fontSize: 13 }}>
+                  {copy.heldNote}
+                </Body>
+              ) : null}
+            </Card>
+          ))}
+        </View>
+      </Screen>
     );
   }
 
@@ -383,79 +356,58 @@ function Present({ half }: { half: PresentHalf }) {
     const ready = cur.story.trim().length > 0 && cur.apply.trim().length > 0;
     // With no goals yet there is nothing to pick, so the prompt must not ask.
     const secondPrompt = half === 'virtues' && goals.length === 0 ? (copy.writeTwoPromptNoGoal ?? copy.writeTwoPrompt) : copy.writeTwoPrompt;
+    const at = selected.indexOf(writing.id) + 1;
     return (
-      <Studio testID="screen-present-write">
-        <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-          <TopBar
-            back={{ onPress: stepBack, testID: 'present-write-back' }}
-            where={String(selected.indexOf(writing.id) + 1) + ' of ' + String(selected.length)}
-            help={{ onPress: showResources }}
+      <Screen
+        testID="screen-present-write"
+        back={{ onPress: stepBack, testID: 'present-write-back' }}
+        where={String(at) + ' of ' + String(selected.length)}
+        help={{ onPress: showResources }}
+        progress={{ value: (at - 1) / Math.max(1, selected.length), label: `${whereHalf} · card ${at} of ${selected.length}`, testID: 'present-write-progress' }}
+        keyboard
+        cta={{ label: ready ? 'Keep this one' : 'Write both lines', disabled: !ready, onPress: keep, testID: 'present-keep' }}
+      >
+        <Statement testID="present-card">{writing.text}</Statement>
+
+        <View style={{ gap: 8 }}>
+          <Label>{copy.writeOnePrompt}</Label>
+          <UserField
+            testID="present-story"
+            label={copy.writeOnePrompt ?? ''}
+            labelHidden
+            value={cur.story}
+            onChangeText={(t) => setLine({ story: t.slice(0, PRESENT_WRITE_CEILING) })}
+            placeholder={copy.writeOneHint}
+            multiline
           />
-          <ScrollView
-            automaticallyAdjustKeyboardInsets
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingVertical: 8, gap: 18 }}
-          >
-            <Statement testID="present-card">{writing.text}</Statement>
+        </View>
 
-            <View style={{ gap: 8 }}>
-              <Label>{copy.writeOnePrompt}</Label>
-              <UserField
-                testID="present-story"
-                label={copy.writeOnePrompt ?? ''}
-                labelHidden
-                value={cur.story}
-                onChangeText={(t) => setLine({ story: t.slice(0, PRESENT_WRITE_CEILING) })}
-                placeholder={copy.writeOneHint}
-                multiline
-              />
+        <View style={{ gap: 8 }}>
+          <Label testID="present-second-prompt">{secondPrompt}</Label>
+          {half === 'faults' ? (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {framings.map((f) => (
+                <Chip key={f.id} testID={'present-framing-' + f.id} label={f.label} selected={cur.framingId === f.id} onPress={() => setLine({ framingId: cur.framingId === f.id ? null : f.id })} />
+              ))}
             </View>
-
-            <View style={{ gap: 8 }}>
-              <Label testID="present-second-prompt">{secondPrompt}</Label>
-              {half === 'faults' ? (
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                  {framings.map((f) => (
-                    <Chip
-                      key={f.id}
-                      testID={'present-framing-' + f.id}
-                      label={f.label}
-                      selected={cur.framingId === f.id}
-                      onPress={() => setLine({ framingId: cur.framingId === f.id ? null : f.id })}
-                    />
-                  ))}
-                </View>
-              ) : goals.length ? (
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                  {goals.map((g) => (
-                    <Chip
-                      key={g.id}
-                      testID={'present-goal-' + g.id}
-                      label={g.title}
-                      selected={cur.goalId === g.id}
-                      onPress={() => setLine({ goalId: cur.goalId === g.id ? null : g.id })}
-                    />
-                  ))}
-                </View>
-              ) : null}
-              <UserField
-                testID="present-apply"
-                label={secondPrompt ?? ''}
-                labelHidden
-                value={cur.apply}
-                onChangeText={(t) => setLine({ apply: t.slice(0, PRESENT_WRITE_CEILING) })}
-                placeholder={copy.writeTwoHint}
-                multiline
-              />
+          ) : goals.length ? (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {goals.map((g) => (
+                <Chip key={g.id} testID={'present-goal-' + g.id} label={g.title} selected={cur.goalId === g.id} onPress={() => setLine({ goalId: cur.goalId === g.id ? null : g.id })} />
+              ))}
             </View>
-          </ScrollView>
-
-          <View style={{ paddingTop: 10, paddingBottom: 18, gap: 4 }}>
-            <InkButton testID="present-keep" label={ready ? 'Keep this one' : 'Write both lines'} disabled={!ready} onPress={keep} />
-          </View>
-        </SafeAreaView>
-      </Studio>
+          ) : null}
+          <UserField
+            testID="present-apply"
+            label={secondPrompt ?? ''}
+            labelHidden
+            value={cur.apply}
+            onChangeText={(t) => setLine({ apply: t.slice(0, PRESENT_WRITE_CEILING) })}
+            placeholder={copy.writeTwoHint}
+            multiline
+          />
+        </View>
+      </Screen>
     );
   }
 
@@ -464,28 +416,27 @@ function Present({ half }: { half: PresentHalf }) {
     const over = selected.length - max;
     const shown = deck.filter((c) => selected.includes(c.id));
     return (
-      <Studio testID="screen-present-narrow">
-        <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-          <TopBar back={{ onPress: stepBack, testID: 'present-narrow-back' }} where={half === 'faults' ? 'Present · the faults' : 'Present · the virtues'} help={{ onPress: showResources }} />
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 10 }}>
-            <Statement testID="present-narrow-prompt">{copy.narrowPrompt}</Statement>
-            <Body style={{ fontSize: 14 }}>{copy.narrowNote}</Body>
-            <Notice testID="present-problem" text={problem} />
-            {shown.map((c) => cardRow(c, 'present-narrow-card-'))}
-          </ScrollView>
-          <View style={{ paddingTop: 10, paddingBottom: 18, gap: 4 }}>
-            <Label testID="present-narrow-count" style={{ textAlign: 'center', paddingBottom: 6 }}>
-              {String(selected.length) + ' ticked · keep up to ' + String(max)}
-            </Label>
-            <InkButton
-              testID="present-narrow-continue"
-              label={over > 0 ? 'Take ' + String(over) + ' off' : 'Write about these ' + String(selected.length)}
-              disabled={over > 0 || selected.length === 0}
-              onPress={commit}
-            />
-          </View>
-        </SafeAreaView>
-      </Studio>
+      <Screen
+        testID="screen-present-narrow"
+        back={{ onPress: stepBack, testID: 'present-narrow-back' }}
+        where={whereHalf}
+        help={{ onPress: showResources }}
+        cta={{
+          label: over > 0 ? 'Take ' + String(over) + ' off' : 'Write about these ' + String(selected.length),
+          disabled: over > 0 || selected.length === 0,
+          onPress: commit,
+          testID: 'present-narrow-continue',
+        }}
+        footer={
+          <Label testID="present-narrow-count" style={{ textAlign: 'center' }}>
+            {String(selected.length) + ' ticked · keep up to ' + String(max)}
+          </Label>
+        }
+      >
+        <Heading title={copy.narrowPrompt ?? ''} testID="present-narrow-prompt" line={copy.narrowNote} />
+        <Notice testID="present-problem" text={problem} />
+        <View style={{ gap: 10 }}>{shown.map((c) => cardRow(c, 'present-narrow-card-'))}</View>
+      </Screen>
     );
   }
 
@@ -498,53 +449,48 @@ function Present({ half }: { half: PresentHalf }) {
         ? 'Narrow these ' + String(selected.length)
         : 'Write about ' + (selected.length === 1 ? 'this one' : 'these ' + String(selected.length));
   return (
-    <Studio testID="screen-present">
-      <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <TopBar
-          back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/choose')), testID: 'present-deck-back' }}
-          where={half === 'faults' ? 'Present · the faults' : 'Present · the virtues'}
-          help={{ onPress: showResources }}
-        />
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 10 }}>
-          <Statement testID="present-question">{copy.deckQuestion}</Statement>
-          <Body testID="present-deck-note" style={{ fontSize: 14 }}>
-            {depth === 'full' ? copy.deckNoteFull : copy.deckNote}
-          </Body>
-          <Notice testID="present-problem" text={problem} />
-          {grouped.length
-            ? grouped.map((s, i) => (
-                <View key={s.group} style={{ gap: 10, marginTop: i === 0 ? 4 : 14 }}>
-                  {/*
-                    A silent divider. Naming a group, or counting how many came
-                    from one, turns a deck into a test — which is the one thing
-                    this volume must never be.
-                  */}
-                  {i === 0 ? null : <View style={{ height: 1, backgroundColor: day.line, marginVertical: 4 }} />}
-                  {s.cards.map((c) => cardRow(c, 'present-card-'))}
-                </View>
-              ))
-            : deck.map((c) => cardRow(c, 'present-card-'))}
-        </ScrollView>
-
-        <View style={{ paddingTop: 10, paddingBottom: 18, gap: 4 }}>
-          {/* Two lines of theirs go with a written card taken off: said before the commit, not after. */}
-          {letGo.length ? (
-            <Label testID="present-let-go" style={{ textAlign: 'center', paddingBottom: 6 }}>
-              {'Going on lets go of ' + String(letGo.length) + ' you wrote about.'}
-            </Label>
-          ) : null}
-          <InkButton
-            testID="present-continue"
-            label={goLabel}
-            disabled={selected.length === 0}
-            onPress={() => {
-              setProblem(null);
-              if (selected.length > max) setNarrowing(true);
-              else commit();
-            }}
-          />
-        </View>
-      </SafeAreaView>
-    </Studio>
+    <Screen
+      testID="screen-present"
+      back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/choose')), testID: 'present-deck-back' }}
+      where={whereHalf}
+      help={{ onPress: showResources }}
+      cta={{
+        label: goLabel,
+        disabled: selected.length === 0,
+        testID: 'present-continue',
+        onPress: () => {
+          setProblem(null);
+          if (selected.length > max) setNarrowing(true);
+          else commit();
+        },
+      }}
+      footer={
+        // Two lines of theirs go with a written card taken off: said before the commit, not after.
+        letGo.length ? (
+          <Label testID="present-let-go" style={{ textAlign: 'center' }}>
+            {'Going on lets go of ' + String(letGo.length) + ' you wrote about.'}
+          </Label>
+        ) : null
+      }
+    >
+      <Heading title={copy.deckQuestion ?? ''} testID="present-question" />
+      <Body testID="present-deck-note" style={{ fontSize: 14, marginTop: -6 }}>
+        {depth === 'full' ? copy.deckNoteFull : copy.deckNote}
+      </Body>
+      <Notice testID="present-problem" text={problem} />
+      {grouped.length
+        ? grouped.map((s, i) => (
+            <View key={s.group} style={{ gap: 10, marginTop: i === 0 ? 0 : 10 }}>
+              {/*
+                A silent divider. Naming a group, or counting how many came
+                from one, turns a deck into a test — which is the one thing
+                this volume must never be.
+              */}
+              {i === 0 ? null : <View style={{ height: 1, backgroundColor: day.line, marginVertical: 4 }} />}
+              {s.cards.map((c) => cardRow(c, 'present-card-'))}
+            </View>
+          ))
+        : <View style={{ gap: 10 }}>{deck.map((c) => cardRow(c, 'present-card-'))}</View>}
+    </Screen>
   );
 }
