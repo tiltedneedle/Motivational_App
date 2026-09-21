@@ -107,6 +107,7 @@ import {
   type PracticeLog,
   type RunnerState,
   type Profile,
+  type Persona,
   type SyncBundle,
   type SafetyRisk,
   type Scene,
@@ -339,6 +340,12 @@ export interface MorrowState {
   letGoDrafts: Record<string, string>;
   /** A memory line mid-change (PRD §7.9), for the same reason. */
   memoryDraft: { key: string; text: string } | null;
+  /**
+   * Set-up's answers so far (the rebuild): kept as they are given, so a
+   * reload, a kill or the privacy-details detour brings them back. Cleared
+   * when set-up finishes.
+   */
+  setupDraft: { step: number; areas: string[]; custom: string; when: 'morning' | 'evening' | 'any' | null; voice: Persona | null; name: string; sixteen: boolean } | null;
   dayDraft: DayDraft | null;
   interviewDraft: InterviewDraft | null;
   readBackDraft: { rows: ReadBackRow[]; leftOut?: string; source: string; updatedAt: string } | null;
@@ -378,6 +385,7 @@ export interface MorrowState {
   restoreMemory: (key: string) => void;
   setLetGoDraft: (goalId: string, text: string | null) => void;
   setMemoryDraft: (draft: { key: string; text: string } | null) => void;
+  setSetupDraft: (draft: MorrowState['setupDraft']) => void;
   /** The way back from Let it go, until the edition is sealed. */
   takeBackGoal: (id: string) => void;
   rankGoals: (ids: string[]) => void;
@@ -682,6 +690,7 @@ const EMPTY = {
   stoneDraft: null,
   letGoDrafts: {},
   memoryDraft: null,
+  setupDraft: null,
   dayDraft: null,
   interviewDraft: null,
   readBackDraft: null,
@@ -815,6 +824,7 @@ const store = create<MorrowState>()(
           return { letGoDrafts: { ...s.letGoDrafts, [goalId]: text } };
         }),
       setMemoryDraft: (draft) => set({ memoryDraft: draft }),
+      setSetupDraft: (draft) => set({ setupDraft: draft }),
 
       editMemory: (key, text) => {
         const line = text.trim();
@@ -2676,7 +2686,10 @@ export const useTodaysPractices = () => useMorrow(useShallow(todaysPractices));
 export function firstRunOf(s: MorrowState): FirstRunStep {
   return firstRunStep({
     goals: activeGoals(s),
-    hasWarmup: latestText(s.texts, 'warmup') !== null,
+    // Any first line counts, whatever the safety screen said of it: the card
+    // has been raised and answered, and the path must not ask for the line
+    // again. (The mirror quotes only what is quotable, so it shows no quote.)
+    hasWarmup: s.texts.some((t) => t.kind === 'warmup' && t.body.trim().length > 0),
     hasIdeal: latestText(s.texts, 'ideal') !== null,
     hasTitle: s.bookTitle.trim().length > 0,
     consented: Boolean(s.profile.consentedAt),

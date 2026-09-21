@@ -35,10 +35,19 @@ export default function SignIn() {
   };
   /** The email code lives on the account screen; it carries `next` on. */
   const onwards = () => router.replace((to ? `/account?next=${to}` : '/account') as never);
-  /** Past the ask, once: it is offered after the Portrait and never again. */
+  /**
+   * Past it. When this screen is the once-only ask after the plan (`next`
+   * is the seal) that is recorded, so it is never asked again; opened from
+   * Welcome, Today or You it is simply left, back to where they were.
+   */
   const notNow = () => {
-    markAccountAsked();
-    router.replace((to || '/today') as never);
+    if (to === '/seal-book') markAccountAsked();
+    if (to) {
+      router.replace(to as never);
+      return;
+    }
+    if (router.canGoBack()) router.back();
+    else router.replace('/today');
   };
 
   /** Signed in here (a phone's auth session, Apple): the account screen finishes the copy. */
@@ -56,7 +65,7 @@ export default function SignIn() {
     setProblem(null);
     try {
       if (Platform.OS === 'web') {
-        const out = await signInWithGoogleRedirect();
+        const out = await signInWithGoogleRedirect(to || undefined);
         // On success the browser is leaving for Google; nothing more to do here.
         if (!out.ok) setProblem(out.error);
         return;

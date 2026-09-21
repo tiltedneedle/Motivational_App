@@ -109,8 +109,13 @@ export function usePlatformBack(canStepBack: boolean, stepBack: () => void): voi
   });
 
   useEffect(() => {
-    const off = navigation.addListener('beforeRemove', (e: { preventDefault: () => void }) => {
+    const off = navigation.addListener('beforeRemove', (e: { preventDefault: () => void; data?: { action?: { type?: string } } }) => {
       if (!latest.current.canStepBack) return;
+      // Only the person's back is an undo. A replace, a reset or a dismiss the
+      // app itself asked for (set-up sending a finished person to Today) is
+      // not, and preventing it left the screen stuck one step back.
+      const type = e.data?.action?.type;
+      if (type && type !== 'GO_BACK' && type !== 'POP' && type !== 'POP_TO') return;
       e.preventDefault();
       latest.current.stepBack();
     });

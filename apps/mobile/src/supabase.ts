@@ -258,10 +258,18 @@ export async function signInWithGoogle(idToken: string, nonce?: string): Promise
  * email link. Nothing about Google is trusted here beyond handing the
  * person to it; the auth server does the exchange.
  */
-export async function signInWithGoogleRedirect(): Promise<AuthResult> {
+export async function signInWithGoogleRedirect(next?: string): Promise<AuthResult> {
   const c = await supabase();
   if (!c) return { ok: false, error: NO_SERVICE };
   const origin = (globalThis as unknown as { location?: { origin?: string } }).location?.origin ?? '';
+  // Where to go once back: kept in this tab's session storage, since the
+  // allow-list matches the redirect by path and a query would not survive.
+  try {
+    if (next) sessionStorage.setItem(SIGNIN_NEXT, next);
+    else sessionStorage.removeItem(SIGNIN_NEXT);
+  } catch {
+    // storage refused (a private window): the account screen falls back to Today
+  }
   try {
     const { error } = await c.auth.signInWithOAuth({
       provider: 'google',
@@ -300,6 +308,19 @@ export async function signInWithGoogleSession(): Promise<AuthResult> {
     return landed ?? { ok: false, error: 'Google came back without a session. Try again.' };
   } catch (err) {
     return { ok: false, error: plain(err instanceof Error ? err.message : 'no network') };
+  }
+}
+
+const SIGNIN_NEXT = 'morrow-signin-next';
+
+/** The `next` a web sign-in was leaving for, read once on the way back. */
+export function takeSignInNext(): string | null {
+  try {
+    const v = sessionStorage.getItem(SIGNIN_NEXT);
+    if (v) sessionStorage.removeItem(SIGNIN_NEXT);
+    return v && /^\/[a-z-]+$/i.test(v) ? v : null;
+  } catch {
+    return null;
   }
 }
 

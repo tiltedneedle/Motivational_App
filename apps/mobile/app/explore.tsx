@@ -36,7 +36,10 @@ export default function Explore() {
   const firstRun = useFirstRun();
 
   const open = (name: VolumeName) => {
-    if (name === 'future') router.push(firstRun.route as never);
+    if (name === 'future') {
+      if (firstRun.step === 'done') router.dismissTo('/today');
+      else router.push(firstRun.route as never);
+    }
     else if (!consented) router.push(`/consent?then=${name}`);
     else router.push(name === 'past' ? '/past' : '/present');
   };

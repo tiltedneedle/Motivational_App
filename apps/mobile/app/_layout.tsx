@@ -113,7 +113,11 @@ export default function RootLayout() {
       if (!out) return;
       if (out.ok) {
         await setAccount();
-        router.push('/account');
+        // Back from Google the tab is already on /account: replace, or the
+        // person lands on the second of two account screens.
+        const here = Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.pathname === '/account';
+        if (here) router.replace('/account');
+        else router.push('/account');
       } else {
         useMorrow.getState().setToast({ text: out.error, kind: 'info' });
       }

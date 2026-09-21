@@ -13,7 +13,7 @@ import { useState } from 'react';
 import { Platform, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Body, Chip, InkButton, Label, Notice, Rule, Statement, Studio, TextButton, TopBar, UserField, day } from '@morrow/ui';
-import { confirmCode, hasGoogleWeb, hasSupabase, sendCode, signInWithApple, signInWithGoogleRedirect } from '../src/supabase';
+import { confirmCode, hasGoogleWeb, hasSupabase, sendCode, signInWithApple, signInWithGoogleRedirect, takeSignInNext } from '../src/supabase';
 import { useMorrow } from '../src/store';
 import { track } from '../src/analytics';
 
@@ -21,7 +21,10 @@ type Stage = 'email' | 'code' | 'done';
 
 export default function Account() {
   const router = useRouter();
-  const { next } = useLocalSearchParams<{ next?: string }>();
+  const { next: nextParam } = useLocalSearchParams<{ next?: string }>();
+  // A web sign-in through Google comes back here cold, with the `next` it
+  // left with kept in the tab; read once, on mount.
+  const [next] = useState<string | undefined>(() => (typeof nextParam === 'string' ? nextParam : (takeSignInNext() ?? undefined)));
   const markAccountAsked = useMorrow((s) => s.markAccountAsked);
   const setAccount = useMorrow((s) => s.setAccount);
   const afterSignIn = useMorrow((s) => s.afterSignIn);

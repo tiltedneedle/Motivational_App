@@ -66,11 +66,55 @@ in build order — tick as done, and if resuming, continue from the first untick
       stepped set-up back a question). The handler now records each screen's own path at
       mount (from the navigator, which already has it; the browser's URL is still the old
       screen's at that moment) and answers only a pop leaving that path.
-- [ ] R5. Tests: `scripts/e2e.mjs` first-run sections rewritten for the new walk (setup →
-      first write → mirror → Interview …); check-cold routes; a11y; shots; motion;
-      `pnpm verify` green.
-- [ ] R6. The built app walked in Playwright end to end as a new person, every screen,
-      every Back; everything found fixed; the live site redeployed.
+- [x] R5. Tests: `scripts/e2e.mjs` first-run sections rewritten for the new walk (setup →
+      first write → mirror → Interview …) plus a sign-in walk — 558 checks; the cold-open
+      table, the axe pass, the shots and the motion checks carry the new routes; the
+      firstrun tests cover the five-step path; `pnpm verify` green (see the entry below).
+- [x] R6. The built app walked: the e2e as a new person end to end, every screen rendered
+      from a seeded store (`pnpm shots`) and read, the tabs, the doors and the sign-in in
+      the browser pane by hand. A five-lens adversarial review of the diff (correctness,
+      flow/resume, a11y, security, product copy) — its confirmed findings are fixed and
+      listed under "The rebuild reviewed" below.
+
+### The rebuild reviewed (2026-09-21)
+
+Five read-only lenses over `git diff 8b21fa6..HEAD`, each finding read against the code
+by hand before it was acted on. What was confirmed and fixed:
+
+- **Correctness.** `platform-back.ts` read `window.location.pathname` at module load
+  without the web guard — on React Native `window` is the global and has no `location`,
+  so a native boot would have thrown at the root layout's import. Guarded. Sign-in's
+  "Continue with email" went to `next` (the seal) instead of the email form; it now
+  carries `next` on to `/account`, and the native Google path does too. "Not now" on
+  sign-in never marked the account as asked, so the once-only ask after the plan
+  repeated — it marks it now. Today's path card title fell through to "Finish your
+  Book." at the first step for anyone past the fresh state — two titles now, honest ones.
+  Set-up forgot its answers at finish, so a browser back from the first line remounted
+  an empty set-up — set-up now redirects to Today once consent is recorded.
+- **Security.** The OAuth flows were implicit (tokens in the redirect URL, which on a
+  phone is a custom-scheme URL any app can claim); the client is PKCE now and the URL
+  handler exchanges the code. Set-up recorded consent under a line that said nothing
+  leaves the phone; the line now says what does and when, with the details a tap away.
+  Sign-in said Google hands over "an email address and nothing else"; it says email and
+  name.
+- **Accessibility.** Welcome had lost its scroll (the buttons were under the hero at 200%
+  type) — it scrolls. The first line's field removed the browser's focus ring with no
+  replacement — the underline shows focus, as every field's does — and its tap-to-focus
+  wrapper was a nameless tab stop — it is not focusable. StreakPill, WeekStrip and the
+  path card's rows carried labels no reader landed on — they are elements now, with a
+  role. The progress bar's value reached the web as nothing (react-native-web drops the
+  object form) — both spellings are set; its fill no longer eases under reduce motion.
+  The Google button's busy state reached the web as nothing and its label could not wrap;
+  the path card's title was a second h1. The age tick, the answered rows and the
+  microphone button were under 44 pt.
+- **Product copy.** One name per thing: the plan screen is "Your plan" everywhere;
+  the closing screen says "Kept as a draft" in both branches; the stone's spoken
+  announcement says "question" like its label; the empty Book and Reading say "five short
+  steps" rather than "three evenings"; re-authoring says "Finish the edition". The path's
+  "Step N of 5" labels show only while there is no Book (a line rewritten later is an
+  edit, not step four). Set-up's bar counts in quarters to match "of 4". The path card's
+  promise counts the steps that remain rather than saying "three sessions" over five
+  steps, and the fresh caption phrases the first evening by when they said they write.
 
 ## Status
 - [x] 0. Toolchain check, monorepo scaffold (pnpm workspaces, apps/mobile Expo, packages/core, packages/ui, supabase/)

@@ -67,7 +67,16 @@ export default function Choose() {
                   // Every volume's door goes through the gate once (PRD §12: the
                   // person is asked to write about their own life, whichever
                   // volume), and never again.
-                  onPress={() => router.push(door.name === 'future' ? (firstRun.route as never) : consented ? door.route : `/consent?then=${door.name}`)}
+                  onPress={() => {
+                    if (door.name !== 'future') {
+                      router.push(consented ? door.route : `/consent?then=${door.name}`);
+                      return;
+                    }
+                    // With a Book the path is done and its route is Today: the
+                    // Today already under this screen, not a second one.
+                    if (firstRun.step === 'done') router.dismissTo('/today');
+                    else router.push(firstRun.route as never);
+                  }}
                   style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.99 : 1 }] })}
                 >
                 <Card style={{ gap: 6 }}>

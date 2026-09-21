@@ -78,27 +78,35 @@ is the hardware button, which only a native build can show.
 
 ### Showing it to somebody in ten minutes
 
-The timers are real (the Fifteen is fifteen minutes), and a demo does not
-have to wait for them. The walk that shows the most, in order:
+The timers are real (the fifteen minutes are fifteen minutes), and a demo
+does not have to wait for them. The walk that shows the most, in order:
 
-1. **Welcome** — one screen. Give a first name. Tap **Look around first**:
-   Today, honestly empty, says what the room is for and what three evenings
-   make. Then **Begin tonight**.
-2. **Consent**, then **the three doors** — pick **Future** (badged "Today
-   comes from here").
-3. **The Interview** — taps only, about a minute. The tray fills with stones.
-4. **The Fifteen** — on Chrome with a microphone, choose **Say it** and talk
-   for a minute; the dot beside *Listening* follows the voice. Then tap
-   **Done for now**: every word is kept; the card that follows has **Read it
-   back to me**. (The fifteen minutes are there whenever somebody wants them.)
-5. **What I heard** — the phrases are their own words, verbatim. For a short
-   demo keep **one** and name it (the Book seals only once every stone is
-   written: five short lines per goal on Starter, so one goal is five lines).
-6. Put it in **order**, name the Book, write the five **stones** (one short
-   line per question; a tapped framing is a way in, the line is still theirs),
-   see the **Portrait**, and **seal the Book** with the hold.
-7. **Today** — the first move, cut from their own line; tap the stone when
-   it is done; the coral ✓ seals the day.
+1. **Welcome** — one line, one button. **Get started**.
+2. **Set-up** — four taps under a progress bar: what to work on, when you
+   have a quiet moment, how the coach speaks, a first name and the age tick.
+   The privacy details are one tap away, to read, not to affirm twice.
+3. **A first line** — one question from the source's warm-up list, no clock.
+   Type a sentence (or **Say it** on Chrome with a microphone). **Keep this
+   line**.
+4. **The mirror** — the app answers: the line back, verbatim, in the serif
+   that is only ever theirs; one question; the five steps with the first one
+   ticked. **Find your goals · 2 min**.
+5. **The Interview** — taps only, about a minute; it opens past the areas
+   set-up already answered. The tray fills with stones.
+6. **Your future** — Starter or Full, then **Begin · 15 minutes**. Talk or
+   type for a minute; the mirror's question sits in the margin with the
+   goals. **Done for now** keeps every word; **Read it back to me**.
+7. **What I heard** — their own phrases, verbatim. Keep one and name it.
+   The first session ends on **Today**: the path card, three of five steps
+   ticked, one button.
+8. **Plan each goal** — order, a name for the Book, five short questions per
+   goal (a tapped chip is a way in; the line is theirs), then **your plan**
+   and **Finish** with the hold.
+9. **Today** — the streak, the week, the first move cut from their own line;
+   tap the stone when it is done; the coral ✓ closes the day. **Book**,
+   **Envision**, **Coach** and **You** are in the bar.
+10. **Sign in** — from Welcome, from You, or once after the plan: Continue
+    with Google, Apple on an iPhone, or the email code. Never a wall.
 
 To start over between demos, clear the site's storage in the browser (or
 open a private window).

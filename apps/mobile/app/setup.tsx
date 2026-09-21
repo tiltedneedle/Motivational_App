@@ -12,7 +12,7 @@
  * The end of set-up is consent (PRD §12: the gate stands before any
  * writing door). Then the first line.
  */
-import { Redirect, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { AREAS, addCustomArea, beginBranches, domainMeta, initialInterview, toggleArea, type DomainId, type Persona } from '@morrow/core';
@@ -45,14 +45,6 @@ const AREA_GLYPH: Record<DomainId, 'health' | 'money' | 'craft' | 'mind' | 'peop
   custom: 'custom',
 };
 
-/**
- * The answers so far, kept across a detour to the details page: the router
- * remounts this screen on the way back, and a person who read one page
- * about privacy should not find their four answers gone. Session-only;
- * set-up is thirty seconds and consent is the record of it.
- */
-let remembered: { step: Step; areas: string[]; custom: string; when: 'morning' | 'evening' | 'any' | null; voice: Persona | null; name: string | null; sixteen: boolean } | null = null;
-
 export default function Setup() {
   const router = useRouter();
   useFirstRunStep('setup');
@@ -61,18 +53,33 @@ export default function Setup() {
   const setProfile = useMorrow((s) => s.setProfile);
   const consent = useMorrow((s) => s.consent);
   const saveInterviewDraft = useMorrow((s) => s.saveInterviewDraft);
+  // The answers so far live in the store, like every other draft: a reload,
+  // a kill with the keyboard up, or the privacy-details detour (the router
+  // remounts this screen on the way back) brings them back.
+  const saved = useMorrow((s) => s.setupDraft);
+  const setSetupDraft = useMorrow((s) => s.setSetupDraft);
+  const done = Boolean(profile.consentedAt);
 
-  const [step, setStep] = useState<Step>(() => remembered?.step ?? 0);
-  const [areas, setAreas] = useState<string[]>(() => remembered?.areas ?? []);
-  const [custom, setCustom] = useState(() => remembered?.custom ?? '');
-  const [customOpen, setCustomOpen] = useState(() => Boolean(remembered?.custom));
-  const [when, setWhen] = useState<'morning' | 'evening' | 'any' | null>(() => remembered?.when ?? null);
-  const [voice, setVoice] = useState<Persona | null>(() => remembered?.voice ?? null);
-  const [name, setName] = useState(() => remembered?.name ?? profile.displayName);
-  const [sixteen, setSixteen] = useState(() => remembered?.sixteen ?? false);
+  const [step, setStep] = useState<Step>(() => (saved && saved.step >= 0 && saved.step <= 3 ? (saved.step as Step) : 0));
+  const [areas, setAreas] = useState<string[]>(() => saved?.areas ?? []);
+  const [custom, setCustom] = useState(() => saved?.custom ?? '');
+  const [customOpen, setCustomOpen] = useState(() => Boolean(saved?.custom));
+  const [when, setWhen] = useState<'morning' | 'evening' | 'any' | null>(() => saved?.when ?? null);
+  const [voice, setVoice] = useState<Persona | null>(() => saved?.voice ?? null);
+  const [name, setName] = useState(() => saved?.name ?? profile.displayName);
+  const [sixteen, setSixteen] = useState(() => saved?.sixteen ?? false);
   useEffect(() => {
-    remembered = { step, areas, custom, when, voice, name, sixteen };
-  }, [step, areas, custom, when, voice, name, sixteen]);
+    if (done) return;
+    setSetupDraft({ step, areas, custom, when, voice, name, sixteen });
+  }, [done, step, areas, custom, when, voice, name, sixteen, setSetupDraft]);
+
+  // Set-up is over once consent is recorded. Reached again — the browser's
+  // back from the first line, a stale link — it goes to Today (the one
+  // already in the stack when there is one) rather than asking four
+  // questions that were answered.
+  useEffect(() => {
+    if (done) router.dismissTo('/today');
+  }, [done, router]);
 
   const back = () => {
     if (step === 0) {
@@ -82,7 +89,7 @@ export default function Setup() {
     }
     setStep((step - 1) as Step);
   };
-  usePlatformBack(step > 0, back);
+  usePlatformBack(step > 0 && !done, back);
 
   const areaLabels = useMemo(() => AREAS.map((a) => ({ id: a.id, domain: a.domain, label: a.label })), []);
   const pickedNames = [...areas.map((id) => areaLabels.find((a) => a.id === id)?.label ?? id), ...(custom.trim() ? [custom.trim()] : [])];
@@ -100,17 +107,13 @@ export default function Setup() {
       s = beginBranches(s);
       saveInterviewDraft(s, [before]);
     }
+    setSetupDraft(null);
     consent();
-    remembered = null;
     router.push('/first-write');
   };
 
   const canGoOn = step === 0 ? areas.length > 0 || custom.trim().length > 0 : step === 1 ? when !== null : step === 2 ? voice !== null : sixteen;
-
-  // Set-up is over once consent is recorded. Reached again — the browser's
-  // back from the first line, a stale link — it goes to Today rather than
-  // asking four questions that were answered.
-  if (profile.consentedAt && remembered === null) return <Redirect href="/today" />;
+  if (done) return null;
 
   const answered = (label: string, value: string, at: Step) => (
     <Pressable

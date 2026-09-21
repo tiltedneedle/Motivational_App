@@ -6,7 +6,7 @@
  * here — five steps, with the first one already ticked. Nothing on this
  * screen was written about them: the engine quotes, labels and asks.
  */
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { View } from 'react-native';
 import { AREAS, firstRunPath, mirrorLocally, type DomainId } from '@morrow/core';
@@ -23,6 +23,9 @@ export default function MirrorScreen() {
   const interviewDraft = useMorrow((s) => s.interviewDraft);
   const firstRun = useFirstRun();
   const warm = useMemo(() => latestText(texts, 'warmup'), [texts]);
+  // Nothing to mirror — opened by its URL with no first line written — is
+  // not a screen; it is wherever the path is.
+  const anyWarm = texts.some((t) => t.kind === 'warmup' && t.body.trim().length > 0);
   // The area they came here for is the mirror's hint, as it was the prompt's.
   const hint: DomainId | null = useMemo(() => {
     const first = interviewDraft?.s?.picked?.[0];
@@ -30,10 +33,13 @@ export default function MirrorScreen() {
   }, [interviewDraft]);
   const mirror = useMemo(() => mirrorLocally(warm?.body ?? '', hint), [warm, hint]);
   const path = firstRunPath(firstRun);
+  const remaining = path.steps.filter((s) => !s.done).length;
   const name = profile.displayName.trim();
 
   const onward = () => router.push(firstRun.route as never);
   const back = () => (router.canGoBack() ? router.back() : router.replace('/today'));
+
+  if (!anyWarm) return <Redirect href={firstRun.route as never} />;
 
   return (
     <Screen testID="screen-mirror" back={{ onPress: back, testID: 'mirror-back' }} where="Heard" secondary={{ label: 'Show me around first', onPress: () => router.dismissTo('/today'), testID: 'mirror-look' }}>
@@ -74,8 +80,8 @@ export default function MirrorScreen() {
       <Rise index={3} reducedMotion={reduced}>
         <PathCard
           testID="mirror-path"
-          title="Four more steps to a Book you wrote."
-          caption="Tonight or over a few days. Nothing you write is ever lost."
+          title={remaining === 0 ? 'Your Book is written.' : `${remaining === 1 ? 'One more step' : `${remaining} more steps`} to a Book you wrote.`}
+          caption={remaining === 0 ? undefined : 'Tonight or over a few days. Nothing you write is ever lost.'}
           steps={path.steps.map((s) => ({ label: s.label, minutes: s.minutes, done: s.done }))}
           at={path.at}
           cta={{ label: firstRun.label, onPress: onward, testID: 'mirror-continue' }}

@@ -62,13 +62,27 @@ export default function FirstWrite() {
     return () => clearInterval(t);
   }, []);
 
-  // Kept as it is typed. A kill mid-line comes back to the line.
+  // Kept as it is typed, a beat after the last change; and flushed on the
+  // way out, so the last stretch typed or heard before Back is on disk too.
+  // Once the line is kept the draft is done with: a timer still pending
+  // must not write it back after saveText has cleared it.
+  const keptRef = useRef(false);
+  const pendingRef = useRef<{ body: string; mode: 'type' | 'say'; seconds: number } | null>(null);
+  const flush = () => {
+    const pending = pendingRef.current;
+    pendingRef.current = null;
+    if (!pending || keptRef.current || !pending.body.trim()) return;
+    saveDraft({ ...startWriting('warmup', profile.track, pending.mode), body: pending.body, elapsed: pending.seconds });
+  };
   useEffect(() => {
-    const session = { ...startWriting('warmup', profile.track, mode), body, elapsed: seconds };
-    const t = setTimeout(() => saveDraft(session), 400);
+    if (keptRef.current) return;
+    pendingRef.current = { body, mode, seconds };
+    const t = setTimeout(flush, 400);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [body, mode]);
+  // Unmounted with a change younger than the timer: written now.
+  useEffect(() => () => flush(), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const listen = async () => {
     if (listening) {
@@ -102,16 +116,27 @@ export default function FirstWrite() {
       dictationRef.current.stop();
       setListening(false);
     }
+    keptRef.current = true;
+    pendingRef.current = null;
     const text = saveText('warmup', body.trim(), mode, seconds);
-    if (!text) return;
+    if (!text) {
+      keptRef.current = false;
+      return;
+    }
     // A crisis line raises the card from the store; the mirror is not the
-    // place for it. Anything else goes to the mirror.
-    if (screen(body).risk === 'crisis') return;
-    router.push('/mirror');
+    // place for it. Anything else goes to the mirror — in this screen's
+    // place, so Back from the mirror does not land on a page that would
+    // keep the same line twice.
+    if (screen(body).risk === 'crisis') {
+      router.replace('/today');
+      return;
+    }
+    router.replace('/mirror');
   };
 
   const back = () => {
     if (listening) dictationRef.current.stop();
+    flush();
     if (router.canGoBack()) router.back();
     else router.replace('/today');
   };
