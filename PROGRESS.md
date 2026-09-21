@@ -28,11 +28,11 @@ loop; plain English; one strong look; account after value.
 **The decision: keep the engines and the authorship rule, rebuild the shell.** The plan,
 in build order — tick as done, and if resuming, continue from the first unticked item:
 
-- [ ] R1. Foundations (`packages/ui`): light is the default appearance (System and Night
+- [x] R1. Foundations (`packages/ui`): light is the default appearance (System and Night
       stay as choices); a `shell.tsx` with `Screen` (top bar + progress + body + sticky
       footer), `ProgressBar`, `OptionTile`, `StatTile`, `WeekStrip`, `PathCard`, `TabBar`
       (moved out of today.tsx), `StreakPill`.
-- [ ] R2. The new first run (≤ 3 minutes to the home screen):
+- [x] R2. The new first run (≤ 3 minutes to the home screen):
       `/` Welcome — hero, one line, Get started · I have a Book on my account.
       `/setup` — four one-tap steps stacked chat-style under a progress bar: what to work
       on (seeds the Interview's areas) · when you write · how the coach speaks · your name
@@ -45,11 +45,11 @@ in build order — tick as done, and if resuming, continue from the first untick
       the first line you kept", the five-step path, Find my goals · 2 min / Show me around.
       Engine: `packages/core/src/engines/mirror.ts` (quotes are verified substrings; the
       question comes from a bank keyed by domain; a remote provider can plug in later).
-- [ ] R3. Home (`/today`) rebuilt: greeting + streak pill; the week strip; before the Book
+- [x] R3. Home (`/today`) rebuilt: greeting + streak pill; the week strip; before the Book
       a PathCard (step N of 5, one button, honest minutes) instead of the paragraph; after
       the Book the Now card, goal rings, practices, "From your words" (a quotable line of
       theirs with a door to the coach), consistency; the shared TabBar.
-- [ ] R4. The program screens in the same shell: Interview, doorway, room close, read-back,
+- [x] R4. The program screens in the same shell: Interview, doorway, room close, read-back,
       order, name, the five questions (stones), your line (portrait), finish (seal) — a
       progress bar with "Step N of 5", one headline + one line of copy each, plain names in
       every user-facing string (the Fifteen → "Your future, 15 minutes"; stones → "the five

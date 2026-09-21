@@ -58,7 +58,7 @@ export default function Wallpaper() {
       <Studio dark testID="screen-wallpaper">
         <SafeAreaView style={{ flex: 1, padding: 22, justifyContent: 'center', gap: 12 }}>
           <Statement style={{ color: night.ink }}>The lock screen is your own line.</Statement>
-          <Body style={{ color: night.ink2 }}>Seal the Book and the I will line goes here.</Body>
+          <Body style={{ color: night.ink2 }}>Finish the Book and the I will line goes here.</Body>
           <InkButton label="Back" onPress={back} />
         </SafeAreaView>
       </Studio>

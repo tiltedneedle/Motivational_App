@@ -116,7 +116,7 @@ export default function Reading() {
 
             {page.kind === 'opening' ? (
               <>
-                <Label style={{ color: paper.ink3 }}>Chapter one · the Fifteen</Label>
+                <Label style={{ color: paper.ink3 }}>Chapter one · your future</Label>
                 <UserText testID="reading-first-sentence" style={{ ...fitSentence(page.firstSentence.length), color: '#15181F' }}>
                   {page.firstSentence}
                 </UserText>

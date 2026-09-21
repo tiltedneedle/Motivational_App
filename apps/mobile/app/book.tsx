@@ -191,7 +191,7 @@ export default function BookScreen() {
           {twoColumn ? (
             <View testID="book-two-column" style={{ flexDirection: 'row', gap: 34 }}>
               <View style={{ flex: 1, gap: 18 }}>
-              <Label style={{ color: paper.ink3 }}>Chapter one · the Fifteen</Label>
+              <Label style={{ color: paper.ink3 }}>Chapter one · your future</Label>
               <UserText testID="book-first-sentence" style={{ ...fitSentence(book.firstSentence.length), color: '#15181F' }}>
                 {book.firstSentence}
               </UserText>
@@ -291,7 +291,7 @@ export default function BookScreen() {
             </View>
           ) : (
             <>
-          <Label style={{ color: paper.ink3 }}>Chapter one · the Fifteen</Label>
+          <Label style={{ color: paper.ink3 }}>Chapter one · your future</Label>
           <UserText testID="book-first-sentence" style={{ ...fitSentence(book.firstSentence.length), color: '#15181F' }}>
             {book.firstSentence}
           </UserText>

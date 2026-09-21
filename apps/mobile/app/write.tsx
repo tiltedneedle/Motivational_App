@@ -8,7 +8,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, AppState, Easing, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
+  AREAS,
   DOORWAY,
+  mirrorLocally,
   canClose,
   canExtend,
   extend,
@@ -189,6 +191,14 @@ export default function Write() {
   const seeds = goals
     .map((g) => ({ title: g.title, authored: g.titleAuthored !== false }))
     .slice(0, 4);
+  // The mirror's question (the rebuild): asked of the first line and promised
+  // for this page. The app's own words, so never in the serif.
+  const warm = useMorrow((s) => latestText(s.texts, 'warmup'));
+  const interviewSeedDomain = useMorrow((s) => {
+    const first = s.interviewDraft?.s?.picked?.[0];
+    return first ? (AREAS.find((a) => a.id === first)?.domain ?? 'custom') : null;
+  });
+  const mirrorQuestion = kind === 'ideal' && warm ? mirrorLocally(warm.body, interviewSeedDomain ?? goals[0]?.domain ?? null).question : null;
   const resumable = draftWorthKeeping(draft);
 
   useEffect(() => {
@@ -529,9 +539,9 @@ export default function Write() {
           </Statement>
           <Body style={{ color: night.ink2, textAlign: 'center' }}>
             {endedEarly
-              ? `Every word you wrote is here — ${words} of them. A sitting can be picked up once, and this one already was, so it counts as it stands.`
+              ? `Every word you wrote is here — ${words} of them. A session can be picked up once, and this one already was, so it counts as it stands.`
               : closedBy === 'early'
-                ? `Every word is kept — ${words} of them — and it goes on to the read-back like any sitting. Sealed as a draft for a day; the whole ${Math.round(targetSeconds(kind, track) / 60)} minutes is there whenever you want it.`
+                ? `Every word is kept — ${words} of them — and it goes on to the read-back like any session. Kept as a draft for a day; the whole ${Math.round(targetSeconds(kind, track) / 60)} minutes is there whenever you want it.`
                 : 'Sealed as a draft for a day. You can read it, not edit it.'}
           </Body>
           {paused ? (
@@ -668,7 +678,7 @@ export default function Write() {
             color={accent.coral}
             track="rgba(255,255,255,0.12)"
             width={3}
-            accessibilityLabel={held ? 'The clock is paused' : 'Time left in this sitting'}
+            accessibilityLabel={held ? 'The clock is paused' : 'Time left in this session'}
             valueText={`${formatRemaining(remaining(session))} left, ${words} words`}
           >
             <Animated.View style={{ transform: [{ translateY: bob }] }}>
@@ -716,8 +726,16 @@ export default function Write() {
             />
           </ScrollView>
 
-          {seeds.length ? (
+          {seeds.length || mirrorQuestion ? (
             <View style={{ width: 92, borderLeftWidth: 1, borderLeftColor: night.line, paddingLeft: 12, gap: 10 }}>
+              {mirrorQuestion ? (
+                <>
+                  <Label style={{ color: night.ink3 }}>A question</Label>
+                  <Body testID="write-mirror-question" style={{ fontSize: 12, lineHeight: 16, color: night.ink3 }}>
+                    {mirrorQuestion}
+                  </Body>
+                </>
+              ) : null}
               <Label style={{ color: night.ink3 }}>Seeds</Label>
               {/*
                 These are read, never inserted. Tapping one used to paste it
@@ -825,7 +843,7 @@ export default function Write() {
                 />
               ) : null}
               <Label testID="write-floor" style={{ color: night.ink3, textAlign: 'center' }}>
-                {Math.max(0, Math.ceil((minSecondsToCount(kind, track) - session.elapsed) / 60))} min more is a full sitting
+                {Math.max(0, Math.ceil((minSecondsToCount(kind, track) - session.elapsed) / 60))} min more is a full session
               </Label>
             </>
           )}

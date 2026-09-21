@@ -26,7 +26,7 @@ import {
   sameLine,
   stoneNow,
 } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Pop, Question, Settle, Statement, Stone, Studio, TextButton, TopBar, UserField, UserText, accent, announce, day, useReducedMotion } from '@morrow/ui';
+import { Body, Chip, InkButton, Label, Pop, ProgressBar, Question, Settle, Statement, Stone, Studio, TextButton, TopBar, UserField, UserText, accent, announce, day, useReducedMotion } from '@morrow/ui';
 import { analysesFor, useGoals, useLatestBook, useMorrow, cardText } from '../src/store';
 import { useFirstRunStep } from '../src/analytics';
 
@@ -122,6 +122,11 @@ export default function StoneScreen() {
   const set = useMemo(() => framingSet(kind, goal?.domain ?? 'custom'), [kind, goal?.domain]);
   const plan = goal ? analysisPlan(goal.rank, track) : ANALYSIS_ORDER;
   const stepIndex = plan.indexOf(kind);
+  // The whole plan's count, for the progress bar: every goal's questions,
+  // and how many already have a line.
+  const allAnalyses = useMorrow((s) => s.analyses);
+  const totalPlanned = goals.reduce((n, g) => n + analysisPlan(g.rank, track).length, 0);
+  const written = goals.reduce((n, g) => n + analysisPlan(g.rank, track).filter((k) => allAnalyses.some((a) => a.goalId === g.id && a.kind === k && a.line.trim().length > 0)).length, 0);
   const spec = scoreSpecificity(paragraph.trim() || line);
   const needsFollowUp =
     (kind === 'strategies' || kind === 'monitoring') && spec.needsFollowUp && line.trim().length > 0 && !followUpAsked;
@@ -258,6 +263,12 @@ export default function StoneScreen() {
     <Studio testID="screen-stone">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
         <TopBar back={{ onPress: goBack, testID: 'stone-back' }} style={{ paddingTop: 6, minHeight: 44 }} help={{ onPress: showResources }} />
+        <ProgressBar
+          value={3.4 / 5 + (0.6 / 5) * (written / Math.max(1, totalPlanned))}
+          label={`Step 4 of 5 · Plan each goal · ${written} of ${totalPlanned} lines`}
+          testID="stone-progress"
+          style={{ paddingTop: 2, paddingBottom: 12 }}
+        />
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 2 }}>
           {/* Just kept a line: the stone seats (PRD 8.2) as the next one opens. */}
           <Settle reduced={reduced} play={stepIndex}>
@@ -267,7 +278,7 @@ export default function StoneScreen() {
             {/* Where this goal sits among the others, so "stone 3 of 5" is not the whole count (OFR-06). */}
             <Label testID="stone-goal">{goals.length > 1 ? `${goal.title} · goal ${goals.findIndex((g) => g.id === goalId) + 1} of ${goals.length}` : goal.title}</Label>
             <Label testID="stone-step" style={{ color: accent.coralText, marginTop: 2 }}>
-              {ANALYSIS_TITLES[kind]} · stone {stepIndex + 1} of {plan.length}
+              {ANALYSIS_TITLES[kind]} · question {stepIndex + 1} of {plan.length}
             </Label>
           </View>
           <View style={{ flexDirection: 'row', gap: 6 }}>
@@ -301,11 +312,11 @@ export default function StoneScreen() {
           {stepIndex === 0 && goals.findIndex((g) => g.id === goalId) === 0 && !existing ? (
             <Body testID="stone-intro" style={{ fontSize: 14, color: day.ink2 }}>
               {track === 'full'
-                ? 'Each goal gets five short lines in your words — five questions, one line each.'
+                ? 'Five short questions per goal, one line each, in your words.'
                 : goals.length > 3
-                  ? 'The top three goals get five short lines in your words, one question each; the rest get the two that make a plan.'
-                  : 'Each goal gets five short lines in your words — five questions, one line each.'}{' '}
-              The chips are ways in; the line is yours. Seat one and the next appears.
+                  ? 'Five short questions for each of the top three goals; the rest get the two that make a plan.'
+                  : 'Five short questions per goal, one line each, in your words.'}{' '}
+              A chip is a way in; the line is yours.
             </Body>
           ) : null}
           <Statement testID="stone-question">{set.question}</Statement>
@@ -359,7 +370,7 @@ export default function StoneScreen() {
             <UserField
               testID="stone-line"
               labelHidden
-              label="Your line for this stone"
+              label="Your line for this question"
               value={line}
               onChangeText={setLine}
               placeholder={faultHint ?? set.hint}
@@ -413,7 +424,7 @@ export default function StoneScreen() {
               <UserField
                 testID="stone-paragraph"
               labelHidden
-                label="Your paragraph for this stone"
+                label="Your paragraph for this question"
                 value={paragraph}
                 onChangeText={setParagraph}
                 placeholder="A paragraph, at least. Write until it is true."

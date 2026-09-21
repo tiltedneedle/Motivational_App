@@ -15,7 +15,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CHOOSER_COPY, doorStanding, firstVisit, halfDone, presentStanding, type VolumeName } from '@morrow/core';
 import { Body, Card, InkButton, Label, Rise, Statement, Studio, TextButton, TopBar, accent, day, useReducedMotion } from '@morrow/ui';
-import { useMorrow, useVolumeStates } from '../src/store';
+import { useFirstRun, useMorrow, useVolumeStates } from '../src/store';
 import { useFirstRunStep } from '../src/analytics';
 
 const DOORS: { name: VolumeName; title: string; route: string }[] = [
@@ -38,6 +38,9 @@ export default function Choose() {
   const virtuesDone = halfDone(picks, 'virtues', depth, sitting);
   const reduced = useReducedMotion();
   const first = firstVisit(states);
+  // The Future door leads to wherever the person is on its path — set-up if
+  // nothing is, else the first line, the Interview, and so on.
+  const firstRun = useFirstRun();
 
   return (
     <Studio testID="screen-choose">
@@ -64,7 +67,7 @@ export default function Choose() {
                   // Every volume's door goes through the gate once (PRD §12: the
                   // person is asked to write about their own life, whichever
                   // volume), and never again.
-                  onPress={() => router.push(consented ? (door.name === 'future' ? '/interview' : door.route) : door.name === 'future' ? '/consent' : `/consent?then=${door.name}`)}
+                  onPress={() => router.push(door.name === 'future' ? (firstRun.route as never) : consented ? door.route : `/consent?then=${door.name}`)}
                   style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.99 : 1 }] })}
                 >
                 <Card style={{ gap: 6 }}>

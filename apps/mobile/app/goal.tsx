@@ -216,7 +216,7 @@ export default function GoalScreen() {
           {/*
             PRD §7.14: two-column Goal on a tablet.
 
-            The five stones are what they wrote; the plan is what it became.
+            The five answers are what they wrote; the plan is what it became.
             Side by side, a move and the line it came from are on screen at the
             same time, which is the claim the plan column makes about itself and
             was previously two scrolls apart. One column below tablet width, in
@@ -226,7 +226,7 @@ export default function GoalScreen() {
             <View testID="goal-two-column" style={{ flexDirection: 'row', gap: 34 }}>
               <View style={{ flex: 1, gap: 20 }}>
               <View style={{ gap: 10 }}>
-                <Label>The five stones</Label>
+                <Label>The five questions</Label>
                 {ANALYSIS_ORDER.map((kind) => {
                   const a = analyses.find((x) => x.kind === kind);
                   const included = wanted.includes(kind);
@@ -411,7 +411,7 @@ export default function GoalScreen() {
           ) : (
             <>
           <View style={{ gap: 10 }}>
-            <Label>The five stones</Label>
+            <Label>The five questions</Label>
             {ANALYSIS_ORDER.map((kind) => {
               const a = analyses.find((x) => x.kind === kind);
               const included = wanted.includes(kind);

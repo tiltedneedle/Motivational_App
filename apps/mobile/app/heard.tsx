@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { domainMeta, plural, type Span } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Notice, Statement, Stone, Studio, TopBar, UserField, UserText, day } from '@morrow/ui';
+import { Body, Chip, InkButton, Label, Notice, ProgressBar, Statement, Stone, Studio, TopBar, UserField, UserText, day } from '@morrow/ui';
 import { useGoals, ai, latestText, useMorrow } from '../src/store';
 import { useFirstRunStep } from '../src/analytics';
 
@@ -112,16 +112,17 @@ export default function Heard() {
   return (
     <Studio testID="screen-heard">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'heard-back' }} where="The read-back" help={{ onPress: showResources }} />
-        <View style={{ paddingTop: 2 }}>
-          <Label>What I heard</Label>
-          <Statement style={{ marginTop: 8 }}>
+        <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'heard-back' }} where="What I heard" help={{ onPress: showResources }} />
+        <ProgressBar value={3 / 5} label="Step 3 of 5 · Your future is written" testID="heard-progress" style={{ paddingTop: 4 }} />
+        <View style={{ paddingTop: 14 }}>
+          <Statement>
             {rows === null
               ? 'Reading it back…'
               : rows.length === 0
                 ? 'Your goals are already named.'
-                : `${rows.length} lines I heard. Keep the ones that are goals, and name each.`}
+                : `${rows.length === 1 ? 'One thing' : `${rows.length} things`} you said you want.`}
           </Statement>
+          {rows && rows.length ? <Body style={{ marginTop: 6, fontSize: 15 }}>Your own phrases, verbatim. Keep the ones that are goals and give each a short name.</Body> : null}
         </View>
 
         {rows === null ? (

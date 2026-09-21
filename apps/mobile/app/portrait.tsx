@@ -18,7 +18,7 @@ import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { domainMeta } from '@morrow/core';
-import { Body, Card, InkButton, Label, Quoted, Rise, Rule, Statement, Stone, Studio, TextButton, TopBar, UserField, UserText, accent, day, useReducedMotion } from '@morrow/ui';
+import { Body, Card, InkButton, Label, ProgressBar, Quoted, Rise, Rule, Statement, Stone, Studio, TextButton, TopBar, UserField, UserText, accent, day, useReducedMotion } from '@morrow/ui';
 import { useGoals, useMorrow } from '../src/store';
 import { useFirstRunStep } from '../src/analytics';
 import { hasSupabase } from '../src/supabase';
@@ -80,7 +80,7 @@ export default function PortraitScreen() {
           <View style={{ flex: 1, justifyContent: 'center', gap: 12 }}>
           <Statement>Not yet.</Statement>
           <Body>
-            A Portrait is built out of the five stones. Write them and it makes itself — nothing here is invented to
+            Your line is built out of the five answers. Write them and it makes itself — nothing here is invented to
             fill the gap.
           </Body>
           <InkButton testID="portrait-onwards" label="Go on" onPress={onwards} />
@@ -95,12 +95,13 @@ export default function PortraitScreen() {
   return (
     <Studio testID="screen-portrait">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'portrait-back' }} where="The Portrait" />
+        <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'portrait-back' }} where="Your line" />
+        <ProgressBar value={4.2 / 5} label="Step 5 of 5 · Finish your Book" testID="portrait-progress" style={{ paddingTop: 4, paddingBottom: 6 }} />
         <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 20 }}>
           <Rise index={0} reducedMotion={reduced} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
             <Stone size={44} domain={goal.domain} polish={1} />
             <View style={{ flex: 1 }}>
-              <Label style={{ color: meta.ink }}>Your portrait</Label>
+              <Label style={{ color: meta.ink }}>Your plan, in your words</Label>
               {/* Their name for it, when they named it. */}
               {goal.titleAuthored === false ? (
                 <Body testID="portrait-title" style={{ fontSize: 21, color: day.ink }}>

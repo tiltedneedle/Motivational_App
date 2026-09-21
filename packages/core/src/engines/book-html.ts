@@ -171,7 +171,7 @@ ${
   <hr class="rule" />`
       : ''
   }
-  <div class="label">Chapter one · the Fifteen</div>
+  <div class="label">Chapter one · your future</div>
   <p class="first theirs">${escapeHtml(book.firstSentence)}</p>
   <p class="body theirs">${escapeHtml(rest)}</p>
   ${shadow}

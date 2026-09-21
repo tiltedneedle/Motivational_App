@@ -1,24 +1,18 @@
 /**
- * The Authoring opening (PRD §7.2, F1.0): the three sittings with their real
- * lengths, and the depth question with Starter preselected.
+ * Before your future (PRD §7.2, F1.0; the rebuild, 2026-09-21): one screen
+ * that says what the fifteen minutes are, and the depth question as two
+ * tiles with Starter preselected. It used to be three paragraphs.
  */
 import { useRouter } from 'expo-router';
-import { View , Pressable, ScrollView, Text } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Body, InkButton, Label, Rule, Statement, Studio, TextButton, TopBar, day , type as fonts } from '@morrow/ui';
-
-
-import { useMorrow } from '../src/store';
-import { useFirstRunStep } from '../src/analytics';
+import { View } from 'react-native';
 import type { DepthTrack } from '@morrow/core';
+import { Body, Heading, Label, OptionTile, Screen, Stone, accent, day, useReducedMotion } from '@morrow/ui';
+import { useGoals, useMorrow } from '../src/store';
+import { useFirstRunStep } from '../src/analytics';
 
-const TRACKS: { id: DepthTrack; title: string; blurb: string }[] = [
-  { id: 'starter', title: 'Starter · three evenings', blurb: 'Fifteen minutes of writing, then one line per question. The way in.' },
-  {
-    id: 'full',
-    title: 'Full · two weeks',
-    blurb: 'The dose the studies tested: a paragraph per question on every goal, the shadow write, five to seven sittings.',
-  },
+const TRACKS: { id: DepthTrack; title: string; caption: string }[] = [
+  { id: 'starter', title: 'Starter · three sessions', caption: 'Fifteen minutes of writing, then one line per question. The way in.' },
+  { id: 'full', title: 'Full · two weeks', caption: 'The dose the studies tested: a paragraph per question, the other road, five to seven sessions.' },
 ];
 
 export default function Authoring() {
@@ -26,67 +20,35 @@ export default function Authoring() {
   useFirstRunStep('doorway');
   const track = useMorrow((s) => s.profile.track);
   const setProfile = useMorrow((s) => s.setProfile);
+  const goals = useGoals();
+  const reduced = useReducedMotion();
 
   return (
-    <Studio testID="screen-authoring">
-      <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'authoring-back' }} where="Before the Fifteen" />
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', gap: 24 }} showsVerticalScrollIndicator={false}>
-          <Statement>Three evenings from now you will have a plan you wrote yourself.</Statement>
-          <Body>
-            Tonight about twenty-five minutes. Tomorrow morning fifteen. Tomorrow evening twenty. Everything you write
-            stays yours, and you can stop at any point and pick it up.
-          </Body>
-
-          <View style={{ gap: 10 }}>
-            <Label>How deep do you want to go?</Label>
-            {TRACKS.map((t) => {
-              const on = track === t.id;
-              return (
-                <Pressable
-                  key={t.id}
-                  testID={`track-${t.id}`}
-                  accessibilityRole="radio"
-                  // A radio announces `checked`, not `selected`. With only
-                  // `selected` set, both tracks read as unchecked and there was
-                  // no way to hear which one you were about to start. As an
-                  // aria prop rather than accessibilityState because the web
-                  // build drops the latter on the floor.
-                  aria-checked={on}
-                  onPress={() => setProfile({ track: t.id })}
-                  style={{
-                    padding: 16,
-                    borderRadius: 20,
-                    backgroundColor: on ? day.ink : day.surface,
-                    gap: 4,
-                  }}
-                >
-                  <Text style={{ fontFamily: fonts.sansSemi, fontSize: 16, color: on ? day.onInk : day.ink }}>
-                    {t.title}
-                  </Text>
-                  <Text
-                    style={{
-                      fontFamily: fonts.sans,
-                      fontSize: 14,
-                      lineHeight: 19,
-                      color: on ? day.onInkSoft : day.ink2,
-                    }}
-                  >
-                    {t.blurb}
-                  </Text>
-                </Pressable>
-              );
-            })}
-            <Body style={{ fontSize: 13 }}>You can change this any time. Nothing you write is lost by switching.</Body>
-          </View>
-          <Rule />
-        </ScrollView>
-
-        <View style={{ paddingTop: 10, paddingBottom: 18, gap: 4 }}>
-          <InkButton testID="authoring-begin" label="Begin" onPress={() => router.push('/write?kind=ideal')} />
-          <TextButton testID="authoring-later" label="Not tonight" onPress={() => router.push('/today')} />
-        </View>
-      </SafeAreaView>
-    </Studio>
+    <Screen
+      testID="screen-authoring"
+      back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'authoring-back' }}
+      where="Your future"
+      progress={{ value: 2.4 / 5, label: 'Step 3 of 5 · Write your future', testID: 'authoring-progress' }}
+      cta={{ label: 'Begin · 15 minutes', onPress: () => router.push('/write?kind=ideal'), testID: 'authoring-begin' }}
+      secondary={{ label: 'Not tonight', onPress: () => router.push('/today'), testID: 'authoring-later' }}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+        {goals.slice(0, 4).map((g) => (
+          <Stone key={g.id} size={30} domain={g.domain} polish={0.8} sweep={!reduced} />
+        ))}
+        <Label style={{ flex: 1 }}>{goals.length === 1 ? 'One goal named' : `${goals.length} goals named`}</Label>
+      </View>
+      <Heading
+        title="Fifteen minutes on the life you want."
+        line="Three to five years from now, if things went well. Write or talk; spelling can wait. Stop whenever you like — every word is kept."
+      />
+      <View style={{ gap: 10 }}>
+        <Label>How deep do you want to go?</Label>
+        {TRACKS.map((t) => (
+          <OptionTile key={t.id} testID={`track-${t.id}`} title={t.title} caption={t.caption} selected={track === t.id} onPress={() => setProfile({ track: t.id })} tint={accent.coral} />
+        ))}
+        <Body style={{ fontSize: 13, color: day.ink2 }}>You can change this any time. Nothing you write is lost by switching.</Body>
+      </View>
+    </Screen>
   );
 }

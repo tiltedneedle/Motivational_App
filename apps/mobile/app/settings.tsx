@@ -417,7 +417,7 @@ export default function Settings() {
           <View style={{ gap: 6 }}>
             <Label>Morrow Pro</Label>
             <Body style={{ fontSize: 14 }}>
-              The Interview, the Fifteen, the Book and its export are free forever. A subscription is changed or cancelled on your phone’s own subscription page, never here.
+              The Interview, the fifteen minutes, the Book and its export are free forever. A subscription is changed or cancelled on your phone’s own subscription page, never here.
             </Body>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               <Chip testID="settings-manage-subscription" label="Manage subscription" ghost onPress={() => void Linking.openURL(manageSubscriptionUrl())} />

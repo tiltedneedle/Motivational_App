@@ -31,3 +31,4 @@ export * from './engines/past';
 export * from './content/volumes';
 export * from './engines/volumes';
 export * from './engines/mirror';
+export * from './engines/week';

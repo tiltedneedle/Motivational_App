@@ -101,7 +101,7 @@ export default function MemoryScreen() {
           <View style={{ gap: 8 }}>
             <Statement testID="memory-title">What Morrow knows about you.</Statement>
             <Body>
-              Every line comes from something you wrote or did; nothing is guessed. This is what is said about you on the way to a coach. Change a line and it stays as you wrote it here. Forget one and it is gone from here — and if it is one of your stones, the coach stops quoting it.
+              Every line comes from something you wrote or did; nothing is guessed. This is what is said about you on the way to a coach. Change a line and it stays as you wrote it here. Forget one and it is gone from here — and if it is one of your answers, the coach stops quoting it.
             </Body>
           </View>
 
@@ -250,7 +250,7 @@ export default function MemoryScreen() {
 
           <Rule />
           <Body style={{ fontSize: 13 }}>
-            The writing itself — the Fifteen, the stones, the Book — is not on this page and is never changed from it. This is only what is said about you on the way to the coach.
+            The writing itself — your future, your answers, the Book — is not on this page and is never changed from it. This is only what is said about you on the way to the coach.
           </Body>
         </ScrollView>
       </SafeAreaView>

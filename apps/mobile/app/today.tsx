@@ -21,7 +21,11 @@ import {
   sourceLineFor,
   firstRunCaption,
   firstRunHeading,
+  firstRunPath,
   firstVisit,
+  streakOf,
+  weekOf,
+  isQuotable,
     presentStanding,
   halfDone,
   reauthorDue,
@@ -34,13 +38,17 @@ import {
   Body,
   Card,
   Chip,
-  InkButton,
   Label,
+  PathCard,
   Quoted,
+  RoundButton,
+  StreakPill,
+  TabBar,
+  WeekStrip,
+  type TabName,
   Readout,
   Ring,
   Rise,
-  Settle,
   Statement,
   Stone,
   Studio,
@@ -52,10 +60,8 @@ import {
   useHover,
   webHover,
   radius,
-  shadow,
   type as fonts,
   useReducedMotion,
-  webOnlyStyle,
 } from '@morrow/ui';
 import { MoveStone } from '../src/components/MoveStone';
 import { hasSupabase } from '../src/supabase';
@@ -70,17 +76,10 @@ import {
   useTodaysPractices,
   useVolumeStates,
   interviewKept,
+  latestText,
   pendingLetGo,
 } from '../src/store';
 import { scheduler } from '../src/notify';
-
-/** "07:00" as a person says it. */
-/** The first three sittings, with their real lengths (PRD §7.1). */
-const FIRST_EVENINGS: { when: string; what: string; long: string }[] = [
-  { when: 'Tonight', what: 'Find your goals by tapping, then write for fifteen minutes', long: '25–35 min' },
-  { when: 'Morning', what: 'Put the goals in order and start the stones: one short line per question', long: '15–20 min' },
-  { when: 'Evening', what: 'Finish the stones, see the plan cut from your words, and seal the Book', long: '20–30 min' },
-];
 
 export default function Today() {
   const router = useRouter();
@@ -157,6 +156,7 @@ export default function Today() {
   const faultsDone = halfDone(picksAll, 'faults', state.profile.track, sitting);
   const virtuesDone = halfDone(picksAll, 'virtues', state.profile.track, sitting);
   const interviewDraft = useMorrow((s) => s.interviewDraft);
+  const warmLine = useMorrow((s) => latestText(s.texts, 'warmup')?.body.trim() ?? null);
   const elsewhere = !firstVisit(volumes) || Boolean(presentDraft) || Boolean(pastDraft) || interviewKept(interviewDraft);
   const whatIsThere = (): string => {
     if (volumes.past === 'done' && volumes.present === 'done') return 'Your past and your Present are written.';
@@ -165,7 +165,7 @@ export default function Today() {
     const half = presentStanding(volumes.present, faultsDone, virtuesDone);
     if (half === 'The faults written') return 'The faults are written.';
     if (half === 'The virtues written') return 'The virtues are written.';
-    return 'A sitting is kept.';
+    return 'A session is kept.';
   };
   // Progressive disclosure, keyed on state that already exists: a person on
   // their first Today has a Now card, a check and five tabs to learn. The
@@ -213,6 +213,27 @@ export default function Today() {
     ? state.plans.flatMap((p) => p.moves).find((m) => m.id === intendedMoveId)
     : undefined;
   const days = useMemo(() => Object.values(state.days), [state.days]);
+  const sealedKeys = new Set(days.filter((d) => d.sealedAt).map((d) => d.day));
+  const streak = streakOf(sealedKeys, today);
+  const week = weekOf(today, sealedKeys);
+  const goTab = (tab: TabName) => {
+    if (tab === 'book') router.push('/book');
+    else if (tab === 'envision') router.push('/envision');
+    else if (tab === 'coach') router.push('/coach');
+    else if (tab === 'you') router.push('/settings');
+  };
+  /**
+   * From your words (the rebuild): one line of theirs, quotable, offered as
+   * something to think on today, with the door to the coach. Chosen by the
+   * day so it changes each morning and holds still through it.
+   */
+  const fromYourWords = (() => {
+    const lines = state.analyses.filter((a) => isQuotable(a) && a.line.trim().length >= 12).map((a) => a.line.trim());
+    if (!lines.length) return null;
+    let h = 0;
+    for (let i = 0; i < today.length; i++) h = (h * 31 + today.charCodeAt(i)) >>> 0;
+    return lines[h % lines.length] ?? null;
+  })();
 
   // The return card is decided once, on arrival: a person who reads it and
   // starts small should not have it come back as the day's state changes.
@@ -254,75 +275,79 @@ export default function Today() {
     no Now, no way to the stones.
   */
   if (!book) {
-    // Nothing begun anywhere: the first screen a new person reads, so it says
-    // what this room is for and what the three evenings make, and its one
-    // button is the first evening. It used to open with "Nothing here yet"
-    // and a button that said "Begin the Interview" — true, and a wall.
-    const fresh = firstRun.step === 'interview' && !elsewhere;
+    // The path card (the rebuild): where you are on the way to a Book, the
+    // five steps with ticks, and one button. It used to be a paragraph and
+    // a wall that said "begin".
+    const fresh = (firstRun.step === 'setup' || firstRun.step === 'warmup') && !elsewhere;
     const name = state.profile.displayName.trim();
+    const path = firstRunPath(firstRun);
+    const heading = firstRun.step !== 'setup' ? firstRunHeading(firstRun) : elsewhere ? whatIsThere() : name ? `Hello, ${name}.` : 'Hello.';
+    const caption =
+      firstRun.step !== 'setup'
+        ? firstRunCaption(firstRun, goals.length)
+        : elsewhere
+          ? interviewKept(interviewDraft)
+            ? 'Your answers so far are kept. Begin picks the Interview up at the question you were on.'
+            : 'It joins your Book when the Book is finished, at the end of Future. Today itself comes from Future.'
+          : 'This is your home screen. Once your Book is written, your day lives here: one move each morning, a word each evening.';
     return (
       <Studio testID="screen-today">
         <SafeAreaView style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 22, justifyContent: 'center', gap: 14 }} showsVerticalScrollIndicator={false}>
-          <Rise index={0} reducedMotion={reduced} style={{ gap: 14 }}>
-            <Settle reduced={reduced} style={{ alignSelf: 'center', marginBottom: 10 }}>
-              <Stone size={96} domain={goals[0]?.domain ?? 'health'} polish={firstRun.step === 'interview' ? 0.4 : 0.7} sweep={!reduced && focused} />
-            </Settle>
-            <Statement testID="today-path">
-              {firstRun.step !== 'interview' ? firstRunHeading(firstRun) : elsewhere ? whatIsThere() : name ? `Hello, ${name}.` : 'Hello.'}
-            </Statement>
-            <Body testID="today-path-caption">
-              {firstRun.step !== 'interview'
-                ? firstRunCaption(firstRun, goals.length)
-                : elsewhere
-                  ? interviewKept(interviewDraft)
-                    ? 'Your answers so far are kept. Begin picks the Interview up at the question you were on; Today itself comes at the end of Future, once the Book is sealed.'
-                    : 'It joins your Book when the Book is sealed, at the end of Future. Today itself comes from Future, so the Interview is next.'
-                  : 'This is your home screen. Once your Book is written, your day lives here: one move each morning, a seal each evening.'}
-            </Body>
-          </Rise>
-          {fresh ? (
-            <Rise index={1} reducedMotion={reduced}>
-              <Card testID="today-evenings" style={{ gap: 4 }}>
-                <Label style={{ marginBottom: 6 }}>Three evenings make the Book</Label>
-                {FIRST_EVENINGS.map((e, i) => (
-                  <View key={e.when} style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start', paddingVertical: 9, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: day.line2 }}>
-                    <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: day.ink, alignItems: 'center', justifyContent: 'center', marginTop: 1 }}>
-                      <Text style={{ fontFamily: fonts.sansSemi, fontSize: 13, color: day.onInk }}>{i + 1}</Text>
-                    </View>
-                    <View style={{ flex: 1, gap: 2 }}>
-                      <Body style={{ color: day.ink, fontSize: 15, lineHeight: 21 }}>{e.what}</Body>
-                      <Label>{`${e.when} · ${e.long}`}</Label>
-                    </View>
-                  </View>
-                ))}
-              </Card>
+          <ScrollView contentContainerStyle={{ padding: 22, paddingBottom: 120, gap: 16 }} showsVerticalScrollIndicator={false}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Label testID="today-date">{formatDay(today, { weekday: true })}</Label>
+              <StreakPill count={0} testID="today-streak" />
+            </View>
+            <Rise index={0} reducedMotion={reduced} style={{ gap: 8 }}>
+              <Statement testID="today-path">{heading}</Statement>
+              <Body testID="today-path-caption">{caption}</Body>
             </Rise>
-          ) : null}
-          <Rise index={fresh ? 2 : 1} reducedMotion={reduced} style={{ gap: 14 }}>
-            <InkButton testID="today-begin" label={fresh ? 'Begin tonight · about 30 minutes' : firstRun.label} onPress={() => router.push(firstRun.route)} />
-            {fresh ? <Label style={{ textAlign: 'center' }}>Nothing is written for you. Every word is yours</Label> : null}
-          </Rise>
-          {carryOnRow}
-          {/* A finished volume is one tap away, not two taps and a door mark away. */}
-          {volumes.past === 'done' ? <TextButton testID="today-reread-past" label="Reread your past" onPress={() => router.push('/past')} /> : null}
-          {volumes.present === 'done' ? (
-            <TextButton testID="today-reread-present" label="Reread your Present" onPress={() => router.push('/present')} />
-          ) : faultsDone ? (
-            <TextButton testID="today-reread-present" label="Reread the faults" onPress={() => router.push('/present?half=faults')} />
-          ) : virtuesDone ? (
-            <TextButton testID="today-reread-present" label="Reread the virtues" onPress={() => router.push('/present?half=virtues')} />
-          ) : null}
-          {/* Today comes from the Future volume, but it is not the only door. */}
-          <TextButton
-            testID="today-other-volumes"
-            label={elsewhere ? 'The three volumes' : 'Or start with your past or present'}
-            onPress={() => router.push('/choose')}
-          />
-          {hasSupabase && !state.account ? (
-            <TextButton testID="today-bring-back" label="Bring my Book back from my account" onPress={() => router.push('/account')} />
-          ) : null}
-        </ScrollView>
+            <Rise index={1} reducedMotion={reduced}>
+              <PathCard
+                testID="today-evenings"
+                title={
+                  fresh
+                    ? 'Three short sessions to a Book you wrote.'
+                    : firstRun.step === 'interview'
+                      ? 'Find your goals, by tapping.'
+                      : firstRun.step === 'fifteen'
+                        ? 'Fifteen minutes on your future.'
+                        : firstRun.step === 'order' || firstRun.step === 'stones'
+                          ? 'Plan each goal, one line at a time.'
+                          : 'Finish your Book.'
+                }
+                caption={fresh ? 'About forty minutes in all, tonight or over a few days. You write every word.' : undefined}
+                steps={path.steps.map((st) => ({ label: st.label, minutes: st.minutes, done: st.done }))}
+                at={path.at}
+                cta={{ label: firstRun.label, onPress: () => router.push(firstRun.route as never), testID: 'today-begin' }}
+              />
+            </Rise>
+            {warmLine ? (
+              <View testID="today-first-line" style={{ backgroundColor: day.surface2, borderRadius: radius.card, padding: 18, gap: 6 }}>
+                <Label style={{ color: accent.coralText }}>Your first line</Label>
+                <UserText italic numberOfLines={4} style={{ fontSize: 18, lineHeight: 26 }}>{`“${warmLine}”`}</UserText>
+                <Label>Kept as you wrote it. It goes with you into the fifteen minutes.</Label>
+              </View>
+            ) : null}
+            {carryOnRow}
+            {/* A finished volume is one tap away, not two taps and a door mark away. */}
+            {volumes.past === 'done' ? <TextButton testID="today-reread-past" label="Reread your past" onPress={() => router.push('/past')} /> : null}
+            {volumes.present === 'done' ? (
+              <TextButton testID="today-reread-present" label="Reread your Present" onPress={() => router.push('/present')} />
+            ) : faultsDone ? (
+              <TextButton testID="today-reread-present" label="Reread the faults" onPress={() => router.push('/present?half=faults')} />
+            ) : virtuesDone ? (
+              <TextButton testID="today-reread-present" label="Reread the virtues" onPress={() => router.push('/present?half=virtues')} />
+            ) : null}
+            {/* Today comes from the Future volume, but it is not the only door. */}
+            <TextButton testID="today-other-volumes" label={elsewhere ? 'The three volumes' : 'Or start with your past or present'} onPress={() => router.push('/choose')} style={{ alignSelf: 'center' }} />
+            {hasSupabase && !state.account ? (
+              <TextButton testID="today-bring-back" label="Bring my Book back from my account" onPress={() => router.push('/account')} style={{ alignSelf: 'center' }} />
+            ) : null}
+          </ScrollView>
+          <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 18, paddingBottom: 10 }}>
+            <TabBar active="today" onPress={goTab} />
+          </View>
         </SafeAreaView>
       </Studio>
     );
@@ -348,7 +373,7 @@ export default function Today() {
         ) : null}
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: 168 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingTop: 12 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12 }}>
             {/*
               The app's day, not the wall clock's. Somebody writing at half past
               midnight with a 4 a.m. boundary is still in yesterday as far as
@@ -357,12 +382,17 @@ export default function Today() {
               had just sealed filed itself under Thursday.
             */}
             <Label testID="today-date">{formatDay(today, { weekday: true })}</Label>
-            <Label>{plural(days.filter((d) => d.sealedAt).length, 'sealed day')}</Label>
+            <StreakPill count={streak} testID="today-streak" />
           </View>
 
           <Rise index={0} reducedMotion={reduced}>
             <Statement style={{ marginTop: 12 }}>{greeting(new Date(), state.profile.displayName)}</Statement>
           </Rise>
+
+          {/* The week, as seven dots: a shape for the days rather than a count of them. */}
+          <View style={{ marginTop: 16 }}>
+            <WeekStrip testID="today-week" days={week} />
+          </View>
 
           {/* The greeting's own line, before anything that has arrived: a letter or the Sunday card sits under it, not between the greeting and its sentence. */}
           {book ? (
@@ -467,10 +497,8 @@ export default function Today() {
             <View testID="today-intro" style={{ marginTop: 16, backgroundColor: day.surface2, borderRadius: radius.card, padding: 18, gap: 10 }}>
               <Label style={{ color: accent.coralText }}>This is Today</Label>
               {/* One instruction per line (COGA: separate each instruction). */}
-              <Body style={{ color: day.ink }}>Your first move is on the Now card, cut from your own line.</Body>
-              <Body style={{ color: day.ink }}>Tap the stone when the move is done. “Not today” sets it aside.</Body>
+              <Body style={{ color: day.ink }}>Your first move is on the card below, cut from your own line. Tap the stone when it is done.</Body>
               <Body style={{ color: day.ink }}>In the evening, the coral ✓ closes the day: a word, one line of proof, a hold.</Body>
-              <Body style={{ color: day.ink }}>Your Book, the scenes and the coach are in the bar below.</Body>
               {/* At the left, clear of the two floating buttons on the right: on a small phone they sat over a full-width chip. */}
               <Chip testID="today-intro-done" label="Got it" onPress={() => setProfile({ todayIntroSeen: true })} style={{ alignSelf: 'flex-start', paddingHorizontal: 24 }} />
             </View>
@@ -510,40 +538,6 @@ export default function Today() {
               <Quoted text={returnCard.body} spans={returnCard.quotes} style={{ color: day.ink }} />
               <Chip label="Start small" onPress={() => setReturnCard(null)} />
             </View>
-          ) : null}
-
-          {/* the goal row: one stone per goal (PRD 7.6), however many; past four it scrolls, bleeding under the gutter */}
-          {goals.length ? (
-            <Rise index={1} reducedMotion={reduced} style={{ marginTop: 24, marginHorizontal: -22 }}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ flexDirection: 'row', gap: 6, paddingHorizontal: 22 }}
-                testID="goal-row"
-              >
-              {goals.map((g) => {
-                const plan = plansById.get(g.id);
-                const total = plan?.moves.length ?? 0;
-                const doneCount = plan?.moves.filter((m) => m.status === 'done').length ?? 0;
-                const pct = total ? doneCount / total : 0;
-                return (
-                  <GoalStone
-                    key={g.id}
-                    testID={`goal-chip-${g.id}`}
-                    accessibilityLabel={`${g.title}, ${Math.round(pct * 100)} percent`}
-                    onPress={() => router.push(`/goal?id=${g.id}`)}
-                  >
-                    <Ring size={62} progress={pct} color={domainMeta(g.domain).hex} width={3} track={day.line2}>
-                      <Stone size={42} domain={g.domain} polish={0.5 + pct * 0.5} />
-                    </Ring>
-                    <Text numberOfLines={2} style={{ fontFamily: fonts.sansMedium, fontSize: 12, lineHeight: 15, color: day.ink2, textAlign: 'center' }}>
-                      {g.title}
-                    </Text>
-                  </GoalStone>
-                );
-              })}
-              </ScrollView>
-            </Rise>
           ) : null}
 
           {/*
@@ -674,10 +668,44 @@ export default function Today() {
           ) : (
             <View testID="all-placed" style={{ marginTop: 22 }}>
               <Body style={{ color: day.ink }}>
-                {moves.length ? 'Every stone placed. Seal the day when you are ready.' : 'Nothing scheduled. One small thing is a whole day.'}
+                {moves.length ? 'Everything placed. Seal the day when you are ready.' : 'Nothing scheduled. One small thing is a whole day.'}
               </Body>
             </View>
           )}
+
+          {/* the goal row: one stone per goal (PRD 7.6), however many; past four it scrolls, bleeding under the gutter */}
+          {goals.length ? (
+            <Rise index={1} reducedMotion={reduced} style={{ marginTop: 24, marginHorizontal: -22 }}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ flexDirection: 'row', gap: 6, paddingHorizontal: 22 }}
+                testID="goal-row"
+              >
+              {goals.map((g) => {
+                const plan = plansById.get(g.id);
+                const total = plan?.moves.length ?? 0;
+                const doneCount = plan?.moves.filter((m) => m.status === 'done').length ?? 0;
+                const pct = total ? doneCount / total : 0;
+                return (
+                  <GoalStone
+                    key={g.id}
+                    testID={`goal-chip-${g.id}`}
+                    accessibilityLabel={`${g.title}, ${Math.round(pct * 100)} percent`}
+                    onPress={() => router.push(`/goal?id=${g.id}`)}
+                  >
+                    <Ring size={62} progress={pct} color={domainMeta(g.domain).hex} width={3} track={day.line2}>
+                      <Stone size={42} domain={g.domain} polish={0.5 + pct * 0.5} />
+                    </Ring>
+                    <Text numberOfLines={2} style={{ fontFamily: fonts.sansMedium, fontSize: 12, lineHeight: 15, color: day.ink2, textAlign: 'center' }}>
+                      {g.title}
+                    </Text>
+                  </GoalStone>
+                );
+              })}
+              </ScrollView>
+            </Rise>
+          ) : null}
 
           {/* Later */}
           {later.length || done.length ? (
@@ -745,6 +773,20 @@ export default function Today() {
                 );
               })}
             </View>
+          ) : null}
+
+          {fromYourWords ? (
+            <Pressable
+              testID="today-from-your-words"
+              accessibilityRole="button"
+              accessibilityLabel={`From your words: “${fromYourWords}”. Opens the coach.`}
+              onPress={() => router.push('/coach')}
+              style={{ marginTop: 22, backgroundColor: day.surface2, borderRadius: radius.card, padding: 18, gap: 6 }}
+            >
+              <Label style={{ color: accent.coralText }}>From your words</Label>
+              <UserText italic style={{ fontSize: 18, lineHeight: 26 }}>{`“${fromYourWords}”`}</UserText>
+              <Label>Think on it today · the coach is one tap away</Label>
+            </Pressable>
           ) : null}
 
           {/*
@@ -885,106 +927,13 @@ export default function Today() {
         */}
         <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 18, paddingBottom: 10, gap: 12 }}>
           <View pointerEvents="box-none" style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 10 }}>
-            <FloatingButton
-              testID="new-move-button"
-              accessibilityLabel="A new move, or something to keep"
-              onPress={() => router.push('/new-move')}
-              size={50}
-              backgroundColor={day.surface}
-              borderColor={day.line2}
-              shadowWeb={shadow.cardWeb}
-              shadowWebHover="0 12px 28px rgba(23,24,28,0.16)"
-              shadowNative={shadow.card}
-            >
-              <Text style={{ color: day.ink, fontSize: 26, lineHeight: 30, fontFamily: fonts.sansMedium }}>+</Text>
-            </FloatingButton>
-            <FloatingButton
-              testID="seal-day-button"
-              accessibilityLabel="Seal the day"
-              onPress={() => router.push('/seal-day')}
-              size={58}
-              backgroundColor={accent.coral}
-              shadowWeb="0 10px 28px rgba(234,75,46,0.35)"
-              shadowWebHover="0 14px 34px rgba(234,75,46,0.48)"
-              shadowNative={{ shadowColor: accent.coral, shadowOpacity: 0.35, shadowRadius: 18, shadowOffset: { width: 0, height: 10 } }}
-            >
-              <Text style={{ color: '#FFFFFF', fontSize: 22, lineHeight: 26, fontFamily: fonts.sansBold }}>✓</Text>
-            </FloatingButton>
+            <RoundButton testID="new-move-button" glyph="plus" accessibilityLabel="A new move, or something to keep" onPress={() => router.push('/new-move')} size={50} />
+            <RoundButton testID="seal-day-button" glyph="check" accessibilityLabel="Seal the day" onPress={() => router.push('/seal-day')} size={58} primary />
           </View>
-          <View
-            accessibilityRole="tablist"
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              height: 58,
-              borderRadius: 29,
-              paddingHorizontal: 6,
-              backgroundColor: day.surface,
-              borderWidth: 1,
-              borderColor: day.line2,
-              ...(Platform.OS === 'web' ? webOnlyStyle({ boxShadow: shadow.cardWeb }) : shadow.card),
-            }}
-          >
-            <TabButton label="Today" active testID="tab-today" onPress={() => undefined} />
-            <TabButton label="Book" testID="tab-book" onPress={() => router.push('/book')} />
-            <TabButton label="Envision" testID="tab-envision" onPress={() => router.push('/envision')} />
-            <TabButton label="Coach" testID="tab-coach" onPress={() => router.push('/coach')} />
-            <TabButton label="You" testID="tab-you" onPress={() => router.push('/settings')} />
-          </View>
+          <TabBar active="today" onPress={goTab} />
         </View>
       </SafeAreaView>
     </Studio>
-  );
-}
-
-/** The round buttons above the tab bar: a lift and a deeper shadow under a pointer, a press down. */
-function FloatingButton({
-  children,
-  onPress,
-  accessibilityLabel,
-  testID,
-  size,
-  backgroundColor,
-  borderColor,
-  shadowWeb,
-  shadowWebHover,
-  shadowNative,
-}: {
-  children: ReactNode;
-  onPress: () => void;
-  accessibilityLabel: string;
-  testID?: string;
-  size: number;
-  backgroundColor: string;
-  borderColor?: string;
-  shadowWeb: string;
-  shadowWebHover: string;
-  shadowNative: Record<string, unknown>;
-}) {
-  const { hovered, hoverProps } = useHover();
-  return (
-    <Pressable
-      testID={testID}
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-      onPress={onPress}
-      {...hoverProps}
-      style={({ pressed }) => ({
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        backgroundColor,
-        alignItems: 'center',
-        justifyContent: 'center',
-        ...(borderColor ? { borderWidth: 1, borderColor } : {}),
-        transform: [{ translateY: hovered && !pressed ? -2 : 0 }, { scale: pressed ? 0.95 : 1 }],
-        ...(Platform.OS === 'web'
-          ? { ...webOnlyStyle({ boxShadow: hovered && !pressed ? shadowWebHover : shadowWeb }), ...webHover.transition }
-          : shadowNative),
-      })}
-    >
-      {children}
-    </Pressable>
   );
 }
 
@@ -1020,35 +969,6 @@ function GoalStone({
       })}
     >
       {children}
-    </Pressable>
-  );
-}
-
-function TabButton({ label, active, onPress, testID }: { label: string; active?: boolean; onPress: () => void; testID?: string }) {
-  const { hovered, hoverProps } = useHover();
-  return (
-    <Pressable
-      testID={testID}
-      accessibilityRole="tab"
-      aria-selected={Boolean(active)}
-      onPress={onPress}
-      {...hoverProps}
-      style={({ pressed }) => ({
-        flex: 1,
-        minWidth: 0,
-        height: 46,
-        borderRadius: 23,
-        alignItems: 'center',
-        justifyContent: 'center',
-        // The pill under the active tab; a fainter one under the pointer.
-        backgroundColor: active ? day.surface2 : hovered ? day.line2 : 'transparent',
-        opacity: pressed ? 0.7 : 1,
-        ...(Platform.OS === 'web' ? webHover.transition : {}),
-      })}
-    >
-      <Text numberOfLines={1} maxFontSizeMultiplier={1.4} style={{ fontFamily: active ? fonts.sansSemi : fonts.sansMedium, fontSize: 13, lineHeight: 16, color: active ? day.ink : day.ink2 }}>
-        {label}
-      </Text>
     </Pressable>
   );
 }

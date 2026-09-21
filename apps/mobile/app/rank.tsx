@@ -6,7 +6,7 @@
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, View , Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Body, InkButton, Label, Ring, Statement, Stone, Studio, TopBar, accent, day , type as fonts } from '@morrow/ui';
+import { Body, InkButton, ProgressBar, Ring, Statement, Stone, Studio, TopBar, accent, day , type as fonts } from '@morrow/ui';
 
 
 import { useGoals, useMorrow } from '../src/store';
@@ -35,11 +35,11 @@ export default function Rank() {
     <Studio testID="screen-rank">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
         <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'rank-back' }} where="The order" />
+        <ProgressBar value={3.2 / 5} label="Step 4 of 5 · Plan each goal" testID="rank-progress" style={{ paddingTop: 4, paddingBottom: 10 }} />
         <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 22 }}>
           <View style={{ gap: 8 }}>
-            <Label>Your goals</Label>
-            <Statement>Put your goals in order. The top one matters most.</Statement>
-            <Body style={{ fontSize: 14 }}>{track === 'full' || goals.length <= 3 ? 'Every goal gets all five lines.' : 'The top three get all five lines; the rest get the two that make a plan.'}</Body>
+            <Statement>Which matters most?</Statement>
+            <Body style={{ fontSize: 15 }}>{track === 'full' || goals.length <= 3 ? 'Put them in order. Each gets five short questions.' : 'Put them in order. The top three get five short questions; the rest get the two that make a plan.'}</Body>
           </View>
 
           <View>

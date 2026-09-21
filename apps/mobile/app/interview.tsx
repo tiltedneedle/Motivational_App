@@ -22,7 +22,7 @@ import {
   toggleArea,
   type InterviewState,
 } from '@morrow/core';
-import { Body, InkButton, Label, Pop, Question, Ring, Slide, Statement, Stone, Studio, TextButton, TopBar, UserField, accent, announce, day, radius, type as fonts, useReducedMotion } from '@morrow/ui';
+import { Body, InkButton, Label, Pop, ProgressBar, Question, Slide, Statement, Stone, Studio, TextButton, TopBar, UserField, announce, day, radius, type as fonts, useReducedMotion } from '@morrow/ui';
 import { usePlatformBack } from '../src/platform-back';
 import { useMorrow } from '../src/store';
 import { track, useFirstRunStep } from '../src/analytics';
@@ -161,23 +161,19 @@ export default function Interview() {
           where={s.stage === 'summary' ? 'What I heard' : `Question ${s.answered + 1}`} help={{ onPress: showResources }}
           style={{ paddingTop: 6, minHeight: 48 }}
         />
-        {/* the coach's pearl inside the clarity ring, and its guess */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingTop: 2 }}>
-          <Ring size={64} progress={clarity(s)} color={accent.coral} width={3.5} testID="clarity-ring">
-            <Stone size={46} gradient={['#FFFFFF', '#F3F1EC', '#CFCBC2', '#8E8A80']} polish={0.8} />
-          </Ring>
-          <View style={{ flex: 1, gap: 3 }}>
-            <Label testID="clarity-value">{Math.round(clarity(s) * 100)}% clarity</Label>
-            {/*
-              The app talking, so it cannot be in the serif. UserText is the
-              typeface reserved for the person's own words, and putting the
-              app's running commentary in it is exactly the confusion the whole
-              rule exists to prevent.
-            */}
-            <Body style={{ fontSize: 15, lineHeight: 20, color: day.ink2 }} testID="guess-line">
-              {guessLine(s)}
-            </Body>
-          </View>
+        {/* Where you are (the rebuild): the bar fills with the Interview's own clarity; the step is the path's. */}
+        <ProgressBar value={0.2 + clarity(s) * 0.2} label="Step 2 of 5 · Find your goals" testID="interview-progress" style={{ paddingTop: 4 }} />
+        {/*
+          The app talking, so it cannot be in the serif. UserText is the
+          typeface reserved for the person's own words, and putting the
+          app's running commentary in it is exactly the confusion the whole
+          rule exists to prevent.
+        */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingTop: 12 }}>
+          <Stone size={22} gradient={['#FFFFFF', '#F3F1EC', '#CFCBC2', '#8E8A80']} polish={0.8} />
+          <Body style={{ flex: 1, fontSize: 14, lineHeight: 19, color: day.ink2 }} testID="guess-line">
+            {guessLine(s)}
+          </Body>
         </View>
 
         {s.stage === 'summary' ? (
@@ -432,7 +428,7 @@ function Summary({
       <View style={{ paddingTop: 10, paddingBottom: 18 }}>
         <InkButton
           testID="interview-finish"
-          label={s.drafts.length ? 'Begin the Fifteen' : 'Add a goal first'}
+          label={s.drafts.length ? 'Write your future · 15 min' : 'Add a goal first'}
           disabled={s.drafts.length === 0}
           onPress={onFinish}
         />

@@ -58,7 +58,7 @@ export default function Declare() {
           <TopBar back={{ onPress: back, testID: 'declare-back' }} where="The Declaration" />
           <View style={{ flex: 1, justifyContent: 'center', gap: 12 }}>
             <Statement style={{ color: night.ink }}>The Declaration is your own line, across your own face.</Statement>
-            <Body style={{ color: night.ink2 }}>Seal the Book and the I will line comes here.</Body>
+            <Body style={{ color: night.ink2 }}>Finish the Book and the I will line comes here.</Body>
             <InkButton label="Back" onPress={back} />
           </View>
         </SafeAreaView>

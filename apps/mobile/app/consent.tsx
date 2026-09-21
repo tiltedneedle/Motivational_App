@@ -13,14 +13,14 @@ import { useFirstRunStep } from '../src/analytics';
 const ROWS: { label: string; body: string; items?: string[] }[] = [
   {
     label: 'What stays on this device',
-    body: 'Everything you write: the Interview and the Fifteen, the decks of Present, the periods and events of Past, your lines, the Book. Writing works with the network off.',
+    body: 'Everything you write: your first line, the Interview, the fifteen minutes on your future, the decks of Present, the periods and events of Past, your answers, the Book. Writing works with the network off.',
   },
   {
     label: 'What is sent to an AI service, and when',
     body: 'Only when a screen needs it, and never for advertising:',
     items: [
       'when you ask for your own phrases to be read back to you;',
-      'when a sitting is checked for signs you may need a person rather than an app;',
+      'when a piece of writing is checked for signs you may need a person rather than an app;',
       'when you ask for a scene drawn from a detail you wrote.',
     ],
   },
@@ -54,8 +54,11 @@ export default function Consent() {
   // The volume that sent the person here, if one did (PRD §12: the gate
   // stands at every writing door, not only the Future's). Checked against a
   // shape this app owns, never followed as a free string.
-  const { then } = useLocalSearchParams<{ then?: string }>();
+  const { then, from } = useLocalSearchParams<{ then?: string; from?: string }>();
   const onward = (then && THEN[then]) || '/choose';
+  // From set-up (the rebuild): the details behind its one privacy line.
+  // Nothing to affirm here; the tick and the consent are on that screen.
+  const reading = from === 'setup';
   /**
    * The age gate (PRD §12). One tap that the button waits for, rather than a
    * date-of-birth field, which is a form and which a child can fill in as
@@ -71,10 +74,10 @@ export default function Consent() {
         screen and Back did nothing at all. Every other screen guards it. */}
         <TopBar
           back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/')), testID: 'consent-back' }}
-          where="Before you write"
+          where={reading ? 'What leaves the phone' : 'Before you write'}
         />
         <ScrollView {...keyboardScroll} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 12, gap: 18 }}>
-          <Statement>Before you write anything.</Statement>
+          <Statement>{reading ? 'What leaves the phone, and when.' : 'Before you write anything.'}</Statement>
           {ROWS.map((r) => (
             <View key={r.label} style={{ gap: 6 }}>
               <Rule />
@@ -89,6 +92,11 @@ export default function Consent() {
             </View>
           ))}
         </ScrollView>
+        {reading ? (
+          <View style={{ paddingTop: 10, paddingBottom: 18 }}>
+            <InkButton testID="consent-got-it" label="Got it" onPress={() => (router.canGoBack() ? router.back() : router.dismissTo('/setup'))} />
+          </View>
+        ) : (
         <View style={{ paddingTop: 10, paddingBottom: 18, gap: 8 }}>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
             <Chip
@@ -120,6 +128,7 @@ export default function Consent() {
           {/* Opened from a link there is nothing behind this screen: the same guard as the arrow above. */}
           <TextButton testID="consent-not-now" label="Not now" onPress={() => (router.canGoBack() ? router.back() : router.dismissTo('/'))} />
         </View>
+        )}
       </SafeAreaView>
     </Studio>
   );

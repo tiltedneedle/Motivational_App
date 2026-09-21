@@ -9,7 +9,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Body, Chip, InkButton, Label, Statement, Studio, TopBar, UserField } from '@morrow/ui';
+import { Body, Chip, InkButton, Label, ProgressBar, Statement, Studio, TopBar, UserField } from '@morrow/ui';
 import { useGoals, useMorrow } from '../src/store';
 import { useFirstRunStep } from '../src/analytics';
 
@@ -31,10 +31,11 @@ export default function Title() {
     <Studio testID="screen-title">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
         <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'title-back' }} where="The name" />
+        <ProgressBar value={3.3 / 5} label="Step 4 of 5 · Plan each goal" testID="title-progress" style={{ paddingTop: 4, paddingBottom: 10 }} />
         <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 22 }}>
           <View style={{ gap: 8 }}>
-            <Statement>If this plan were a book on your shelf, what is on the spine?</Statement>
-            <Body style={{ fontSize: 14 }}>A few words. It goes on the cover of your Book and at the top of every export; you can leave it for now and the Book is called Untitled.</Body>
+            <Statement>Name your Book.</Statement>
+            <Body style={{ fontSize: 15 }}>A few words for the spine. You can leave it for now; it is called Untitled until you do.</Body>
           </View>
 
           <View style={{ gap: 10 }}>
@@ -73,7 +74,7 @@ export default function Title() {
         <View style={{ paddingTop: 10, paddingBottom: 18 }}>
           <InkButton
             testID="title-continue"
-            label={bookTitle.trim() ? 'Write the stones' : 'Leave it for now · write the stones'}
+            label={bookTitle.trim() ? 'On to the five questions' : 'Leave it for now · the five questions'}
             disabled={goals.length === 0}
             onPress={() => {
               const first = goals[0];

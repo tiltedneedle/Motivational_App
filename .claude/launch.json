@@ -4,8 +4,11 @@
     {
       "name": "morrow-web",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["scripts/serve.mjs"],
-      "port": 8790
+      "runtimeArgs": [
+        "scripts/serve.mjs"
+      ],
+      "port": 8790,
+      "autoPort": true
     }
   ]
 }

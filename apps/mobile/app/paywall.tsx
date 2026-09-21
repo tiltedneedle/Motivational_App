@@ -236,7 +236,7 @@ export default function Paywall() {
           <TextButton testID="paywall-manage" label="Manage subscription" onPress={() => void Linking.openURL(manageSubscriptionUrl())} />
 
           <Body style={{ fontSize: 12, lineHeight: 18 }}>
-            The Interview, the Fifteen, the Book and its export are free forever, and stay yours whatever you choose
+            The Interview, the fifteen minutes, the Book and its export are free forever, and stay yours whatever you choose
             here.
           </Body>
         </ScrollView>

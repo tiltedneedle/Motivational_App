@@ -19,7 +19,7 @@
  * same shape; `verifyMirror` throws away any quote that is not verbatim.
  */
 import type { DomainId } from '../types';
-import { clauses, domainOf, extractSpansLocally } from './readback';
+import { clauses, domainOf, domainMatches, extractSpansLocally } from './readback';
 
 export interface Mirror {
   /** Verbatim clauses of the person's text, in the order they wrote them. */
@@ -87,8 +87,15 @@ function hash(s: string): number {
   return h;
 }
 
-/** Where a domain's word list places the text, or null when nothing matches. */
-export function mirrorDomain(text: string): DomainId | null {
+/**
+ * Where a domain's word list places the text, or null when nothing matches.
+ * With a hint — the area the person said they want to work on — the hint
+ * wins whenever the text touches it at all: "out the door for a run" is
+ * about the run when they came here for their health, whatever the
+ * longest-word rule says about doors.
+ */
+export function mirrorDomain(text: string, hint?: DomainId | null): DomainId | null {
+  if (hint && hint !== 'custom' && domainMatches(text, hint)) return hint;
   const d = domainOf(text);
   return d === 'custom' ? null : d;
 }
@@ -98,9 +105,9 @@ export function mirrorDomain(text: string): DomainId | null {
  * then the longest if it found only one and there is more), names the
  * domain, asks one question. Writes nothing.
  */
-export function mirrorLocally(text: string): Mirror {
+export function mirrorLocally(text: string, hint?: DomainId | null): Mirror {
   const source = (text ?? '').trim();
-  const domain = mirrorDomain(source);
+  const domain = mirrorDomain(source, hint);
   const bank = QUESTIONS[domain ?? 'custom'];
   const question = bank[hash(source) % bank.length]!;
   const note = domain ? `This sounds like it is about ${DOMAIN_NAME[domain]}. Your words, kept as you wrote them.` : 'Your words, kept as you wrote them.';

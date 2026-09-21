@@ -86,7 +86,7 @@ export default function ReauthorScreen() {
           <TopBar back={{ label: 'Today', onPress: goBack, testID: 'reauthor-back' }} help={{ onPress: showResources }} />
           <View style={{ flex: 1, justifyContent: 'center', gap: 12 }}>
             <Statement testID="reauthor-none">There is no Book to write again yet.</Statement>
-            <Body>Ninety days after the first one is sealed, this is where it is read against the stones as they stand then.</Body>
+            <Body>Ninety days after the first one is sealed, this is where it is read against your answers as they stand then.</Body>
             <InkButton label="Back to today" onPress={() => router.dismissTo('/today')} style={{ marginTop: 18 }} />
           </View>
         </SafeAreaView>
@@ -345,8 +345,8 @@ export default function ReauthorScreen() {
               )}
               <Body style={{ fontSize: 13 }}>
                 {newSince.length === 1
-                  ? `Written on its own stones; it joins the ${nextEdition} edition as it stands.`
-                  : `Written on their own stones; they join the ${nextEdition} edition as they stand.`}
+                  ? `Written in its own answers; it joins the ${nextEdition} edition as it stands.`
+                  : `Written in their own answers; they join the ${nextEdition} edition as they stand.`}
               </Body>
             </View>
           ) : null}

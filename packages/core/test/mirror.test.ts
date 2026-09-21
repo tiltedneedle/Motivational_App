@@ -47,3 +47,14 @@ describe('the mirror', () => {
     expect(warmupPrompt(null)).toContain('one thing better');
   });
 });
+
+describe('the mirror, with a hint', () => {
+  it('lets the area they chose win when the text touches it', () => {
+    const m = mirrorLocally('I want to get out the door for a run before work.', 'health');
+    expect(m.domain).toBe('health');
+  });
+  it('ignores a hint the text never touches', () => {
+    const m = mirrorLocally('Pay off the overdraft.', 'health');
+    expect(m.domain).toBe('money');
+  });
+});

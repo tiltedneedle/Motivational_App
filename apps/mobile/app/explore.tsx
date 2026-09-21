@@ -12,7 +12,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EXPLAINER_COPY, SUGGESTED_ROUTE, type VolumeName } from '@morrow/core';
 import { Body, InkButton, Label, Rule, Statement, Studio, TopBar, accent, day } from '@morrow/ui';
-import { useMorrow } from '../src/store';
+import { useFirstRun, useMorrow } from '../src/store';
 import { useFirstRunStep } from '../src/analytics';
 
 const ORDER: { name: VolumeName; title: string }[] = [
@@ -33,9 +33,10 @@ export default function Explore() {
   const router = useRouter();
   useFirstRunStep('explore');
   const consented = useMorrow((s) => Boolean(s.profile.consentedAt));
+  const firstRun = useFirstRun();
 
   const open = (name: VolumeName) => {
-    if (name === 'future') router.push(consented ? '/interview' : '/consent');
+    if (name === 'future') router.push(firstRun.route as never);
     else if (!consented) router.push(`/consent?then=${name}`);
     else router.push(name === 'past' ? '/past' : '/present');
   };

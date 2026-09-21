@@ -64,6 +64,12 @@ const NOISE = /^(and|but|so|then|because|which|that|it|there|this)\b/i;
  * screen shows as "something else". Saying nothing is better than guessing
  * out loud at what somebody's sentence was about.
  */
+/** Whether the text touches a domain's word list at all. */
+export function domainMatches(text: string, domain: DomainId): boolean {
+  if (domain === 'custom') return false;
+  return DOMAIN_HINTS[domain].test(text);
+}
+
 export function domainOf(text: string): DomainId {
   let best: DomainId = 'custom';
   let bestScore = 0;

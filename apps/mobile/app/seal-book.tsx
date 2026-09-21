@@ -9,7 +9,7 @@ import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ordinal, type PaywallMoment } from '@morrow/core';
-import { Body, HoldBar, InkButton, Label, Notice, SealBurst, Settle, Statement, Stone, Studio, TopBar, UserField, accent, night, useReducedMotion } from '@morrow/ui';
+import { Body, HoldBar, InkButton, Label, Notice, ProgressBar, SealBurst, Settle, Statement, Stone, Studio, TopBar, UserField, accent, night, useReducedMotion } from '@morrow/ui';
 import { feelDrained, feelSealed } from '../src/feel';
 import { useGoals, useMorrow } from '../src/store';
 import { useFirstRunStep } from '../src/analytics';
@@ -64,10 +64,11 @@ export default function SealBook() {
   return (
     <Studio dark testID="screen-seal-book">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'seal-book-back' }} right={<Label style={{ color: night.ink3 }}>The seal</Label>} help={{ onPress: showResources }} />
-        <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 20 }}>
-          <Label style={{ color: night.ink3 }}>Last thing</Label>
-          <Statement style={{ color: night.ink }}>Finish this, in your words.</Statement>
+        <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'seal-book-back' }} right={<Label style={{ color: night.ink3 }}>Finish</Label>} help={{ onPress: showResources }} />
+        <ProgressBar value={4.7 / 5} label="Step 5 of 5 · Finish your Book" testID="seal-progress" style={{ paddingTop: 4 }} />
+        <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, paddingBottom: 24, gap: 20 }}>
+          <Label style={{ color: night.ink3 }}>Last line</Label>
+          <Statement style={{ color: night.ink }}>Finish it, in your words.</Statement>
           <View style={{ gap: 8 }}>
             <Label style={{ color: night.ink3 }}>I will…</Label>
             <UserField
@@ -97,7 +98,7 @@ export default function SealBook() {
           </View>
 
           <Body style={{ color: night.ink2, textAlign: 'center' }}>
-            {goals.length} {goals.length === 1 ? 'goal' : 'goals'}. Hold, and it&apos;s yours. Nothing in it is fixed for good; a new edition is one sitting away.
+            {goals.length} {goals.length === 1 ? 'goal' : 'goals'}. Hold, and the Book is yours. Nothing in it is fixed for good; a new edition is one session away.
           </Body>
 
           <Notice testID="seal-error" kind="error" text={error} style={{ color: '#FF8A6E' }} />
@@ -115,7 +116,7 @@ export default function SealBook() {
               {unplanned.every((u) => u.moment) ? (
                 <>
                   <Statement style={{ color: night.ink, fontSize: 22, lineHeight: 28 }}>
-                    Your Book is sealed. {unplanned.length === 1 ? 'One goal is' : `${unplanned.length} goals are`}{' '}
+                    Your Book is finished. {unplanned.length === 1 ? 'One goal is' : `${unplanned.length} goals are`}{' '}
                     written and waiting for a plan.
                   </Statement>
                   <Body style={{ color: night.ink2 }}>
@@ -126,7 +127,7 @@ export default function SealBook() {
               ) : (
                 <>
                   <Statement style={{ color: night.ink, fontSize: 22, lineHeight: 28 }}>
-                    Your Book is sealed. {unplanned.length === 1 ? 'One goal' : `${unplanned.length} goals`} still
+                    Your Book is finished. {unplanned.length === 1 ? 'One goal' : `${unplanned.length} goals`} still
                     {unplanned.length === 1 ? ' needs' : ' need'} a first step.
                   </Statement>
                   <Body style={{ color: night.ink2 }}>
@@ -181,10 +182,10 @@ export default function SealBook() {
         <View style={{ paddingBottom: 22, gap: 10 }}>
           <HoldBar
             testID="seal-hold"
-            label={iWill.trim() ? 'Hold to seal' : 'Write the last line first'}
+            label={iWill.trim() ? 'Hold to finish' : 'Write the last line first'}
             // `editions` counts the Books in the store, which the seal has
             // just added to: read after the seal, "first edition" said second.
-            doneLabel={`Sealed · ${ordinal(sealed ? editions : editions + 1).toLowerCase()} edition`}
+            doneLabel={`Finished · ${ordinal(sealed ? editions : editions + 1).toLowerCase()} edition`}
             done={sealed}
             reducedMotion={reduced}
             // Both branches have to RETURN the refusal. The bar releases its

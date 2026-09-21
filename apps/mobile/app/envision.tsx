@@ -102,7 +102,7 @@ export default function Envision() {
         <SafeAreaView style={{ flex: 1, padding: 22, justifyContent: 'center', gap: 12 }}>
           <Statement style={{ color: night.ink }}>Nothing to picture yet.</Statement>
           <Body style={{ color: night.ink2 }}>
-            Envision is built out of what you have already written. Name a goal and write the Fifteen, and this fills
+            Envision is built out of what you have already written. Name a goal and write your future, and this fills
             itself.
           </Body>
           <TextButton label="← Today" onPress={goBack} />
@@ -221,7 +221,7 @@ export default function Envision() {
                     }}
                   >
                     <Body style={{ color: night.ink2 }}>
-                      There is not enough of your own writing behind this one yet. Write the Fifteen, or the line about
+                      There is not enough of your own writing behind this one yet. Write your future, or the line about
                       who else it changes, and it will have something true to be made of.
                     </Body>
                     <TextButton
