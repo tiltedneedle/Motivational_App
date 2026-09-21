@@ -2914,7 +2914,7 @@ hardware, a credential, or a product call — plus the items the rebuild opened:
    is the cross-device path and the README says so. (c) The Interview and the read-back
    are in the shell now (2026-09-21, at the owner's request: `Screen`, `OptionTile`
    answers with their letters, the summary and the read-back as cards, the tray in
-   the footer); the Present and Past volumes keep their older layout inside it. (d) The
+   the footer); so are the Present and Past volumes (2026-09-22: the decks and the event picks as tiles, the writes and the closing pages as cards, a bar for the card or the period you are on; their copy says "finished" rather than "sealed"). Every screen in the product is in the shell now. (d) The
    mirror is local-only by
    design; a remote model can propose the quote and the question through
    `verifyMirror` when a key exists. (e) `setupDraft` is device-only (not in the
