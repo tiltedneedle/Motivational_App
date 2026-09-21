@@ -429,8 +429,8 @@ tested. What is left needs a machine or a key this one does not have; see
   tests, 8 storage tests, the eval harness (687 checks), the edge-function
   guards, the SQL structural guards, 68 checks against a real Postgres, the
   serif authorship guard, the way-back guard (33 screens), the web build
-  (offline), 527 end-to-end checks, the axe pass over 37 screens and 84
-  cold-open checks. Against the real project: `pnpm test:account`, 46 more.
+  (offline), 527 end-to-end checks, the axe pass over 37 screens, 84
+  cold-open checks and 8 service-worker checks. Against the real project: `pnpm test:account`, 46 more.
 - **The account's spend limit is the month's, not the run's.** The fourth
   audit was ten agents and 1.59M tokens and tripped the monthly limit with
   two verifiers still running; a review workflow did it again on 2026-09-17.
@@ -457,21 +457,31 @@ pnpm install
 pnpm verify        # everything below, in order, as one command
 ```
 
-`verify` is: typecheck, unit tests (core + the contrast measurements), the edge
-function guards, the SQL structural guards, the serif authorship guard, the web
-build, then the end-to-end suite. Nothing ships without it passing.
+`verify` is: the toolchain, date and copy guards, typecheck, lint, the unit
+tests, the eval harness, the edge-function and SQL guards, the migration
+against a real Postgres, the serif authorship guard, the way-back guard, the
+web build, then the end-to-end suite, the axe pass, every route opened cold,
+and the service worker driven through two deploys. Nothing ships without it
+passing.
 
 ```
 pnpm test:deps                  # one toolchain; the RN side left to Expo
 pnpm test:dates                 # no local date turned into a UTC day
-pnpm test:copy                  # no full stop on top of theirs, no raw day in prose
+pnpm test:copy                  # no full stop on top of theirs, no raw day in prose, no regex missing its backslash
 pnpm lint                       # eslint; rules-of-hooks is an error
-pnpm test                       # 299 core + 33 contrast + 6 storage unit tests
+pnpm test                       # 489 core + 48 ui + 8 storage unit tests
+pnpm test:eval                  # the harness: 687 checks over forty profiles, spoken and typed, and two hundred labelled lines
 pnpm test:sql                   # RLS on every table, the three authorship guards
-pnpm test:migration             # 30 checks against a real Postgres, via PGlite
+pnpm test:migration             # 68 checks against a real Postgres, via PGlite
 pnpm test:authorship            # nothing but the user's words in the serif
-pnpm build:web && pnpm test:e2e # 128 end-to-end checks, serves dist itself
-node scripts/serve.mjs          # the built app on :8790, to walk it by hand
+pnpm test:back                  # every screen but the roots has a way back at its top
+pnpm build:web:offline && pnpm test:e2e   # 527 end-to-end checks, serves dist itself
+pnpm test:a11y                  # axe over 37 screens (SEED=, DARK= as for shots)
+pnpm test:cold                  # 84 routes opened cold on both stores
+pnpm test:sw                    # the service worker: first load, a second deploy, an outage
+pnpm shots                      # every screen from a seeded store → scripts/shots/
+pnpm journey                    # the whole walk, frame by frame → scripts/shots/journey/
+pnpm demo                       # the built app on :8790 and the Wi-Fi address, to walk it by hand
 cd apps/mobile && npx expo start
 ```
 

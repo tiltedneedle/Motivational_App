@@ -113,7 +113,13 @@ async function checkOnDevice(): Promise<void> {
     return;
   }
   try {
-    onDevice = (await R.available({ langs: [lang], processLocally: true, quality: 'dictation' })) === 'available';
+    // The doorway waits on this answer; a browser that never gives one is
+    // not allowed to hold the door.
+    const answer = await Promise.race([
+      R.available({ langs: [lang], processLocally: true, quality: 'dictation' }),
+      new Promise<string>((resolve) => setTimeout(() => resolve('unavailable'), 2500)),
+    ]);
+    onDevice = answer === 'available';
   } catch {
     onDevice = false;
   }
