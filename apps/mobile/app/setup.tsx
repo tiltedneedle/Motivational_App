@@ -12,8 +12,8 @@
  * The end of set-up is consent (PRD §12: the gate stands before any
  * writing door). Then the first line.
  */
-import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { AREAS, addCustomArea, beginBranches, domainMeta, initialInterview, toggleArea, type DomainId, type Persona } from '@morrow/core';
 import { Body, Glyph, Heading, Label, OptionTile, Screen, Slide, TextButton, UserField, accent, day, type as fonts, useReducedMotion } from '@morrow/ui';
@@ -76,10 +76,26 @@ export default function Setup() {
   // Set-up is over once consent is recorded. Reached again — the browser's
   // back from the first line, a stale link — it goes to Today (the one
   // already in the stack when there is one) rather than asking four
-  // questions that were answered.
+  // questions that were answered. Not on the way out, though: finish()
+  // records consent and pushes the first line in the same breath, and this
+  // screen is still the one in front for that instant.
+  // Read through a ref so the focus effect runs only on a real focus, not
+  // on the render in which consent flips.
+  const doneRef = useRef(done);
   useEffect(() => {
-    if (done) router.dismissTo('/today');
-  }, [done, router]);
+    doneRef.current = done;
+  });
+  const doneAtMount = useRef(done).current;
+  const focusedBefore = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      const returning = focusedBefore.current;
+      focusedBefore.current = true;
+      // Opened already done (a cold link, or the web's remount on the way
+      // back), or returned to after finishing here (a phone's Back).
+      if (doneRef.current && (doneAtMount || returning)) router.dismissTo('/today');
+    }, [router, doneAtMount]),
+  );
 
   const back = () => {
     if (step === 0) {

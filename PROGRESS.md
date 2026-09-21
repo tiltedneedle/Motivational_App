@@ -107,6 +107,26 @@ by hand before it was acted on. What was confirmed and fixed:
   The Google button's busy state reached the web as nothing and its label could not wrap;
   the path card's title was a second h1. The age tick, the answered rows and the
   microphone button were under 44 pt.
+- **Flow, Back and resume** (the fifth lens, run on its own after the review was
+  interrupted). The back hook's `beforeRemove` listener took every removal as the
+  person's back — including the replace set-up itself asked for once consent existed, so
+  a finished set-up reopened by Back stepped itself back a question instead of going to
+  Today; it answers only GO_BACK/POP now, and set-up dismisses to the Today already in
+  the stack. Set-up's answers lived in a module variable; they live in the store
+  (`setupDraft`), so a reload or a kill mid set-up comes back to the same step with the
+  name and the custom area. Sign-in's "Not now" replaced itself with a fresh Today from
+  every door (two Todays stacked) and marked the once-only ask from any of them; it goes
+  back where it came from and marks the ask only when it was the ask. The Future door on
+  the chooser and the explainer pushed a second Today once the Book existed; it dismisses
+  to the one there. The first line's draft was written only by a 400 ms timer — Back
+  inside it lost the last stretch typed or heard, and a keep inside it let the timer
+  write the kept line back as a draft — it flushes on the way out and the timer is
+  disarmed by a keep; keep replaces the page with the mirror, so Back from the mirror
+  cannot keep the same line twice. The mirror opened by its URL with no first line still
+  drew a screen; it redirects to the path. Google on the web came back to `/account`
+  without the `next` it left with, and the layout pushed a second account screen over
+  the one already there; `next` rides in the tab's session storage and the layout
+  replaces when it is already on `/account`.
 - **Product copy.** One name per thing: the plan screen is "Your plan" everywhere;
   the closing screen says "Kept as a draft" in both branches; the stone's spoken
   announcement says "question" like its label; the empty Book and Reading say "five short
@@ -2878,11 +2898,22 @@ program's actual prompt text by someone with a licensed copy.
 
 ## Next steps
 
-Everything that can be done on this machine, without a key, is done. Seven
-audits are closed (the last four on the three volumes, each adversarially
-verified), the built app is walked end to end by 529 checks, and the account
-round-trips against the live project. What remains needs either hardware, a
-credential, or a product call.
+The rebuild (2026-09-21, the section at the top) is done and verified: the new
+first run, the home with its loop, the sign-in with Google, the five-lens review
+folded in, 558 end-to-end checks, `pnpm verify` green. What remains needs either
+hardware, a credential, or a product call — plus the items the rebuild opened:
+
+0. **After the rebuild.** (a) The Google round trip through the *live* project has
+   only been driven to Google's own page (no credentials are entered by the tooling);
+   the first real sign-in on the deployed site should be watched once: Google → back
+   on `/account` → "Bring my Book back". (b) `flowType: 'pkce'` means a magic link
+   from an email must be opened on the device that asked for it; the six-digit code
+   is the cross-device path and the README says so. (c) The Interview, the read-back
+   and the volumes keep their older layout inside the new shell; they read fine, and
+   the next pass could give them `OptionTile` rows. (d) The mirror is local-only by
+   design; a remote model can propose the quote and the question through
+   `verifyMirror` when a key exists. (e) `setupDraft` is device-only (not in the
+   sync bundle) on purpose.
 
 1. **Build it natively, once.** The tree is ready for it: `npx expo-doctor`
    passes 18/18, the Android prebuild generates cleanly, the icon and splash
