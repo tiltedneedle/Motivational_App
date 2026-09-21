@@ -2911,9 +2911,11 @@ hardware, a credential, or a product call — plus the items the rebuild opened:
    the first real sign-in on the deployed site should be watched once: Google → back
    on `/account` → "Bring my Book back". (b) `flowType: 'pkce'` means a magic link
    from an email must be opened on the device that asked for it; the six-digit code
-   is the cross-device path and the README says so. (c) The Interview, the read-back
-   and the volumes keep their older layout inside the new shell; they read fine, and
-   the next pass could give them `OptionTile` rows. (d) The mirror is local-only by
+   is the cross-device path and the README says so. (c) The Interview and the read-back
+   are in the shell now (2026-09-21, at the owner's request: `Screen`, `OptionTile`
+   answers with their letters, the summary and the read-back as cards, the tray in
+   the footer); the Present and Past volumes keep their older layout inside it. (d) The
+   mirror is local-only by
    design; a remote model can propose the quote and the question through
    `verifyMirror` when a key exists. (e) `setupDraft` is device-only (not in the
    sync bundle) on purpose.

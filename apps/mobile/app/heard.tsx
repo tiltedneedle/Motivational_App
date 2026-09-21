@@ -7,10 +7,9 @@
  */
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, View } from 'react-native';
 import { domainMeta, plural, type Span } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Notice, ProgressBar, Statement, Stone, Studio, TopBar, UserField, UserText, day } from '@morrow/ui';
+import { Body, Chip, Heading, Label, Notice, Screen, Stone, UserField, UserText, day } from '@morrow/ui';
 import { useGoals, ai, latestText, useMorrow } from '../src/store';
 import { useFirstRunStep } from '../src/analytics';
 
@@ -110,128 +109,123 @@ export default function Heard() {
     router.dismissTo('/today');
   };
 
+  const back = () => (router.canGoBack() ? router.back() : router.dismissTo('/today'));
+  const progress = onPath ? { value: 3 / 5, label: 'Step 3 of 5 · Your future is written', testID: 'heard-progress' } : undefined;
+
   return (
-    <Studio testID="screen-heard">
-      <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'heard-back' }} where="What I heard" help={{ onPress: showResources }} />
-        {onPath ? <ProgressBar value={3 / 5} label="Step 3 of 5 · Your future is written" testID="heard-progress" style={{ paddingTop: 4 }} /> : null}
-        <View style={{ paddingTop: 14 }}>
-          <Statement>
-            {rows === null
-              ? 'Reading it back…'
-              : rows.length === 0
-                ? 'Your goals are already named.'
-                : `${rows.length === 1 ? 'One thing' : `${rows.length} things`} you said you want.`}
-          </Statement>
-          {rows && rows.length ? <Body style={{ marginTop: 6, fontSize: 15 }}>Your own phrases, verbatim. Keep the ones that are goals and give each a short name.</Body> : null}
+    <Screen
+      testID="screen-heard"
+      back={{ onPress: back, testID: 'heard-back' }}
+      where="What I heard"
+      help={{ onPress: showResources }}
+      progress={progress}
+      keyboard
+      cta={
+        rows === null
+          ? undefined
+          : {
+              label: named.length ? `Keep ${named.length} and go on` : goals.length ? 'Go on with the goals I named' : 'Name at least one',
+              disabled: named.length === 0 && goals.length === 0,
+              onPress: done,
+              testID: 'heard-continue',
+            }
+      }
+      footer={
+        // A kept line with no name is not a goal, because the app does not
+        // get to name it. Said out loud, because otherwise pressing "go on"
+        // quietly drops the lines they just chose and nothing on the screen
+        // explains where they went.
+        unnamed.length ? (
+          <Notice testID="heard-unnamed" text={`${plural(unnamed.length, 'line')} kept but not named yet. Name a line to keep it — the app will not name it for you.`} style={{ fontSize: 13, textAlign: 'center' }} />
+        ) : null
+      }
+    >
+      <Heading
+        title={rows === null ? 'Reading it back…' : rows.length === 0 ? 'Your goals are already named.' : `${rows.length === 1 ? 'One thing' : `${rows.length} things`} you said you want.`}
+        line={rows && rows.length ? 'Your own phrases, verbatim. Keep the ones that are goals and give each a short name.' : undefined}
+      />
+
+      {rows === null ? (
+        <View style={{ paddingVertical: 40, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator color={day.ink} />
         </View>
+      ) : (
+        <View style={{ gap: 10 }}>
+          <Notice testID="heard-error" kind="error" text={error} />
 
-        {rows === null ? (
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <ActivityIndicator color={day.ink} />
-          </View>
-        ) : (
-          <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 0 }}>
-            <Notice testID="heard-error" kind="error" text={error} />
-
-            {rows.map((row, i) => {
-              const meta = domainMeta(row.span.domain);
-              if (row.state === 'dropped') {
-                return (
-                  <View key={`${row.span.start}-${i}`} testID={`span-${i}-dropped`} style={{ paddingVertical: 12, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: day.line, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                    <Body style={{ flex: 1, fontSize: 14, color: day.ink3, textDecorationLine: 'line-through' }} numberOfLines={1}>
-                      “{row.span.text}”
-                    </Body>
-                    <Chip testID={`restore-${i}`} label="Put it back" accessibilityLabel={`Put it back, “${row.span.text}”`} ghost onPress={() => restore(i)} />
-                  </View>
-                );
-              }
+          {rows.map((row, i) => {
+            const meta = domainMeta(row.span.domain);
+            if (row.state === 'dropped') {
               return (
                 <View
                   key={`${row.span.start}-${i}`}
-                  testID={`span-${i}`}
-                  // A document, not a stack of cards: the read-back is the
-                  // coach's one page, and its lines sit on hairlines the way a
-                  // list of quotations does.
-                  style={{
-                    paddingVertical: 18,
-                    gap: 12,
-                    borderTopWidth: i === 0 ? 0 : 1,
-                    borderTopColor: day.line,
-                  }}
+                  testID={`span-${i}-dropped`}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6, paddingHorizontal: 14, borderRadius: 18, borderWidth: 1, borderColor: day.line2, borderStyle: 'dashed' }}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
-                    <Stone size={22} domain={row.span.domain} polish={1} style={{ marginTop: 4 }} />
-                    {/* verbatim, in the serif, because these are their words */}
-                    <UserText testID={`span-text-${i}`} style={{ flex: 1, fontSize: 17, lineHeight: 24 }}>
-                      “{row.span.text}”
-                    </UserText>
-                  </View>
-                  <View style={{ flexDirection: 'row', gap: 8 }}>
-                    <Chip
-                      testID={`keep-${i}`}
-                      label={row.state === 'kept' ? 'Keeping' : 'Keep'}
-                      accessibilityLabel={`${row.state === 'kept' ? 'Keeping' : 'Keep'}, “${row.span.text}”`}
-                      selected={row.state === 'kept'}
-                      role="checkbox"
-                      onPress={() => keep(i)}
-                    />
-                    <Chip testID={`drop-${i}`} label="Not a goal" accessibilityLabel={`Not a goal, “${row.span.text}”`} ghost onPress={() => drop(i)} />
-                    <View style={{ flex: 1 }} />
-                    <Label style={{ alignSelf: 'center' }}>{meta.label}</Label>
-                  </View>
-                  {row.state === 'kept' ? (
-                    <UserField
-                      testID={`name-${i}`}
-                      label={`Name for “${row.span.text.slice(0, 40)}${row.span.text.length > 40 ? '…' : ''}”`}
-                      labelHidden
-                      value={row.name}
-                      onChangeText={(t) => rename(i, t)}
-                      placeholder="Name it the way you'd say it to a friend"
-                    />
-                  ) : null}
+                  <Body style={{ flex: 1, fontSize: 14, color: day.ink3, textDecorationLine: 'line-through' }} numberOfLines={1}>
+                    “{row.span.text}”
+                  </Body>
+                  <Chip testID={`restore-${i}`} label="Put it back" accessibilityLabel={`Put it back, “${row.span.text}”`} ghost onPress={() => restore(i)} />
                 </View>
               );
-            })}
-
-            {leftOut && named.length < 3 ? (
-              <Body testID="left-out" style={{ color: day.ink2 }}>
-                {leftOut}
-              </Body>
-            ) : null}
-
-            <Label style={{ marginTop: 4 }}>Every line is yours. I only sorted them.</Label>
-          </ScrollView>
-        )}
-
-        <View style={{ paddingTop: 10, paddingBottom: 18, gap: 8 }}>
-          {/*
-            A kept line with no name is not a goal, because the app does not
-            get to name it. Said out loud, because otherwise pressing "go on"
-            quietly drops the lines they just chose and nothing on the screen
-            explains where they went.
-          */}
-          {unnamed.length ? (
-            <Notice
-              testID="heard-unnamed"
-              text={`${plural(unnamed.length, 'line')} kept but not named yet. Name a line to keep it — the app will not name it for you.`}
-              style={{ fontSize: 13 }}
-            />
-          ) : null}
-          <InkButton
-            testID="heard-continue"
-            label={
-              named.length
-                ? `Keep ${named.length} and go on`
-                : goals.length
-                  ? 'Go on with the goals I named'
-                  : 'Name at least one'
             }
-            disabled={named.length === 0 && goals.length === 0}
-            onPress={done}
-          />
+            const kept = row.state === 'kept';
+            return (
+              <View
+                key={`${row.span.start}-${i}`}
+                testID={`span-${i}`}
+                style={{
+                  gap: 12,
+                  padding: 16,
+                  borderRadius: 18,
+                  backgroundColor: day.surface,
+                  borderWidth: kept ? 2 : 1,
+                  borderColor: kept ? day.ink : day.line2,
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+                  <Stone size={24} domain={row.span.domain} polish={1} style={{ marginTop: 3 }} />
+                  {/* verbatim, in the serif, because these are their words */}
+                  <UserText testID={`span-text-${i}`} style={{ flex: 1, fontSize: 18, lineHeight: 26 }}>
+                    “{row.span.text}”
+                  </UserText>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Chip
+                    testID={`keep-${i}`}
+                    label={kept ? 'Keeping' : 'Keep'}
+                    accessibilityLabel={`${kept ? 'Keeping' : 'Keep'}, “${row.span.text}”`}
+                    selected={kept}
+                    role="checkbox"
+                    onPress={() => keep(i)}
+                  />
+                  <Chip testID={`drop-${i}`} label="Not a goal" accessibilityLabel={`Not a goal, “${row.span.text}”`} ghost onPress={() => drop(i)} />
+                  <View style={{ flex: 1 }} />
+                  <Label>{meta.label}</Label>
+                </View>
+                {kept ? (
+                  <UserField
+                    testID={`name-${i}`}
+                    label={`Name for “${row.span.text.slice(0, 40)}${row.span.text.length > 40 ? '…' : ''}”`}
+                    labelHidden
+                    value={row.name}
+                    onChangeText={(t) => rename(i, t)}
+                    placeholder="Name it the way you'd say it to a friend"
+                  />
+                ) : null}
+              </View>
+            );
+          })}
+
+          {leftOut && named.length < 3 ? (
+            <Body testID="left-out" style={{ color: day.ink2 }}>
+              {leftOut}
+            </Body>
+          ) : null}
+
+          <Label style={{ marginTop: 4, textAlign: 'center' }}>Every line is yours. I only sorted them.</Label>
         </View>
-      </SafeAreaView>
-    </Studio>
+      )}
+    </Screen>
   );
 }

@@ -4,8 +4,7 @@
  */
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, View , Text } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View } from 'react-native';
 import {
   addAnother,
   addCustomArea,
@@ -22,7 +21,7 @@ import {
   toggleArea,
   type InterviewState,
 } from '@morrow/core';
-import { Body, InkButton, Label, Pop, ProgressBar, Question, Slide, Statement, Stone, Studio, TextButton, TopBar, UserField, announce, day, radius, type as fonts, useReducedMotion } from '@morrow/ui';
+import { Body, Heading, InkButton, Label, OptionTile, Pop, Question, Screen, Slide, Statement, Stone, TextButton, UserField, accent, announce, day, radius, useReducedMotion } from '@morrow/ui';
 import { usePlatformBack } from '../src/platform-back';
 import { useMorrow } from '../src/store';
 import { track, useFirstRunStep } from '../src/analytics';
@@ -153,178 +152,107 @@ export default function Interview() {
     router.push('/authoring');
   };
 
-  return (
-    <Studio testID="screen-interview">
-      <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <TopBar
-          back={{ onPress: stepBack, testID: 'interview-back' }}
-          where={s.stage === 'summary' ? 'What I heard' : `Question ${s.answered + 1}`} help={{ onPress: showResources }}
-          style={{ paddingTop: 6, minHeight: 48 }}
-        />
-        {/* Where you are (the rebuild): the bar fills with the Interview's own clarity; the step is the path's. */}
-        <ProgressBar value={0.2 + clarity(s) * 0.2} label="Step 2 of 5 · Find your goals" testID="interview-progress" style={{ paddingTop: 4 }} />
-        {/*
-          The app talking, so it cannot be in the serif. UserText is the
-          typeface reserved for the person's own words, and putting the
-          app's running commentary in it is exactly the confusion the whole
-          rule exists to prevent.
-        */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingTop: 12 }}>
+  const areasStage = q.stage === 'areas';
+  const where = s.stage === 'summary' ? 'What I heard' : `Question ${s.answered + 1}`;
+
+  if (s.stage === 'summary') {
+    return (
+      <Screen
+        testID="screen-interview"
+        back={{ onPress: stepBack, testID: 'interview-back' }}
+        where={where}
+        help={{ onPress: showResources }}
+        progress={{ value: 0.4, label: 'Step 2 of 5 · Find your goals', testID: 'interview-progress' }}
+        cta={{ label: s.drafts.length ? 'Write your future · 15 min' : 'Add a goal first', onPress: finish, disabled: s.drafts.length === 0, testID: 'interview-finish' }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <Stone size={22} gradient={['#FFFFFF', '#F3F1EC', '#CFCBC2', '#8E8A80']} polish={0.8} />
           <Body style={{ flex: 1, fontSize: 14, lineHeight: 19, color: day.ink2 }} testID="guess-line">
             {guessLine(s)}
           </Body>
         </View>
+        <Summary
+          s={s}
+          onDrop={(id) => {
+            const next = dropDraft(s, id);
+            setS(next);
+            saveDraft(next, history);
+          }}
+          onAddAnother={() => {
+            const next = addAnother(s);
+            setS(next);
+            saveDraft(next, history);
+          }}
+        />
+      </Screen>
+    );
+  }
 
-        {s.stage === 'summary' ? (
-          <Summary
-            s={s}
-            onDrop={(id) => {
-              const next = dropDraft(s, id);
-              setS(next);
-              saveDraft(next, history);
-            }}
-            onAddAnother={() => {
-              const next = addAnother(s);
-              setS(next);
-              saveDraft(next, history);
-            }}
-            onFinish={finish}
+  return (
+    <Screen
+      testID="screen-interview"
+      back={{ onPress: stepBack, testID: 'interview-back' }}
+      where={where}
+      help={{ onPress: showResources }}
+      // The bar fills with the Interview's own clarity; the step is the path's.
+      progress={{ value: 0.2 + clarity(s) * 0.2, label: 'Step 2 of 5 · Find your goals', testID: 'interview-progress' }}
+      keyboard
+      cta={
+        areasStage
+          ? {
+              label: s.picked.length === 0 ? 'Pick at least one' : s.picked.length === 1 ? 'Continue with one' : `Continue with ${s.picked.length}`,
+              disabled: s.picked.length === 0,
+              onPress: () => advance(beginBranches(s)),
+              testID: 'interview-continue',
+            }
+          : undefined
+      }
+      footer={areasStage ? null : <Tray s={s} />}
+    >
+      {/*
+        The app talking, so it cannot be in the serif. UserText is the
+        typeface reserved for the person's own words, and putting the
+        app's running commentary in it is exactly the confusion the whole
+        rule exists to prevent.
+      */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <Stone size={22} gradient={['#FFFFFF', '#F3F1EC', '#CFCBC2', '#8E8A80']} polish={0.8} />
+        <Body style={{ flex: 1, fontSize: 14, lineHeight: 19, color: day.ink2 }} testID="guess-line">
+          {guessLine(s)}
+        </Body>
+      </View>
+      {/* PRD 7.1: "the next question slides in from the right". A new prompt is a new slide. */}
+      <Slide key={q.prompt} reduced={reduced} style={{ gap: 10 }}>
+        <Statement testID="interview-question" style={{ marginBottom: 6 }}>
+          {q.prompt}
+        </Statement>
+        {options.map((label, i) => (
+          <OptionTile
+            key={label}
+            testID={`option-${i}`}
+            letter={LETTERS[i] ?? '+'}
+            title={label}
+            // "Pick as many as are true" is a box to tick; every other
+            // question answers and moves on at one tap, which is a button.
+            role={areasStage ? 'checkbox' : 'button'}
+            selected={areasStage ? isSelected(label) : undefined}
+            accessibilityLabel={areasStage ? label : `${label}. Answers, and moves to the next question`}
+            onPress={() => choose(label)}
+            compact
           />
-        ) : (
-          <>
-            <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18, gap: 10 }}>
-              {/* PRD 7.1: "the next question slides in from the right". A new prompt is a new slide. */}
-              <Slide key={q.prompt} reduced={reduced} style={{ gap: 10 }}>
-              <Statement testID="interview-question" style={{ marginBottom: 8 }}>
-                {q.prompt}
-              </Statement>
-
-              {options.map((label, i) => (
-                <Pressable
-                  key={label}
-                  testID={`option-${i}`}
-                  // "Pick as many as are true" is a box to tick; every other
-                  // question answers and moves on at one tap, which is a button.
-                  // Announced as "checkbox, unchecked" a branch option promised
-                  // a tick it never gave.
-                  accessibilityRole={q.stage === 'areas' ? 'checkbox' : 'button'}
-                  {...(q.stage === 'areas' ? { 'aria-checked': isSelected(label) } : { accessibilityHint: 'Answers, and moves to the next question' })}
-                  onPress={() => choose(label)}
-                  style={({ pressed }) => ({
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 14,
-                    // A floor, not a fixed height: an answer has to be able to
-                    // wrap to a second line at 200% type instead of being cut.
-                    minHeight: 54,
-                    paddingVertical: 12,
-                    paddingHorizontal: 16,
-                    borderRadius: 18,
-                    backgroundColor: isSelected(label) ? day.ink : day.surface,
-                    borderWidth: 1,
-                    borderColor: isSelected(label) ? day.ink : day.line2,
-                    transform: [{ scale: pressed ? 0.985 : 1 }],
-                  })}
-                >
-                  <View
-                    style={{
-                      width: 26,
-                      height: 26,
-                      flexShrink: 0,
-                      borderRadius: 13,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: isSelected(label) ? day.onInkWash : day.line2,
-                    }}
-                  >
-                    <Text style={{ fontFamily: fonts.sansSemi, fontSize: 12, color: isSelected(label) ? day.onInk : day.ink2 }}>
-                      {LETTERS[i] ?? '+'}
-                    </Text>
-                  </View>
-                  <Text
-                    style={{
-                      flex: 1,
-                      fontFamily: fonts.sansSemi,
-                      fontSize: 17,
-                      color: isSelected(label) ? day.onInk : day.ink,
-                    }}
-                  >
-                    {label}
-                  </Text>
-                </Pressable>
-              ))}
-
-              {/* always last, always outlined: the only place anyone types */}
-              <Pressable
-                testID="option-custom"
-                accessibilityRole="button"
-                onPress={() => setCustomOpen((v) => !v)}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 14,
-                  minHeight: 54,
-                  paddingVertical: 12,
-                  paddingHorizontal: 16,
-                  borderRadius: 18,
-                  borderWidth: 1.5,
-                  borderColor: day.line,
-                }}
-              >
-                <Text style={{ fontFamily: fonts.sansSemi, fontSize: 17, color: day.ink2 }}>Something else…</Text>
-              </Pressable>
-
-              {customOpen ? (
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 8,
-                    backgroundColor: day.surface,
-                    borderRadius: radius.field,
-                    paddingHorizontal: 14,
-                  }}
-                >
-                  <View style={{ flex: 1 }}>
-                    <UserField
-                      testID="custom-input"
-                      label="Say it in your own words"
-                      value={customText}
-                      onChangeText={setCustomText}
-                      placeholder={q.customHint}
-                      autoFocus
-                      onSubmitEditing={useCustom}
-                    />
-                  </View>
-                  <InkButton testID="custom-use" label="Use this" onPress={useCustom} compact />
-                </View>
-              ) : null}
-              </Slide>
-            </ScrollView>
-
-            <View style={{ paddingTop: 10, paddingBottom: 18, gap: 10 }}>
-              {q.stage === 'areas' ? (
-                <InkButton
-                  testID="interview-continue"
-                  label={
-                    s.picked.length === 0
-                      ? 'Pick at least one'
-                      : s.picked.length === 1
-                        ? 'Continue with one'
-                        : `Continue with ${s.picked.length}`
-                  }
-                  disabled={s.picked.length === 0}
-                  onPress={() => advance(beginBranches(s))}
-                />
-              ) : (
-                <Tray s={s} />
-              )}
+        ))}
+        {/* always last, always outlined: the only place anyone types */}
+        <OptionTile testID="option-custom" glyph="custom" tint={accent.violet} title="Something else…" role="button" onPress={() => setCustomOpen((v) => !v)} compact />
+        {customOpen ? (
+          <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8, backgroundColor: day.surface, borderRadius: radius.field, paddingHorizontal: 14, paddingBottom: 8 }}>
+            <View style={{ flex: 1 }}>
+              <UserField testID="custom-input" label="Say it in your own words" value={customText} onChangeText={setCustomText} placeholder={q.customHint} autoFocus onSubmitEditing={useCustom} />
             </View>
-          </>
-        )}
-      </SafeAreaView>
-    </Studio>
+            <InkButton testID="custom-use" label="Use this" onPress={useCustom} compact />
+          </View>
+        ) : null}
+      </Slide>
+    </Screen>
   );
 }
 
@@ -332,7 +260,7 @@ function Tray({ s }: { s: InterviewState }) {
   const reduced = useReducedMotion();
   const picked = pickedAreas(s);
   return (
-    <View style={{ gap: 10 }} testID="interview-tray">
+    <View style={{ gap: 8, paddingBottom: 4 }} testID="interview-tray">
       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
         <Label>Your goals</Label>
         <Label>
@@ -370,69 +298,27 @@ function Tray({ s }: { s: InterviewState }) {
   );
 }
 
-function Summary({
-  s,
-  onDrop,
-  onAddAnother,
-  onFinish,
-}: {
-  s: InterviewState;
-  onDrop: (id: string) => void;
-  onAddAnother: () => void;
-  onFinish: () => void;
-}) {
+function Summary({ s, onDrop, onAddAnother }: { s: InterviewState; onDrop: (id: string) => void; onAddAnother: () => void }) {
   return (
-    <>
-      <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18 }}>
-        <Statement style={{ marginBottom: 14 }}>Here&apos;s what I heard.</Statement>
-        {s.drafts.map((d) => (
-          <View
-            key={d.id}
-            testID={`draft-${d.id}`}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 14,
-              paddingVertical: 12,
-              borderTopWidth: 1,
-              borderTopColor: day.line,
-            }}
-          >
-            <Stone size={40} domain={d.domain} polish={1} />
-            <View style={{ flex: 1 }}>
-              <Question style={{ fontSize: 18 }}>{d.title}</Question>
-              <Body style={{ fontSize: 13 }}>
-                {d.domainLabel ?? domainMeta(d.domain).label} · {d.horizon.toLowerCase()}
-              </Body>
-            </View>
-            <TextButton testID={`drop-${d.id}`} label="Drop" accessibilityLabel={`Drop ${d.title}`} onPress={() => onDrop(d.id)} />
-          </View>
-        ))}
-        <Pressable
-          testID="add-another"
-          onPress={onAddAnother}
-          accessibilityRole="button"
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 14,
-            paddingVertical: 14,
-            borderTopWidth: 1,
-            borderTopColor: day.line,
-          }}
+    <View style={{ gap: 10 }}>
+      <Heading title="Here’s what I heard." line="Each becomes a goal in your Book. Drop one, or add another." />
+      {s.drafts.map((d) => (
+        <View
+          key={d.id}
+          testID={`draft-${d.id}`}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 12, paddingHorizontal: 14, backgroundColor: day.surface, borderRadius: 18, borderWidth: 1, borderColor: day.line2 }}
         >
-          <View style={{ width: 30, height: 30, borderRadius: 15, borderWidth: 1.5, borderColor: day.line }} />
-          <Body style={{ color: day.ink2 }}>Add another goal</Body>
-        </Pressable>
-      </ScrollView>
-      <View style={{ paddingTop: 10, paddingBottom: 18 }}>
-        <InkButton
-          testID="interview-finish"
-          label={s.drafts.length ? 'Write your future · 15 min' : 'Add a goal first'}
-          disabled={s.drafts.length === 0}
-          onPress={onFinish}
-        />
-      </View>
-    </>
+          <Stone size={36} domain={d.domain} polish={1} />
+          <View style={{ flex: 1 }}>
+            <Question style={{ fontSize: 17 }}>{d.title}</Question>
+            <Body style={{ fontSize: 13 }}>
+              {d.domainLabel ?? domainMeta(d.domain).label} · {d.horizon.toLowerCase()}
+            </Body>
+          </View>
+          <TextButton testID={`drop-${d.id}`} label="Drop" accessibilityLabel={`Drop ${d.title}`} onPress={() => onDrop(d.id)} />
+        </View>
+      ))}
+      <OptionTile testID="add-another" glyph="plus" tint={accent.teal} title="Add another goal" role="button" onPress={onAddAnother} compact />
+    </View>
   );
 }
