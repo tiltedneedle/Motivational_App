@@ -260,6 +260,38 @@ export async function signInWithGoogleRedirect(): Promise<AuthResult> {
   }
 }
 
+/**
+ * Sign in with Google on a phone, through the system browser: the auth
+ * server's Google URL opens in an auth session, Google comes back to
+ * `morrow://account` with the session in the fragment, and the same URL
+ * handler as the email link turns it into a session. Uses the web OAuth
+ * client, so it works the day the web one does; the native id-token route
+ * (`signInWithGoogle`) stays for a build with the Google SDK in it.
+ */
+export async function signInWithGoogleSession(): Promise<AuthResult> {
+  const c = await supabase();
+  if (!c) return { ok: false, error: NO_SERVICE };
+  const redirectTo = 'morrow://account';
+  try {
+    const { data, error } = await c.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo, skipBrowserRedirect: true, queryParams: { prompt: 'select_account' } },
+    });
+    if (error) return { ok: false, error: plain(error.message) };
+    if (!data.url) return { ok: false, error: 'Google did not answer. Try again in a moment.' };
+    const browser = await import('expo-web-browser');
+    const result = await browser.openAuthSessionAsync(data.url, redirectTo);
+    if (result.type !== 'success') return { ok: false, error: 'Sign-in was closed before it finished.' };
+    const landed = await signInFromUrl(result.url);
+    return landed ?? { ok: false, error: 'Google came back without a session. Try again.' };
+  } catch (err) {
+    return { ok: false, error: plain(err instanceof Error ? err.message : 'no network') };
+  }
+}
+
+/** Whether a Google button belongs on this build: the web client id is set, on any platform. */
+export const hasGoogle = hasSupabase && GOOGLE_WEB_CLIENT_ID.length > 0;
+
 export async function signOut(): Promise<void> {
   const c = await supabase();
   if (!c) return;

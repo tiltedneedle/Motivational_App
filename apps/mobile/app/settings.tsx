@@ -541,7 +541,7 @@ export default function Settings() {
                     <Body testID="settings-account-none" style={{ fontSize: 14, color: day.ink }}>
                       Not signed in. Everything is on this phone and nowhere else; a lost phone loses the Book.
                     </Body>
-                    <Chip testID="settings-account-signin" label="Keep a copy" onPress={() => router.push('/account')} />
+                    <Chip testID="settings-account-signin" label="Sign in" onPress={() => router.push('/signin')} />
                   </>
                 )}
                 {accountNote ? (

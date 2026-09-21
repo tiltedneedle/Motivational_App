@@ -57,7 +57,7 @@ export default function PortraitScreen() {
     // the seal, and only when there is an account service to ask about —
     // a build with none has nothing to offer and does not pretend to.
     if (to === '/seal-book' && hasSupabase && !account && !accountAsked) {
-      router.replace(`/account?next=${to}`);
+      router.replace(`/signin?next=${to}`);
       return;
     }
     if (to) {

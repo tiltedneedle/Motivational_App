@@ -218,76 +218,113 @@ async function main() {
 
     check('welcome renders', await seen('screen-welcome'));
 
-    // ---- Welcome is one screen (client, 2026-09-20): what this is, a name if
-    // you want to give one, and two doors. No pages, no Skip, no dots.
+    // ---- Welcome is one screen (the rebuild, 2026-09-21): one line, one
+    // button, and a look around for whoever wants it. No pages, no name
+    // field, no paragraph to read first.
     check('Welcome says what this is', await seen('welcome-page-0'));
-    check('with no pages to get through', !(await seen('welcome-next')) && !(await seen('welcome-skip')) && !(await seen('welcome-page-count')));
+    check('with no pages to get through', !(await seen('welcome-next')) && !(await seen('welcome-skip')) && !(await seen('welcome-name')));
     check('and both doors on the one screen', (await seen('welcome-begin')) && (await seen('welcome-look')));
-    check('Begin says how long tonight takes', (await text('welcome-begin')).toLowerCase().includes('30 minutes'), await text('welcome-begin'));
-    await page.locator('[data-testid="welcome-name"]').fill('Sam');
+    check('Get started is the one button', (await text('welcome-begin')).toLowerCase().includes('get started'), await text('welcome-begin'));
 
     // ---- the home screen is not behind the introduction
-    // Somebody who wants to see the room before writing for it can: Today,
-    // which says hello, what the room is for and what three evenings make,
-    // with the first evening as its one button, and Back to Welcome.
     await tap('welcome-look');
     check('Welcome opens onto Today for a look around', await seen('screen-today'));
-    check('which greets by the name just given', (await text('today-path')) === 'Hello, Sam.', await text('today-path'));
+    check('which says hello', (await text('today-path')) === 'Hello.', await text('today-path'));
     check('says what the room is for', (await text('today-path-caption')).toLowerCase().includes('home screen'), await text('today-path-caption'));
     await page.waitForTimeout(700); // the card rises in after the greeting
-    check('and what three evenings make, with their lengths', (await seen('today-evenings')) && (await text('today-evenings')).toLowerCase().includes('25–35 min'), (await seen('today-evenings')) ? await text('today-evenings') : 'no card');
-    check('with the first evening as the one button', (await text('today-begin')).toLowerCase().includes('begin tonight'), await text('today-begin'));
+    check('and shows the five steps with their minutes', (await seen('today-evenings')) && (await text('today-evenings')).includes('15 min'), (await seen('today-evenings')) ? await text('today-evenings') : 'no card');
+    check('with Get started as the one button', (await text('today-begin')).toLowerCase().includes('get started'), await text('today-begin'));
+    check('and the tab bar already there', (await seen('tab-today')) && (await seen('tab-book')) && (await seen('tab-you')));
     check('with the other volumes one tap away', await seen('today-other-volumes'));
     await page.goBack({ waitUntil: 'commit' }).catch(() => {});
     await page.waitForTimeout(600);
-    check('and Back is Welcome again, name kept', (await seen('screen-welcome')) && (await page.locator('[data-testid="welcome-name"]').inputValue()) === 'Sam');
+    check('and Back is Welcome again', await seen('screen-welcome'));
 
-    // ---- Interview
+    // ---- set-up: four taps under a progress bar
     await tap('welcome-begin');
-    check('consent screen', await seen('screen-consent'));
-    await tap('consent-back');
-    check('consent has a way back to Welcome', await seen('screen-welcome'));
+    check('Get started opens set-up', await seen('screen-setup'));
+    check('set-up says where it is', (await text('setup-progress')).toLowerCase().includes('step 1 of 4'), await text('setup-progress'));
+    check('and Continue waits for an area', (await page.locator('[data-testid="setup-continue"]').getAttribute('aria-disabled')) === 'true' || (await page.locator('[data-testid="setup-continue"]').isDisabled()));
+    await tap('setup-back');
+    check('set-up has a way back to Welcome', await seen('screen-welcome'));
     await tap('welcome-begin');
-    // The 16+ gate (PRD 12): Continue waits for the affirmation.
-    check('consent has the age gate', (await seen('consent-age')) && (await seen('consent-age-note')));
-    check('and Continue waits for it', (await page.locator('[data-testid="consent-continue"]').getAttribute('aria-disabled')) === 'true' || (await page.locator('[data-testid="consent-continue"]').isDisabled()));
-    await tap('consent-age');
-    await page.waitForTimeout(200);
-    check('one tap, and the note is gone', !(await seen('consent-age-note')));
-    await tap('consent-continue');
+    await tap('setup-area-health');
+    await tap('setup-area-craft');
+    check('the button counts the areas picked', (await text('setup-continue')).includes('2'), await text('setup-continue'));
+    await tap('setup-continue');
+    check('step two asks when', (await text('setup-question')).toLowerCase().includes('quiet moment'), await text('setup-question'));
+    check('and the answer so far is folded above it', (await text('setup-answered')).includes('Health'), await text('setup-answered'));
+    await tap('setup-when-evening');
+    await tap('setup-continue');
+    check('step three asks how the coach speaks', (await text('setup-question')).toLowerCase().includes('speak'), await text('setup-question'));
+    // Back is one step, with the answers kept.
+    await tap('setup-back');
+    check('Back in set-up is one step, answer kept', (await text('setup-question')).toLowerCase().includes('quiet moment') && (await text('setup-answered')).includes('Health'), await text('setup-question'));
+    await tap('setup-continue');
+    await tap('setup-voice-straight');
+    await tap('setup-continue');
+    check('the last step is the name and the age', (await seen('setup-name')) && (await seen('setup-sixteen')));
+    await page.locator('[data-testid="setup-name"]').fill('Sam');
+    check('and the first line waits for the tick', (await page.locator('[data-testid="setup-continue"]').getAttribute('aria-disabled')) === 'true' || (await page.locator('[data-testid="setup-continue"]').isDisabled()));
+    check('with the privacy line and its details a tap away', (await seen('setup-privacy')) && (await seen('setup-details')));
+    await tap('setup-details');
+    check('the details are the consent page, to read', (await seen('screen-consent')) && (await seen('consent-got-it')) && !(await seen('consent-age')));
+    await tap('consent-got-it');
+    check('and Got it comes back to the last step, name kept', (await seen('screen-setup')) && (await page.locator('[data-testid="setup-name"]').inputValue()) === 'Sam');
+    await tap('setup-sixteen');
+    await tap('setup-continue');
 
-    // ---- the three doors (client decision, 2026-09-15)
-    //
-    // Consent leads to a choice, not into one volume: the source sells its
-    // programs separately and tells people to pick. Every door is reachable,
-    // in any order, and the fourth explains all three.
-    check('consent leads to the three doors', await seen('screen-choose'));
-    check('the heading is the client’s own', (await text('choose-heading')) === 'Work on your:', await text('choose-heading'));
-    for (const door of ['past', 'present', 'future']) {
-      check(`the ${door} door is there`, await seen(`door-${door}`));
-    }
-    check('and Future is marked as the one Today comes from', await seen('door-future-badge'));
-    await tap('choose-explore');
-    check('door four explains all three', await seen('screen-explore'));
-    for (const v of ['past', 'present', 'future']) check(`it says what ${v} is`, await seen(`explore-${v}`));
-    const route = await text('explore-order-steps');
-    check(
-      'and offers the source’s order, with both halves of Present named',
-      route.indexOf('faults') < route.indexOf('Future') && route.indexOf('Future') < route.indexOf('virtues') && route.indexOf('virtues') < route.indexOf('Past'),
-      route,
-    );
-    check('and lets you choose from that screen', await seen('explore-pick-future'));
-    await tap('explore-pick-future');
-
-    check('interview screen', await seen('screen-interview'));
-    check('the name given on Welcome is kept', await page.evaluate(() => {
+    // ---- the first line: two minutes on one question, no clock
+    check('set-up leads to the first line', await seen('screen-first-write'));
+    check('which is step one of five', (await text('first-write-progress')).toLowerCase().includes('step 1 of 5'), await text('first-write-progress'));
+    check('with a warm-up prompt for the area picked first', (await text('first-write-prompt')).toLowerCase().includes('body'), await text('first-write-prompt'));
+    check('and the name given in set-up is kept', await page.evaluate(() => {
       const key = Object.keys(localStorage).find((k) => k.includes('morrow'));
       return JSON.parse(localStorage.getItem(key)).state.profile.displayName === 'Sam';
     }));
-    check('clarity starts at the floor', (await text('clarity-value')).startsWith('8%'));
+    check('and consent was recorded at the end of set-up', await page.evaluate(() => {
+      const key = Object.keys(localStorage).find((k) => k.includes('morrow'));
+      return Boolean(JSON.parse(localStorage.getItem(key)).state.profile.consentedAt);
+    }));
+    check('Keep waits for a few words', (await page.locator('[data-testid="first-write-continue"]').getAttribute('aria-disabled')) === 'true' || (await page.locator('[data-testid="first-write-continue"]').isDisabled()));
+    await page.locator('[data-testid="first-write-input"]').fill('I want to get out the door for a run before work on Tuesdays.');
+    await page.waitForTimeout(700); // the autosave tick
+    // Killed mid-line: the line comes back.
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(600);
+    check('a reload mid-line lands on the same page', await seen('screen-first-write'));
+    check('with the line typed before the kill still on it', (await page.locator('[data-testid="first-write-input"]').inputValue()).includes('run before work'));
+    // Opened fresh: Today, with the path card at the first line — never Welcome again.
+    await page.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(600);
+    check('a relaunch after set-up opens on Today, not Welcome', await seen('screen-today'));
+    check('with the path card at the first line', (await text('today-begin')).toLowerCase().includes('first line'), await text('today-begin'));
+    await tap('today-begin');
+    check('and the line is still on the page from there too', (await page.locator('[data-testid="first-write-input"]').inputValue()).includes('run before work'));
+    check('with the words counted', (await text('first-write-note')).toLowerCase().includes('words'), await text('first-write-note'));
+    await tap('first-write-continue');
 
-    await tap('option-0'); // Health
-    check('guess is built from the pick', (await text('guess-line')).toLowerCase().includes('health'));
+    // ---- the mirror: the app answers, in their words
+    check('the first line is answered', await seen('screen-mirror'));
+    check('with a quote that is verbatim', (await text('mirror-quote-0')).includes('run before work'), await text('mirror-quote-0'));
+    check('labelled by the area they chose', (await text('mirror-note')).toLowerCase().includes('health'), await text('mirror-note'));
+    check('and one question', (await text('mirror-question')).trim().endsWith('?'), await text('mirror-question'));
+    check('and the five-step path with the first step ticked', (await seen('mirror-path')) && (await text('mirror-path')).includes('Find your goals'), await text('mirror-path'));
+    check('whose button is the Interview', (await text('mirror-continue')).toLowerCase().includes('find your goals'), await text('mirror-continue'));
+    await accessible('the mirror');
+    await tap('mirror-continue');
+
+    // ---- Interview: it opens on the question after the areas, which set-up already answered
+    check('interview screen', await seen('screen-interview'));
+    check('the Interview is step two of five', (await text('interview-progress')).toLowerCase().includes('step 2 of 5'), await text('interview-progress'));
+    check('and opens past the areas question, on the first area picked', (await text('guess-line')).toLowerCase().includes('health'), await text('guess-line'));
+    await tap('interview-back');
+    check('Back reaches the areas, ticked as set-up left them', (await text('interview-question')).toLowerCase().includes('parts of life') && (await text('interview-continue')).includes('2'), await text('interview-continue'));
+    // An area can be un-ticked here: one goal from here on, so the walk below stays the same walk.
+    await tap('option-2'); // Work & craft, off
+    check('un-ticking an area is a real un-tick', (await text('interview-continue')).toLowerCase().includes('one'), await text('interview-continue'));
     await tap('interview-continue');
     await tap('option-0'); // Finish a race
     check('follow-up asked', (await text('interview-question')) === 'How far?');
@@ -297,12 +334,12 @@ async function main() {
     await page.clock.runFor(1500);
     await page.waitForTimeout(700);
     check('a relaunch mid-Interview opens on Today, not on Welcome again', (await seen('screen-today')) && !(await seen('screen-welcome')));
-    check('which says a sitting is kept', (await text('today-path')).toLowerCase().includes('sitting is kept'), await text('today-path'));
-    check('and the caption says what Begin does', (await text('today-path-caption')).includes('picks the Interview up'), await text('today-path-caption'));
+    check('which says the first line is kept', (await text('today-path')).toLowerCase().includes('first line'), await text('today-path'));
+    check('and shows it', (await seen('today-first-line')) && (await text('today-first-line')).includes('run before work'), (await seen('today-first-line')) ? await text('today-first-line') : 'no card');
     await tap('today-begin');
     await page.clock.runFor(1200);
     await page.waitForTimeout(500);
-    check('and Begin the Interview resumes on the same question', (await text('interview-question')) === 'How far?', await text('interview-question'));
+    check('and Find your goals resumes on the same question', (await text('interview-question')) === 'How far?', await text('interview-question'));
     // A wrong tap is not final: Back undoes it and keeps everything before it (§7.1).
     await tap('interview-back');
     check('Back in the Interview undoes the last answer', (await text('interview-question')) !== 'How far?');
@@ -335,21 +372,21 @@ async function main() {
     await tap('option-1'); // Six months
     await tap('option-1'); // admire: a friend
     check('summary names the goal', (await page.locator('body').innerText()).includes('Half marathon'));
+    check('and the button is the fifteen minutes, in plain words', (await text('interview-finish')).toLowerCase().includes('your future'), await text('interview-finish'));
     await tap('interview-finish');
     check('authoring opening', await seen('screen-authoring'));
 
     // ---- halfway along, the app opens on the next step, not the start
-    // Somebody who named goals tonight and comes back tomorrow used to be
-    // offered "Begin tonight" and the Interview again, or a Today with a
-    // goal row and nothing to do on it.
     await page.goto(`${BASE}/`, { waitUntil: 'networkidle' });
     await page.clock.runFor(1500);
     await page.waitForTimeout(500);
     check('a launch with goals named does not show Welcome again', !(await seen('screen-welcome')) && (await seen('screen-today')));
     check('Today, with goals and no Book, is the path, headed by where the person is', (await text('today-path')) === 'Your goals are named.', await text('today-path'));
-    check('and its button is the next step', (await text('today-begin')) === 'Write the Fifteen', await text('today-begin'));
+    check('and its button is the next step', (await text('today-begin')).toLowerCase().includes('write your future'), await text('today-begin'));
+    check('with the first two steps ticked on the card', (await text('today-evenings')).toLowerCase().includes('step 3 of 5'), await text('today-evenings'));
     await tap('today-begin');
     check('and it goes to the Fifteen', await seen('screen-authoring'));
+    check('which is step three of five', (await text('authoring-progress')).toLowerCase().includes('step 3 of 5'), await text('authoring-progress'));
 
     // ---- the Fifteen
     await tap('authoring-begin');
@@ -414,7 +451,7 @@ async function main() {
     // Before the floor: "Done for now" is a door, not a countdown to wait
     // behind. Pressed later in the walk, on an addition; here only that it is
     // offered, and what the room says about the floor.
-    check('before the floor the room says how much more is a full sitting', (await text('write-floor')).toLowerCase().endsWith('min more is a full sitting'), await text('write-floor'));
+    check('before the floor the room says how much more is a full sitting', (await text('write-floor')).toLowerCase().endsWith('min more is a full session'), await text('write-floor'));
     check('and offers Done for now once there are words', await seen('write-done-early'));
 
     // fast-forward past the ten-minute floor
@@ -459,7 +496,7 @@ async function main() {
     // The first evening ends on Today, with the next step on the path card
     // — not straight on into the second sitting.
     check('the read-back lands on Today, a marked stopping point', await seen('screen-today') && (await seen('today-path')));
-    check('with the Fifteen written, Today points at the order', (await text('today-begin')) === 'Put the goals in order', await text('today-begin'));
+    check('with the Fifteen written, Today points at the order', (await text('today-begin')) === 'Put your goals in order', await text('today-begin'));
     await tap('today-begin');
     check('rank screen', await seen('screen-rank'));
     // One question per page: the order here, the name on its own page.
@@ -576,11 +613,27 @@ async function main() {
     }
 
     // ---- the account ask (only in a build with an account service) — never a gate
-    if (await seen('screen-account')) {
-      check('the account is offered after the Portrait, once, with a plain way past it', await seen('account-not-now'));
-      await tap('account-not-now');
+    if (await seen('screen-signin')) {
+      check('the account is offered after the Portrait, once, with a plain way past it', await seen('signin-not-now'));
+      await tap('signin-not-now');
       await page.waitForTimeout(600);
     }
+
+    // ---- the sign-in screen (the rebuild): one door for the account, never a wall
+    await page.goto(`${BASE}/signin?next=/seal-book`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(600);
+    check('the sign-in screen opens cold', await seen('screen-signin'));
+    check('and says plainly when there is no account service', (await text('signin-heading')).toLowerCase().includes('no account service') || (await text('signin-heading')).toLowerCase().includes('sign in'), await text('signin-heading'));
+    check('with no Google button in a build without the id', !(await seen('signin-google')));
+    check('and the privacy details a tap away', await seen('signin-privacy'));
+    await tap('signin-privacy');
+    check('which open to read, not to affirm', (await seen('screen-consent')) && (await seen('consent-got-it')));
+    await tap('consent-got-it');
+    check('and come back to sign-in', await seen('screen-signin'));
+    await accessible('sign in');
+    await tap('signin-not-now');
+    check('Not now goes where the person was headed', await seen('screen-seal-book'));
 
     // ---- seal the Book
     check('seal screen', await seen('screen-seal-book'));

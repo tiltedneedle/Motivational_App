@@ -24,7 +24,8 @@ const missing = [];
 for (const file of files) {
   if (ROOTS.has(file)) continue;
   const src = await readFile(join(DIR, file), 'utf8');
-  const hasTopBar = /<TopBar[\s\S]*?back=\{/.test(src);
+  // The shell's Screen carries the same top bar with the same `back`.
+  const hasTopBar = /<(TopBar|Screen)[\s\S]*?back=\{/.test(src);
   const hasTextBack = /label="← (Today|Back)"/.test(src) || /label="Back"/.test(src);
   // A sheet closes; a running routine stops. Both sit where Back does.
   const hasClose = /label="(Close|Stop)"/.test(src);

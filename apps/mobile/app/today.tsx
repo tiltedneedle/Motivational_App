@@ -8,6 +8,7 @@ import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   consistencyCaption,
+  endSentence,
   paywallMoment,
   dayOf,
   domainMeta,
@@ -342,7 +343,7 @@ export default function Today() {
             {/* Today comes from the Future volume, but it is not the only door. */}
             <TextButton testID="today-other-volumes" label={elsewhere ? 'The three volumes' : 'Or start with your past or present'} onPress={() => router.push('/choose')} style={{ alignSelf: 'center' }} />
             {hasSupabase && !state.account ? (
-              <TextButton testID="today-bring-back" label="Bring my Book back from my account" onPress={() => router.push('/account')} style={{ alignSelf: 'center' }} />
+              <TextButton testID="today-bring-back" label="Sign in to bring my Book back" onPress={() => router.push('/signin')} style={{ alignSelf: 'center' }} />
             ) : null}
           </ScrollView>
           <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 18, paddingBottom: 10 }}>
@@ -779,7 +780,7 @@ export default function Today() {
             <Pressable
               testID="today-from-your-words"
               accessibilityRole="button"
-              accessibilityLabel={`From your words: “${fromYourWords}”. Opens the coach.`}
+              accessibilityLabel={`From your words: ${endSentence(`“${fromYourWords}”`)} Opens the coach.`}
               onPress={() => router.push('/coach')}
               style={{ marginTop: 22, backgroundColor: day.surface2, borderRadius: radius.card, padding: 18, gap: 6 }}
             >

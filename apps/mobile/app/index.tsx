@@ -53,7 +53,7 @@ export default function Welcome() {
             <InkButton testID="welcome-begin" label={here ? 'Back to today' : 'Get started'} onPress={() => (here ? router.dismissTo('/today') : router.push('/setup'))} />
             {!here ? <GhostButton testID="welcome-look" label="Look around first" onPress={() => router.push('/today')} /> : null}
             {hasSupabase && !account && !here ? (
-              <TextButton testID="welcome-bring-back" label="I already have a Book on my account" onPress={() => router.push('/account')} style={{ alignSelf: 'center' }} />
+              <TextButton testID="welcome-bring-back" label="I already have an account" onPress={() => router.push('/signin')} style={{ alignSelf: 'center' }} />
             ) : null}
             <Label style={{ textAlign: 'center', marginTop: 2 }}>{hasSupabase ? 'No sign-up wall. Your writing stays on this phone' : 'No sign-up. Everything stays on this phone'}</Label>
           </Rise>

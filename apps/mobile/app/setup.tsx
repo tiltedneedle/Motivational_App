@@ -13,7 +13,7 @@
  * writing door). Then the first line.
  */
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { AREAS, addCustomArea, beginBranches, domainMeta, initialInterview, toggleArea, type DomainId, type Persona } from '@morrow/core';
 import { Body, Glyph, Heading, Label, OptionTile, Screen, Slide, TextButton, UserField, accent, day, type as fonts, useReducedMotion } from '@morrow/ui';
@@ -45,6 +45,14 @@ const AREA_GLYPH: Record<DomainId, 'health' | 'money' | 'craft' | 'mind' | 'peop
   custom: 'custom',
 };
 
+/**
+ * The answers so far, kept across a detour to the details page: the router
+ * remounts this screen on the way back, and a person who read one page
+ * about privacy should not find their four answers gone. Session-only;
+ * set-up is thirty seconds and consent is the record of it.
+ */
+let remembered: { step: Step; areas: string[]; custom: string; when: 'morning' | 'evening' | 'any' | null; voice: Persona | null; name: string | null; sixteen: boolean } | null = null;
+
 export default function Setup() {
   const router = useRouter();
   useFirstRunStep('setup');
@@ -54,14 +62,17 @@ export default function Setup() {
   const consent = useMorrow((s) => s.consent);
   const saveInterviewDraft = useMorrow((s) => s.saveInterviewDraft);
 
-  const [step, setStep] = useState<Step>(0);
-  const [areas, setAreas] = useState<string[]>([]);
-  const [custom, setCustom] = useState('');
-  const [customOpen, setCustomOpen] = useState(false);
-  const [when, setWhen] = useState<'morning' | 'evening' | 'any' | null>(null);
-  const [voice, setVoice] = useState<Persona | null>(null);
-  const [name, setName] = useState(profile.displayName);
-  const [sixteen, setSixteen] = useState(false);
+  const [step, setStep] = useState<Step>(() => remembered?.step ?? 0);
+  const [areas, setAreas] = useState<string[]>(() => remembered?.areas ?? []);
+  const [custom, setCustom] = useState(() => remembered?.custom ?? '');
+  const [customOpen, setCustomOpen] = useState(() => Boolean(remembered?.custom));
+  const [when, setWhen] = useState<'morning' | 'evening' | 'any' | null>(() => remembered?.when ?? null);
+  const [voice, setVoice] = useState<Persona | null>(() => remembered?.voice ?? null);
+  const [name, setName] = useState(() => remembered?.name ?? profile.displayName);
+  const [sixteen, setSixteen] = useState(() => remembered?.sixteen ?? false);
+  useEffect(() => {
+    remembered = { step, areas, custom, when, voice, name, sixteen };
+  }, [step, areas, custom, when, voice, name, sixteen]);
 
   const back = () => {
     if (step === 0) {
@@ -90,6 +101,7 @@ export default function Setup() {
       saveInterviewDraft(s, [before]);
     }
     consent();
+    remembered = null;
     router.push('/first-write');
   };
 

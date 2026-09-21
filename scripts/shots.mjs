@@ -55,6 +55,11 @@ const MIME = {
 const ROUTES = {
   welcome: '/?intro=1',
   consent: '/consent',
+  'consent-details': '/consent?from=setup',
+  setup: '/setup',
+  signin: '/signin',
+  'first-write': '/first-write',
+  mirror: '/mirror',
   interview: '/interview',
   authoring: '/authoring',
   'write-doorway': '/write?kind=ideal',

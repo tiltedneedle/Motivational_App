@@ -26,13 +26,34 @@
  * nothing of the app's behind it — fires no popstate and is not the app's to
  * intercept; that is the browser's, the same as on any site.
  */
-import { useNavigation } from 'expo-router';
+import { useNavigation, usePathname } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 
 interface Handler {
   canStepBack: boolean;
   stepBack: () => void;
+  /** The path this screen lives at, as the browser showed it when the screen mounted. */
+  path: string;
+}
+
+/**
+ * The path the browser was on before the pop being handled. A pop that
+ * leaves some other screen — the privacy details pushed over set-up — is
+ * that screen's, and no handler underneath it may take it as its own. The
+ * browser has already moved by the time popstate fires, so the path is
+ * tracked as it changes.
+ */
+let currentPath = typeof window !== 'undefined' ? window.location.pathname : '/';
+if (Platform.OS === 'web' && typeof window !== 'undefined') {
+  for (const method of ['pushState', 'replaceState'] as const) {
+    const original = window.history[method].bind(window.history);
+    window.history[method] = ((...args: Parameters<History['pushState']>) => {
+      const out = original(...args);
+      currentPath = window.location.pathname;
+      return out;
+    }) as History['pushState'];
+  }
 }
 
 /** The screens mounted right now that use this, the one on top last. */
@@ -44,6 +65,8 @@ const mounted: { current: Handler }[] = [];
 let restoring = false;
 
 function onPopState(e: { stopImmediatePropagation: () => void }): void {
+  const leaving = currentPath;
+  currentPath = window.location.pathname;
   if (restoring) {
     restoring = false;
     e.stopImmediatePropagation();
@@ -51,6 +74,12 @@ function onPopState(e: { stopImmediatePropagation: () => void }): void {
   }
   const top = mounted[mounted.length - 1]?.current;
   if (!top?.canStepBack) return;
+  // The pop belongs to the screen the browser is leaving. A handler for a
+  // screen underneath it — set-up under the privacy details — stays out
+  // of the way; it used to take that pop as its own step back. (The
+  // navigator's own focus is no help here: on web it reports the screen
+  // underneath as focused, and re-renders it after the URL has moved.)
+  if (top.path !== leaving) return;
   e.stopImmediatePropagation();
   restoring = true;
   window.history.go(1);
@@ -63,12 +92,18 @@ if (Platform.OS === 'web' && typeof window !== 'undefined') {
 
 export function usePlatformBack(canStepBack: boolean, stepBack: () => void): void {
   const navigation = useNavigation();
+  // The screen's own path, taken once at mount from the navigator — which
+  // already has this screen as the route in front — rather than from the
+  // browser, which is still showing the previous screen's URL at that
+  // moment. A later render may happen with another screen's path current.
+  const pathname = usePathname();
+  const path = useRef(pathname).current;
   // Read at the moment of the event, never from a closure that has gone
   // stale: a listener remade on every change was still one render behind on
   // Full's writing screen.
-  const latest = useRef<Handler>({ canStepBack, stepBack });
+  const latest = useRef<Handler>({ canStepBack, stepBack, path });
   useEffect(() => {
-    latest.current = { canStepBack, stepBack };
+    latest.current = { canStepBack, stepBack, path };
   });
 
   useEffect(() => {

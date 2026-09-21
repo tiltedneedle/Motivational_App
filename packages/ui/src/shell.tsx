@@ -162,7 +162,13 @@ export function ProgressBar({ value, label, testID, style }: { value: number; la
   const { p } = usePalette();
   const pct = Math.max(0, Math.min(1, value));
   return (
-    <View testID={testID} style={[{ gap: 8 }, style]} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: Math.round(pct * 100), text: label }} accessibilityLabel={label}>
+    <View
+      testID={testID}
+      style={[{ gap: 8 }, style]}
+      accessibilityRole="progressbar"
+      accessibilityValue={{ min: 0, max: 100, now: Math.round(pct * 100), text: label }}
+      accessibilityLabel={label ?? `${Math.round(pct * 100)} percent`}
+    >
       {label ? <Label numberOfLines={1}>{label}</Label> : null}
       <View style={{ height: 4, borderRadius: 2, backgroundColor: p.line, overflow: 'hidden' }}>
         <View
@@ -401,12 +407,12 @@ export type WeekDay = { key: string; letter: string; state: 'sealed' | 'today' |
 export function WeekStrip({ days, testID }: { days: WeekDay[]; testID?: string }) {
   const { p } = usePalette();
   return (
-    <View testID={testID} accessibilityRole="list" style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+    <View testID={testID} accessibilityLabel={`This week: ${days.map((d) => d.label).join('; ')}`} accessible style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
       {days.map((d) => {
         const sealed = d.state === 'sealed' || d.state === 'todaySealed';
         const today = d.state === 'today' || d.state === 'todaySealed';
         return (
-          <View key={d.key} accessibilityLabel={d.label} accessibilityRole="text" style={{ alignItems: 'center', gap: 6, width: 36 }}>
+          <View key={d.key} style={{ alignItems: 'center', gap: 6, width: 36 }}>
             <Text style={{ fontFamily: fonts.sansMedium, fontSize: 11, color: today ? p.ink : p.ink3 }}>{d.letter}</Text>
             <View
               style={{
@@ -483,12 +489,13 @@ export function PathCard({
           </Text>
         ) : null}
       </View>
-      <ProgressBar value={done / steps.length} />
+      <ProgressBar value={done / steps.length} label={undefined} testID={testID ? `${testID}-bar` : undefined} />
       <View style={{ gap: 8 }}>
         {steps.map((s, i) => {
           const current = i === at && !s.done;
+          const later = !s.done && !current;
           return (
-            <View key={s.label} accessibilityLabel={`${s.label}${s.done ? ', done' : current ? ', next' : ''}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, opacity: !s.done && !current ? 0.55 : 1 }}>
+            <View key={s.label} accessibilityLabel={`${s.label}${s.done ? ', done' : current ? ', next' : ''}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <View
                 style={{
                   width: 22,
@@ -503,8 +510,8 @@ export function PathCard({
               >
                 {s.done ? <Glyph name="check" size={14} color="#FFFFFF" /> : null}
               </View>
-              <Text style={{ flex: 1, fontFamily: current ? fonts.sansSemi : fonts.sansMedium, fontSize: 15, color: p.ink }}>{s.label}</Text>
-              {s.minutes ? <Text style={{ fontFamily: fonts.sans, fontSize: 13, color: p.ink3 }}>{s.minutes}</Text> : null}
+              <Text style={{ flex: 1, fontFamily: current ? fonts.sansSemi : fonts.sansMedium, fontSize: 15, color: later ? p.ink2 : p.ink }}>{s.label}</Text>
+              {s.minutes ? <Text style={{ fontFamily: fonts.sans, fontSize: 13, color: p.ink2 }}>{s.minutes}</Text> : null}
             </View>
           );
         })}
@@ -633,6 +640,61 @@ export function RoundButton({
       })}
     >
       <Glyph name={glyph} size={24} color={primary ? '#FFFFFF' : p.ink} strokeWidth={2.2} />
+    </Pressable>
+  );
+}
+
+// ---------------------------------------------------------------- sign in
+
+/** The four-colour G, as Google draws it, on an 18-point grid. */
+export function GoogleMark({ size = 20 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 48 48" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      <Path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+      <Path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+      <Path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+      <Path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+    </Svg>
+  );
+}
+
+/**
+ * Continue with Google, drawn to Google's own rules for the light button:
+ * white, a hairline, the mark at the left, the words in the middle. It is
+ * the one button in the product that is not the product's, which is the
+ * point — a person recognises it.
+ */
+export function GoogleButton({ onPress, testID, busy = false, label = 'Continue with Google' }: { onPress: () => void; testID?: string; busy?: boolean; label?: string }) {
+  const { hovered, hoverProps } = useHover();
+  const reduced = useReducedMotion();
+  const { scale, onPressIn, onPressOut } = usePress(reduced);
+  return (
+    <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ busy }} onPress={busy ? undefined : onPress} onPressIn={onPressIn} onPressOut={onPressOut} {...hoverProps}>
+      {({ pressed }) => (
+        <Animated.View
+          style={[
+            {
+              minHeight: 54,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 12,
+              paddingHorizontal: 18,
+              borderRadius: 999,
+              backgroundColor: '#FFFFFF',
+              borderWidth: 1,
+              borderColor: hovered ? '#5F6368' : '#747775',
+              opacity: busy ? 0.7 : 1,
+              transform: [{ translateY: hovered && !pressed ? -1 : 0 }, { scale }],
+            },
+            Platform.OS === 'web' ? webHover.transitionStill : null,
+            Platform.OS === 'web' ? webOnlyStyle({ boxShadow: hovered && !pressed ? '0 4px 12px rgba(23,24,28,0.12)' : '0 1px 2px rgba(23,24,28,0.06)' }) : null,
+          ]}
+        >
+          <GoogleMark size={20} />
+          <Text style={{ fontFamily: fonts.sansSemi, fontSize: 16, color: '#1F1F1F' }}>{busy ? 'One moment…' : label}</Text>
+        </Animated.View>
+      )}
     </Pressable>
   );
 }
