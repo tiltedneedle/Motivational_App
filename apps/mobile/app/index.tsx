@@ -6,7 +6,7 @@
  * first.
  */
 import { Redirect, useIsFocused, useLocalSearchParams, useRouter } from 'expo-router';
-import { View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Body, GhostButton, InkButton, Label, Rise, Settle, Statement, Stone, Studio, TextButton, useReducedMotion } from '@morrow/ui';
 import { useHasBegun, useLatestBook, useMorrow } from '../src/store';
@@ -33,8 +33,9 @@ export default function Welcome() {
   return (
     <Studio testID="screen-welcome">
       <SafeAreaView style={{ flex: 1 }}>
-        <View style={{ flex: 1, paddingHorizontal: 22, paddingVertical: 24, justifyContent: 'space-between' }}>
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', gap: 20 }}>
+        {/* Scrolls: on a small phone, or at 200% type, the buttons were under the hero with no way to them. */}
+        <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 22, paddingVertical: 24, justifyContent: 'space-between' }} showsVerticalScrollIndicator={false}>
+          <View style={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', gap: 20, paddingVertical: 12 }}>
             <Rise index={0} reducedMotion={reduced} style={{ alignItems: 'center', gap: 20 }}>
               <Settle reduced={reduced}>
                 <Stone size={132} domain="health" polish={1} sweep={!reduced && focused} testID="welcome-stone" />
@@ -57,7 +58,7 @@ export default function Welcome() {
             ) : null}
             <Label style={{ textAlign: 'center', marginTop: 2 }}>{hasSupabase ? 'No sign-up wall. Your writing stays on this phone' : 'No sign-up. Everything stays on this phone'}</Label>
           </Rise>
-        </View>
+        </ScrollView>
       </SafeAreaView>
     </Studio>
   );

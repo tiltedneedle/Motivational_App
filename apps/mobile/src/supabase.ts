@@ -60,6 +60,12 @@ export function supabase(): Promise<SupabaseClient | null> {
           autoRefreshToken: true,
           persistSession: true,
           detectSessionInUrl: false,
+          // PKCE (the rebuild's review): a sign-in through Google comes back
+          // with a one-time code, not with tokens in the URL — which on a
+          // phone is a custom-scheme URL any app can register for. The
+          // verifier lives in the same storage as the session, so the
+          // exchange happens here and nowhere else.
+          flowType: 'pkce',
         },
       }),
     )
@@ -159,7 +165,7 @@ export async function signInFromUrl(url: string | null | undefined): Promise<Aut
     const u = new URL(url);
     const fragment = u.hash.startsWith('#') ? u.hash.slice(1) : u.hash;
     params = new URLSearchParams(fragment || u.search);
-    if (!params.has('access_token') && !params.has('token_hash')) {
+    if (!params.has('access_token') && !params.has('token_hash') && !params.has('code')) {
       // some senders put the fragment's keys in the query instead
       params = new URLSearchParams(u.search);
     }
@@ -169,6 +175,14 @@ export async function signInFromUrl(url: string | null | undefined): Promise<Aut
   const error = params.get('error_description') ?? params.get('error');
   if (error) return { ok: false, error: plain(error.replace(/\+/g, ' ')) };
   try {
+    // The PKCE code, from Google (or any provider) coming back: exchanged
+    // here with the verifier this device kept. A code from a URL that did
+    // not start on this device exchanges for nothing.
+    const code = params.get('code');
+    if (code) {
+      const { error: e } = await c.auth.exchangeCodeForSession(code);
+      return e ? { ok: false, error: plain(e.message) } : { ok: true };
+    }
     const access = params.get('access_token');
     const refresh = params.get('refresh_token');
     if (access && refresh) {

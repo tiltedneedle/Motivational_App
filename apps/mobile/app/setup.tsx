@@ -12,7 +12,7 @@
  * The end of set-up is consent (PRD §12: the gate stands before any
  * writing door). Then the first line.
  */
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { AREAS, addCustomArea, beginBranches, domainMeta, initialInterview, toggleArea, type DomainId, type Persona } from '@morrow/core';
@@ -107,13 +107,18 @@ export default function Setup() {
 
   const canGoOn = step === 0 ? areas.length > 0 || custom.trim().length > 0 : step === 1 ? when !== null : step === 2 ? voice !== null : sixteen;
 
+  // Set-up is over once consent is recorded. Reached again — the browser's
+  // back from the first line, a stale link — it goes to Today rather than
+  // asking four questions that were answered.
+  if (profile.consentedAt && remembered === null) return <Redirect href="/today" />;
+
   const answered = (label: string, value: string, at: Step) => (
     <Pressable
       key={label}
       accessibilityRole="button"
       accessibilityLabel={`${label}: ${value}. Change`}
       onPress={() => setStep(at)}
-      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: day.line2 }}
+      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingVertical: 12, minHeight: 44, borderBottomWidth: 1, borderBottomColor: day.line2 }}
     >
       <Text style={{ fontFamily: fonts.sans, fontSize: 14, color: day.ink2, flexShrink: 1 }}>{label}</Text>
       <Text numberOfLines={1} style={{ fontFamily: fonts.sansSemi, fontSize: 14, color: day.ink, flexShrink: 1 }}>
@@ -198,7 +203,7 @@ export default function Setup() {
               aria-checked={sixteen}
               accessibilityLabel="I am sixteen or over"
               onPress={() => setSixteen((v) => !v)}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6 }}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 9, minHeight: 44 }}
             >
               <View style={{ width: 26, height: 26, borderRadius: 8, borderWidth: 2, borderColor: sixteen ? day.ink : day.ink3, backgroundColor: sixteen ? day.ink : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
                 {sixteen ? <Glyph name="check" size={16} color={day.onInk} /> : null}
@@ -207,7 +212,7 @@ export default function Setup() {
             </Pressable>
             <View style={{ gap: 6, backgroundColor: day.surface2, borderRadius: 16, padding: 14 }}>
               <Body testID="setup-privacy" style={{ fontSize: 14, lineHeight: 20 }}>
-                Everything you write stays on this phone. The AI never writes a goal or a line of your Book — it only asks and quotes you.
+                Your writing stays on this phone. Only when you ask — a read-back of your phrases, a check on a piece of writing, a scene — does that piece go to an AI service, and it never writes a goal or a line of your Book.
               </Body>
               <TextButton testID="setup-details" label="What leaves the phone, and when" onPress={() => router.push('/consent?from=setup')} style={{ alignSelf: 'flex-start' }} />
             </View>

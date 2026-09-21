@@ -44,7 +44,9 @@ interface Handler {
  * browser has already moved by the time popstate fires, so the path is
  * tracked as it changes.
  */
-let currentPath = typeof window !== 'undefined' ? window.location.pathname : '/';
+// On React Native `window` is the global and has no `location`; only the
+// web build reads it (a module-level read here crashed a native boot).
+let currentPath = Platform.OS === 'web' && typeof window !== 'undefined' && window.location ? window.location.pathname : '/';
 if (Platform.OS === 'web' && typeof window !== 'undefined') {
   for (const method of ['pushState', 'replaceState'] as const) {
     const original = window.history[method].bind(window.history);

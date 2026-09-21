@@ -23,6 +23,7 @@ export default function SignIn() {
   const account = useMorrow((s) => s.account);
   const setAccount = useMorrow((s) => s.setAccount);
   const afterSignIn = useMorrow((s) => s.afterSignIn);
+  const markAccountAsked = useMorrow((s) => s.markAccountAsked);
   const { next } = useLocalSearchParams<{ next?: string }>();
   const [busy, setBusy] = useState<'google' | 'apple' | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
@@ -32,7 +33,13 @@ export default function SignIn() {
     if (router.canGoBack()) router.back();
     else router.replace(to || '/today');
   };
-  const onwards = () => router.replace((to || '/account') as never);
+  /** The email code lives on the account screen; it carries `next` on. */
+  const onwards = () => router.replace((to ? `/account?next=${to}` : '/account') as never);
+  /** Past the ask, once: it is offered after the Portrait and never again. */
+  const notNow = () => {
+    markAccountAsked();
+    router.replace((to || '/today') as never);
+  };
 
   /** Signed in here (a phone's auth session, Apple): the account screen finishes the copy. */
   const settle = async (method: 'apple' | 'google') => {
@@ -40,7 +47,7 @@ export default function SignIn() {
     const synced = await afterSignIn();
     track({ name: 'account_signed_in', method, pulled: synced.ok && synced.pulled });
     if (!synced.ok) setProblem(synced.error);
-    router.replace('/account');
+    router.replace((to ? `/account?next=${to}` : '/account') as never);
   };
 
   const google = async () => {
@@ -91,7 +98,7 @@ export default function SignIn() {
       testID="screen-signin"
       back={{ onPress: back, testID: 'signin-back' }}
       where="Sign in"
-      secondary={{ label: hasSupabase ? 'Not now — keep it on this phone' : 'Carry on', onPress: () => router.replace((to || '/today') as never), testID: 'signin-not-now' }}
+      secondary={{ label: hasSupabase ? 'Not now — keep it on this phone' : 'Carry on', onPress: notNow, testID: 'signin-not-now' }}
     >
       <View style={{ alignItems: 'center', paddingTop: 10, paddingBottom: 6 }}>
         <Stone size={88} domain="health" polish={1} sweep={!reduced} />
@@ -118,7 +125,7 @@ export default function SignIn() {
           <Chip testID="signin-email" label="Continue with email" onPress={onwards} style={{ minHeight: 54 }} />
           <Notice testID="signin-problem" kind="error" text={problem} style={{ color: accent.coralText }} />
           <Body style={{ fontSize: 13, color: day.ink2, textAlign: 'center', marginTop: 6 }}>
-            {hasGoogle ? 'Google or Apple give the app an email address and nothing else. ' : ''}No password is ever made or kept. The account only ever holds a copy of the Book.
+            {hasGoogle ? 'Google or Apple hand the app your email address and name, nothing more. ' : ''}No password is ever made or kept. The account only ever holds a copy of the Book.
           </Body>
         </View>
       ) : hasSupabase && account ? (

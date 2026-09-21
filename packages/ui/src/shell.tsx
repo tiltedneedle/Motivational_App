@@ -160,22 +160,31 @@ export function Glyph({ name, size = 22, color, strokeWidth = 1.8 }: { name: Gly
  */
 export function ProgressBar({ value, label, testID, style }: { value: number; label?: string; testID?: string; style?: StyleProp<ViewStyle> }) {
   const { p } = usePalette();
+  const reduced = useReducedMotion();
   const pct = Math.max(0, Math.min(1, value));
+  const now = Math.round(pct * 100);
   return (
     <View
       testID={testID}
       style={[{ gap: 8 }, style]}
       accessibilityRole="progressbar"
-      accessibilityValue={{ min: 0, max: 100, now: Math.round(pct * 100), text: label }}
-      accessibilityLabel={label ?? `${Math.round(pct * 100)} percent`}
+      // Both spellings: the object form is what native reads, the aria
+      // props are what react-native-web forwards (it drops the object).
+      accessibilityValue={{ min: 0, max: 100, now, text: label }}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={now}
+      aria-valuetext={label ?? `${now} percent`}
+      accessibilityLabel={label ?? `${now} percent`}
     >
       {label ? <Label numberOfLines={1}>{label}</Label> : null}
       <View style={{ height: 4, borderRadius: 2, backgroundColor: p.line, overflow: 'hidden' }}>
         <View
           testID={testID ? `${testID}-fill` : undefined}
           style={[
-            { height: 4, borderRadius: 2, backgroundColor: accent.coral, width: `${Math.round(pct * 100)}%` },
-            Platform.OS === 'web' ? webOnlyStyle({ transitionProperty: 'width', transitionDuration: '360ms', transitionTimingFunction: 'cubic-bezier(0.2, 0.7, 0.2, 1)' }) : null,
+            { height: 4, borderRadius: 2, backgroundColor: accent.coral, width: `${now}%` },
+            // The fill eases to its new width; under reduce motion it is simply there.
+            Platform.OS === 'web' && !reduced ? webOnlyStyle({ transitionProperty: 'width', transitionDuration: '360ms', transitionTimingFunction: 'cubic-bezier(0.2, 0.7, 0.2, 1)' }) : null,
           ]}
         />
       </View>
@@ -392,6 +401,8 @@ export function StreakPill({ count, testID }: { count: number; testID?: string }
   return (
     <View
       testID={testID}
+      accessible
+      accessibilityRole="text"
       accessibilityLabel={on ? `${count} day streak` : 'No streak yet'}
       style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, paddingLeft: 10, paddingRight: 12, borderRadius: 999, backgroundColor: on ? accent.coralSoft : p.surface2 }}
     >
@@ -407,7 +418,7 @@ export type WeekDay = { key: string; letter: string; state: 'sealed' | 'today' |
 export function WeekStrip({ days, testID }: { days: WeekDay[]; testID?: string }) {
   const { p } = usePalette();
   return (
-    <View testID={testID} accessibilityLabel={`This week: ${days.map((d) => d.label).join('; ')}`} accessible style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+    <View testID={testID} accessible accessibilityRole="text" accessibilityLabel={`This week: ${days.map((d) => d.label).join('; ')}`} style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
       {days.map((d) => {
         const sealed = d.state === 'sealed' || d.state === 'todaySealed';
         const today = d.state === 'today' || d.state === 'todaySealed';
@@ -480,7 +491,7 @@ export function PathCard({
     >
       <View style={{ gap: 6 }}>
         <Label testID={testID ? `${testID}-where` : undefined}>{`Step ${Math.min(at + 1, steps.length)} of ${steps.length}`}</Label>
-        <Text testID={testID ? `${testID}-title` : undefined} accessibilityRole="header" style={{ fontFamily: fonts.sansBold, fontSize: 24, lineHeight: 29, color: p.ink }}>
+        <Text testID={testID ? `${testID}-title` : undefined} accessibilityRole="header" aria-level={2} style={{ fontFamily: fonts.sansBold, fontSize: 24, lineHeight: 29, color: p.ink }}>
           {title}
         </Text>
         {caption ? (
@@ -495,7 +506,7 @@ export function PathCard({
           const current = i === at && !s.done;
           const later = !s.done && !current;
           return (
-            <View key={s.label} accessibilityLabel={`${s.label}${s.done ? ', done' : current ? ', next' : ''}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <View key={s.label} accessible accessibilityRole="text" accessibilityLabel={`${s.label}${s.minutes ? `, ${s.minutes}` : ''}${s.done ? ', done' : current ? ', next' : ''}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <View
                 style={{
                   width: 22,
@@ -669,7 +680,7 @@ export function GoogleButton({ onPress, testID, busy = false, label = 'Continue 
   const reduced = useReducedMotion();
   const { scale, onPressIn, onPressOut } = usePress(reduced);
   return (
-    <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ busy }} onPress={busy ? undefined : onPress} onPressIn={onPressIn} onPressOut={onPressOut} {...hoverProps}>
+    <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={busy ? 'One moment' : label} accessibilityState={{ busy, disabled: busy }} aria-busy={busy} aria-disabled={busy} onPress={busy ? undefined : onPress} onPressIn={onPressIn} onPressOut={onPressOut} {...hoverProps}>
       {({ pressed }) => (
         <Animated.View
           style={[
@@ -692,7 +703,7 @@ export function GoogleButton({ onPress, testID, busy = false, label = 'Continue 
           ]}
         >
           <GoogleMark size={20} />
-          <Text style={{ fontFamily: fonts.sansSemi, fontSize: 16, color: '#1F1F1F' }}>{busy ? 'One moment…' : label}</Text>
+          <Text style={{ flexShrink: 1, textAlign: 'center', fontFamily: fonts.sansSemi, fontSize: 16, color: '#1F1F1F' }}>{busy ? 'One moment…' : label}</Text>
         </Animated.View>
       )}
     </Pressable>

@@ -42,6 +42,7 @@ export default function FirstWrite() {
   const [listening, setListening] = useState(false);
   const [micNote, setMicNote] = useState<string | null>(null);
   const [canListen, setCanListen] = useState(false);
+  const [focused, setFocused] = useState(false);
   const anchorRef = useRef('');
   const dictationRef = useRef(dictation());
   const inputRef = useRef<TextInput>(null);
@@ -140,7 +141,8 @@ export default function FirstWrite() {
       <Text testID="first-write-prompt" accessibilityRole="header" style={{ fontFamily: fonts.sansBold, fontSize: 28, lineHeight: 34, color: day.ink }}>
         {prompt}
       </Text>
-      <Pressable accessibilityRole="none" onPress={() => inputRef.current?.focus()} style={{ minHeight: 180, borderBottomWidth: 2, borderBottomColor: body ? accent.coral : day.line, paddingTop: 6, paddingBottom: 10 }}>
+      {/* Focus is shown by the line under the page, as every field's is; the wrapper only widens the tap and is not itself a stop. */}
+      <Pressable accessible={false} focusable={false} onPress={() => inputRef.current?.focus()} style={{ minHeight: 180, borderBottomWidth: focused ? 3 : 2, borderBottomColor: focused ? accent.coral : body ? accent.coralSoftLine : day.line, paddingTop: 6, paddingBottom: 10 }}>
         <TextInput
           ref={inputRef}
           testID="first-write-input"
@@ -152,6 +154,8 @@ export default function FirstWrite() {
           }}
           multiline
           autoFocus={!reduced}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
           placeholder="Start anywhere."
           placeholderTextColor={day.ink3}
           style={{ fontFamily: fonts.serif, fontSize: 21, lineHeight: 31, color: day.ink, minHeight: 160, textAlignVertical: 'top', padding: 0, ...(Platform.OS === 'web' ? webOnlyStyle({ outlineStyle: 'none' }) : {}) }}
@@ -165,7 +169,7 @@ export default function FirstWrite() {
             accessibilityRole="button"
             accessibilityLabel={listening ? 'Stop listening' : 'Say it instead'}
             onPress={() => void listen()}
-            style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 999, backgroundColor: listening ? accent.coralSoft : day.surface2, opacity: pressed ? 0.8 : 1 })}
+            style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44, paddingVertical: 10, paddingHorizontal: 16, borderRadius: 999, backgroundColor: listening ? accent.coralSoft : day.surface2, opacity: pressed ? 0.8 : 1 })}
           >
             <Glyph name="mic" size={18} color={listening ? accent.coralText : day.ink} />
             <Text style={{ fontFamily: fonts.sansSemi, fontSize: 13, color: listening ? accent.coralText : day.ink }}>{listening ? 'Listening…' : 'Say it'}</Text>
