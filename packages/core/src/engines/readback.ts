@@ -133,10 +133,28 @@ function cutSpoken(text: string, start: number): { text: string; start: number; 
   return pieces;
 }
 
+/**
+ * Whether `[start, end)` begins and ends on a word boundary of the source: a
+ * word character on one side of each edge and not on the other, or the edge
+ * of the text. Letters and digits are word characters; so is an apostrophe
+ * between two of them ("mum's"), so "mum" inside "mum's" is not a whole word.
+ */
+export function onWordEdges(source: string, start: number, end: number): boolean {
+  const wordAt = (i: number) => i >= 0 && i < source.length && /[\p{L}\p{N}]/u.test(source[i]!);
+  const joinedAt = (i: number) => i > 0 && i < source.length - 1 && /['’]/.test(source[i]!) && wordAt(i - 1) && wordAt(i + 1);
+  const leftOk = start === 0 || !(wordAt(start - 1) && wordAt(start)) && !(joinedAt(start - 1) && wordAt(start));
+  const rightOk = end >= source.length || !(wordAt(end - 1) && wordAt(end)) && !(wordAt(end - 1) && joinedAt(end));
+  return leftOk && rightOk;
+}
+
 /** Split into clauses while keeping exact offsets, so every span stays verbatim. */
 export function clauses(text: string): { text: string; start: number; end: number }[] {
   const out: { text: string; start: number; end: number }[] = [];
-  const re = /[^.!?;\n]+[.!?;\n]?/g;
+  // A stop ends a clause only when whitespace, a closing quote or the end
+  // follows it. The dot inside "6.40", "5.5 miles", "£1.5k" and "v2.0" is
+  // part of the word: split there, the mirror's first words back to a
+  // person were “30 and I am out the door by 7”.
+  const re = /[^\n]+?(?:[.!?;]+["'”’)\]]*(?=\s|$)|\n|$)/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) {
     const raw = m[0];
@@ -206,6 +224,9 @@ export function extractSpansLocally(text: string, limit = 7): ReadBackResult {
   for (const c of ranked) {
     if (chosen.length >= limit) break;
     if (chosen.some((x) => overlaps(x, c))) continue;
+    // A refrain is one thing they want, not three: the same sentence
+    // written again is offered once.
+    if (chosen.some((x) => x.text.trim().toLowerCase() === c.text.trim().toLowerCase())) continue;
     chosen.push({ text: c.text, start: c.start, end: c.end, domain: domainOf(c.text) });
   }
   chosen.sort(wantsFirst);
@@ -241,12 +262,15 @@ export function verifySpans(source: string, spans: { text: string; domain?: Doma
     if (text.length < 8) continue;
     let from = 0;
     let start = -1;
-    // Take the first occurrence that is not already spoken for.
+    // Take the first occurrence that is not already spoken for, and that
+    // begins and ends on a word of theirs: "call my mum on Sunday" is inside
+    // "call my mum on Sundays" but it is not what they wrote, and a quote
+    // that starts mid-word reads as a bug in the app.
     while (from <= source.length) {
       const idx = source.indexOf(text, from);
       if (idx === -1) break;
       const end = idx + text.length;
-      if (!used.some((u) => idx < u.end && u.start < end)) {
+      if (onWordEdges(source, idx, end) && !used.some((u) => idx < u.end && u.start < end)) {
         start = idx;
         break;
       }

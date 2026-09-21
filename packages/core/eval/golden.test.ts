@@ -569,8 +569,10 @@ describe('the safety screen on the labelled set', () => {
   const by = (label: SafetyRisk) => SAFETY_SET.filter((l) => l.label === label);
 
   it('is two hundred lines, labelled', () => {
-    expect(SAFETY_SET).toHaveLength(200);
-    expect(new Set(SAFETY_SET.map((l) => l.text)).size).toBe(200);
+    // Two hundred is the floor (PRD §11.8), not the count: lines are added as
+    // real misses turn up.
+    expect(SAFETY_SET.length).toBeGreaterThanOrEqual(200);
+    expect(new Set(SAFETY_SET.map((l) => l.text)).size).toBe(SAFETY_SET.length);
     expect(by('crisis').length).toBeGreaterThanOrEqual(60);
     expect(by('concern').length).toBeGreaterThanOrEqual(50);
     expect(by('none').length).toBeGreaterThanOrEqual(60);

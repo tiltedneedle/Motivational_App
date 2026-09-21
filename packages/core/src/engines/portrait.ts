@@ -195,7 +195,12 @@ export function proposeIdentity(ideal: string): IdentityProposal {
     // Not inside somebody else's clause: "pretend I'm looking at the
     // pictures", "stopped saying that I am too old", "asking if I'm alright".
     if (INSIDE_ANOTHER_CLAUSE.test(before)) continue;
-    const clause = tidy(m[1]);
+    // Nor a hedge, an opener or a fact about now: "I am not sure what time
+    // it is", "I am going to be honest", "I am 38", "I am writing this at
+    // the kitchen table" are none of them who they are becoming. And the
+    // clause stops at a comma that starts the next one of theirs.
+    const clause = tidy(m[1]).replace(/,\s+(?:i|we|it|they|but)\b.*$/i, '').trim();
+    if (NOT_A_STATE.test(clause)) continue;
     if (clause) return { clause, framing: IDENTITY_FRAMING };
   }
   return { clause: '', framing: null };
@@ -232,6 +237,8 @@ const WHO_CLAUSE = new RegExp(
   'i',
 );
 const STATE_CLAUSE = new RegExp("\\b[iI]\\s*(?:am|'m|’m)\\s+(" + LEAD + '[a-z]' + WORD_REST + '(?:,?\\s+' + WORD + ')*?)' + END, 'gi');
+const NOT_A_STATE =
+  /^(?:not\s+(?:sure|certain|convinced|entirely|really|quite|totally)\b|going\s+to\s+be\s+honest|afraid|sorry|aware|told|asked|writing\s+this|typing\s+this|sitting\s+(?:here|at|in|on)|\d+\b|still\s+in\s+\p{Lu})/iu;
 const INSIDE_ANOTHER_CLAUSE =
   /\b(?:that|if|whether|what|when|where|while|because|how|why|who|which|although|though|as|like|say|says|said|saying|pretend|pretending|think|thinks|thought|wish|hope|know|knows|feel|felt|feels|ask|asks|asked|asking|sure|realise|realize|remember|forget|tell|tells|told|until|till|unless|since|so\s+that)\s+$/i;
 

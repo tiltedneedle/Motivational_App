@@ -644,6 +644,60 @@ by hand before it was acted on. What was confirmed and fixed:
 
 ## In flight
 
+### The completeness pass (2026-09-22) — read this on resume
+
+The owner: "fix the app completely, build it completely, whatever it takes". Nine
+read-only lenses were run over the whole tree in one sweep (journey, runtime,
+resilience, dates, engines, web platform, a11y/shell, backend/security,
+dependencies); their findings are being confirmed by hand and fixed in batches.
+The raw findings are in the session scratchpad (`findings/*.md`); what matters is
+this list. Tick as done; on resume continue from the first unticked item.
+
+- [x] Vocabulary after the Book: the day is closed, an edition is finished, a goal
+      has a plan (no "seal"/"Blueprint" a person can see). Committed.
+- [x] Batch A, the daily loop: notices planned a week ahead and replaced when their
+      time or words change; the day rolls over on a mounted screen (`clockDay`); a
+      parked move does not close the following mornings; a second run never lowers
+      the day; closing the day keeps the day it opened for; the streak counts every
+      active day; a finished move remembers its day (`completedOn`); re-closing
+      edits the proof line. Committed.
+- [x] Batch B, the engines: safety false negatives ("take my life", "end it", "stop
+      existing", "no point anymore", "kms") and false positives ("career suicide",
+      "the hills kill me", "cut my arms on the brambles", "overdosed on coffee");
+      readback clauses cut at decimal points; a typed Interview follow-up wrapped
+      in the bank's template and lowercased; specificity counts "in the morning" as a
+      place; a crisis-flagged stone counts as written on the path; verifySpans
+      accepts a span that starts or ends mid-word (readback, mirror, edge
+      function); duplicate spans; identity proposal from "I am not sure…".
+- [ ] Batch C, data safety: a first sign-in from a phone with one warm-up line
+      deletes the account's Book (pushAll's prune on first push; afterSignIn asks
+      the account first); the storage latch has no exit (a recover path; write
+      failures do not latch; reset keeps the flag; a rehydrate error latches before
+      the defaults are written; writes gated on hydration); sync errors in plain
+      words; a timeout on account calls; the sign-in outcome shown on the account
+      screen; the pulled Book restores title/I-will; a revoked session clears the
+      account; one push in flight at a time; Android's double PKCE exchange.
+- [ ] Batch D, the journey: a crisis-flagged first line strands the person; the
+      first Today after set-up says "Finish your Book."; the clock closes over an
+      empty page; the read-back is not a step of the path (and Back from it opens
+      the doorway); Back from Portrait/sign-in/finish lands on "Name your Book";
+      the free plan's second goal contradicts itself on New move and Goal; the
+      practice builder invites steps it refuses; the runner restarts from step one;
+      two doorways in a row; the tab bar only on Today; the coach before the Book;
+      the streak pill at 0; "Not tonight" pushes a second Today; the mirror's
+      promised question differs on the page.
+- [ ] Batch E, the web on a phone: Safari's 7-day storage eviction (persist(),
+      an install/sign-in nudge, honest copy); the keyboard hiding the CTA
+      (interactive-widget, visualViewport); a deploy breaking an open tab (vercel
+      rewrites scoped, the SW not caching HTML as JS, lazy chunks precached, a
+      "newer Morrow is ready" line, "reload" instead of "no account service");
+      export/wallpaper fallbacks (Blob download, Web Share with files, clipboard);
+      fonts preloaded and not gating first paint; the room's focus on iOS; Safari's
+      speech permission on the doorway; Settings' notification copy on the web;
+      overscroll, theme-color, http-equiv; the dictation 'network' retry loop.
+- [ ] Batch F: the a11y/shell, backend/security and dependency lenses (pending).
+- [ ] Then: `pnpm verify` green, the journey re-walked, deploy, PROGRESS closed out.
+
 Nothing is half-done. Four audits are closed — 95, 37, 47, then 43 — the
 eval harness has been run and reviewed, and the app has been walked end to
 end in a browser on the built bundle, frame by frame, rather than only

@@ -45,7 +45,7 @@ import type { SafetyRisk } from '../types';
  * and "don't want to wake up at 5am" is another. A stop, the end of the
  * text, or one of the few continuations that keep the meaning.
  */
-const CLAUSE_END = String.raw`(?=\s*(?:[.,;:!?)\]…—-]|$)|\s+(?:any\s?more|any\s+longer|at\s+all|like\s+this|tomorrow|tonight|today|this\s+(?:morning|week|month|year)|these\s+days|lately|again|because|if|so|honestly|really|sometimes|most\s+days|some\s+days|pretending|as\s+if|with\s+(?:any\s+of\s+)?(?:it|this|life|things))\b)`;
+const CLAUSE_END = String.raw`(?=\s*(?:[.,;:!?)\]…—-]|$)|\s+(?:any\s?more|any\s+longer|at\s+all|like\s+this|tomorrow|tonight|today|this\s+(?:morning|afternoon|evening|week|weekend|month|year)|these\s+days|lately|again|because|if|so|honestly|really|sometimes|most\s+days|some\s+days|pretending|as\s+if|with\s+(?:any\s+of\s+)?(?:it|this|life|things))\b)`;
 const re = (source: string) => new RegExp(source, 'i');
 
 const CRISIS = [
@@ -56,18 +56,36 @@ const CRISIS = [
   // without reading, which is the one way this screen can be made worse at
   // its job.
   /\bkill(?:ing|ed|s)?\s+my ?self(?![\w-])/i,
-  /(?<!\b(?:will|would|could|might|gonna|to|going\s+to|ll|['’]ll|can|may)\s)\bkill\s+me\b(?!\s+(?:now|if|when|for|with|before|after|already|later)\b)/i,
+  // Nor with a thing for a subject: "the stairs kill me", "these hills
+  // kill me" — a plural noun before "kill" is the gym or the commute.
+  re(String.raw`(?<!\b(?:will|would|could|might|gonna|to|going\s+to|ll|['’]ll|can|may)\s)(?<!\b[a-z]+s\s)\bkill\s+me` + CLAUSE_END),
   /\b(?:end|ending|ended|ends)\s+(?:my|this)\s+(?:own\s+)?life\b/i,
   // "take" only with "own". "Taking my life back" and "took my life savings"
   // are ordinary sentences, and the idiom this list is for says "own life".
   /\b(?:take|taking|took|takes|taken)\s+(?:my|his|her|their)\s+own\s+life\b/i,
-  /\bend(?:ing|ed)?\s+it\s+all\b/i,
-  /\bsuicid\w*/i,
+  // Without "own" too — "I am going to take my life tonight" says the same
+  // thing — but not the idioms: "taking my life back", "took my life
+  // savings", "take my life in my own hands", "take my life seriously".
+  /\b(?:take|taking|took|takes|taken)\s+my\s+life\b(?!\s+(?:back|savings|into|in\s+(?:my|a\s+new)|seriously|as|one|story|lessons|less|more|for|off|on|by|to\s+the|apart|and\s+(?:make|turn|do)))/i,
+  re(String.raw`\bend(?:ing|ed)?\s+it\s+all` + CLAUSE_END),
+  // "end it", "ending things", "end everything" — when the clause stops
+  // there. "End it with a party", "ending things with him" carry on.
+  re(String.raw`\b(?:end|ending|ended)\s+(?:it|things|everything)` + CLAUSE_END),
+  // Not "career suicide", "political suicide", "suicide doors", nor the
+  // sprints a football coach calls suicides.
+  /(?<!\b(?:career|financial|political|social|commercial|professional|brand|economic|electoral|did|do|doing|ran|run|running)\s)\bsuicid(?:e|al|es)?\b(?!\s+(?:squad|drills?|sprints?|runs?|hill|mission|doors?|pact\s+of|prevention|hotline|line|awareness|bombers?|attack))/i,
   /\bunalive\w*/i,
   // "die of embarrassment", "die of shame", "die laughing" are idioms, and
   // the card on them teaches people to dismiss it. "wanna" is how it is
   // typed at night.
-  /\b(?:want(?:ed|ing|s)?\s+to|wanna)\s+(?:die(?!\s+(?:of\s+(?:embarrassment|shame|boredom|laughter|laughing|cringe|the\s+cold|hunger|thirst)|laughing)\b)|be\s+dead|not\s+exist|not\s+wake\s+up|kill\s+my ?self(?![\w-])|end\s+it)\b/i,
+  /\b(?:want(?:ed|ing|s)?\s+to|wanna)\s+(?:die(?!\s+(?:of\s+(?:embarrassment|shame|boredom|laughter|laughing|cringe|the\s+cold|hunger|thirst)|laughing|my\s+hair|the\s+wool|the\s+fabric)\b)|be\s+dead|not\s+exist|not\s+be\s+alive|not\s+wake\s+up|stop\s+existing|disappear\s+(?:forever|for\s+good|completely)|kill\s+my ?self(?![\w-]))\b/i,
+  // "want to end it" when the clause stops there; "end it all on a high
+  // note" carries on into something.
+  re(String.raw`\b(?:want(?:ed|ing|s)?\s+to|wanna)\s+end\s+it(?:\s+all)?` + CLAUSE_END),
+  re(String.raw`\bwant\s+(?:it\s+all|everything|all\s+of\s+it)\s+to\s+(?:be\s+over|end|stop)` + CLAUSE_END),
+  // "there is no point anymore" with nothing it is the point of.
+  re(String.raw`\b(?:no\s+point|there(?:['’]s|\s+is)\s+no\s+point)\s+(?:any\s?more|any\s+longer|in\s+anything|to\s+anything)` + CLAUSE_END),
+  /\bkms\b/i,
   // "rather die than wear that" is hyperbole; "rather die" alone, and
   // "rather be dead" however it goes on, are not.
   /\brather\s+(?:not\s+(?:exist|be\s+alive|be\s+here|wake\s+up)|be\s+dead|die(?!\s+than))\b/i,
@@ -76,7 +94,7 @@ const CRISIS = [
   /\b(?:hang|hanging|hung|shoot|shooting|drown|drowning|burn|burning|burnt|burned)\s+my ?self(?![\w-])(?!\s+(?:out\s+to\s+dry|on\s+the\s+(?:oven|iron|pan|hob|stove|kettle)|with\s+the\s+(?:iron|kettle|oven|pan)|making|cooking))/i,
   /\b(?:took|take|taking|taken)\s+(?:all|too\s+many)\s+(?:of\s+)?(?:my|the)\s+(?:pills|tablets|meds|medication)\b/i,
   /\bod['’]d\b|\bod['’]?ed\b/i,
-  /\boverdos\w*/i,
+  /\boverdos(?:e|ed|es|ing)?\b(?!\s+(?:on|of)\s+(?:coffee|caffeine|sugar|chocolate|cake|netflix|tv|telly|news|it|the\s+news|cheese|carbs|screen))/i,
   // "do not want", "don't want", "didn't want", "doesn't want" — and only when
   // the clause ends there: "don't want to wake up at 5am", "didn't want to go
   // on the trip", "don't want to live in this flat" are a hard week, not this.
@@ -91,10 +109,13 @@ const CRISIS = [
   // A body part in the plural, or the reflexive without an accident after it:
   // "cutting my arms" is this; "cut my arm on the rose bush", "cut myself
   // shaving" are not.
-  /\b(?:cut|cutting|cuts|harm|harming|harms|harmed)\s+(?:my ?self(?![\w-])(?!\s+(?:shaving|chopping|slicing|cooking|opening|gardening|on\s+the|with\s+the|at\s+work|in\s+the\s+(?:kitchen|garden|garage|workshop)|doing\s+the))|my\s+(?:arms|legs|wrists|thighs)\b|my\s+(?:arm|leg|wrist|thigh|skin)\b(?!\s+(?:on|shaving|while|when|with|at|in|chopping|cooking|gardening|falling|climbing|playing|doing|during|again\s+on)))/i,
+  /\b(?:cut|cutting|cuts|harm|harming|harms|harmed)\s+(?:my ?self(?![\w-])(?!\s+(?:shaving|chopping|slicing|cooking|opening|gardening|on\s+the|with\s+the|at\s+work|in\s+the\s+(?:kitchen|garden|garage|workshop)|doing\s+the))|my\s+(?:arms|legs|wrists|thighs|arm|leg|wrist|thigh|skin)\b(?!\s+(?:on|to\s+(?:ribbons|shreds|pieces|bits)|shaving|while|when|with|at|in|chopping|cooking|gardening|falling|climbing|playing|doing|during|again\s+on|open\s+on|up\s+on|badly\s+on)))/i,
   // "hurt my legs" is a gym sentence; so is "hurt myself deadlifting".
   // "Hurt myself" with nothing after it is not.
-  /\b(?:hurt|hurting|hurts)\s+my ?self(?![\w-])(?!\s+(?:deadlifting|squatting|lifting|running|training|playing|skiing|climbing|falling|cycling|at\s+(?:the\s+)?(?:gym|work|football|rugby|training|five-a-side)|in\s+the\s+(?:gym|garden)|on\s+the\s+(?:bike|stairs|ice|pitch)|doing\s+(?:the|a|my)|laughing|getting))/i,
+  // "hurt my legs" is a gym sentence; so is "hurt myself deadlifting" and
+  // "hurt myself pretty badly at the gym". "Hurt myself" with nothing
+  // after it, or with "when it gets bad", is not.
+  /\b(?:hurt|hurting|hurts)\s+my ?self(?![\w-])(?!\s+(?:deadlifting|squatting|lifting|running|training|playing|skiing|climbing|falling|cycling|skating|slipping|tripping|at\s+(?:the\s+)?(?:gym|work|football|rugby|training|five-a-side|practice)|in\s+the\s+(?:gym|garden|kitchen)|on\s+the\s+(?:bike|stairs|ice|pitch|court|slopes)|doing\s+(?:the|a|my)|laughing|getting|(?:pretty|quite|really|so|very)\s+badly\s+(?:at|in|on|playing|doing|falling|skiing|when)|badly\s+(?:at|in|on|playing|doing|falling|skiing|when)|last\s+(?:week|month|year|night|time)|yesterday|when\s+i\s+(?:fell|slipped|tripped|crashed|landed)))/i,
   // "no point in going on holiday", "no point in living in London" carry on
   // into something; the sentence this is for stops.
   re(String.raw`\b(?:no\s+(?:reason|point)\s+(?:to|in)|what(?:['’]s|\s+is)\s+the\s+point\s+(?:of|in))\s+(?:go(?:ing)?\s+on|carry(?:ing)?\s+on|liv(?:e|ing)|be(?:ing)?\s+here|be(?:ing)?\s+alive|stay(?:ing)?\s+alive|any\s+of\s+it|it\s+all)` + CLAUSE_END),

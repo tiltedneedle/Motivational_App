@@ -39,6 +39,19 @@ interface SpanOut {
 
 const DOMAINS = new Set(['health', 'money', 'craft', 'mind', 'people', 'home', 'custom']);
 
+/**
+ * Whether `[start, end)` begins and ends on a word boundary of the source —
+ * the same rule as packages/core's `onWordEdges`. "call my mum on Sunday"
+ * is inside "call my mum on Sundays", and it is not what they wrote.
+ */
+function onWordEdges(source: string, start: number, end: number): boolean {
+  const wordAt = (i: number) => i >= 0 && i < source.length && /[\p{L}\p{N}]/u.test(source[i]!);
+  const joinedAt = (i: number) => i > 0 && i < source.length - 1 && /['’]/.test(source[i]!) && wordAt(i - 1) && wordAt(i + 1);
+  const leftOk = start === 0 || (!(wordAt(start - 1) && wordAt(start)) && !(joinedAt(start - 1) && wordAt(start)));
+  const rightOk = end >= source.length || (!(wordAt(end - 1) && wordAt(end)) && !(wordAt(end - 1) && joinedAt(end)));
+  return leftOk && rightOk;
+}
+
 /** The gate. Offsets are recomputed from the source, never trusted. */
 function verify(source: string, proposed: { text?: string; domain?: string; merge_with?: number }[]): SpanOut[] {
   const out: SpanOut[] = [];
@@ -52,7 +65,7 @@ function verify(source: string, proposed: { text?: string; domain?: string; merg
       const idx = source.indexOf(text, from);
       if (idx === -1) break;
       const end = idx + text.length;
-      if (!used.some((u) => idx < u.end && u.start < end)) {
+      if (onWordEdges(source, idx, end) && !used.some((u) => idx < u.end && u.start < end)) {
         start = idx;
         break;
       }

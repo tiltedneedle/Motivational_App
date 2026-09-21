@@ -2,6 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { mirrorLocally, verifyMirror, warmupPrompt } from '../src/engines/mirror';
 
 describe('the mirror', () => {
+  it('quotes a line with a decimal in it whole', () => {
+    // The clause splitter used to end a sentence at the dot in "6.30", and
+    // the first words back to a person were “30 and I am out the door by 7”.
+    expect(mirrorLocally('I wake at 6.30 and I am out the door by 7').quotes).toEqual(['I wake at 6.30 and I am out the door by 7']);
+    // And a proposed quote that starts mid-word is not their words.
+    expect(verifyMirror('I want to run everyday and grow', ['un everyday and gro', 'run everyday and grow'])).toEqual(['run everyday and grow']);
+  });
+
   it('quotes only what was written, verbatim', () => {
     const text = 'I want to get to bed before midnight and I want to run before work on Tuesdays.';
     const m = mirrorLocally(text);

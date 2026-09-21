@@ -19,7 +19,7 @@
  * same shape; `verifyMirror` throws away any quote that is not verbatim.
  */
 import type { DomainId } from '../types';
-import { clauses, domainOf, domainMatches, extractSpansLocally } from './readback';
+import { clauses, domainOf, domainMatches, extractSpansLocally, onWordEdges } from './readback';
 
 export interface Mirror {
   /** Verbatim clauses of the person's text, in the order they wrote them. */
@@ -141,7 +141,17 @@ export function verifyMirror(source: string, proposed: readonly string[]): strin
   for (const raw of proposed) {
     const text = (raw ?? '').trim();
     if (text.length < 8) continue;
-    const start = source.indexOf(text);
+    // The first occurrence that begins and ends on a word of theirs.
+    let start = -1;
+    for (let from = 0; from <= source.length; ) {
+      const idx = source.indexOf(text, from);
+      if (idx === -1) break;
+      if (onWordEdges(source, idx, idx + text.length)) {
+        start = idx;
+        break;
+      }
+      from = idx + 1;
+    }
     if (start === -1) continue;
     const end = start + text.length;
     if (used.some((u) => start < u.end && u.start < end)) continue;

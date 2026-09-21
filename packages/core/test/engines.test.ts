@@ -90,6 +90,19 @@ describe('the Interview', () => {
     expect(s.drafts[0]!.horizon).toBe('Six months');
   });
 
+  it('keeps a typed follow-up answer as the goal, as typed', () => {
+    // Through the bank's template it came back as "Save for my mum’s 70th
+    // in lisbon", lowercased and marked as the app's words.
+    let s = initialInterview();
+    s = toggleArea(s, 'money');
+    s = beginBranches(s);
+    s = answer(s, 'Save for something');
+    s = answer(s, 'My mum’s 70th in Lisbon', true);
+    s = answer(s, 'A year');
+    expect(s.drafts[0]!.title).toBe('My mum’s 70th in Lisbon');
+    expect(s.drafts[0]!.custom).toBe(true);
+  });
+
   it('lets a custom answer skip the follow-up, exactly as specified', () => {
     let s = initialInterview();
     s = toggleArea(s, 'money');
@@ -364,6 +377,15 @@ describe('counting things in copy', () => {
 });
 
 describe('specificity', () => {
+  it('does not take a time of day for a place', () => {
+    for (const line of ['I will write in the morning', 'I will meditate in the evening', 'I will run at the weekend', 'I will call my mum on a Sunday']) {
+      const r = scoreSpecificity(line);
+      expect(r.hasPlace, line).toBe(false);
+      expect(r.needsFollowUp, line).toBe(true);
+    }
+    expect(scoreSpecificity('I will write at the kitchen table at 6am').hasPlace).toBe(true);
+  });
+
   it('accepts a line with a clock time and a place without a follow-up', () => {
     const r = scoreSpecificity('Tuesday, Thursday, Saturday at 6:40, out the back door');
     expect(r.hasTime).toBe(true);
@@ -684,6 +706,19 @@ describe('safety', () => {
       'This year I am taking my life back.',
       'I took my life savings and bought the van.',
       'She took my life apart and I let her.',
+      // The completeness pass (2026-09-22): each of these raised the card.
+      'These hills kill me every morning but I keep running them.',
+      'If the stairs kill me, then I take the lift',
+      'Quitting now would be career suicide.',
+      'We did suicides at football practice',
+      'The brambles cut my arms to ribbons in the garden.',
+      'I keep cutting my legs shaving.',
+      'I hurt myself pretty badly at the gym last week.',
+      'I overdosed on coffee',
+      'The kids are ending it all with a party on Saturday.',
+      'I want to die my hair pink',
+      'I want to take my life seriously',
+      'I want to end it all on a high note, then start the next chapter',
     ]) {
       expect(screen(t).risk, t).not.toBe('crisis');
     }
@@ -696,6 +731,18 @@ describe('safety', () => {
       'I have thought about taking my own life',
       'I am going to end my life',
       'killing myself would be easier',
+      // The completeness pass (2026-09-22): each of these was missed.
+      'I am going to take my life tonight.',
+      'I want to take my life.',
+      'I should just end it',
+      'I have been thinking about ending things',
+      'I want to stop existing',
+      'I want it all to be over.',
+      'I want to not be alive',
+      'there is no point anymore',
+      'kms',
+      'I hurt myself when it gets bad.',
+      'I am planning to end it all this weekend.',
     ]) {
       expect(screen(t).risk, t).toBe('crisis');
     }
@@ -951,6 +998,12 @@ describe('helpers', () => {
     expect(identityLineText(p)).toBe(
       "I'm becoming someone who is out the back door before the kettle boils, every Tuesday",
     );
+  });
+
+  it('does not take a hedge, an opener or an age for who they are becoming', () => {
+    expect(proposeIdentity("It's a Tuesday. I am not sure what time it is but I am up before the kids.").clause).toBe('up before the kids');
+    expect(proposeIdentity('I am going to be honest, I am tired most days but I am out the door at 6.').clause).toBe('out the door at 6');
+    expect(proposeIdentity('I am 38 and I am still in Leeds.').clause).toBe('');
   });
 
   it('proposes nothing when the person wrote no state about themselves', () => {

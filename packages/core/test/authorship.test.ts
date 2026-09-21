@@ -26,6 +26,7 @@ import {
   type Goal,
 } from '../src/index';
 import { sequentialIds } from '../src/ids';
+import { clauses } from '../src/engines/readback';
 
 const IDEAL = `It's 6:40 and the kitchen is still blue. I lace the left shoe first, like always, and the door is already open before I've decided anything. Rent went out on the first and I didn't look at the balance, because I already knew. Sam is asleep upstairs and the guitar is on the wall where I can see it from the table.`;
 
@@ -72,6 +73,31 @@ describe('verifySpans', () => {
     for (const s of spans) {
       expect(IDEAL.slice(s.start, s.end)).toBe(s.text);
     }
+  });
+
+  it('refuses a span that starts or ends inside one of their words', () => {
+    // "un everyday and gro" is a substring; it is not what anybody wrote.
+    expect(verifySpans('I want to run everyday and grow', [{ text: 'un everyday and gro' }])).toEqual([]);
+    // A model that drops their plural is quoting a word they did not write.
+    const spans = verifySpans('I want to call my mum on Sundays and see the boys more', [{ text: 'call my mum on Sunday' }, { text: 'call my mum on Sundays' }]);
+    expect(spans.map((s) => s.text)).toEqual(['call my mum on Sundays']);
+    // "mum" inside "mum's" is not a whole word either.
+    expect(verifySpans("I want to see my mum's garden and run the towpath", [{ text: 'see my mum' }])).toEqual([]);
+  });
+
+  it('does not end a clause at the dot inside a number', () => {
+    expect(clauses('I want to be out the door by 6.40 every morning and I want to have saved 1.5k by June.').map((c) => c.text)).toEqual([
+      'I want to be out the door by 6.40 every morning and I want to have saved 1.5k by June',
+    ]);
+    expect(clauses('I want to run 5.5 miles before work. I want to be at 12.5 stone by March.').map((c) => c.text)).toEqual([
+      'I want to run 5.5 miles before work',
+      'I want to be at 12.5 stone by March',
+    ]);
+  });
+
+  it('offers a sentence written three times once', () => {
+    const r = extractSpansLocally('I want to run every morning. I want to run every morning. I want to run every morning.');
+    expect(r.spans.map((s) => s.text)).toEqual(['I want to run every morning']);
   });
 
   it('never returns overlapping spans for a repeated phrase', () => {

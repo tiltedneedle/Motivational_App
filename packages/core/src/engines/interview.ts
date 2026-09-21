@@ -493,7 +493,11 @@ export function answer(s: InterviewState, value: string, custom = false): Interv
       return { ...s, stage: 'follow', branchLabel: value, customBranch: null, answered: s.answered + 1 };
     }
     case 'follow':
-      return { ...s, stage: 'horizon', followAnswer: value, answered: s.answered + 1 };
+      // Typed rather than tapped, the answer is the goal's name as they
+      // wrote it. Passed through the bank's template it came back lowercased
+      // and wrapped — "Save for my mum’s 70th in lisbon" — and marked as the
+      // app's words.
+      return { ...s, stage: 'horizon', followAnswer: value, customBranch: custom ? value : s.customBranch, answered: s.answered + 1 };
     case 'horizon': {
       if (!area) return s;
       const branch = area.branches.find((b) => b.label === s.branchLabel);

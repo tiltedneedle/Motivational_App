@@ -61,8 +61,11 @@ const CADENCE =
  */
 const PLACE_NAMED =
   /\b(kitchen|desk|gym|park|office|stairwell|bedroom|bathroom|studio|garage|hall|hallway|street|door|doorstep|table|floor|track|pool|shed|garden|yard|balcony|basement|porch|counter|sink|window|couch|sofa|stairs|library|cafe|church|field|beach|river|canal|towpath|trail|car|bus|train|platform)\b/i;
+// Not a time wearing a preposition: "in the morning", "at the weekend", "on
+// a Sunday", "in a rush" name no place, and the one chance to ask "where,
+// exactly?" was skipped on every one of them.
 const PLACE_PHRASE =
-  /\b(at|in|on|by|outside|inside|behind|beside|under|near|round)\s+(the|a|an|my|our|his|her|their|its)\s+[a-z][\w'-]*/i;
+  /\b(at|in|on|by|outside|inside|behind|beside|under|near|round)\s+(the|a|an|my|our|his|her|their|its)\s+(?!(?:morning|mornings|evening|evenings|afternoon|afternoons|night|nights|weekend|weekends|week|month|year|moment|minute|hour|end|start|rush|hurry|way|meantime|monday|tuesday|wednesday|thursday|friday|saturday|sunday|same\s+time|first|last|next)\b)[a-z][\w'-]*/i;
 const PLACE = { test: (t: string) => PLACE_NAMED.test(t) || PLACE_PHRASE.test(t) };
 
 const NUMBER = /\b\d+(\.\d+)?\s?(km|k|m|mi|miles|min|mins|minutes|hours?|hrs?|kg|lbs|words|pages|reps|sets|£|\$|€)?\b|[£$€]\s?\d/i;

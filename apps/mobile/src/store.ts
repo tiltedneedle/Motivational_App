@@ -2757,7 +2757,10 @@ export function firstRunOf(s: MorrowState): FirstRunStep {
     hasIdeal: latestText(s.texts, 'ideal') !== null,
     hasTitle: s.bookTitle.trim().length > 0,
     consented: Boolean(s.profile.consentedAt),
-    analyses: s.analyses,
+    // Only the lines the plan can use. A line the screen held out of the
+    // Book counted as written here while the Portrait refused to build, so
+    // "One step from your Book" led to "Not yet".
+    analyses: quotable(s.analyses),
     books: s.books,
     track: s.profile.track,
   });
