@@ -1034,12 +1034,19 @@ async function main() {
       await page.waitForTimeout(200);
       check('the stretches after the first sentence are kept', (await spoken()) === 'I want to run every morning. and I mean it this time.', await spoken());
       check('and still one recogniser: a final does not start another', (await recs()) === 1, `${await recs()} recognisers`);
+      // The browser ends the session with a stretch still being heard —
+      // Chrome does this on its own every so often, and on Android after
+      // every phrase. What was heard is kept; it used to be written over.
+      await page.evaluate(() => window.__hear([['I want to run every morning.', true], ['and I mean it this time.', true], ['hello how are you', false]]));
+      await page.waitForTimeout(150);
+      check('a stretch still being heard is on the page', (await spoken()).endsWith('this time.\nhello how are you'), JSON.stringify((await spoken()).slice(-40)));
       await page.evaluate(() => window.__silence());
       await page.waitForTimeout(600);
       check('when the browser stops on its own the room listens again', (await recs()) === 2 && (await lastStarted()), `${await recs()} recognisers`);
+      check('and the stretch it was still hearing is kept, not lost', (await spoken()).endsWith('this time.\nhello how are you'), JSON.stringify((await spoken()).slice(-40)));
       await page.evaluate(() => window.__hear([['Sam is asleep.', true]]));
       await page.waitForTimeout(200);
-      check('and what comes next is added, not lost', (await spoken()).endsWith('this time. Sam is asleep.'), await spoken());
+      check('and what comes next is added after it, not over it', (await spoken()).endsWith('hello how are you\nSam is asleep.'), JSON.stringify((await spoken()).slice(-50)));
       await tap('write-hold');
       await page.waitForTimeout(400);
       check('a pause of the clock is a pause of the microphone', !(await lastStarted()) && (await text('write-mic')).toLowerCase() === 'paused', await text('write-mic'));

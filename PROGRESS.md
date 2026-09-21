@@ -10,6 +10,57 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - Local-first; the app must work fully offline for the Interview, the Fifteen, the stones, the Book and Today.
 - No account/keys exist in this environment: Supabase, Anthropic, fal, RevenueCat are behind adapters with deterministic local fallbacks. Real providers are wired but untested until keys are supplied (see "Blocked on the user").
 
+## THE REBUILD (2026-09-21) — read this first on resume
+
+The owner walked the live site, compared it with the published apps in the space
+(selfauthoring.com itself; Rosebud, Stoic, Mindsera, Reflection, Life Note, Prompted
+Journal, Being Me, Strides, Finch) and called the product a failure as it stood. The
+diagnosis, in one line: the engines are sound, the shell is a book. ~30 screens and 30–45
+minutes before the home screen; a 230-word consent wall; a 15-minute blank page as the
+first real action; every screen a paragraph; invented jargon (the Fifteen, stones, seal,
+sittings, volumes); the AI never speaks; no loop (no streak, no week, no reward); dark by
+default on a dark laptop; grey ground and one red ball for a visual identity.
+
+What every published app does that this did not: first write within two minutes; a small
+first prompt; the app answers back in the person's own words; a home screen with a visible
+loop; plain English; one strong look; account after value.
+
+**The decision: keep the engines and the authorship rule, rebuild the shell.** The plan,
+in build order — tick as done, and if resuming, continue from the first unticked item:
+
+- [ ] R1. Foundations (`packages/ui`): light is the default appearance (System and Night
+      stay as choices); a `shell.tsx` with `Screen` (top bar + progress + body + sticky
+      footer), `ProgressBar`, `OptionTile`, `StatTile`, `WeekStrip`, `PathCard`, `TabBar`
+      (moved out of today.tsx), `StreakPill`.
+- [ ] R2. The new first run (≤ 3 minutes to the home screen):
+      `/` Welcome — hero, one line, Get started · I have a Book on my account.
+      `/setup` — four one-tap steps stacked chat-style under a progress bar: what to work
+      on (seeds the Interview's areas) · when you write · how the coach speaks · your name
+      + "I'm 16 or over" + one privacy line with a "What leaves the phone" link to the
+      details (`/consent` becomes that details page).
+      `/first-write` — one small prompt from the source's warm-up list ("If you could do
+      one thing better…"), no timer, "2 minutes is plenty", say-it available; saved as a
+      `warmup` text (never enters the Book).
+      `/mirror` — the app answers: one or two verbatim quotes, one question, "that is
+      the first line you kept", the five-step path, Find my goals · 2 min / Show me around.
+      Engine: `packages/core/src/engines/mirror.ts` (quotes are verified substrings; the
+      question comes from a bank keyed by domain; a remote provider can plug in later).
+- [ ] R3. Home (`/today`) rebuilt: greeting + streak pill; the week strip; before the Book
+      a PathCard (step N of 5, one button, honest minutes) instead of the paragraph; after
+      the Book the Now card, goal rings, practices, "From your words" (a quotable line of
+      theirs with a door to the coach), consistency; the shared TabBar.
+- [ ] R4. The program screens in the same shell: Interview, doorway, room close, read-back,
+      order, name, the five questions (stones), your line (portrait), finish (seal) — a
+      progress bar with "Step N of 5", one headline + one line of copy each, plain names in
+      every user-facing string (the Fifteen → "Your future, 15 minutes"; stones → "the five
+      questions"; seal → "Finish"; sittings → "sessions"; Portrait → "Your line").
+      The track choice (`/authoring`) folds into the doorway as a small Depth control.
+- [ ] R5. Tests: `scripts/e2e.mjs` first-run sections rewritten for the new walk (setup →
+      first write → mirror → Interview …); check-cold routes; a11y; shots; motion;
+      `pnpm verify` green.
+- [ ] R6. The built app walked in Playwright end to end as a new person, every screen,
+      every Back; everything found fixed; the live site redeployed.
+
 ## Status
 - [x] 0. Toolchain check, monorepo scaffold (pnpm workspaces, apps/mobile Expo, packages/core, packages/ui, supabase/)
 - [x] 1. packages/core: domain model, stores (zustand + persist), engines
@@ -17,7 +68,7 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 3. apps/mobile screens (all 16 routes)
 - [x] 4. Tests, as of 2026-09-18: 489 core + 48 ui + 8 storage unit tests, the eval harness
       (687 checks over forty profiles and two hundred labelled lines), 68 real-Postgres
-      checks, **527 Playwright e2e checks**, 84 cold-open checks, 8 service-worker checks, 6 motion checks, axe 0 across 37 screens,
+      checks, **527 Playwright e2e checks**, 84 cold-open checks, 8 service-worker checks, 8 motion checks, axe 0 across 37 screens,
       the account round-trip 46/46 against the live project — all green, all in `pnpm verify`
 - [x] 5. supabase/: migrations with RLS and three structural authorship guards, edge functions
 - [x] 6. Hardening: the eight-lens audit's findings, worst first (see below) — 95 of 95
@@ -50,6 +101,30 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 66. **The words the browser was still hearing are kept, 2026-09-21.** The
+      client, on the live site: "when I say hello, how are you doing, it writes
+      hello and then rewrites the next sentence". Chrome ends a recognition
+      session on its own every so often (and on Android after every phrase); a
+      session that ended with a stretch still being heard — on the page, not
+      yet final — dropped it: the next recogniser started clean and its first
+      words were laid over the ones showing. The scripted recogniser in the
+      tests always finalised before ending, so nothing saw it. Now whatever was
+      being heard is kept as final when a session ends (or is turned over for
+      a network hiccup or a language fallback), and two unfinished stretches
+      join with a space rather than running together. e2e: a stretch still
+      being heard, the browser stopping on its own, the stretch kept, the next
+      words added after it and not over it. Also from the motion review (12
+      agents, 0.9M tokens; 8 findings, 5 distinct): reduce motion is known at
+      the first frame (a media query on the web, remembered after the first
+      answer anywhere) instead of one render late with every rise already
+      begun; Settle never blanks a visible stone; the chip's hover lift and
+      press scale share one transform so a mouse press springs back (the CSS
+      transition no longer smooths the spring away); the text-button pill no
+      longer overrides a parent that left-aligns it; the ink and ghost buttons,
+      chips, text buttons and the toast honour reduce motion; the day seal's
+      rings reach 1.8× with room inside the scroll view. `pnpm test:motion` now
+      also walks a reduce-motion context: no frame moves, a chip does not
+      scale. 8/8.
 - [x] 65. **Motion (§8.5), and buttons that read as buttons, 2026-09-21.** The
       client: "see how the initial design had motions… buttons submerged, looking
       like text". Against §8.5 the app had the stone's sweep, the room's bob, the

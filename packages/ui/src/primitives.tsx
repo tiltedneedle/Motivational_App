@@ -495,7 +495,8 @@ export function Chip({
 }) {
   const { p, dark } = usePalette();
   const { hovered, hoverProps } = useHover();
-  const { scale, onPressIn, onPressOut } = usePress();
+  const reduced = useReducedMotion();
+  const { scale, onPressIn, onPressOut } = usePress(reduced);
   const on = selected === true;
   const kind = role ?? (selected === undefined ? 'button' : 'radio');
   const bg = on ? p.ink : ghost ? 'transparent' : p.surface;
@@ -528,12 +529,15 @@ export function Chip({
               borderWidth: 1,
               borderColor: on ? p.ink : hovered ? p.ink2 : ghost ? p.line : dark ? p.line2 : 'rgba(23,24,28,0.06)',
               opacity: pressed ? 0.9 : 1,
-              transform: [{ scale }],
+              // The pointer's lift and the press's scale in one transform:
+              // a second transform key would replace the animated one and
+              // the spring back would drive nothing.
+              transform: [{ translateY: hovered && !pressed ? -1 : 0 }, { scale }],
               justifyContent: 'center',
               alignItems: 'center',
             },
-            // The pointer's lift, after the scale so the press still wins.
-            hoverStyle(hovered && !pressed, dark),
+            Platform.OS === 'web' ? webHover.transitionStill : null,
+            hovered && !pressed && Platform.OS === 'web' ? { boxShadow: dark ? webHover.liftNight.boxShadow : webHover.lift.boxShadow } : null,
           ]}
         >
           <Text style={{ fontFamily: fonts.sansSemi, fontSize: 14, lineHeight: 20, textAlign: 'center', color: ghost ? p.ink2 : fg }}>{label}</Text>
@@ -568,15 +572,19 @@ export function InkButton({
   // the press has that point further to drop: a button that answers before
   // it is pressed.
   const lift = hovered && !disabled && !busy ? 1 : 0;
+  const reduced = useReducedMotion();
   // The press: the face drops onto the edge at once (a key does) and comes
-  // back up on the standard spring rather than snapping.
+  // back up on the standard spring rather than snapping. Under reduce
+  // motion it snaps both ways.
   const [drop] = useState(() => new Animated.Value(0));
   const pressIn = () => {
     if (disabled || busy) return;
-    Animated.timing(drop, { toValue: 1, duration: 60, useNativeDriver: true }).start();
+    if (reduced) drop.setValue(1);
+    else Animated.timing(drop, { toValue: 1, duration: 60, useNativeDriver: true }).start();
   };
   const pressOut = () => {
-    Animated.spring(drop, { toValue: 0, useNativeDriver: true, ...motion.standard }).start();
+    if (reduced) drop.setValue(0);
+    else Animated.spring(drop, { toValue: 0, useNativeDriver: true, ...motion.standard }).start();
   };
   return (
     <Pressable
@@ -676,13 +684,16 @@ export function GhostButton({
   const { hovered, hoverProps } = useHover();
   const EDGE = 3;
   const lift = hovered && !disabled ? 1 : 0;
+  const reduced = useReducedMotion();
   const [drop] = useState(() => new Animated.Value(0));
   const pressIn = () => {
     if (disabled) return;
-    Animated.timing(drop, { toValue: 1, duration: 60, useNativeDriver: true }).start();
+    if (reduced) drop.setValue(1);
+    else Animated.timing(drop, { toValue: 1, duration: 60, useNativeDriver: true }).start();
   };
   const pressOut = () => {
-    Animated.spring(drop, { toValue: 0, useNativeDriver: true, ...motion.standard }).start();
+    if (reduced) drop.setValue(0);
+    else Animated.spring(drop, { toValue: 0, useNativeDriver: true, ...motion.standard }).start();
   };
   return (
     <Pressable
@@ -846,7 +857,8 @@ export function TextButton({
 }) {
   const { p, dark } = usePalette();
   const { hovered, hoverProps } = useHover();
-  const { scale, onPressIn, onPressOut } = usePress();
+  const reduced = useReducedMotion();
+  const { scale, onPressIn, onPressOut } = usePress(reduced);
   return (
     <Pressable
       testID={testID}
@@ -856,8 +868,10 @@ export function TextButton({
       {...hoverProps}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
-      // 44 points each way (Apple HIG): "Skip" was thirty wide.
-      style={[{ minHeight: 44, minWidth: 44, alignItems: 'center', justifyContent: 'center', alignSelf: plain ? undefined : 'center' }, style]}
+      // 44 points each way (Apple HIG): "Skip" was thirty wide. A row, so the
+      // pill hugs its words and centres in whatever width the parent gives —
+      // and a parent that left-aligns still gets to.
+      style={[{ minHeight: 44, minWidth: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }, style]}
     >
       {({ pressed }) => (
         <Animated.View
@@ -871,7 +885,7 @@ export function TextButton({
             alignItems: 'center',
             opacity: plain && pressed ? 0.6 : 1,
             transform: [{ scale }],
-            ...(Platform.OS === 'web' ? webHover.transition : {}),
+            ...(Platform.OS === 'web' ? webHover.transitionStill : {}),
           }}
         >
           <Text
@@ -1263,14 +1277,42 @@ export function HoldBar({
 }
 
 /** Whether the OS asked us to stop moving things. */
+/**
+ * The answer, once known, for every mount after: the first render of a
+ * screen used to say "not reduced" while the OS was asked, and the rise,
+ * the slide and the seat had all started before the answer came back —
+ * so with Reduce Motion on, everything still moved. On the web the answer
+ * is a media query and is known at once.
+ */
+let reducedKnown: boolean | null = null;
+function reducedNow(): boolean {
+  if (reducedKnown !== null) return reducedKnown;
+  if (Platform.OS === 'web') {
+    const w = globalThis as unknown as { matchMedia?: (q: string) => { matches: boolean } };
+    try {
+      reducedKnown = w.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    } catch {
+      reducedKnown = false;
+    }
+    return reducedKnown;
+  }
+  return false;
+}
+
 export function useReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(false);
+  const [reduced, setReduced] = useState<boolean>(reducedNow);
   useEffect(() => {
     let alive = true;
     AccessibilityInfo.isReduceMotionEnabled()
-      .then((v) => alive && setReduced(v))
+      .then((v) => {
+        reducedKnown = v;
+        if (alive) setReduced(v);
+      })
       .catch(() => undefined);
-    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduced);
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', (v) => {
+      reducedKnown = v;
+      setReduced(v);
+    });
     return () => {
       alive = false;
       sub?.remove?.();
@@ -1304,16 +1346,17 @@ export function Toast({
     AccessibilityInfo.announceForAccessibility(message);
   }, [text, actionLabel]);
   // Arrives from a little above, on the standard spring; a new text arrives again.
-  const [y] = useState(() => new Animated.Value(-10));
+  const reduced = useReducedMotion();
+  const [y] = useState(() => new Animated.Value(reduced ? 0 : -10));
   const [opacity] = useState(() => new Animated.Value(0));
   useEffect(() => {
-    y.setValue(-10);
+    y.setValue(reduced ? 0 : -10);
     opacity.setValue(0);
     Animated.parallel([
       Animated.timing(opacity, { toValue: 1, duration: motion.fadeFast, useNativeDriver: true }),
       Animated.spring(y, { toValue: 0, useNativeDriver: true, ...motion.standard }),
     ]).start();
-  }, [text, y, opacity]);
+  }, [text, y, opacity, reduced]);
 
   return (
     <Animated.View

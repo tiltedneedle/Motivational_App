@@ -261,6 +261,18 @@ function webDictation(): Dictation {
     // handed. The browser keeps every stretch of the session in `results`;
     // the ones before this index are already in the person's text.
     let committed = 0;
+    // What the browser is still hearing, as last shown on the page. A session
+    // that ends with this unfinished — Chrome ends one on its own every so
+    // often, and on Android after every phrase — used to drop it: the words
+    // were on the page, the next recogniser started clean, and its first
+    // stretch was laid over them. "Hello" and then the next sentence written
+    // over it. Whatever was heard is kept when the session ends.
+    let pending = '';
+    const keepPending = () => {
+      const text = pending.trim();
+      pending = '';
+      if (text) current?.onText(text, true);
+    };
     r.onresult = (ev) => {
       if (rec !== r) return;
       const results = ev.results;
@@ -272,14 +284,19 @@ function webDictation(): Dictation {
         const text = stretch[0]?.transcript?.trim() ?? '';
         committed = i + 1;
         strikes = 0;
+        pending = '';
         if (text) current?.onText(text, true);
       }
-      let interim = '';
+      // Two unfinished stretches at once are two phrases, with a space
+      // between them, not one word run into the next.
+      const parts: string[] = [];
       for (let i = committed; i < results.length; i++) {
         const stretch = results[i];
-        if (stretch && !stretch.isFinal) interim += stretch[0]?.transcript ?? '';
+        if (stretch && !stretch.isFinal) parts.push((stretch[0]?.transcript ?? '').trim());
       }
-      if (interim.trim()) {
+      const interim = parts.filter(Boolean).join(' ');
+      pending = interim;
+      if (interim) {
         strikes = 0;
         current?.onText(interim, false);
       }
@@ -287,6 +304,7 @@ function webDictation(): Dictation {
     r.onend = () => {
       if (rec !== r) return;
       rec = null;
+      keepPending();
       // Silence, the browser's own limit, or an interruption. Still wanted,
       // so listen again — after a beat, so a browser that ends and errors in
       // the same instant does not see two starts.
@@ -312,6 +330,7 @@ function webDictation(): Dictation {
         current?.onProblem(NO_NETWORK);
         rec = null;
         r.onend = null;
+        keepPending();
         later(3000);
         return;
       }
@@ -323,6 +342,7 @@ function webDictation(): Dictation {
         lang = FALLBACK_LANG;
         rec = null;
         r.onend = null;
+        keepPending();
         later(200);
         return;
       }

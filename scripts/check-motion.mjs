@@ -99,7 +99,35 @@ const end = await page.evaluate(() => { const el = document.querySelector('[data
 const tx = (t) => { const m = /matrix\(([^)]*)\)/.exec(t ?? ''); return m ? parseFloat(m[1].split(',')[4]) : 0; };
 check('the next question slides in from the right', tx(mid) > 2 && Math.abs(tx(end)) < 0.5, `mid ${mid} end ${end}`);
 
+// 6. Reduce motion: a crossfade and nothing else. The answer must be known at
+// the first frame — it used to arrive one render late, after the rise had
+// already started.
+const still = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });
+await still.addInitScript((s) => localStorage.setItem('morrow-v1', JSON.stringify(s)), seed);
+await still.addInitScript(() => {
+  window.__arrive = [];
+  const tick = () => { const s = document.querySelector('[data-testid^="screen-"]'); const inner = s?.children?.[1]; if (inner) { const c = getComputedStyle(inner); window.__arrive.push([parseFloat(c.opacity), c.transform]); } if (window.__arrive.length < 90) requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
+});
+const quiet = await still.newPage();
+await quiet.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
+await quiet.waitForTimeout(1500);
+const stillSamples = await quiet.evaluate(() => window.__arrive);
+const moved = stillSamples.filter(([, t]) => t && t !== 'none' && t !== 'matrix(1, 0, 0, 1, 0, 0)');
+check('under reduce motion a screen only crossfades: no frame moves it', stillSamples.length > 5 && moved.length === 0 && stillSamples[0][0] < 0.9, JSON.stringify(moved.slice(0, 3)) + ' first opacity ' + stillSamples[0]?.[0]);
+await quiet.goto(`${BASE}/seal-day`, { waitUntil: 'networkidle' });
+await quiet.waitForTimeout(900);
+const chip2 = quiet.locator('[role="radio"]').first();
+const box2 = await chip2.boundingBox();
+await quiet.mouse.move(box2.x + box2.width / 2, box2.y + box2.height / 2);
+await quiet.mouse.down();
+await quiet.waitForTimeout(120);
+const pressedStill = await quiet.evaluate(() => { const el = document.querySelector('[role="radio"] > div'); return el ? getComputedStyle(el).transform : null; });
+await quiet.mouse.up();
+check('and a chip does not scale under a press', !/0\.9[0-9]/.test(pressedStill ?? ''), pressedStill ?? 'none');
+await still.close();
+
 await browser.close();
 server.close();
-console.log(fails ? `${fails} failed` : '6/6 motion checks passed');
+console.log(fails ? `${fails} failed` : '8/8 motion checks passed');
 process.exit(fails ? 1 : 0);

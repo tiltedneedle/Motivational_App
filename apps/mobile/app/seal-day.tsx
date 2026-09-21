@@ -169,9 +169,9 @@ export default function SealDay() {
             />
           </View>
 
-          <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 10 }}>
-            {/* PRD 8.5: "completion drops the stone with a spring, two rings pulse out". */}
-            <SealBurst size={110} color={accent.coral} play={sealed} reduced={reduced} />
+          <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 44 }}>
+            {/* PRD 8.5: "completion drops the stone with a spring, two rings pulse out". The rings reach 1.8×, inside the scroll view's edge. */}
+            <SealBurst size={110} color={accent.coral} play={sealed} reduced={reduced} reach={1.8} />
             <Settle reduced={reduced} play={sealed ? 1 : 0}>
               <Stone size={110} domain="health" polish={sealed ? 1 : 0.6} seated={sealed} />
             </Settle>

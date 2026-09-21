@@ -51,14 +51,21 @@ export function Slide({ children, style, reduced = false }: Kids) {
  * spring (one overshoot, 0.55 s). `play` re-runs it; a change of key does too.
  */
 export function Settle({ children, style, reduced = false, play = 0 }: Kids & { play?: number }) {
-  const [y] = useState(() => new Animated.Value(reduced ? 0 : -10));
-  const [opacity] = useState(() => new Animated.Value(reduced ? 0 : 1));
+  const [y] = useState(() => new Animated.Value(0));
+  const [opacity] = useState(() => new Animated.Value(1));
+  const first = useRef(true);
   useEffect(() => {
+    // Under reduce motion a fresh mount crossfades in once; a later "play"
+    // is left still. A stone that is already visible is never blanked.
     if (reduced) {
-      opacity.setValue(0);
-      Animated.timing(opacity, { toValue: 1, duration: motion.fade, useNativeDriver: true }).start();
+      if (first.current) {
+        opacity.setValue(0);
+        Animated.timing(opacity, { toValue: 1, duration: motion.fade, useNativeDriver: true }).start();
+      }
+      first.current = false;
       return;
     }
+    first.current = false;
     y.setValue(-10);
     Animated.spring(y, { toValue: 0, useNativeDriver: true, ...motion.seat }).start();
   }, [play, reduced, y, opacity]);
@@ -84,7 +91,7 @@ export function Pop({ children, style, reduced = false }: Kids) {
  * behind the stone, centred; `size` is the stone's. Plays once when `play`
  * turns true; still under reduce motion.
  */
-export function SealBurst({ size, color, play, reduced = false }: { size: number; color: string; play: boolean; reduced?: boolean }) {
+export function SealBurst({ size, color, play, reduced = false, reach = 2.4 }: { size: number; color: string; play: boolean; reduced?: boolean; reach?: number }) {
   const rings = useRef([new Animated.Value(0), new Animated.Value(0)]).current;
   const played = useRef(false);
   useEffect(() => {
@@ -112,7 +119,7 @@ export function SealBurst({ size, color, play, reduced = false }: { size: number
             borderWidth: 2,
             borderColor: color,
             opacity: r.interpolate({ inputRange: [0, 0.1, 1], outputRange: [0, 0.55, 0] }),
-            transform: [{ scale: r.interpolate({ inputRange: [0, 1], outputRange: [1, 2.4] }) }],
+            transform: [{ scale: r.interpolate({ inputRange: [0, 1], outputRange: [1, reach] }) }],
           }}
         />
       ))}

@@ -214,6 +214,16 @@ export const webHover = {
     transitionDuration: '160ms',
     transitionTimingFunction: 'cubic-bezier(0.2, 0.7, 0.2, 1)',
   }),
+  /**
+   * For a face whose transform Animated drives: everything but the
+   * transform eases, or the CSS transition would smooth every frame the
+   * spring writes and filter its overshoot out.
+   */
+  transitionStill: webOnlyStyle({
+    transitionProperty: 'box-shadow, border-color, background-color, color, opacity',
+    transitionDuration: '160ms',
+    transitionTimingFunction: 'cubic-bezier(0.2, 0.7, 0.2, 1)',
+  }),
   /** The lift under a resting pointer: a point up, and a shadow to say so. */
   lift: webOnlyStyle({
     transform: [{ translateY: -1 }],
