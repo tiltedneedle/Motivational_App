@@ -60,7 +60,9 @@ once it has loaded it opens without a connection: a service worker keeps the
 bundle, and the writing was always on the device. On an iPhone, add it to the
 Home Screen before writing: the installed app keeps its own storage, separate
 from Safari's, so a Book written in the browser tab does not follow it. "Say
-it" needs Chrome, Edge or Safari and, off this machine, HTTPS.
+it" needs Chrome, Edge or Safari and, off this machine, HTTPS — and on an
+iPhone it works in Safari itself, not from the Home Screen, which WebKit gives
+no recogniser; the doorway says so and offers the typed room.
 
 What a web demo shows honestly and what it does not: every screen and every
 flow, the three volumes, the account sign-in against the live project, the

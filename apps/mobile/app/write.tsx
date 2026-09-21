@@ -31,7 +31,7 @@ import {
 import { Body, Chip, InkButton, Label, Question, Ring, Statement, Stone, Studio, TopBar, UserText, accent, focusRing, night, type as fonts, useReducedMotion, webOnlyStyle } from '@morrow/ui';
 import { useGoals, latestText, useMorrow } from '../src/store';
 import { useFirstRunStep } from '../src/analytics';
-import { dictation, secureEnough } from '../src/dictation';
+import { dictation, iosHomeScreen, secureEnough } from '../src/dictation';
 import { KeepAwake } from '../src/components/KeepAwake';
 
 const TICK_MS = 250;
@@ -438,7 +438,9 @@ export default function Write() {
                   ? 'This phone cannot listen, so this is a typed room.'
                   : !secureEnough()
                     ? 'Saying it needs a secure address (https). Over plain http a browser will not listen, so this is a typed room.'
-                    : 'Saying it needs Chrome, Edge or Safari. This browser cannot listen, so this is a typed room.'}
+                    : iosHomeScreen()
+                      ? 'From the Home Screen an iPhone cannot listen. Open the address in Safari to say it; here it is a typed room.'
+                      : 'Saying it needs Chrome, Edge or Safari. This browser cannot listen, so this is a typed room.'}
               </Label>
             ) : null}
             {/*

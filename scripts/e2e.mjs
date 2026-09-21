@@ -142,6 +142,8 @@ async function main() {
   await page.addInitScript(() => {
     // A plain-http address, on request: the browser will not listen there.
     if (sessionStorage.getItem('insecure') === '1') Object.defineProperty(window, 'isSecureContext', { configurable: true, get: () => false });
+    // The site kept on an iPhone's Home Screen, on request.
+    if (sessionStorage.getItem('standalone') === '1') Object.defineProperty(navigator, 'standalone', { configurable: true, get: () => true });
     if (sessionStorage.getItem('no-voice') === '1') {
       delete window.SpeechRecognition;
       delete window.webkitSpeechRecognition;
@@ -1175,7 +1177,16 @@ async function main() {
     await page.waitForTimeout(600);
     check('a browser that cannot listen is not offered Say it', (await seen('mode-type')) && !(await seen('mode-say')) && !(await seen('mode-walk')));
     check('and the doorway says which browsers can', (await seen('write-no-voice')) && (await text('write-no-voice')).toLowerCase().includes('chrome, edge or safari'), (await seen('write-no-voice')) ? await text('write-no-voice') : 'no line');
-    await page.evaluate(() => sessionStorage.removeItem('no-voice'));
+    // The same, from an iPhone's Home Screen: the reason is the Home Screen.
+    await page.evaluate(() => sessionStorage.setItem('standalone', '1'));
+    await page.goto(`${BASE}/write?kind=addition`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1200);
+    await page.waitForTimeout(600);
+    check('from an iPhone’s Home Screen the doorway names the Home Screen', (await seen('write-no-voice')) && (await text('write-no-voice')).toLowerCase().includes('home screen'), (await seen('write-no-voice')) ? await text('write-no-voice') : 'no line');
+    await page.evaluate(() => {
+      sessionStorage.removeItem('standalone');
+      sessionStorage.removeItem('no-voice');
+    });
     // The same doorway over plain http: the line names the real reason.
     await page.evaluate(() => sessionStorage.setItem('insecure', '1'));
     await page.goto(`${BASE}/write?kind=addition`, { waitUntil: 'networkidle' });

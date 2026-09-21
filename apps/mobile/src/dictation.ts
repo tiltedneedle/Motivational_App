@@ -130,6 +130,16 @@ export function secureEnough(): boolean {
   return w.isSecureContext !== false;
 }
 
+/**
+ * Whether this is the site kept on an iPhone's Home Screen. WebKit gives a
+ * home-screen web app no speech recogniser, so when it cannot listen there
+ * the reason is the Home Screen, not the browser.
+ */
+export function iosHomeScreen(): boolean {
+  const w = globalThis as unknown as { navigator?: { standalone?: boolean } };
+  return w.navigator?.standalone === true;
+}
+
 function webRecognitionClass(): WebRecognitionClass | null {
   const w = globalThis as unknown as { webkitSpeechRecognition?: WebRecognitionClass; SpeechRecognition?: WebRecognitionClass };
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
