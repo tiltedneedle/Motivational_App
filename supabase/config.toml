@@ -57,7 +57,7 @@ otp_expiry = 600
 # (README, "Google sign-in"); the redirect URI registered there is this
 # project's /auth/v1/callback. Off until both exist. The id also goes in the
 # app's environment as EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID, which shows the button.
-enabled = false
+enabled = true
 client_id = "env(GOOGLE_CLIENT_ID)"
 secret = "env(GOOGLE_CLIENT_SECRET)"
 # The native module (a later step) signs in with an id token; its iOS client
