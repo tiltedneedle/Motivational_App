@@ -44,7 +44,8 @@ installs for seven days; a developer account makes it permanent.
 ## Show it in a browser (the web demo)
 
 The whole app runs as a web build, and it is the build every check runs
-against — 330 end-to-end checks, every route opened cold, the axe pass.
+against — the end-to-end suite (five hundred and more checks), every route
+opened cold, the axe pass, the service worker driven through two deploys.
 
 ```bash
 pnpm build:web && pnpm demo
@@ -68,6 +69,33 @@ own fallbacks until a model key is set (the screens say so); the paywall's
 Continue says plainly that nothing was charged; and the platform's back is the
 browser's arrow, which the app intercepts as one step back — on a phone that
 is the hardware button, which only a native build can show.
+
+### Showing it to somebody in ten minutes
+
+The timers are real (the Fifteen is fifteen minutes), and a demo does not
+have to wait for them. The walk that shows the most, in order:
+
+1. **Welcome** — one screen. Give a first name. Tap **Look around first**:
+   Today, honestly empty, says what the room is for and what three evenings
+   make. Then **Begin tonight**.
+2. **Consent**, then **the three doors** — pick **Future** (badged "Today
+   comes from here").
+3. **The Interview** — taps only, about a minute. The tray fills with stones.
+4. **The Fifteen** — on Chrome with a microphone, choose **Say it** and talk
+   for a minute; the dot beside *Listening* follows the voice. Then tap
+   **Done for now**: every word is kept; the card that follows has **Read it
+   back to me**. (The fifteen minutes are there whenever somebody wants them.)
+5. **What I heard** — the phrases are their own words, verbatim. For a short
+   demo keep **one** and name it (the Book seals only once every stone is
+   written: five short lines per goal on Starter, so one goal is five lines).
+6. Put it in **order**, name the Book, write the five **stones** (one short
+   line per question; a tapped framing is a way in, the line is still theirs),
+   see the **Portrait**, and **seal the Book** with the hold.
+7. **Today** — the first move, cut from their own line; tap the stone when
+   it is done; the coral ✓ seals the day.
+
+To start over between demos, clear the site's storage in the browser (or
+open a private window).
 
 ## Run it anywhere, without a build
 
