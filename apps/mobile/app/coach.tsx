@@ -21,15 +21,18 @@ import {
   fullTrackInvitation,
   type CoachReply,
 } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Quoted, Rule, Stone, Studio, Toast, TopBar, UserField, UserText, accent, day, type as fonts } from '@morrow/ui';
-import { coachAnalyses, useConsistency, useLatestBook, useMorrow, useTodaysMoves } from '../src/store';
+import { Body, Chip, InkButton, Label, Quoted, Rule, Statement, Stone, Studio, TabBar, Toast, TopBar, UserField, UserText, accent, day, type as fonts } from '@morrow/ui';
+import { coachAnalyses, useConsistency, useFirstRun, useLatestBook, useMorrow, useTodaysMoves } from '../src/store';
+import { useGoTab } from '../src/tabs';
 import { dictation } from '../src/dictation';
 
 export default function Coach() {
   const router = useRouter();
+  const goTab = useGoTab('coach');
   const showResources = useMorrow((st) => st.showResources);
   const state = useMorrow((s) => s);
   const book = useLatestBook();
+  const firstRun = useFirstRun();
   const moves = useTodaysMoves();
   const score = useConsistency();
   const shrinkMove = useMorrow((s) => s.shrinkMove);
@@ -231,7 +234,17 @@ export default function Coach() {
         ) : null}
 
         <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18, gap: 16 }}>
-          {thread.length === 0 && brief ? (
+          {!book && thread.length === 0 ? (
+            // Nothing to read yet. The brief used to be built anyway — "Quiet
+            // day yesterday. It is in the ledger", "Consistency 0" — to a
+            // person three minutes into the app.
+            <View testID="coach-no-book" style={{ gap: 12 }}>
+              <Statement style={{ fontSize: 24, lineHeight: 30 }}>The coach reads your Book.</Statement>
+              <Body>Write it and it has something to say every morning: your line, yesterday, what to start with — in your words, never its own.</Body>
+              <InkButton testID="coach-begin" label={firstRun.label} onPress={() => router.push(firstRun.route as never)} />
+            </View>
+          ) : null}
+          {book && thread.length === 0 && brief ? (
             <View testID="dawn-brief" style={{ gap: 14 }}>
               {/*
                 The brief is the app's sentences around the person's own —
@@ -421,6 +434,7 @@ export default function Coach() {
               {micNote}
             </Label>
           ) : null}
+          <TabBar active="coach" onPress={goTab} style={{ marginTop: 10 }} />
         </View>
       </SafeAreaView>
     </Studio>

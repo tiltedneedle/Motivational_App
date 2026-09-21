@@ -17,7 +17,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { domainMeta } from '@morrow/core';
+import { analysisPlan, domainMeta } from '@morrow/core';
 import { Body, Card, InkButton, Label, ProgressBar, Quoted, Rise, Rule, Statement, Stone, Studio, TextButton, TopBar, UserField, UserText, accent, day, useReducedMotion } from '@morrow/ui';
 import { useGoals, useMorrow } from '../src/store';
 import { useFirstRunStep } from '../src/analytics';
@@ -38,6 +38,23 @@ export default function PortraitScreen() {
 
   const goal = goalId ? goals.find((g) => g.id === goalId) : goals[0];
   const portrait = goal ? portraits.find((p) => p.goalId === goal.id) : undefined;
+  const track = useMorrow((s) => s.profile.track);
+
+  /**
+   * Back, on the path, is the last stone — the screen the person was just
+   * on. Every stone replaced the one before it, so the router's own back
+   * from here was "Name your Book", two screens and five stones ago.
+   */
+  const goBack = () => {
+    if (onPath && goals.length) {
+      const last = goals[goals.length - 1]!;
+      const plan = analysisPlan(last.rank, track);
+      router.replace(`/stone?goal=${last.id}&kind=${plan[plan.length - 1]}`);
+      return;
+    }
+    if (router.canGoBack()) router.back();
+    else router.dismissTo('/today');
+  };
 
   const [editing, setEditing] = useState(false);
   const [line, setLine] = useState(portrait?.identityLine ?? '');
@@ -78,7 +95,7 @@ export default function PortraitScreen() {
       <Studio testID="screen-portrait">
         <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
           {/* A way back at the top, like every other screen: this branch is what a stale link lands on. */}
-          <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'portrait-back' }} where="Your plan" />
+          <TopBar back={{ onPress: goBack, testID: 'portrait-back' }} where="Your plan" />
           <View style={{ flex: 1, justifyContent: 'center', gap: 12 }}>
           <Statement>Not yet.</Statement>
           <Body>

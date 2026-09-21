@@ -25,6 +25,7 @@ export default function Account() {
   // A web sign-in through Google comes back here cold, with the `next` it
   // left with kept in the tab; read once, on mount.
   const [next] = useState<string | undefined>(() => (typeof nextParam === 'string' ? nextParam : (takeSignInNext() ?? undefined)));
+  const topGoalId = useMorrow((s) => s.goals.find((g) => g.status !== 'archived')?.id ?? null);
   const markAccountAsked = useMorrow((s) => s.markAccountAsked);
   const setAccount = useMorrow((s) => s.setAccount);
   const afterSignIn = useMorrow((s) => s.afterSignIn);
@@ -205,7 +206,20 @@ export default function Account() {
   return (
     <Studio testID="screen-account">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'account-back' }} />
+        <TopBar
+          back={{
+            onPress: () => {
+              // On the way to the finish, back is the sign-in screen's plan, not the stack under it.
+              if (next === '/seal-book' && topGoalId) {
+                router.replace(`/portrait?goal=${topGoalId}&next=/seal-book`);
+                return;
+              }
+              if (router.canGoBack()) router.back();
+              else router.dismissTo('/today');
+            },
+            testID: 'account-back',
+          }}
+        />
         <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 18 }}>
           <Label>An account, if you want one</Label>
           <Statement style={{ fontSize: 27, lineHeight: 33 }}>Keep the Book somewhere a lost phone cannot reach.</Statement>

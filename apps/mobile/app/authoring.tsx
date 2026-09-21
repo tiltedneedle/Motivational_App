@@ -29,8 +29,11 @@ export default function Authoring() {
       back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'authoring-back' }}
       where="Your future"
       progress={{ value: 2.4 / 5, label: 'Step 3 of 5 · Write your future', testID: 'authoring-progress' }}
-      cta={{ label: 'Begin · 15 minutes', onPress: () => router.push('/write?kind=ideal'), testID: 'authoring-begin' }}
-      secondary={{ label: 'Not tonight', onPress: () => router.push('/today'), testID: 'authoring-later' }}
+      // "Continue", not "Begin": the room's own doorway (type it, say it,
+      // the clock) is where the fifteen minutes begin, and two screens in a
+      // row that both said "Begin · 15 minutes" read as one that did not work.
+      cta={{ label: 'Continue', onPress: () => router.push('/write?kind=ideal'), testID: 'authoring-begin' }}
+      secondary={{ label: 'Not tonight', onPress: () => router.dismissTo('/today'), testID: 'authoring-later' }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 }}>
         {goals.slice(0, 4).map((g) => (
@@ -40,7 +43,7 @@ export default function Authoring() {
       </View>
       <Heading
         title="Fifteen minutes on the life you want."
-        line="Three to five years from now, if things went well. Write or talk; spelling can wait. Stop whenever you like — every word is kept."
+        line="Three to five years from now, if things went well. Write or talk; spelling can wait. Stop whenever you like — every word is kept. Next: choose type or talk, and begin."
       />
       <View style={{ gap: 10 }}>
         <Label>How deep do you want to go?</Label>

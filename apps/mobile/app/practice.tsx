@@ -77,7 +77,11 @@ export default function PracticeBuilder() {
       ...(minVersion.trim() ? { minVersion } : {}),
     });
     if (!made) {
-      setError('That could not be saved yet. Every step needs words and a length.');
+      setError(
+        source
+          ? 'That could not be saved yet. Every step needs words and a length.'
+          : 'A practice is built from the How line for this goal, and there is none yet. Write it first.',
+      );
       return;
     }
     router.dismissTo('/today');
@@ -142,10 +146,13 @@ export default function PracticeBuilder() {
                 Cut from what you already wrote. Change any of it; it is yours.
               </Body>
             ) : (
-              <Body testID="practice-no-source" style={{ fontSize: 13 }}>
-                You have not written how yet for this goal, so there is nothing to cut steps from. You can write them
-                here, or write that line first and come back to a form that is already filled in.
-              </Body>
+              <View testID="practice-no-source" style={{ gap: 10, alignItems: 'flex-start' }}>
+                <Body style={{ fontSize: 13 }}>
+                  You have not written how yet for this goal, so there is nothing to cut steps from — and a practice is
+                  built from that line. Write it, and this form comes back already filled in.
+                </Body>
+                <Chip testID="practice-write-how" label="Write how" onPress={() => router.push(`/stone?goal=${goal.id}&kind=strategies`)} />
+              </View>
             )}
 
             {steps.map((s, i) => (
@@ -233,12 +240,14 @@ export default function PracticeBuilder() {
               </View>
             ))}
 
-            <Chip
-              testID="practice-add-step"
-              label="Add a step"
-              ghost
-              onPress={() => setSteps((all) => [...all, { text: '', seconds: 300 }])}
-            />
+            {source ? (
+              <Chip
+                testID="practice-add-step"
+                label="Add a step"
+                ghost
+                onPress={() => setSteps((all) => [...all, { text: '', seconds: 300 }])}
+              />
+            ) : null}
             {steps.length > 0 ? (
               <Label testID="practice-total">
                 {steps.length} {steps.length === 1 ? 'step' : 'steps'} · {durationLabel(totalSeconds({ steps }))}
@@ -308,8 +317,8 @@ export default function PracticeBuilder() {
         <View style={{ paddingTop: 10, paddingBottom: 18 }}>
           <InkButton
             testID="practice-save"
-            label="Keep it"
-            disabled={!title.trim() || steps.length === 0 || days.length === 0}
+            label={source ? 'Keep it' : 'Write how first'}
+            disabled={!source || !title.trim() || steps.length === 0 || days.length === 0}
             onPress={save}
           />
         </View>

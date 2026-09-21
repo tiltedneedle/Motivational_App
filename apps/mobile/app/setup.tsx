@@ -112,7 +112,8 @@ export default function Setup() {
 
   const finish = () => {
     const trimmed = name.trim();
-    setProfile({ displayName: trimmed, persona: voice ?? 'gentle', writeWhen: when ?? 'evening' });
+    const firstArea = areas[0] ? (AREAS.find((a) => a.id === areas[0])?.domain ?? 'custom') : custom.trim() ? 'custom' : null;
+    setProfile({ displayName: trimmed, persona: voice ?? 'gentle', writeWhen: when ?? 'evening', firstArea });
     // The Interview opens with these areas already ticked and its first
     // question answered, so it begins on the question after.
     let s = initialInterview();

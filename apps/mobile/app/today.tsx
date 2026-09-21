@@ -158,7 +158,10 @@ export default function Today() {
   const virtuesDone = halfDone(picksAll, 'virtues', state.profile.track, sitting);
   const interviewDraft = useMorrow((s) => s.interviewDraft);
   const warmLine = useMorrow((s) => latestText(s.texts, 'warmup')?.body.trim() ?? null);
-  const elsewhere = !firstVisit(volumes) || Boolean(presentDraft) || Boolean(pastDraft) || interviewKept(interviewDraft);
+  // Somewhere else on the path already: a volume begun, or the Interview
+  // answered past the areas set-up seeded for it (set-up itself saves a
+  // draft with the picked areas, and that is the start, not elsewhere).
+  const elsewhere = !firstVisit(volumes) || Boolean(presentDraft) || Boolean(pastDraft) || (interviewKept(interviewDraft) && (interviewDraft?.s.answered ?? 0) > 0);
   const whatIsThere = (): string => {
     if (volumes.past === 'done' && volumes.present === 'done') return 'Your past and your Present are written.';
     if (volumes.past === 'done') return 'Your past is written.';
@@ -314,7 +317,7 @@ export default function Today() {
           <ScrollView contentContainerStyle={{ padding: 22, paddingBottom: 120, gap: 16 }} showsVerticalScrollIndicator={false}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <Label testID="today-date">{formatDay(today, { weekday: true })}</Label>
-              <StreakPill count={0} testID="today-streak" />
+              <View />
             </View>
             <Rise index={0} reducedMotion={reduced} style={{ gap: 8 }}>
               <Statement testID="today-path">{heading}</Statement>
@@ -324,17 +327,17 @@ export default function Today() {
               <PathCard
                 testID="today-evenings"
                 title={
-                  fresh
-                    ? 'Three short sessions to a Book you wrote.'
+                  fresh || firstRun.step === 'setup' || firstRun.step === 'warmup'
+                    ? 'Five short steps to a Book you wrote.'
                     : firstRun.step === 'interview'
                       ? 'Find your goals, by tapping.'
-                      : firstRun.step === 'fifteen'
+                      : firstRun.step === 'fifteen' || firstRun.step === 'readback'
                         ? 'Fifteen minutes on your future.'
                         : firstRun.step === 'order' || firstRun.step === 'stones'
                           ? 'Plan each goal, one line at a time.'
                           : 'Finish your Book.'
                 }
-                caption={fresh ? 'About forty minutes in all, tonight or over a few days. You write every word.' : undefined}
+                caption={fresh || firstRun.step === 'warmup' ? 'About forty minutes in all, tonight or over a few days. You write every word.' : undefined}
                 steps={path.steps.map((st) => ({ label: st.label, minutes: st.minutes, done: st.done }))}
                 at={path.at}
                 cta={{ label: firstRun.label, onPress: () => router.push(firstRun.route as never), testID: 'today-begin' }}
@@ -400,7 +403,7 @@ export default function Today() {
               had just sealed filed itself under Thursday.
             */}
             <Label testID="today-date">{formatDay(today, { weekday: true })}</Label>
-            <StreakPill count={streak} testID="today-streak" />
+            <StreakPill count={streak} week={week.filter((d) => d.state === 'sealed' || d.state === 'todaySealed').length} testID="today-streak" />
           </View>
 
           <Rise index={0} reducedMotion={reduced}>

@@ -44,9 +44,13 @@ export default function NewMove() {
     () => (goalId ? analysesFor(state, goalId).find((a) => a.kind === 'strategies' && a.line.trim()) : undefined),
     [state, goalId],
   );
-  // Cut from the line, as the Blueprint is: the Full track's paragraph
+  // Cut from the line, as the plan is: the Full track's paragraph
   // made sixty-word chips.
   const suggestions = useMemo(() => (source ? splitFirstMoves(source.line) : []), [source]);
+  // A line written and no plan built: the free plan builds one, and a move
+  // needs a plan to sit in. Said here, with the door, rather than refused
+  // after the person has picked one of their own lines.
+  const planless = Boolean(goalId && source && !state.plans.some((p) => p.goalId === goalId));
 
   const back = () => (router.canGoBack() ? router.back() : router.dismissTo('/today'));
 
@@ -55,6 +59,10 @@ export default function NewMove() {
     const title = (picked ?? own).trim();
     if (!title) {
       setProblem('Say what the move is, in your words.');
+      return;
+    }
+    if (planless) {
+      setProblem('This goal is written and waiting for its plan. The free plan builds one; Pro builds one for every goal.');
       return;
     }
     const ok = addMove(goalId, title, minutes, source ? { sourceLineId: source.id } : undefined);
@@ -112,7 +120,15 @@ export default function NewMove() {
             </View>
           ) : null}
 
-          {mode === 'move' && goals.length ? (
+          {mode === 'move' && goals.length && planless ? (
+            <View testID="new-move-planless" style={{ gap: 12, alignItems: 'flex-start' }}>
+              <Body>
+                This goal is written and waiting for its plan. The free plan builds one plan; Pro builds one for every goal, and
+                then a move can go under this one.
+              </Body>
+              <Chip testID="new-move-see-pro" label="See what Pro adds" onPress={() => router.push(`/paywall?moment=second-blueprint&from=/today`)} />
+            </View>
+          ) : mode === 'move' && goals.length ? (
             <>
               <View style={{ gap: 8 }}>
                 <Label>What</Label>

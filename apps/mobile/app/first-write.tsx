@@ -29,11 +29,13 @@ export default function FirstWrite() {
   const showResources = useMorrow((s) => s.showResources);
 
   // The prompt follows the first area picked in set-up.
+  const firstArea = useMorrow((s) => s.profile.firstArea);
   const domain: DomainId | null = useMemo(() => {
+    if (firstArea) return firstArea;
     const first = interviewDraft?.s?.picked?.[0];
     if (!first) return null;
     return AREAS.find((a) => a.id === first)?.domain ?? 'custom';
-  }, [interviewDraft]);
+  }, [firstArea, interviewDraft]);
   const prompt = warmupPrompt(domain);
 
   const [body, setBody] = useState(draft?.body ?? '');
@@ -120,7 +122,12 @@ export default function FirstWrite() {
     pendingRef.current = null;
     const text = saveText('warmup', body.trim(), mode, seconds);
     if (!text) {
-      keptRef.current = false;
+      // The store kept the line and raised the card over this screen. The
+      // path has moved on (a first line is a first line, whatever the screen
+      // said of it), so once the card is answered this screen is done: it
+      // used to stay, with the same line and a live Keep, and every further
+      // tap kept the line again and raised the card again.
+      router.replace('/today');
       return;
     }
     // A crisis line raises the card from the store; the mirror is not the

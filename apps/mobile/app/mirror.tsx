@@ -27,10 +27,12 @@ export default function MirrorScreen() {
   // not a screen; it is wherever the path is.
   const anyWarm = texts.some((t) => t.kind === 'warmup' && t.body.trim().length > 0);
   // The area they came here for is the mirror's hint, as it was the prompt's.
+  const firstArea = useMorrow((s) => s.profile.firstArea);
   const hint: DomainId | null = useMemo(() => {
+    if (firstArea) return firstArea;
     const first = interviewDraft?.s?.picked?.[0];
     return first ? (AREAS.find((a) => a.id === first)?.domain ?? 'custom') : null;
-  }, [interviewDraft]);
+  }, [firstArea, interviewDraft]);
   const mirror = useMemo(() => mirrorLocally(warm?.body ?? '', hint), [warm, hint]);
   const path = firstRunPath(firstRun);
   const remaining = path.steps.filter((s) => !s.done).length;

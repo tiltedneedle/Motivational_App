@@ -36,6 +36,7 @@ import {
   UserText,
   accent,
   day,
+  radius,
   useTwoColumn,
   TopBar,
 } from '@morrow/ui';
@@ -48,6 +49,8 @@ export default function GoalScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const state = useMorrow((s) => s);
   const goals = useGoals();
+  const entitled = state.profile.entitled === true;
+  const makePortraitAndPlan = useMorrow((s) => s.makePortraitAndPlan);
   // Never fall back to another goal. An id that no longer resolves means the
   // goal was dropped, and showing a different one in its place attributes
   // somebody's plan and their own sentences to a goal they did not open.
@@ -180,6 +183,27 @@ export default function GoalScreen() {
               />
             ) : null}
           </View>
+
+          {/*
+            Written and waiting: the How line is there and the plan is not,
+            because the free plan builds one. Said, with the door, rather
+            than a ring labelled "No plan yet" as if it were their omission.
+          */}
+          {!plan && analyses.some((a) => a.kind === 'strategies' && a.line.trim()) ? (
+            <View testID="goal-planless" style={{ backgroundColor: day.surface2, borderRadius: radius.card, padding: 16, gap: 10 }}>
+              <Label style={{ color: accent.coralText }}>Written, waiting for a plan</Label>
+              <Body style={{ fontSize: 14 }}>
+                {entitled
+                  ? 'The five answers are here. Build the plan and its first moves land on Today.'
+                  : 'The five answers are here. The free plan builds one goal’s plan; Pro builds one for every goal, and this one’s moves would land on Today.'}
+              </Body>
+              {entitled ? (
+                <Chip testID="goal-build-plan" label="Build the plan" onPress={() => makePortraitAndPlan(goal.id)} />
+              ) : (
+                <Chip testID="goal-see-pro" label="See what Pro adds" onPress={() => router.push(`/paywall?moment=second-blueprint&from=/goal?id=${goal.id}`)} />
+              )}
+            </View>
+          ) : null}
 
           {/*
             The Present volume's other half. Each virtue the person wrote about

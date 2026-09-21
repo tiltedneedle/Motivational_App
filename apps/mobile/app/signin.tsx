@@ -36,7 +36,14 @@ export default function SignIn() {
   }, [signInNotice, setSignInNotice]);
 
   const to = typeof next === 'string' && /^\/[a-z-]+$/i.test(next) ? next : '';
+  const topGoalId = useMorrow((s) => s.goals.find((g) => g.status !== 'archived')?.id ?? null);
   const back = () => {
+    // The ask on the way to the finish: back is the plan it came from, not
+    // "Name your Book" five stones ago.
+    if (to === '/seal-book' && topGoalId) {
+      router.replace(`/portrait?goal=${topGoalId}&next=/seal-book`);
+      return;
+    }
     if (router.canGoBack()) router.back();
     else router.replace(to || '/today');
   };

@@ -394,20 +394,27 @@ export function StatTile({ value, label, testID, style }: { value: string | numb
   );
 }
 
-/** A count with a flame. Zero is shown as "Day 1 tonight", never a dead zero. */
-export function StreakPill({ count, testID }: { count: number; testID?: string }) {
+/**
+ * The run of days, with a flame. Never a zero: the product's rule (PRD §2.4,
+ * "nothing resets to zero") and the person it is written for both mean a
+ * dead flame at 0 the morning after a night shift is the wrong first thing
+ * to see. With no run, `week` (days kept this week) is shown instead, and
+ * with nothing at all there is no pill.
+ */
+export function StreakPill({ count, week = 0, testID }: { count: number; week?: number; testID?: string }) {
   const { p } = usePalette();
   const on = count > 0;
+  if (!on && week === 0) return null;
   return (
     <View
       testID={testID}
       accessible
       accessibilityRole="text"
-      accessibilityLabel={on ? `${count} day streak` : 'No streak yet'}
+      accessibilityLabel={on ? `${count} day run` : `${week} of 7 days this week`}
       style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, paddingLeft: 10, paddingRight: 12, borderRadius: 999, backgroundColor: on ? accent.coralSoft : p.surface2 }}
     >
       <Glyph name="flame" size={18} color={on ? accent.coralText : p.ink3} />
-      <Text style={{ fontFamily: fonts.sansSemi, fontSize: 14, color: on ? accent.coralText : p.ink2 }}>{on ? `${count}` : '0'}</Text>
+      <Text style={{ fontFamily: fonts.sansSemi, fontSize: 14, color: on ? accent.coralText : p.ink2 }}>{on ? `${count}` : `${week}/7`}</Text>
     </View>
   );
 }

@@ -611,6 +611,13 @@ export const Profile = z.object({
    * two daily moments the primer offers first. Not a schedule.
    */
   writeWhen: z.enum(['morning', 'evening', 'any']).default('evening'),
+  /**
+   * The first area picked in set-up. The first line's prompt, the mirror's
+   * question and the question in the margin of the fifteen minutes all
+   * follow it; read from the Interview's draft they disagreed once the
+   * Interview had finished and cleared it.
+   */
+  firstArea: DomainId.nullable().default(null),
   consentedAt: z.string().nullable(),
   entitled: z.boolean(),
   /**
@@ -681,6 +688,7 @@ export const DEFAULT_PROFILE: Profile = {
   reducedMotion: false,
   appearance: 'light',
   writeWhen: 'evening',
+  firstArea: null,
   consentedAt: null,
   entitled: false,
   supportOfferedAt: null,

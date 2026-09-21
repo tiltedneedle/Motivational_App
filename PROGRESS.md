@@ -677,7 +677,7 @@ this list. Tick as done; on resume continue from the first unticked item.
       words; a timeout on account calls; the sign-in outcome shown on the account
       screen; the pulled Book restores title/I-will; a revoked session clears the
       account; one push in flight at a time; Android's double PKCE exchange.
-- [ ] Batch D, the journey: a crisis-flagged first line strands the person; the
+- [x] Batch D, the journey: a crisis-flagged first line strands the person; the
       first Today after set-up says "Finish your Book."; the clock closes over an
       empty page; the read-back is not a step of the path (and Back from it opens
       the doorway); Back from Portrait/sign-in/finish lands on "Name your Book";

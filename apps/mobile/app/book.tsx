@@ -27,6 +27,7 @@ import {
 } from '@morrow/ui';
 import { printBook } from '../src/print';
 import { useLatestBook, useMorrow, useFirstRun } from '../src/store';
+import { FloatingTabs, TAB_BAR_ROOM } from '../src/tabs';
 import { takeAway, takeawayNote } from '../src/takeaway';
 import { DiffPage } from '../src/components/DiffPage';
 
@@ -84,11 +85,12 @@ export default function BookScreen() {
       <Studio testID="screen-book">
         <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
           <TopBar back={{ label: 'Today', onPress: () => router.dismissTo('/today'), testID: 'book-back' }} where="The Book" />
-          <View style={{ flex: 1, justifyContent: 'center', gap: 12 }}>
+          <View style={{ flex: 1, justifyContent: 'center', gap: 12, paddingBottom: TAB_BAR_ROOM }}>
             <Statement>No Book yet.</Statement>
             <Body>Five short steps and there will be one. Pick up where you left off.</Body>
             <InkButton testID="book-start" label={firstRun.label} onPress={() => router.push(firstRun.route)} />
           </View>
+          <FloatingTabs active="book" />
         </SafeAreaView>
       </Studio>
     );
@@ -129,7 +131,7 @@ export default function BookScreen() {
           testID="book-page"
           showsVerticalScrollIndicator={false}
           style={{ flex: 1, backgroundColor: paper.ground, borderRadius: radius.card }}
-          contentContainerStyle={{ padding: 26, paddingBottom: 40, gap: 18 }}
+          contentContainerStyle={{ padding: 26, paddingBottom: 40 + TAB_BAR_ROOM, gap: 18 }}
         >
           {/*
             The spine.
@@ -461,6 +463,7 @@ export default function BookScreen() {
             ) : null}
           </View>
         </View>
+        <FloatingTabs active="book" />
       </SafeAreaView>
     </Studio>
   );

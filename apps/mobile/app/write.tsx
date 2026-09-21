@@ -194,7 +194,11 @@ export default function Write() {
   // The mirror's question (the rebuild): asked of the first line and promised
   // for this page. The app's own words, so never in the serif.
   const warm = useMorrow((s) => latestText(s.texts, 'warmup'));
+  // The same hint the mirror used, so the question promised there is the
+  // one on this page: the first area from set-up, kept on the profile
+  // (the Interview's draft, read before, is cleared when it finishes).
   const interviewSeedDomain = useMorrow((s) => {
+    if (s.profile.firstArea) return s.profile.firstArea;
     const first = s.interviewDraft?.s?.picked?.[0];
     return first ? (AREAS.find((a) => a.id === first)?.domain ?? 'custom') : null;
   });
@@ -529,22 +533,51 @@ export default function Write() {
 
   if (phase === 'closed') {
     const words = wordCount(session.body);
+    // The clock can run out over an empty page — the phone put down, the
+    // recogniser hearing nothing. Nothing was written, so nothing is kept
+    // and nothing goes on to the read-back: this used to congratulate zero
+    // words, save an empty Fifteen, and finish a Book that opened on “”.
+    const empty = words === 0 && !paused;
     return (
       <Studio dark testID="screen-write-closed">
         <SafeAreaView style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 22, justifyContent: 'center', gap: 24 }} showsVerticalScrollIndicator={false}>
           <Stone size={132} domain="health" polish={polish(words)} seated style={{ alignSelf: 'center' }} />
           <Statement style={{ color: night.ink, textAlign: 'center', fontSize: 28, lineHeight: 34 }}>
-            {endedEarly ? 'The room closed while you were away.' : closedBy === 'early' ? 'Closed here, for now.' : 'That is the most you have said about this in one go.'}
+            {empty ? 'Nothing was written this time.' : endedEarly ? 'The room closed while you were away.' : closedBy === 'early' ? 'Closed here, for now.' : 'That is the most you have said about this in one go.'}
           </Statement>
           <Body style={{ color: night.ink2, textAlign: 'center' }}>
-            {endedEarly
+            {empty
+              ? 'The clock ran out over an empty page. That is fine — nothing is kept, and the whole time is there whenever you want it.'
+              : endedEarly
               ? `Every word you wrote is here — ${words} of them. A session can be picked up once, and this one already was, so it counts as it stands.`
               : closedBy === 'early'
                 ? `Every word is kept — ${words} of them — and it goes on to the read-back like any session. Kept as a draft for a day; the whole ${Math.round(targetSeconds(kind, track) / 60)} minutes is there whenever you want it.`
                 : 'Kept as a draft for a day. You can read it, not edit it.'}
           </Body>
-          {paused ? (
+          {empty ? (
+            <View style={{ gap: 10 }}>
+              <InkButton
+                testID="write-again"
+                label="Write it again"
+                onPress={() => {
+                  clearDraft(kind);
+                  setSession(startWriting(kind, track, mode));
+                  setClosedBy(null);
+                  setPhase('doorway');
+                }}
+              />
+              <InkButton
+                testID="write-later"
+                label="Not now"
+                onPress={() => {
+                  clearDraft(kind);
+                  router.dismissTo('/today');
+                }}
+                style={{ backgroundColor: 'transparent', borderWidth: 1.5, borderColor: night.line }}
+              />
+            </View>
+          ) : paused ? (
             <View style={{ gap: 10 }}>
               <Body style={{ color: night.ink2, textAlign: 'center' }}>
                 What you wrote is on this device and nothing was sent anywhere. It is not going into the Book, and it

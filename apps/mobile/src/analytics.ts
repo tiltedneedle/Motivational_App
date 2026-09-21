@@ -61,6 +61,7 @@ export type Event =
         | 'interview'
         | 'doorway'
         | 'fifteen'
+        | 'readback'
         | 'read_back'
         | 'order'
         | 'stone'

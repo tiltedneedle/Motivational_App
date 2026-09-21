@@ -168,14 +168,19 @@ export interface RunnerState {
   minimal: boolean;
 }
 
-export function startRun(p: Practice, minimal = false): RunnerState {
-  const first = p.steps[0];
+export function startRun(p: Practice, minimal = false, from = 0): RunnerState {
+  // Picked up where the day left it: three steps done this morning and a
+  // stop for a call used to mean step one again tonight, and a second stop
+  // wrote the tally back down to nothing.
+  const at = Math.max(0, Math.min(from, p.steps.length));
+  const done = p.steps.length === 0 || at >= p.steps.length;
+  const step = p.steps[at];
   return {
     practiceId: p.id,
-    stepIndex: 0,
-    remaining: minimal ? 120 : (first?.seconds ?? 0),
-    running: true,
-    done: p.steps.length === 0,
+    stepIndex: done ? Math.max(0, p.steps.length - 1) : at,
+    remaining: minimal ? 120 : (step?.seconds ?? 0),
+    running: !done,
+    done,
     minimal,
   };
 }

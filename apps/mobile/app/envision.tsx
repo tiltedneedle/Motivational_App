@@ -35,6 +35,7 @@ import {
   TopBar,
 } from '@morrow/ui';
 import { useGoals, useMorrow } from '../src/store';
+import { FloatingTabs, TAB_BAR_ROOM } from '../src/tabs';
 
 type SceneType = Scene['type'];
 
@@ -99,13 +100,14 @@ export default function Envision() {
   if (!goal) {
     return (
       <Studio dark testID="screen-envision">
-        <SafeAreaView style={{ flex: 1, padding: 22, justifyContent: 'center', gap: 12 }}>
+        <SafeAreaView style={{ flex: 1, padding: 22, paddingBottom: TAB_BAR_ROOM, justifyContent: 'center', gap: 12 }}>
           <Statement style={{ color: night.ink }}>Nothing to picture yet.</Statement>
           <Body style={{ color: night.ink2 }}>
             Envision is built out of what you have already written. Name a goal and write your future, and this fills
             itself.
           </Body>
           <TextButton label="← Today" onPress={goBack} />
+          <FloatingTabs active="envision" />
         </SafeAreaView>
       </Studio>
     );
@@ -118,7 +120,7 @@ export default function Envision() {
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
         <TopBar back={{ label: 'Today', onPress: goBack, testID: 'envision-back' }} right={<Label style={{ color: night.ink3 }}>Envision</Label>} />
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18, gap: 22 }}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18, paddingBottom: 18 + TAB_BAR_ROOM, gap: 22 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
             <Stone size={54} domain={goal.domain} polish={0.85} />
             <View style={{ flex: 1, gap: 3 }}>
@@ -269,6 +271,7 @@ export default function Envision() {
             gets made up to fill the space.
           </Body>
         </ScrollView>
+        <FloatingTabs active="envision" />
       </SafeAreaView>
     </Studio>
   );

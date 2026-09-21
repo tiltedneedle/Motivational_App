@@ -39,6 +39,7 @@ import {
   night,
 } from '@morrow/ui';
 import { useMorrow } from '../src/store';
+import { dayOf } from '@morrow/core';
 import { KeepAwake } from '../src/components/KeepAwake';
 
 const TICK_MS = 250;
@@ -49,9 +50,15 @@ export default function Runner() {
   const practices = useMorrow((s) => s.practices);
   const logRun = useMorrow((s) => s.logRun);
   const practice = practices.find((p) => p.id === params.id);
+  // Today's log for it, so a routine stopped at step three resumes at four.
+  const doneToday = useMorrow((s) => {
+    const day = dayOf(new Date(), s.profile.dayBoundaryHour);
+    const log = s.practiceLogs.find((l) => l.practiceId === params.id && l.day === day);
+    return log && !log.minimal ? log.stepsDone : 0;
+  });
 
   const [run, setRun] = useState<RunnerState | null>(() =>
-    practice ? startRun(practice, params.minimal === '1') : null,
+    practice ? startRun(practice, params.minimal === '1', params.minimal === '1' ? 0 : doneToday) : null,
   );
   // The latest run, for the AppState handler. Written after each commit
   // rather than during render, which is the only time a ref may be written.

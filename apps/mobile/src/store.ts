@@ -895,6 +895,10 @@ const store = create<MorrowState>()(
         })),
 
       saveText: (kind, body, mode, seconds) => {
+        // Nothing is nothing: an empty text was counted as the future
+        // written, hid an earlier real one from the read-back (the newest
+        // wins), and finished a Book that opened on an empty quote.
+        if (!body.trim()) return null;
         const risk = screen(body);
         const text: AuthoringText = {
           id: newId('text'),
@@ -1484,9 +1488,15 @@ const store = create<MorrowState>()(
           ? s.analyses.find((a) => a.id === opts.sourceLineId && a.goalId === goalId)
           : undefined;
         const source = given ?? s.analyses.find((a) => a.goalId === goalId && a.kind === 'strategies');
-        if (!plan || !source) {
+        if (!source) {
           // Without a line of theirs behind it there is no move.
           set({ toast: { text: 'Write how you’ll do this goal first — the How stone.', kind: 'info' } });
+          return false;
+        }
+        if (!plan) {
+          // The line is written; the plan is not built (the free plan builds
+          // one). The sheet says so itself, with the door to Pro — this used
+          // to be a toast about the How stone they had just written.
           return false;
         }
         // Ordered before every move the plan already has, so it is the first
@@ -2843,7 +2853,10 @@ export function firstRunOf(s: MorrowState): FirstRunStep {
     // has been raised and answered, and the path must not ask for the line
     // again. (The mirror quotes only what is quotable, so it shows no quote.)
     hasWarmup: s.texts.some((t) => t.kind === 'warmup' && t.body.trim().length > 0),
-    hasIdeal: latestText(s.texts, 'ideal') !== null,
+    // A Fifteen with words in it. The clock can close over an empty page,
+    // and an empty text counted as the future written.
+    hasIdeal: (latestText(s.texts, 'ideal')?.body.trim().length ?? 0) > 0,
+    readBackOpen: s.readBackDraft !== null && s.readBackDraft.rows.some((r) => r.state === 'kept'),
     hasTitle: s.bookTitle.trim().length > 0,
     consented: Boolean(s.profile.consentedAt),
     // Only the lines the plan can use. A line the screen held out of the

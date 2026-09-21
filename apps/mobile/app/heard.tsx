@@ -109,7 +109,11 @@ export default function Heard() {
     router.dismissTo('/today');
   };
 
-  const back = () => (router.canGoBack() ? router.back() : router.dismissTo('/today'));
+  // Today, not the screen behind: the room replaced itself with this one,
+  // so "back" was the doorway with a live "Begin · 15 minutes" — an
+  // invitation to write the fifteen again. The rows are kept (the draft
+  // above), and Today's path card offers to carry on with them.
+  const back = () => router.dismissTo('/today');
   const progress = onPath ? { value: 3 / 5, label: 'Step 3 of 5 · Your future is written', testID: 'heard-progress' } : undefined;
 
   return (

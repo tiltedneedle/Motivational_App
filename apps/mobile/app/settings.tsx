@@ -10,6 +10,7 @@ import { hourOf, boundaryFor, HELPLINES, bookToText, formatDay, plural, sealedOn
 import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, accent, day, TopBar } from '@morrow/ui';
 import { manageSubscriptionUrl } from '../src/billing';
 import { useLatestBook, useMorrow } from '../src/store';
+import { FloatingTabs, TAB_BAR_ROOM } from '../src/tabs';
 import { takeAway, takeawayNote } from '../src/takeaway';
 import { hasSupabase } from '../src/supabase';
 
@@ -177,7 +178,7 @@ export default function Settings() {
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
         <TopBar back={{ label: 'Today', onPress: () => router.dismissTo('/today'), testID: 'settings-back' }} where="You" />
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18, gap: 22 }}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18, paddingBottom: 18 + TAB_BAR_ROOM, gap: 22 }}>
           <Statement>What Morrow knows about you.</Statement>
           <Body>
             {plural(state.texts.length, 'piece')} of writing, {plural(state.goals.length, 'goal')},{' '}
@@ -595,6 +596,7 @@ export default function Settings() {
             )}
           </View>
         </ScrollView>
+        <FloatingTabs active="you" />
       </SafeAreaView>
     </Studio>
   );

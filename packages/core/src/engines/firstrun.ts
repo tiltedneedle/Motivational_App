@@ -23,6 +23,7 @@ export type FirstRunStep =
   | { step: 'warmup'; route: '/first-write'; label: string }
   | { step: 'interview'; route: '/interview'; label: string }
   | { step: 'fifteen'; route: '/authoring'; label: string }
+  | { step: 'readback'; route: '/heard'; label: string }
   | { step: 'order'; route: '/rank'; label: string }
   | { step: 'stones'; route: string; label: string; goalId: string; kind: AnalysisKind; written: number; total: number }
   | { step: 'seal'; route: string; label: string; goalId: string }
@@ -34,6 +35,12 @@ export interface FirstRunInput {
   hasWarmup?: boolean;
   /** Whether the Fifteen (the ideal) has been written. */
   hasIdeal: boolean;
+  /**
+   * Whether the read-back of the Fifteen was begun and left: rows kept or
+   * named and not yet made goals. Left out of the path, the kept phrases
+   * and the names typed sat on disk and were never shown again.
+   */
+  readBackOpen?: boolean;
   /** Whether the Book has been given its order and its title (the rank screen). */
   hasTitle: boolean;
   /** Whether consent has been given (the end of set-up). */
@@ -53,6 +60,7 @@ export function firstRunStep(input: FirstRunInput): FirstRunStep {
     return { step: 'interview', route: '/interview', label: 'Find your goals · 2 min' };
   }
   if (!input.hasIdeal) return { step: 'fifteen', route: '/authoring', label: 'Write your future · 15 min' };
+  if (input.readBackOpen) return { step: 'readback', route: '/heard', label: 'Carry on with what I heard · 2 min' };
   // The order and the title come between the Fifteen and the stones; once a
   // stone is written the person has been past that screen, titled or not.
   if (!input.hasTitle && input.analyses.length === 0) return { step: 'order', route: '/rank', label: 'Put your goals in order' };
@@ -102,7 +110,7 @@ export interface PathStepInfo {
 export function firstRunPath(s: FirstRunStep): { steps: PathStepInfo[]; at: number } {
   const order: PathStepInfo['key'][] = ['warmup', 'interview', 'fifteen', 'plan', 'finish'];
   const current: PathStepInfo['key'] =
-    s.step === 'setup' || s.step === 'warmup' ? 'warmup' : s.step === 'interview' ? 'interview' : s.step === 'fifteen' ? 'fifteen' : s.step === 'order' || s.step === 'stones' ? 'plan' : 'finish';
+    s.step === 'setup' || s.step === 'warmup' ? 'warmup' : s.step === 'interview' ? 'interview' : s.step === 'fifteen' || s.step === 'readback' ? 'fifteen' : s.step === 'order' || s.step === 'stones' ? 'plan' : 'finish';
   const at = s.step === 'done' ? order.length : order.indexOf(current);
   const labels: Record<PathStepInfo['key'], { label: string; minutes: string }> = {
     warmup: { label: 'Write a first line', minutes: '2 min' },
@@ -132,6 +140,8 @@ export function firstRunHeading(s: FirstRunStep): string {
       return 'Your first line is kept.';
     case 'fifteen':
       return 'Your goals are named.';
+    case 'readback':
+      return 'Your future is written.';
     case 'order':
       return 'Your future is written.';
     case 'stones':
@@ -154,6 +164,8 @@ export function firstRunCaption(s: FirstRunStep, goalCount: number): string {
       return 'Next, find your goals: about eight taps, no typing.';
     case 'fifteen':
       return `${goalCount === 1 ? 'One goal is' : `${goalCount} goals are`} named. Next: fifteen minutes on the life you want, three to five years out.`;
+    case 'readback':
+      return 'The phrases you kept from it are where you left them. Finish naming them, then the goals go in order.';
     case 'order':
       return 'Next: put the goals in order and name the Book, then five short questions per goal.';
     case 'stones':
