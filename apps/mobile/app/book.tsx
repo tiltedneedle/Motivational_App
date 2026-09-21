@@ -85,7 +85,7 @@ export default function BookScreen() {
           <TopBar back={{ label: 'Today', onPress: () => router.dismissTo('/today'), testID: 'book-back' }} where="The Book" />
           <View style={{ flex: 1, justifyContent: 'center', gap: 12 }}>
             <Statement>No Book yet.</Statement>
-            <Body>Three evenings and there will be one. It starts with the Interview.</Body>
+            <Body>Five short steps and there will be one. Pick up where you left off.</Body>
             <InkButton testID="book-start" label={firstRun.label} onPress={() => router.push(firstRun.route)} />
           </View>
         </SafeAreaView>

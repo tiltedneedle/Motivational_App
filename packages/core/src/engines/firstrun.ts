@@ -158,7 +158,7 @@ export function firstRunCaption(s: FirstRunStep, goalCount: number): string {
       return 'Next: put the goals in order and name the Book, then five short questions per goal.';
     case 'stones':
       return s.written === 0
-        ? `Five short questions ${goalCount === 1 ? 'for your goal' : 'per goal'}: ${plural(s.total, 'line')}, one each, in your words.`
+        ? `${plural(s.total, 'short question')} ${goalCount === 1 ? 'about your goal' : 'across your goals'}, one line each, in your words.`
         : `${s.written} of ${s.total} lines are written. The rest are where you left them.`;
     case 'seal':
       return 'Every line is written. One line about who you are becoming, then the Book is yours.';

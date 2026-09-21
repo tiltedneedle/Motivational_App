@@ -66,7 +66,7 @@ export default function Reading() {
       <Studio dark testID="screen-reading">
         <SafeAreaView style={{ flex: 1, padding: 22, justifyContent: 'center', gap: 12 }}>
           <Statement style={{ color: night.ink }}>There is no Book to read yet.</Statement>
-          <Body style={{ color: night.ink2 }}>Three evenings and there will be one.</Body>
+          <Body style={{ color: night.ink2 }}>Five short steps and there will be one.</Body>
           <InkButton testID="reading-back" label="Today" onPress={() => router.dismissTo('/today')} />
         </SafeAreaView>
       </Studio>

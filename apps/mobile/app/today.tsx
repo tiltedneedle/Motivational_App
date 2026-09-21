@@ -288,7 +288,7 @@ export default function Today() {
         ? firstRunCaption(firstRun, goals.length)
         : elsewhere
           ? interviewKept(interviewDraft)
-            ? 'Your answers so far are kept. Begin picks the Interview up at the question you were on.'
+            ? 'Your answers so far are kept; the button picks the Interview up at the question you were on.'
             : 'It joins your Book when the Book is finished, at the end of Future. Today itself comes from Future.'
           : 'This is your home screen. Once your Book is written, your day lives here: one move each morning, a word each evening.';
     return (

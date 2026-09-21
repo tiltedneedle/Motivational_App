@@ -21,7 +21,7 @@ site_url = "morrow://"
 # e.g. "https://morrow.vercel.app/**". Never a bare "https://*.vercel.app/**":
 # anyone can host on that domain, and a redirect allow-list that wide hands
 # them a session.
-additional_redirect_urls = ["morrow://", "http://localhost:8081", "http://localhost:8790", "https://selfauthoring00.vercel.app/**"]
+additional_redirect_urls = ["morrow://", "morrow://account", "http://localhost:8081", "http://localhost:8790", "http://localhost:8790/**", "https://selfauthoring00.vercel.app/**"]
 jwt_expiry = 3600
 enable_signup = true
 

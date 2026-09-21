@@ -125,6 +125,9 @@ export default function StoneScreen() {
   // The whole plan's count, for the progress bar: every goal's questions,
   // and how many already have a line.
   const allAnalyses = useMorrow((s) => s.analyses);
+  // The path's step labels belong to the first run; a line rewritten after
+  // the Book exists is an edit, not step four of anything.
+  const onPath = useMorrow((s) => s.books.length === 0);
   const totalPlanned = goals.reduce((n, g) => n + analysisPlan(g.rank, track).length, 0);
   const written = goals.reduce((n, g) => n + analysisPlan(g.rank, track).filter((k) => allAnalyses.some((a) => a.goalId === g.id && a.kind === k && a.line.trim().length > 0)).length, 0);
   const spec = scoreSpecificity(paragraph.trim() || line);
@@ -139,7 +142,7 @@ export default function StoneScreen() {
   // reader, so the stone says where it is and what it asks.
   useEffect(() => {
     if (!goal) return;
-    announce(`${goal.title}. ${ANALYSIS_TITLES[kind]}, stone ${stepIndex + 1} of ${plan.length}. ${set.question}`);
+    announce(`${goal.title}. ${ANALYSIS_TITLES[kind]}, question ${stepIndex + 1} of ${plan.length}. ${set.question}`);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [goalId, kind]);
 
@@ -263,12 +266,14 @@ export default function StoneScreen() {
     <Studio testID="screen-stone">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
         <TopBar back={{ onPress: goBack, testID: 'stone-back' }} style={{ paddingTop: 6, minHeight: 44 }} help={{ onPress: showResources }} />
-        <ProgressBar
-          value={3.4 / 5 + (0.6 / 5) * (written / Math.max(1, totalPlanned))}
-          label={`Step 4 of 5 · Plan each goal · ${written} of ${totalPlanned} lines`}
-          testID="stone-progress"
-          style={{ paddingTop: 2, paddingBottom: 12 }}
-        />
+        {onPath ? (
+          <ProgressBar
+            value={3.4 / 5 + (0.6 / 5) * (written / Math.max(1, totalPlanned))}
+            label={`Step 4 of 5 · Plan each goal · ${written} of ${totalPlanned} lines`}
+            testID="stone-progress"
+            style={{ paddingTop: 2, paddingBottom: 12 }}
+          />
+        ) : null}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 2 }}>
           {/* Just kept a line: the stone seats (PRD 8.2) as the next one opens. */}
           <Settle reduced={reduced} play={stepIndex}>

@@ -74,8 +74,8 @@ export default function MirrorScreen() {
       <Rise index={3} reducedMotion={reduced}>
         <PathCard
           testID="mirror-path"
-          title="Three short sessions to a Book you wrote."
-          caption="Tonight or tomorrow, in any order you like. Nothing you write is ever lost."
+          title="Four more steps to a Book you wrote."
+          caption="Tonight or over a few days. Nothing you write is ever lost."
           steps={path.steps.map((s) => ({ label: s.label, minutes: s.minutes, done: s.done }))}
           at={path.at}
           cta={{ label: firstRun.label, onPress: onward, testID: 'mirror-continue' }}

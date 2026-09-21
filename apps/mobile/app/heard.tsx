@@ -22,6 +22,7 @@ interface Row {
 
 export default function Heard() {
   const router = useRouter();
+  const onPath = useMorrow((s) => s.books.length === 0);
   useFirstRunStep('read_back');
   const showResources = useMorrow((st) => st.showResources);
   const texts = useMorrow((s) => s.texts);
@@ -113,7 +114,7 @@ export default function Heard() {
     <Studio testID="screen-heard">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
         <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'heard-back' }} where="What I heard" help={{ onPress: showResources }} />
-        <ProgressBar value={3 / 5} label="Step 3 of 5 · Your future is written" testID="heard-progress" style={{ paddingTop: 4 }} />
+        {onPath ? <ProgressBar value={3 / 5} label="Step 3 of 5 · Your future is written" testID="heard-progress" style={{ paddingTop: 4 }} /> : null}
         <View style={{ paddingTop: 14 }}>
           <Statement>
             {rows === null

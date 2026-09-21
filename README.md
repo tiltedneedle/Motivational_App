@@ -214,8 +214,15 @@ function checks it (`verify_jwt = true`); row level security ties every row
 to `auth.uid()`. The app never sees a password, and the account only ever
 holds a copy of the Book.
 
-The web half of Google is wired (`signInWithGoogleRedirect` in
-`apps/mobile/src/supabase.ts`; the button appears when the id below is set).
+There is one sign-in screen (`/signin`): Continue with Google first, Sign in
+with Apple on an iPhone, the email code for everyone, and a plain way past
+all of it. Google is wired on both halves: the web uses the redirect
+(`signInWithGoogleRedirect` in `apps/mobile/src/supabase.ts`) and a phone
+uses an auth session in the system browser that comes back to
+`morrow://account` (`signInWithGoogleSession`, through `expo-web-browser`).
+Both use the web OAuth client below, so the phone works the day the web
+does; `morrow://account` is on the allow-list in `config.toml`. The button
+appears when the id below is set.
 It is the standard OAuth redirect: the browser goes to Google, comes back to
 `/account#access_token=…`, and the launch handler turns that into a session
 exactly as it does for the email link. To turn it on:

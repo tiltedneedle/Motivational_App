@@ -124,7 +124,7 @@ export default function ReauthorScreen() {
                 ) : null}
                 <InkButton
                   testID="reauthor-seal"
-                  label={`Seal the ${ordinal(previous.version + 1).toLowerCase()} edition`}
+                  label={`Finish the ${ordinal(previous.version + 1).toLowerCase()} edition`}
                   disabled={activeGoals(state).length === 0}
                   onPress={() => router.push('/seal-book?from=reauthor')}
                 />

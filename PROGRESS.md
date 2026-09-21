@@ -55,6 +55,17 @@ in build order — tick as done, and if resuming, continue from the first untick
       every user-facing string (the Fifteen → "Your future, 15 minutes"; stones → "the five
       questions"; seal → "Finish"; sittings → "sessions"; Portrait → "Your line").
       The track choice (`/authoring`) folds into the doorway as a small Depth control.
+- [x] R4b. Sign in (`/signin`, 2026-09-21, at the owner's request): one screen for the
+      account — Continue with Google (the web redirect; on a phone an auth session through
+      `expo-web-browser` back to `morrow://account`), Sign in with Apple on iOS, the email
+      code, and "Not now" past all of it. Every door to the account (Welcome, Today's
+      bring-back, You, the ask after the Portrait) goes through it; the email code and the
+      copy still live on `/account`. `morrow://account` joined the allow-list.
+- [x] R4c. The platform back stays with the screen being left: `usePlatformBack` used to
+      take a pop that belonged to a screen pushed over it (Got it on the privacy details
+      stepped set-up back a question). The handler now records each screen's own path at
+      mount (from the navigator, which already has it; the browser's URL is still the old
+      screen's at that moment) and answers only a pop leaving that path.
 - [ ] R5. Tests: `scripts/e2e.mjs` first-run sections rewritten for the new walk (setup →
       first write → mirror → Interview …); check-cold routes; a11y; shots; motion;
       `pnpm verify` green.

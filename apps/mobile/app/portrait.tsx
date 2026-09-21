@@ -32,6 +32,8 @@ export default function PortraitScreen() {
   const editIdentityLine = useMorrow((s) => s.editIdentityLine);
   const account = useMorrow((s) => s.account);
   const accountAsked = useMorrow((s) => s.accountAsked);
+  // The path's step label belongs to the first run, not to a plan reread later.
+  const onPath = useMorrow((s) => s.books.length === 0);
   const reduced = useReducedMotion();
 
   const goal = goalId ? goals.find((g) => g.id === goalId) : goals[0];
@@ -76,11 +78,11 @@ export default function PortraitScreen() {
       <Studio testID="screen-portrait">
         <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
           {/* A way back at the top, like every other screen: this branch is what a stale link lands on. */}
-          <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'portrait-back' }} where="The Portrait" />
+          <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'portrait-back' }} where="Your plan" />
           <View style={{ flex: 1, justifyContent: 'center', gap: 12 }}>
           <Statement>Not yet.</Statement>
           <Body>
-            Your line is built out of the five answers. Write them and it makes itself — nothing here is invented to
+            Your plan is built out of the five answers. Write them and it makes itself — nothing here is invented to
             fill the gap.
           </Body>
           <InkButton testID="portrait-onwards" label="Go on" onPress={onwards} />
@@ -95,8 +97,8 @@ export default function PortraitScreen() {
   return (
     <Studio testID="screen-portrait">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'portrait-back' }} where="Your line" />
-        <ProgressBar value={4.2 / 5} label="Step 5 of 5 · Finish your Book" testID="portrait-progress" style={{ paddingTop: 4, paddingBottom: 6 }} />
+        <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'portrait-back' }} where="Your plan" />
+        {onPath ? <ProgressBar value={4.2 / 5} label="Step 5 of 5 · Finish your Book" testID="portrait-progress" style={{ paddingTop: 4, paddingBottom: 6 }} /> : null}
         <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 20 }}>
           <Rise index={0} reducedMotion={reduced} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
             <Stone size={44} domain={goal.domain} polish={1} />

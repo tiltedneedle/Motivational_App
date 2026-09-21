@@ -57,7 +57,9 @@ const APP_PROSE = [
  * separately from its value. It is grey, it disappears the moment they type,
  * and it is written down here rather than pretended away.
  */
-const MAY_SET_SERIF = ['packages/ui/src/primitives.tsx', 'apps/mobile/app/write.tsx'];
+// `first-write.tsx` is the first line's page: the same kind of surface as the
+// room, the person typing and nothing else in the serif.
+const MAY_SET_SERIF = ['packages/ui/src/primitives.tsx', 'apps/mobile/app/write.tsx', 'apps/mobile/app/first-write.tsx'];
 
 async function* walk(dir) {
   let entries;

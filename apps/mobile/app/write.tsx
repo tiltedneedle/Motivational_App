@@ -542,7 +542,7 @@ export default function Write() {
               ? `Every word you wrote is here — ${words} of them. A session can be picked up once, and this one already was, so it counts as it stands.`
               : closedBy === 'early'
                 ? `Every word is kept — ${words} of them — and it goes on to the read-back like any session. Kept as a draft for a day; the whole ${Math.round(targetSeconds(kind, track) / 60)} minutes is there whenever you want it.`
-                : 'Sealed as a draft for a day. You can read it, not edit it.'}
+                : 'Kept as a draft for a day. You can read it, not edit it.'}
           </Body>
           {paused ? (
             <View style={{ gap: 10 }}>

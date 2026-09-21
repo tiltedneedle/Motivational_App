@@ -14,6 +14,7 @@ import { useFirstRunStep } from '../src/analytics';
 
 export default function Rank() {
   const router = useRouter();
+  const onPath = useMorrow((s) => s.books.length === 0);
   useFirstRunStep('order');
   const goals = useGoals();
   const track = useMorrow((s) => s.profile.track);
@@ -35,7 +36,7 @@ export default function Rank() {
     <Studio testID="screen-rank">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
         <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'rank-back' }} where="The order" />
-        <ProgressBar value={3.2 / 5} label="Step 4 of 5 · Plan each goal" testID="rank-progress" style={{ paddingTop: 4, paddingBottom: 10 }} />
+        {onPath ? <ProgressBar value={3.2 / 5} label="Step 4 of 5 · Plan each goal" testID="rank-progress" style={{ paddingTop: 4, paddingBottom: 10 }} /> : null}
         <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 22 }}>
           <View style={{ gap: 8 }}>
             <Statement>Which matters most?</Statement>

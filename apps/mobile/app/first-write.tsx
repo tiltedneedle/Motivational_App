@@ -135,7 +135,7 @@ export default function FirstWrite() {
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 4 }}>
         <Stone size={44} domain={domain ?? 'health'} polish={0.5} sweep={!reduced} />
-        <Body style={{ flex: 1, fontSize: 15, color: day.ink2 }}>{name ? `${name}, one question before anything else.` : 'One question before anything else.'}</Body>
+        <Body style={{ flex: 1, fontSize: 15, color: day.ink2 }}>{name ? `${name}, one question to start with.` : 'One question to start with.'}</Body>
       </View>
       <Text testID="first-write-prompt" accessibilityRole="header" style={{ fontFamily: fonts.sansBold, fontSize: 28, lineHeight: 34, color: day.ink }}>
         {prompt}

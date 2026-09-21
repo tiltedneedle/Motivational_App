@@ -17,6 +17,7 @@ const TITLE_FRAMINGS = ['A year of…', 'The one where I…', 'Back to…'];
 
 export default function Title() {
   const router = useRouter();
+  const onPath = useMorrow((s) => s.books.length === 0);
   useFirstRunStep('order');
   const goals = useGoals();
   const bookTitle = useMorrow((s) => s.bookTitle);
@@ -31,7 +32,7 @@ export default function Title() {
     <Studio testID="screen-title">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
         <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'title-back' }} where="The name" />
-        <ProgressBar value={3.3 / 5} label="Step 4 of 5 · Plan each goal" testID="title-progress" style={{ paddingTop: 4, paddingBottom: 10 }} />
+        {onPath ? <ProgressBar value={3.3 / 5} label="Step 4 of 5 · Plan each goal" testID="title-progress" style={{ paddingTop: 4, paddingBottom: 10 }} /> : null}
         <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 22 }}>
           <View style={{ gap: 8 }}>
             <Statement>Name your Book.</Statement>

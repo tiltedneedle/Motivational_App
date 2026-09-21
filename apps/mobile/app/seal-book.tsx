@@ -16,6 +16,7 @@ import { useFirstRunStep } from '../src/analytics';
 
 export default function SealBook() {
   const router = useRouter();
+  const onPath = useMorrow((s) => s.books.length === 0);
   useFirstRunStep('seal');
   const showResources = useMorrow((st) => st.showResources);
   const goals = useGoals();
@@ -65,7 +66,7 @@ export default function SealBook() {
     <Studio dark testID="screen-seal-book">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
         <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'seal-book-back' }} right={<Label style={{ color: night.ink3 }}>Finish</Label>} help={{ onPress: showResources }} />
-        <ProgressBar value={4.7 / 5} label="Step 5 of 5 · Finish your Book" testID="seal-progress" style={{ paddingTop: 4 }} />
+        {onPath ? <ProgressBar value={4.7 / 5} label="Step 5 of 5 · Finish your Book" testID="seal-progress" style={{ paddingTop: 4 }} /> : null}
         <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, paddingBottom: 24, gap: 20 }}>
           <Label style={{ color: night.ink3 }}>Last line</Label>
           <Statement style={{ color: night.ink }}>Finish it, in your words.</Statement>

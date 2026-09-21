@@ -123,14 +123,14 @@ export default function Setup() {
   );
 
   const titles = ['What do you want to work on?', 'When do you have a quiet moment?', 'How should Morrow speak to you?', 'Last thing.'];
-  const lines = ['Pick as many as are true. The first questions come from here.', 'Not a schedule. It only shapes when the app suggests writing.', 'The coach only ever asks and quotes you; this is its tone.', 'A name for the coach to use, and one line before you write.'];
+  const lines = ['Pick as many as are true. The first questions come from here.', 'Not a schedule. It only shapes how the app talks about the next step.', 'The coach only ever asks and quotes you; this is its tone.', 'A name for the coach to use, and one line before you write.'];
 
   return (
     <Screen
       testID="screen-setup"
       back={{ onPress: back, testID: 'setup-back' }}
       where="Set-up"
-      progress={{ value: (step + 1) / 5, label: `Step ${step + 1} of 4`, testID: 'setup-progress' }}
+      progress={{ value: (step + 1) / 4, label: `Step ${step + 1} of 4`, testID: 'setup-progress' }}
       keyboard
       cta={{
         label: step === 3 ? 'Write my first line · 2 min' : step === 0 && pickedNames.length ? `Continue with ${pickedNames.length}` : 'Continue',
