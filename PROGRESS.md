@@ -50,6 +50,11 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 63. **The card a shared link shows, 2026-09-21.** Open Graph and Twitter tags in
+      the shell and a 1200×630 card (`public/og.png`: the ground, the coral stone,
+      the name, the one line in the serif, the address), so a link pasted into a
+      chat or a feed unfurls as the product rather than a bare URL. The worker
+      serves it network-first with the other named files. Live and checked.
 - [x] 62. **The first load, a third lighter, 2026-09-21.** The entry chunk was 3.6 MB
       (876 KB over the wire), and on mobile data a client waits for every byte of
       it before Welcome. Two things had no business in it: `@supabase/supabase-js`
