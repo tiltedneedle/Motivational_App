@@ -264,8 +264,8 @@ describe('the coach quotes their words as written', () => {
 
   it('counts sealed days in the right number', () => {
     const r = replyToChip('celebrate', { ...ctx, days: [days[0]!] });
-    expect(r.text).toContain('1 sealed day.');
-    expect(r.text).not.toContain('1 sealed days');
+    expect(r.text).toContain('1 closed day.');
+    expect(r.text).not.toContain('1 closed days');
   });
 });
 

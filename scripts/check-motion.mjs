@@ -83,7 +83,7 @@ await page.waitForTimeout(250);
 const rings = await page.evaluate(() => [...document.querySelectorAll('div')].filter((d) => { const c = getComputedStyle(d); return c.borderRadius !== '0px' && c.borderWidth === '2px' && /234, 75, 46/.test(c.borderColor) && c.position === 'absolute'; }).map((d) => ({ opacity: parseFloat(getComputedStyle(d).opacity), transform: getComputedStyle(d).transform })));
 check('two coral rings pulse out of the sealed stone', rings.length === 2 && rings.some((r) => /matrix\(/.test(r.transform) && parseFloat(r.transform.split('(')[1]) > 1.05), JSON.stringify(rings));
 await page.waitForTimeout(900);
-check('and the day is sealed', /Sealed|screen-today/.test((await page.locator('body').innerText()) + (await page.evaluate(() => [...document.querySelectorAll('[data-testid^="screen-"]')].map((e) => e.getAttribute('data-testid')).join(',')))));
+check('and the day is sealed', /Closed|Sealed|screen-today/.test((await page.locator('body').innerText()) + (await page.evaluate(() => [...document.querySelectorAll('[data-testid^="screen-"]')].map((e) => e.getAttribute('data-testid')).join(',')))));
 
 // 5. The Interview: the next question slides in from the right.
 await context.clearCookies();

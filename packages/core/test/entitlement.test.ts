@@ -137,7 +137,7 @@ describe('the screen it opens', () => {
       expect(b.length).toBeGreaterThan(20);
       expect(b).not.toMatch(/unlimited everything|best|amazing/i);
     }
-    expect(BENEFITS.join(' ')).toContain('Blueprint');
+    expect(BENEFITS.join(' ')).toContain('plan');
     expect(BENEFITS.join(' ')).toContain('coach');
     expect(BENEFITS.join(' ')).toContain('ninety days');
   });

@@ -86,7 +86,7 @@ export default function ReauthorScreen() {
           <TopBar back={{ label: 'Today', onPress: goBack, testID: 'reauthor-back' }} help={{ onPress: showResources }} />
           <View style={{ flex: 1, justifyContent: 'center', gap: 12 }}>
             <Statement testID="reauthor-none">There is no Book to write again yet.</Statement>
-            <Body>Ninety days after the first one is sealed, this is where it is read against your answers as they stand then.</Body>
+            <Body>Ninety days after the first one is finished, this is where it is read against your answers as they stand then.</Body>
             <InkButton label="Back to today" onPress={() => router.dismissTo('/today')} style={{ marginTop: 18 }} />
           </View>
         </SafeAreaView>
@@ -112,7 +112,7 @@ export default function ReauthorScreen() {
             {pendingLetGo(state).length ? (
               <View testID="reauthor-pending" style={{ gap: 8, alignItems: 'flex-start' }}>
                 <Body style={{ fontSize: 14 }}>
-                  {pendingLetGo(state).length === 1 ? 'A goal was let go and no edition sealed since.' : `${plural(pendingLetGo(state).length, 'goal')} were let go and no edition sealed since.`}
+                  {pendingLetGo(state).length === 1 ? 'A goal was let go and no edition finished since.' : `${plural(pendingLetGo(state).length, 'goal')} were let go and no edition finished since.`}
                 </Body>
                 {pendingLetGo(state).map((g) => (
                   <TextButton key={g.id} testID={`reauthor-take-back-${g.id}`} label={`Take back “${g.title}”`} onPress={() => takeBack(g.id)} />
@@ -165,7 +165,7 @@ export default function ReauthorScreen() {
         >
           <View style={{ gap: 8 }}>
             <Label testID="reauthor-sealed">
-              {ordinal(previous.version)} edition · sealed {formatDay(sealedOn(previous.sealedAt, boundary))}
+              {ordinal(previous.version)} edition · finished {formatDay(sealedOn(previous.sealedAt, boundary))}
             </Label>
             <Statement testID="reauthor-title">Time to write it again.</Statement>
             <Body>

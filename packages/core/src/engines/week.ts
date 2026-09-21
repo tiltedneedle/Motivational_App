@@ -64,7 +64,7 @@ export function weekOf(today: string, sealed: ReadonlySet<string> | readonly str
       key,
       letter: LETTERS[d.getDay()]!,
       state,
-      label: `${NAMES[d.getDay()]} ${d.getDate()}${isToday ? ', today' : ''}${isSealed ? ', sealed' : future ? '' : isToday ? '' : ', not sealed'}`,
+      label: `${NAMES[d.getDay()]} ${d.getDate()}${isToday ? ', today' : ''}${isSealed ? ', closed' : future ? '' : isToday ? '' : ', not closed'}`,
     });
   }
   return out;

@@ -107,7 +107,7 @@ export default function MemoryScreen() {
 
           {lines.length === 0 ? (
             <Body testID="memory-empty">
-              {forgotten > 0 ? 'Every line is forgotten. Bring them back to see them here.' : 'Nothing yet. There will be lines here once there is a name, a goal, or a sealed day.'}
+              {forgotten > 0 ? 'Every line is forgotten. Bring them back to see them here.' : 'Nothing yet. There will be lines here once there is a name, a goal, or a closed day.'}
             </Body>
           ) : null}
 

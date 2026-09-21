@@ -359,7 +359,7 @@ export default function StoneScreen() {
                   {thenHalf(before.text2).act}
                 </UserText>
               ) : null}
-              <Body style={{ fontSize: 13 }}>Write it again below. Back leaves the sealed line as it is.</Body>
+              <Body style={{ fontSize: 13 }}>Write it again below. Back leaves the finished line as it is.</Body>
             </View>
           ) : null}
 

@@ -335,7 +335,7 @@ export function planNotices(input: NoticeInput): Notice[] {
       id: `${input.day}:evening`,
       moment: 'evening',
       at: at(eveningDate, eveningAt),
-      title: 'Seal the day',
+      title: 'Close the day',
       route: '/seal-day',
       // Never a count of what is missing. A quiet day goes in the ledger as a
       // quiet day, and the notification says the same thing the screen does.

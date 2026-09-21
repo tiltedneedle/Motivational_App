@@ -452,20 +452,20 @@ export default function Today() {
               accessibilityLabel={
                 reauthor
                   ? `${reauthorLabel(reauthor.cycle)}: time to write the Book again`
-                  : `Unsealed: ${pending.length === 1 ? 'a goal was' : plural(pending.length, 'goal') + ' were'} let go and no edition sealed since`
+                  : `Unfinished: ${pending.length === 1 ? 'a goal was' : plural(pending.length, 'goal') + ' were'} let go and no edition finished since`
               }
               // A let-go waiting goes to the screen that can take it back
               // whatever the plan; the gated branch offers exactly that.
               onPress={() => router.push(entitled || pending.length ? '/reauthor?from=/today' : '/paywall?moment=reauthor&from=/today')}
               style={{ marginTop: 16, backgroundColor: day.surface2, borderRadius: radius.card, padding: 18, gap: 6 }}
             >
-              <Label style={{ color: accent.coralText }}>{reauthor ? reauthorLabel(reauthor.cycle) : 'Unsealed'}</Label>
+              <Label style={{ color: accent.coralText }}>{reauthor ? reauthorLabel(reauthor.cycle) : 'Unfinished'}</Label>
               <Body style={{ color: day.ink, fontSize: 16 }}>
                 {reauthor
                   ? 'Time to write it again. Two Books, side by side.'
                   : pending.length === 1
-                    ? 'A goal was let go and no edition sealed since. Seal it, or take it back.'
-                    : `${plural(pending.length, 'goal')} were let go and no edition sealed since. Seal the edition, or take them back.`}
+                    ? 'A goal was let go and no edition finished since. Finish it, or take it back.'
+                    : `${plural(pending.length, 'goal')} were let go and no edition finished since. Finish the edition, or take them back.`}
               </Body>
             </Pressable>
           ) : null}
@@ -669,7 +669,7 @@ export default function Today() {
           ) : (
             <View testID="all-placed" style={{ marginTop: 22 }}>
               <Body style={{ color: day.ink }}>
-                {moves.length ? 'Everything placed. Seal the day when you are ready.' : 'Nothing scheduled. One small thing is a whole day.'}
+                {moves.length ? 'Everything placed. Close the day when you are ready.' : 'Nothing scheduled. One small thing is a whole day.'}
               </Body>
             </View>
           )}
@@ -929,7 +929,7 @@ export default function Today() {
         <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 18, paddingBottom: 10, gap: 12 }}>
           <View pointerEvents="box-none" style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 10 }}>
             <RoundButton testID="new-move-button" glyph="plus" accessibilityLabel="A new move, or something to keep" onPress={() => router.push('/new-move')} size={50} />
-            <RoundButton testID="seal-day-button" glyph="check" accessibilityLabel="Seal the day" onPress={() => router.push('/seal-day')} size={58} primary />
+            <RoundButton testID="seal-day-button" glyph="check" accessibilityLabel="Close the day" onPress={() => router.push('/seal-day')} size={58} primary />
           </View>
           <TabBar active="today" onPress={goTab} />
         </View>

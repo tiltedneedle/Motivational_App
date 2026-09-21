@@ -50,7 +50,7 @@ export default function SealDay() {
    */
   const tell = async () => {
     const count = sealedCount;
-    const message = String(count) + (count === 1 ? ' sealed day.' : ' sealed days.') + (iWillLine.trim() ? ' ' + iWillLine.trim() : '') + ' — Morrow';
+    const message = String(count) + (count === 1 ? ' day closed.' : ' days closed.') + (iWillLine.trim() ? ' ' + iWillLine.trim() : '') + ' — Morrow';
     try {
       const r = await Share.share({ message, title: 'To ' + witnessName });
       // iOS says whether the sheet was dismissed. Android cannot, and the web
@@ -116,9 +116,9 @@ export default function SealDay() {
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
         <TopBar back={{ label: 'Today', onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'seal-day-back' }} help={{ onPress: showResources }} />
         <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 6, gap: 20 }}>
-          <Label style={{ color: night.ink3 }}>Seal the day</Label>
+          <Label style={{ color: night.ink3 }}>Close the day</Label>
           <Statement style={{ color: night.ink }}>
-            {sealed ? 'Sealed. See you at dawn.' : 'Quiet day or not, it goes in the ledger.'}
+            {sealed ? 'Closed. See you at dawn.' : 'Quiet day or not, it goes in the ledger.'}
           </Statement>
 
           <View style={{ gap: 8 }}>
@@ -188,7 +188,7 @@ export default function SealDay() {
           <HoldBar
             testID="seal-day-hold"
             label="Hold to close the day"
-            doneLabel={`Sealed · ${word}`}
+            doneLabel={`Closed · ${word}`}
             done={sealed}
             reducedMotion={reduced}
             onComplete={() => {

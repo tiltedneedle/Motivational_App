@@ -1233,7 +1233,7 @@ export function HoldBar({
       accessibilityRole="button"
       accessibilityLabel={done ? (doneLabel ?? label) : label}
       accessibilityHint={
-        screenReader ? 'Double tap to seal' : 'Press and hold until the bar fills'
+        screenReader ? 'Double tap to confirm' : 'Press and hold until the bar fills'
       }
       // The same as the button above: only `disabled` reaches the DOM.
       disabled={done}

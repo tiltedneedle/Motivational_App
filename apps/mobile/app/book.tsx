@@ -285,7 +285,7 @@ export default function BookScreen() {
                 {book.iWill}
               </UserText>
               <Label style={{ color: paper.ink3, marginTop: 8 }}>
-                Sealed {formatDay(sealedOn(book.sealedAt, boundary))} · written by you
+                Finished {formatDay(sealedOn(book.sealedAt, boundary))} · written by you
               </Label>
               </View>
             </View>
@@ -383,7 +383,7 @@ export default function BookScreen() {
             {book.iWill}
           </UserText>
           <Label style={{ color: paper.ink3, marginTop: 8 }}>
-            Sealed {formatDay(sealedOn(book.sealedAt, boundary))} · written by you
+            Finished {formatDay(sealedOn(book.sealedAt, boundary))} · written by you
           </Label>
             </>
           )}

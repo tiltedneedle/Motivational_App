@@ -108,7 +108,7 @@ export function annualAgainstMonthly(plans: PricePlan[] = PLANS): string | null 
 
 /** The lines on the paywall. App chrome; never set in the serif. */
 export const BENEFITS = [
-  'Every goal gets its own Blueprint, not just the first.',
+  'Every goal gets its own plan, not just the first.',
   'A scene for every goal, drawn from what you wrote about it.',
   'The coach every day, with the whole Book in front of it.',
   // What Pro gates in this build, and nothing it does not: this line waited
@@ -154,7 +154,7 @@ export function canBuildBlueprint(ctx: EntitlementContext): Gate {
   return {
     allowed: false,
     moment: 'second-blueprint',
-    reason: 'The free plan builds one Blueprint. Everything you have written is still yours and still here.',
+    reason: 'The free plan builds one goal’s plan. Everything you have written is still yours and still here.',
   };
 }
 
@@ -216,8 +216,8 @@ export function paywallMoment(ctx: EntitlementContext): PaywallMoment | null {
 
 /** The line at the head of each moment. The person's own "I will" sits above it. */
 export const MOMENT_HEADING: Record<PaywallMoment, string> = {
-  'after-blueprint': 'Your Blueprint is ready.',
-  'second-blueprint': 'A Blueprint for this one too.',
+  'after-blueprint': 'Your plan is ready.',
+  'second-blueprint': 'A plan for this one too.',
   reauthor: 'Ninety days. Time to write it again.',
   bench: 'The Bench.',
   'coach-cap': 'That is today’s turns.',

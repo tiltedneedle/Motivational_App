@@ -167,7 +167,7 @@ export function buildMemory(input: MemoryInput): MemoryLine[] {
       byWeekday.set(dow, (byWeekday.get(dow) ?? 0) + 1);
     }
     const best = [...byWeekday.entries()].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0];
-    if (best && sealed.length >= 3) lines.push({ key: 'days.weekday', about: 'your days', text: `Your sealed days fall most often on a ${WEEKDAYS[best[0]]}.` });
+    if (best && sealed.length >= 3) lines.push({ key: 'days.weekday', about: 'your days', text: `Your closed days fall most often on a ${WEEKDAYS[best[0]]}.` });
     const words = new Map<string, number>();
     for (const d of sealed) if (d.moodWord?.trim()) words.set(d.moodWord.trim(), (words.get(d.moodWord.trim()) ?? 0) + 1);
     const word = [...words.entries()].sort((a, b) => b[1] - a[1])[0];

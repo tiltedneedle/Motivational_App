@@ -50,7 +50,7 @@ const EVIDENCE_LABEL: Record<string, string> = {
   practice: 'Practice',
   milestone: 'Milestone',
   capture: 'Caught',
-  seal: 'Sealed the day',
+  seal: 'Closed the day',
 };
 
 function monthName(iso: string): string {
@@ -270,7 +270,7 @@ function Almanac({ marks, today }: { marks: AlmanacMark[]; today: string }) {
         const sealed = month.marks.filter((m) => m.sealed).length;
         const quiet = month.marks.filter((m) => m.quiet && m.day <= today).length;
         const ahead = month.marks.filter((m) => m.day > today).length;
-        const summary = `${month.name}: ${plural(sealed, 'day')} sealed, ${quiet} quiet, ${ahead} to come`;
+        const summary = `${month.name}: ${plural(sealed, 'day')} closed, ${quiet} quiet, ${ahead} to come`;
         return (
         <View key={month.name} style={{ flexDirection: 'row', alignItems: 'center', gap: 0 }}>
           <Label style={{ fontSize: 10, width: LABEL }}>{month.name}</Label>
@@ -283,7 +283,7 @@ function Almanac({ marks, today }: { marks: AlmanacMark[]; today: string }) {
                       accessible: true,
                       accessibilityRole: 'image' as const,
                       accessibilityLabel: m.sealed
-                        ? `Today, sealed, ${plural(m.evidence, 'entry', 'entries')} in the ledger`
+                        ? `Today, closed, ${plural(m.evidence, 'entry', 'entries')} in the ledger`
                         : m.quiet
                           ? 'Today, nothing in the ledger yet'
                           : `Today, ${plural(m.evidence, 'entry', 'entries')} in the ledger`,

@@ -225,7 +225,7 @@ export default function Reading() {
                   {page.text}
                 </UserText>
                 <Rule style={{ backgroundColor: '#E2DACB' }} />
-                <Label style={{ color: paper.ink3 }}>Sealed {formatDay(sealedOn(page.sealedAt, boundary))}</Label>
+                <Label style={{ color: paper.ink3 }}>Finished {formatDay(sealedOn(page.sealedAt, boundary))}</Label>
 
                 <View testID="horizon-review" style={{ marginTop: 26, gap: 10 }}>
                   <Label style={{ color: paper.ink3 }}>This week</Label>

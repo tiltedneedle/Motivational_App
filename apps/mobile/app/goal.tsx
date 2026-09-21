@@ -71,7 +71,7 @@ export default function GoalScreen() {
           <Label>Let go</Label>
           <Statement testID="goal-let-go">You let this one go.</Statement>
           <Body>
-            {`On ${formatDay(dayOf(new Date(letGo.letGoAt!), boundary))}. It can be taken back until the next edition is sealed; everything you wrote for it is still in your Book.`}
+            {`On ${formatDay(dayOf(new Date(letGo.letGoAt!), boundary))}. It can be taken back until the next edition is finished; everything you wrote for it is still in your Book.`}
           </Body>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             <Chip testID="goal-take-back" label="Take it back" onPress={() => takeBack(letGo.id)} />

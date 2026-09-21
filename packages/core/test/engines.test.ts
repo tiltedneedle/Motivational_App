@@ -832,7 +832,7 @@ describe('the coach', () => {
       persona: 'gentle',
     });
     // Two sealed days and no returns: the sentence must not claim two returns.
-    expect(r.text).toContain('2 sealed days');
+    expect(r.text).toContain('2 closed days');
     expect(r.text).not.toContain('2 returns');
   });
 

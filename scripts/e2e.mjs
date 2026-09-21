@@ -2802,7 +2802,7 @@ async function main() {
       );
     check(
       'it says which edition, and when it was sealed',
-      (await noticeText('reauthor-sealed')).toLowerCase().includes(`${ORD[editionBefore].toLowerCase()} edition`) && (await noticeText('reauthor-sealed')).toLowerCase().includes('sealed'),
+      (await noticeText('reauthor-sealed')).toLowerCase().includes(`${ORD[editionBefore].toLowerCase()} edition`) && (await noticeText('reauthor-sealed')).toLowerCase().includes('finished'),
       await noticeText('reauthor-sealed'),
     );
     check(

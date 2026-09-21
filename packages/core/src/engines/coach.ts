@@ -405,13 +405,13 @@ export function replyToChip(chip: ChipId, ctx: ChipContext): CoachReply {
       const returns = ctx.returns > 0 ? ` and ${ctx.returns} ${ctx.returns === 1 ? 'return' : 'returns'}` : '';
       if (line) {
         return {
-          text: `${plural(days, 'sealed day')}${returns}. You wrote ${endSentence(`“${line}”`)} Say it out loud; that is the whole exercise.`,
+          text: `${plural(days, 'closed day')}${returns}. You wrote ${endSentence(`“${line}”`)} Say it out loud; that is the whole exercise.`,
           quotedSpans: [line],
           action: null,
         };
       }
       return {
-        text: `${plural(days, 'sealed day')}. Name one thing that is true now that was not in January.`,
+        text: `${plural(days, 'closed day')}. Name one thing that is true now that was not in January.`,
         quotedSpans: [],
         action: null,
       };
