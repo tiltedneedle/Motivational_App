@@ -10,7 +10,7 @@
  * account screen is where the session lands, and it does the copy.
  */
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Platform, View } from 'react-native';
 import { Body, Chip, GoogleButton, Heading, Label, Notice, Rule, Screen, Stone, TextButton, accent, day, useReducedMotion } from '@morrow/ui';
 import { useMorrow } from '../src/store';
@@ -23,10 +23,17 @@ export default function SignIn() {
   const account = useMorrow((s) => s.account);
   const setAccount = useMorrow((s) => s.setAccount);
   const afterSignIn = useMorrow((s) => s.afterSignIn);
+  const signInNotice = useMorrow((s) => s.signInNotice);
+  const setSignInNotice = useMorrow((s) => s.setSignInNotice);
   const markAccountAsked = useMorrow((s) => s.markAccountAsked);
   const { next } = useLocalSearchParams<{ next?: string }>();
   const [busy, setBusy] = useState<'google' | 'apple' | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
+  useEffect(() => {
+    if (!signInNotice) return;
+    setProblem(signInNotice);
+    setSignInNotice(null);
+  }, [signInNotice, setSignInNotice]);
 
   const to = typeof next === 'string' && /^\/[a-z-]+$/i.test(next) ? next : '';
   const back = () => {

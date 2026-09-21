@@ -8,7 +8,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
 import { useSyncExternalStore } from 'react';
 import { isDark, setDark, subscribeDark } from '@morrow/ui';
-import { STORE_KEY, failureReason, guardedStorage, hasFailed, onStorageFailure } from './storage';
+import { STORE_KEY, failureReason, guardedStorage, hasFailed, markUnreadable, onStorageFailure, openStorage } from './storage';
 import { scheduler, syncNotices } from './notify';
 import type { Notice } from '@morrow/core';
 import { billing, type BillingResult, type PlanId } from './billing';
@@ -278,6 +278,8 @@ export interface MorrowState {
    * and a screen that reads it is rendered again on the new day.
    */
   clockDay: string;
+  /** What the root layout found when it handled a sign-in link. Not persisted; the account screen shows it once. */
+  signInNotice: string | null;
   books: BookVersion[];
   portraits: Portrait[];
   plans: Plan[];
@@ -554,7 +556,14 @@ export interface MorrowState {
    * Right after signing in: a device with writing pushes it up; an empty
    * device pulls the account's copy down. Never a merge — see src/sync.ts.
    */
-  afterSignIn: () => Promise<{ ok: true; pulled: boolean; moved: 'pushed' | 'pulled' | 'nothing' } | { ok: false; error: string }>;
+  /**
+   * After a sign-in: the copy, one way or the other. `conflict` means both
+   * this device and the account hold writing and nothing was moved — the
+   * account screen offers the two honest choices, through `resolveSignIn`.
+   */
+  afterSignIn: () => Promise<{ ok: true; pulled: boolean; moved: 'pushed' | 'pulled' | 'nothing' } | { ok: false; error: string; conflict?: true }>;
+  /** The person's answer to a conflict: bring the account's Book here, or replace the account's copy with this device's. */
+  resolveSignIn: (choice: 'pull' | 'push') => Promise<{ ok: true; pulled: boolean; moved: 'pushed' | 'pulled' | 'nothing' } | { ok: false; error: string }>;
   /** Everything on the device, up. Safe to call on every launch. */
   pushToAccount: () => Promise<{ ok: true } | { ok: false; error: string }>;
   signOutAccount: () => Promise<void>;
@@ -595,6 +604,7 @@ export interface MorrowState {
   setToast: (t: ToastState | null) => void;
   /** Note the day the clock says. A change re-renders every screen that reads `clockDay`. */
   tickClock: () => void;
+  setSignInNotice: (text: string | null) => void;
   clearSafety: () => void;
   /** The helplines card, asked for. No pause, no "not about me". */
   showResources: () => void;
@@ -677,6 +687,7 @@ const EMPTY = {
   storageError: false,
   systemDark: false,
   clockDay: '',
+  signInNotice: null as string | null,
   books: [] as BookVersion[],
   portraits: [] as Portrait[],
   plans: [] as Plan[],
@@ -1971,39 +1982,43 @@ const store = create<MorrowState>()(
 
       afterSignIn: async () => {
         const s = get();
-        if (hasWriting(s)) {
-          const pushed = await get().pushToAccount();
-          return pushed.ok ? { ok: true, pulled: false, moved: 'pushed' as const } : pushed;
-        }
+        // Ask the account what it holds before deciding which way the copy
+        // goes. This used to push whenever the device held anything at all —
+        // and since the first run puts a two-minute line on every new phone
+        // before the account, a replacement phone's first sign-in pushed that
+        // one line and then pruned the whole Book off the account.
         const pulled = await pullAll(false);
         if (!pulled.ok) return { ok: false, error: pulled.error };
         const b = pulled.bundle;
-        if (!hasWriting(b)) return { ok: true, pulled: false, moved: 'nothing' as const };
-        // A new phone, handed the same shape back. The profile merges over
-        // the defaults the same way a rehydrate does, so a field this build
-        // added since the copy was made is not undefined.
-        set({
-          profile: { ...DEFAULT_PROFILE, ...b.profile },
-          // In rank order with the archived rows after: the pull returns rows
-          // by id, and two writers rank by array position.
-          goals: denseRanks(b.goals),
-          texts: b.texts,
-          analyses: b.analyses,
-          books: b.books,
-          plans: b.plans,
-          evidence: b.evidence,
-          days: b.days,
-          practices: b.practices,
-          practiceLogs: b.practiceLogs,
-          scenes: b.scenes,
-          letters: b.letters,
-          briefs: b.briefs,
-          presentPicks: b.presentPicks,
-          pastEpochs: b.pastEpochs,
-          pastEvents: b.pastEvents,
-          pastListed: b.pastListed,
-          memoryEdits: b.memoryEdits,
-        });
+        const accountHas = hasWriting(b);
+        const deviceHas = hasSubstance(s);
+        if (!accountHas) {
+          if (!hasWriting(s)) return { ok: true, pulled: false, moved: 'nothing' as const };
+          const pushed = await get().pushToAccount();
+          return pushed.ok ? { ok: true, pulled: false, moved: 'pushed' as const } : pushed;
+        }
+        if (deviceHas) {
+          return {
+            ok: false,
+            conflict: true,
+            error: 'This phone and the account both have writing. Choose which copy to keep — nothing has been moved yet.',
+          };
+        }
+        takeBundle(set, s, b);
+        return { ok: true, pulled: true, moved: 'pulled' as const };
+      },
+
+      resolveSignIn: async (choice) => {
+        if (choice === 'push') {
+          // Their word that this device is the copy: the prune may run.
+          const out = await pushAll(bundleOf(get()), { reconcile: true });
+          if (!out.ok) return { ok: false, error: out.error };
+          set((st) => (st.account ? { account: { ...st.account, lastPushAt: new Date().toISOString() } } : {}));
+          return { ok: true, pulled: false, moved: 'pushed' as const };
+        }
+        const pulled = await pullAll(false);
+        if (!pulled.ok) return { ok: false, error: pulled.error };
+        takeBundle(set, get(), pulled.bundle);
         return { ok: true, pulled: true, moved: 'pulled' as const };
       },
 
@@ -2013,10 +2028,21 @@ const store = create<MorrowState>()(
         // nothing to say about the account, and its default profile must not
         // land over the one the account already holds.
         if (!hasWriting(get()) && !get().account?.lastPushAt) return { ok: false, error: 'Nothing to copy yet.' };
-        const out = await pushAll(bundleOf(get()));
-        if (!out.ok) return { ok: false, error: out.error };
-        set((st) => (st.account ? { account: { ...st.account, lastPushAt: new Date().toISOString() } } : {}));
-        return { ok: true };
+        // One at a time. iOS backgrounds with 'inactive' then 'background',
+        // and two whole pushes ran at once, each pruning from its own snapshot.
+        if (pushInFlight) return pushInFlight;
+        pushInFlight = (async () => {
+          try {
+            // The prune runs only from a device that has copied up before.
+            const out = await pushAll(bundleOf(get()), { reconcile: Boolean(get().account?.lastPushAt) });
+            if (!out.ok) return { ok: false as const, error: out.error };
+            set((st) => (st.account ? { account: { ...st.account, lastPushAt: new Date().toISOString() } } : {}));
+            return { ok: true as const };
+          } finally {
+            pushInFlight = null;
+          }
+        })();
+        return pushInFlight;
       },
 
       signOutAccount: async () => {
@@ -2176,6 +2202,7 @@ const store = create<MorrowState>()(
         })),
 
       setToast: (t) => set({ toast: t }),
+      setSignInNotice: (text) => set({ signInNotice: text }),
       tickClock: () => {
         const day = dayOf(new Date(), get().profile.dayBoundaryHour);
         if (day !== get().clockDay) set({ clockDay: day });
@@ -2234,7 +2261,9 @@ const store = create<MorrowState>()(
         }),
 
       clearSafety: () => set({ safetyPause: null }),
-      reset: () => set({ profile: DEFAULT_PROFILE, ...EMPTY }),
+      // The storage flag survives a reset: with the latch closed the reset
+      // cannot reach the disk, and a banner that went away said it had.
+      reset: () => set((s) => ({ profile: DEFAULT_PROFILE, ...EMPTY, storageError: s.storageError })),
     }),
     {
       name: STORE_KEY,
@@ -2246,7 +2275,7 @@ const store = create<MorrowState>()(
       // recovery path was the thing destroying the data. See src/storage.ts.
       storage: createJSONStorage(() => guardedStorage),
       partialize: (s) => {
-        const { hydrated: _h, toast: _t, storageError: _e, systemDark: _d, clockDay: _c, ...rest } = s as MorrowState & Record<string, unknown>;
+        const { hydrated: _h, toast: _t, storageError: _e, systemDark: _d, clockDay: _c, signInNotice: _n, ...rest } = s as MorrowState & Record<string, unknown>;
         return rest as Partial<MorrowState>;
       },
       /**
@@ -2271,19 +2300,27 @@ const store = create<MorrowState>()(
           ...sound,
           profile: { ...DEFAULT_PROFILE, ...current.profile, ...(sound.profile ?? {}) },
           // A store written by an earlier build may hold the goals out of rank
-          // order; the array agrees with its ranks from here on.
-          ...(Array.isArray(sound.goals) ? { goals: denseRanks(sound.goals as Goal[]) } : {}),
+          // order; the array agrees with its ranks from here on. Only rows
+          // that are rows: a null in the array threw here, and the throw was
+          // reported as an error that then wrote the defaults over the blob.
+          ...(Array.isArray(sound.goals) ? { goals: denseRanks((sound.goals as unknown[]).filter((g): g is Goal => Boolean(g) && typeof g === 'object')) } : {}),
         };
       },
       onRehydrateStorage: () => (state, error) => {
         // Ask the storage layer, not this callback, whether the disk is sound:
         // a blob that reads but does not parse never reaches `error` here, and
-        // that is the commonest shape of the failure.
+        // that is the commonest shape of the failure. An error zustand
+        // reports itself — the merge threw on a shape it could not take —
+        // has to close the latch here, before the write below, or that write
+        // put the empty defaults over the blob it could not read.
+        if (error && !hasFailed()) markUnreadable(error instanceof Error ? error.message : String(error));
         const broken = Boolean(error) || hasFailed();
         if (broken) {
           console.error('[morrow] could not read local storage', error ?? failureReason());
         } else {
           state?.setToast(null);
+          // The store has been read: writes may land from here on.
+          openStorage();
         }
         // Safe either way now: with the latch closed this write is dropped
         // rather than persisted, so it cannot overwrite anything.
@@ -2324,8 +2361,10 @@ useMorrow.subscribe((s) => setDark(darkOf(s)));
  * the next launch. With the latch closed this setState is dropped by the
  * storage layer rather than persisted, so it is safe to make at any time.
  */
-onStorageFailure(() => {
-  if (!useMorrow.getState().storageError) useMorrow.setState({ storageError: true });
+onStorageFailure((failure) => {
+  const has = useMorrow.getState().storageError;
+  if (failure && !has) useMorrow.setState({ storageError: true });
+  if (!failure && has) useMorrow.setState({ storageError: false });
 });
 
 // ---------------------------------------------------------------- helpers
@@ -2368,6 +2407,56 @@ function hasWriting(s: Pick<SyncBundle, 'texts' | 'goals' | 'analyses' | 'books'
     s.pastEpochs.length > 0 ||
     s.pastEvents.length > 0
   );
+}
+
+/** The push in progress, so a second call joins it rather than starting another. */
+let pushInFlight: Promise<{ ok: true } | { ok: false; error: string }> | null = null;
+
+/**
+ * Writing that is more than the first run's two-minute line: a Book, goals,
+ * lines on the stones, a Fifteen, the volumes, a memory edit. A phone that
+ * holds only a warm-up line has not written anything the account would
+ * miss, and the account's Book should come to it.
+ */
+function hasSubstance(s: Pick<SyncBundle, 'texts' | 'goals' | 'analyses' | 'books' | 'presentPicks' | 'pastEpochs' | 'pastEvents' | 'memoryEdits'>): boolean {
+  return hasWriting({ ...s, texts: s.texts.filter((t) => t.kind !== 'warmup') });
+}
+
+/**
+ * The account's copy, taken onto this device. The profile merges over the
+ * defaults the same way a rehydrate does, so a field this build added since
+ * the copy was made is not undefined; the goals come back in rank order with
+ * the archived rows after; a warm-up line written on this phone before the
+ * sign-in is kept (nothing written is lost); and the spine title, its
+ * framing and the "I will" line come back from the latest edition, or the
+ * next edition finished on this phone was "Untitled" with an empty line.
+ */
+function takeBundle(set: (partial: Partial<MorrowState>) => void, s: MorrowState, b: SyncBundle): void {
+  const latest = b.books[b.books.length - 1];
+  const mine = s.texts.filter((t) => t.kind === 'warmup' && !b.texts.some((x) => x.id === t.id));
+  set({
+    profile: { ...DEFAULT_PROFILE, ...b.profile },
+    goals: denseRanks(b.goals),
+    texts: [...b.texts, ...mine],
+    analyses: b.analyses,
+    books: b.books,
+    plans: b.plans,
+    evidence: b.evidence,
+    days: b.days,
+    practices: b.practices,
+    practiceLogs: b.practiceLogs,
+    scenes: b.scenes,
+    letters: b.letters,
+    briefs: b.briefs,
+    presentPicks: b.presentPicks,
+    pastEpochs: b.pastEpochs,
+    pastEvents: b.pastEvents,
+    pastListed: b.pastListed,
+    memoryEdits: b.memoryEdits,
+    bookTitle: latest?.titleAuthored ? latest.title : s.bookTitle,
+    bookTitleFraming: latest?.titleFraming ?? s.bookTitleFraming,
+    iWill: latest?.iWill?.trim() ? latest.iWill : s.iWill,
+  });
 }
 
 /** The store as the sync sees it: everything that is theirs, nothing that is the screen's. */

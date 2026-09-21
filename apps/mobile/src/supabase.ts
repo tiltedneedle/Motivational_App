@@ -55,6 +55,10 @@ export function supabase(): Promise<SupabaseClient | null> {
   client = import('@supabase/supabase-js')
     .then((m) =>
       m.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        // A deadline on every call. Without one a stalled connection held
+        // "Copy now", "Send me a code" and "Bring my Book back" busy for as
+        // long as the browser's own limit, with nothing said.
+        global: { fetch: fetchWithDeadline },
         auth: {
           storage: AsyncStorage,
           autoRefreshToken: true,
@@ -70,12 +74,38 @@ export function supabase(): Promise<SupabaseClient | null> {
       }),
     )
     .catch(() => {
-      // The chunk did not arrive (offline before it was ever cached): the
-      // account is unreachable this time, not gone. Asked again next time.
+      // The chunk did not arrive (offline before it was ever cached, or an
+      // open tab outlived a deploy): the account is unreachable this time,
+      // not gone. Asked again next time, and said as what it is.
+      chunkMissing = true;
       client = null;
       return null;
     });
   return client;
+}
+
+/** Whether the account's code could not be fetched this session. */
+let chunkMissing = false;
+
+/** What to tell a person when the client is not there: a missing chunk is a reload, not a missing service. */
+export function noClientMessage(): string {
+  if (chunkMissing) return 'This copy of Morrow could not fetch its account part. Reload the page and try again; your writing is safe.';
+  return NO_SERVICE;
+}
+
+const CALL_DEADLINE_MS = 15_000;
+
+/** `fetch` with a deadline, for the account client. */
+function fetchWithDeadline(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), CALL_DEADLINE_MS);
+  // A caller's own signal, if any, is honoured too.
+  const outer = init?.signal;
+  if (outer) {
+    if (outer.aborted) controller.abort();
+    else outer.addEventListener('abort', () => controller.abort(), { once: true });
+  }
+  return fetch(input, { ...init, signal: controller.signal }).finally(() => clearTimeout(timer));
 }
 
 /** The current session, or null when there is no account service or nobody is signed in. */
@@ -95,7 +125,15 @@ export async function sessionState(): Promise<{ session: Session | null; reachab
   if (!c) return { session: null, reachable: true };
   try {
     const { data, error } = await c.auth.getSession();
-    if (error) return { session: data.session ?? null, reachable: false };
+    if (error) {
+      // A refresh that failed for want of a network is a blip; a refresh
+      // the service refused — the token revoked, the account closed from
+      // another phone — is the answer. Read as a blip, the second kept
+      // Settings saying "Signed in" while every copy failed.
+      const retryable = (error as { name?: string }).name === 'AuthRetryableFetchError' || /network|fetch|abort|timeout/i.test(error.message ?? '');
+      if (retryable) return { session: data.session ?? null, reachable: false };
+      return { session: null, reachable: true };
+    }
     return { session: data.session ?? null, reachable: true };
   } catch {
     return { session: null, reachable: false };
@@ -133,7 +171,7 @@ const NO_SERVICE = 'There is no account service in this build, so nothing was se
  */
 export async function sendCode(email: string): Promise<AuthResult> {
   const c = await supabase();
-  if (!c) return { ok: false, error: NO_SERVICE };
+  if (!c) return { ok: false, error: noClientMessage() };
   const address = email.trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) return { ok: false, error: 'That does not look like an email address.' };
   try {
@@ -158,8 +196,24 @@ export async function sendCode(email: string): Promise<AuthResult> {
  * beyond handing it to the auth server, which is the one that decides.
  */
 export async function signInFromUrl(url: string | null | undefined): Promise<AuthResult | null> {
+  if (!url) return null;
+  // Once per URL. On Android the auth session's own listener and the root
+  // layout's both receive the redirect, and the second exchange of a
+  // one-time code fails — telling a person who had just signed in that the
+  // sign-in did not go through.
+  const seen = handled.get(url);
+  if (seen) return seen;
+  const result = signInFromUrlOnce(url);
+  handled.set(url, result);
+  if (handled.size > 8) handled.delete(handled.keys().next().value as string);
+  return result;
+}
+
+const handled = new Map<string, Promise<AuthResult | null>>();
+
+async function signInFromUrlOnce(url: string): Promise<AuthResult | null> {
   const c = await supabase();
-  if (!c || !url) return null;
+  if (!c) return null;
   let params: URLSearchParams;
   try {
     const u = new URL(url);
@@ -203,7 +257,7 @@ export async function signInFromUrl(url: string | null | undefined): Promise<Aut
 
 export async function confirmCode(email: string, code: string): Promise<AuthResult> {
   const c = await supabase();
-  if (!c) return { ok: false, error: NO_SERVICE };
+  if (!c) return { ok: false, error: noClientMessage() };
   const token = code.replace(/\D/g, '');
   if (token.length < 6) return { ok: false, error: 'The code is six digits.' };
   try {
@@ -222,7 +276,7 @@ export async function confirmCode(email: string, code: string): Promise<AuthResu
  */
 export async function signInWithApple(identityToken: string, nonce?: string): Promise<AuthResult> {
   const c = await supabase();
-  if (!c) return { ok: false, error: NO_SERVICE };
+  if (!c) return { ok: false, error: noClientMessage() };
   try {
     const { error } = await c.auth.signInWithIdToken({ provider: 'apple', token: identityToken, ...(nonce ? { nonce } : {}) });
     if (error) return { ok: false, error: plain(error.message) };
@@ -241,7 +295,7 @@ export async function signInWithApple(identityToken: string, nonce?: string): Pr
  */
 export async function signInWithGoogle(idToken: string, nonce?: string): Promise<AuthResult> {
   const c = await supabase();
-  if (!c) return { ok: false, error: NO_SERVICE };
+  if (!c) return { ok: false, error: noClientMessage() };
   try {
     const { error } = await c.auth.signInWithIdToken({ provider: 'google', token: idToken, ...(nonce ? { nonce } : {}) });
     if (error) return { ok: false, error: plain(error.message) };
@@ -260,7 +314,7 @@ export async function signInWithGoogle(idToken: string, nonce?: string): Promise
  */
 export async function signInWithGoogleRedirect(next?: string): Promise<AuthResult> {
   const c = await supabase();
-  if (!c) return { ok: false, error: NO_SERVICE };
+  if (!c) return { ok: false, error: noClientMessage() };
   const origin = (globalThis as unknown as { location?: { origin?: string } }).location?.origin ?? '';
   // Where to go once back: kept in this tab's session storage, since the
   // allow-list matches the redirect by path and a query would not survive.
@@ -292,7 +346,7 @@ export async function signInWithGoogleRedirect(next?: string): Promise<AuthResul
  */
 export async function signInWithGoogleSession(): Promise<AuthResult> {
   const c = await supabase();
-  if (!c) return { ok: false, error: NO_SERVICE };
+  if (!c) return { ok: false, error: noClientMessage() };
   const redirectTo = 'morrow://account';
   try {
     const { data, error } = await c.auth.signInWithOAuth({
@@ -344,7 +398,7 @@ export async function signOut(): Promise<void> {
  */
 export async function deleteAccount(): Promise<AuthResult> {
   const c = await supabase();
-  if (!c) return { ok: false, error: NO_SERVICE };
+  if (!c) return { ok: false, error: noClientMessage() };
   try {
     const { error } = await c.functions.invoke('delete-account', { body: {} });
     if (error) return { ok: false, error: plain(error.message) };
@@ -359,11 +413,15 @@ export async function deleteAccount(): Promise<AuthResult> {
  * The service's error strings are written for developers. The person sees
  * one sentence that says what to do next, and never a stack trace.
  */
-function plain(message: string): string {
+export function plain(message: string): string {
   const m = message.toLowerCase();
   if (m.includes('rate') || m.includes('too many')) return 'Too many tries just now. Give it a minute and ask again.';
+  if (m.includes('abort') || m.includes('timed out') || m.includes('timeout')) return 'That took too long. Check the connection and try again; nothing was lost.';
+  if (m.includes('code verifier') || m.includes('both auth code')) return 'That sign-in link has already been used, or was opened in a different browser. Start the sign-in again here.';
+  if (m.includes('row-level security') || m.includes('permission denied')) return 'The account refused the copy. Sign out and in again; if it keeps happening, tell us.';
+  if (m.includes('jwt') || m.includes('refresh_token') || m.includes('session') && m.includes('missing')) return 'Your sign-in has lapsed. Sign in again to keep copying.';
   if (m.includes('expired')) return 'That code has expired. Ask for a new one.';
   if (m.includes('invalid') || m.includes('otp')) return 'That code did not match. Check it and try once more.';
-  if (m.includes('network') || m.includes('fetch')) return 'No connection just now. Everything you wrote is still on this device.';
+  if (m.includes('network') || m.includes('fetch') || m.includes('load failed')) return 'No connection just now. Everything you wrote is still on this device.';
   return 'That did not go through. Nothing was lost; try again in a moment.';
 }

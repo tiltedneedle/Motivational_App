@@ -55,6 +55,9 @@ export interface Dictation {
 const NO_MIC = 'This device cannot listen, so the room is a typed one.';
 const REFUSED = 'The microphone was not allowed. You can type instead, or allow it in Settings.';
 const NO_NETWORK = 'No connection for the recogniser just now. Type for a moment; it will try again.';
+const NO_NETWORK_FINAL = 'No connection for the recogniser. This is a typed room until you tap Listen again.';
+/** How many network failures in a row before the recogniser stops trying: about nine seconds offline. */
+const NETWORK_STRIKES = 3;
 
 export function dictation(): Dictation {
   return Platform.OS === 'web' ? webDictation() : nativeDictation();
@@ -327,10 +330,20 @@ function webDictation(): Dictation {
         return;
       }
       if (code === 'network') {
-        current?.onProblem(NO_NETWORK);
+        // A few tries, then stop. This used to try every three seconds for
+        // ever while the screen said it had stopped listening — the mic
+        // indicator on, and words landing on the page under a control that
+        // said the room was typed.
         rec = null;
         r.onend = null;
         keepPending();
+        strikes += 1;
+        if (strikes >= NETWORK_STRIKES) {
+          wanted = false;
+          current?.onProblem(NO_NETWORK_FINAL);
+          return;
+        }
+        current?.onProblem(NO_NETWORK);
         later(3000);
         return;
       }
@@ -593,6 +606,12 @@ function nativeDictation(): Dictation {
             return;
           }
           if (code === 'network') {
+            strikes += 1;
+            if (strikes >= NETWORK_STRIKES) {
+              listening = false;
+              current?.onProblem(NO_NETWORK_FINAL);
+              return;
+            }
             current?.onProblem(NO_NETWORK);
             again(m, 3000);
             return;

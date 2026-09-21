@@ -669,7 +669,7 @@ this list. Tick as done; on resume continue from the first unticked item.
       place; a crisis-flagged stone counts as written on the path; verifySpans
       accepts a span that starts or ends mid-word (readback, mirror, edge
       function); duplicate spans; identity proposal from "I am not sure…".
-- [ ] Batch C, data safety: a first sign-in from a phone with one warm-up line
+- [x] Batch C, data safety: a first sign-in from a phone with one warm-up line
       deletes the account's Book (pushAll's prune on first push; afterSignIn asks
       the account first); the storage latch has no exit (a recover path; write
       failures do not latch; reset keeps the flag; a rehydrate error latches before

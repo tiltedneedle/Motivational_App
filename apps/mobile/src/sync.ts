@@ -21,11 +21,12 @@
  */
 import { TABLE_ORDER, fromRows, toRows, type Row, type SyncBundle } from '@morrow/core';
 import { DEFAULT_PROFILE } from '@morrow/core';
-import { currentSession, supabase } from './supabase';
+import { currentSession, plain, supabase } from './supabase';
 
 export type SyncOutcome =
   | { ok: true; rows: number }
-  | { ok: false; error: string; rows: number };
+  /** `error` is for the person; `detail` is the service's own words, for a log. */
+  | { ok: false; error: string; detail?: string; rows: number };
 
 const NOT_SIGNED_IN = 'Not signed in, so nothing was sent. Everything is still on this device.';
 
@@ -46,19 +47,23 @@ function timezone(): string {
  * Rows are chunked; a Book with a year of ledger entries is a few thousand
  * rows and one request of that size is one request that times out.
  */
-export async function pushAll(bundle: SyncBundle): Promise<SyncOutcome> {
+export async function pushAll(bundle: SyncBundle, opts: { reconcile?: boolean; deadlineMs?: number } = {}): Promise<SyncOutcome> {
   const c = await supabase();
   const session = await currentSession();
   if (!c || !session) return { ok: false, error: NOT_SIGNED_IN, rows: 0 };
 
   const uid = session.user.id;
   const tables = toRows(bundle, uid, timezone());
+  const startedAt = Date.now();
+  const budget = opts.deadlineMs ?? 90_000;
+  const overdue = () => Date.now() - startedAt > budget;
   let written = 0;
   for (const { table, rows } of tables) {
     for (const part of chunks(rows, 200)) {
+      if (overdue()) return { ok: false, error: TOOK_TOO_LONG, rows: written };
       const { error } = await c.from(table).upsert(part, { onConflict: CONFLICT[table] ?? 'id' });
       if (error) {
-        return { ok: false, error: `${table}: ${error.message}`, rows: written };
+        return { ok: false, error: plain(error.message), detail: `${table}: ${error.message}`, rows: written };
       }
       written += part.length;
     }
@@ -69,20 +74,29 @@ export async function pushAll(bundle: SyncBundle): Promise<SyncOutcome> {
   // new device pulled them straight back — the dropped goal's moves on
   // Today, the very thing dropping it was for. Children first, so a parent
   // is never deleted from under a row that still points at it.
+  //
+  // Only from a device that has copied up before (`reconcile`). A new
+  // phone's first push knows nothing about what the account holds, and this
+  // pass used to delete the whole Book off the account when a replacement
+  // phone signed in with one two-minute line on it.
+  if (!opts.reconcile) return { ok: true, rows: written };
   for (const { table, rows } of [...tables].reverse()) {
     if (table === 'profiles') continue;
+    if (overdue()) return { ok: false, error: TOOK_TOO_LONG, rows: written };
     const key = KEY[table] ?? 'id';
     const keep = new Set(rows.map((r) => String(r[key])));
     const have = await allOf(c, table, uid, key);
-    if (!have.ok) return { ok: false, error: `${table}: ${have.error}`, rows: written };
+    if (!have.ok) return { ok: false, error: plain(have.error), detail: `${table}: ${have.error}`, rows: written };
     const gone = have.values.filter((v) => !keep.has(v));
     for (const part of chunks(gone, 100)) {
       const { error } = await c.from(table).delete().eq('user_id', uid).in(key, part);
-      if (error) return { ok: false, error: `${table}: ${error.message}`, rows: written };
+      if (error) return { ok: false, error: plain(error.message), detail: `${table}: ${error.message}`, rows: written };
     }
   }
   return { ok: true, rows: written };
 }
+
+const TOOK_TOO_LONG = 'That took too long. Check the connection and try again; nothing was lost.';
 
 /** The column an upsert matches on, where it is not the id. */
 const CONFLICT: Partial<Record<string, string>> = {
@@ -136,7 +150,7 @@ async function allOf(
  * own Book is a merge, not a pull, and the honest thing is to say so rather
  * than let one silently win.
  */
-export async function pullAll(localHasWriting: boolean): Promise<{ ok: true; bundle: SyncBundle } | { ok: false; error: string }> {
+export async function pullAll(localHasWriting: boolean): Promise<{ ok: true; bundle: SyncBundle } | { ok: false; error: string; detail?: string }> {
   const c = await supabase();
   const session = await currentSession();
   if (!c || !session) return { ok: false, error: NOT_SIGNED_IN };
@@ -160,7 +174,7 @@ export async function pullAll(localHasWriting: boolean): Promise<{ ok: true; bun
         .eq(table === 'profiles' ? 'id' : 'user_id', session.user.id)
         .order(key)
         .range(from, from + PAGE - 1);
-      if (error) return { ok: false, error: `${table}: ${error.message}` };
+      if (error) return { ok: false, error: plain(error.message), detail: `${table}: ${error.message}` };
       const page = (data ?? []) as Row[];
       rows.push(...page);
       if (page.length < PAGE) break;

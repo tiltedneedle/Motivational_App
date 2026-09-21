@@ -62,8 +62,71 @@ export function storageFailure(): StorageFailure | null {
   return failure;
 }
 
-type FailureListener = (failure: StorageFailure) => void;
+/** Told of a failure, and told `null` when a later write cleared it. */
+type FailureListener = (failure: StorageFailure | null) => void;
 const listeners = new Set<FailureListener>();
+
+/**
+ * Whether writes may go to disk at all. Closed until the store has been read
+ * once: zustand persists on every `setState`, including ones the root layout
+ * makes before the disk has answered, and each of those wrote the empty
+ * defaults over the person's blob for the milliseconds until the real state
+ * was read back. A crash in that window was the whole Book gone.
+ */
+let open = false;
+
+/** The store has been read; writes may land. Called once hydration is done. */
+export function openStorage(): void {
+  open = true;
+}
+
+/**
+ * Close the read latch and make a fresh start on this device, at the
+ * person's asking. The unreadable bytes are already under a dated
+ * quarantine key (`quarantinedRaw`); the store key itself is removed so the
+ * next launch does not read them again, and writes are allowed from now.
+ */
+export async function clearLatchAndReplace(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(STORE_KEY);
+  } catch {
+    // Nothing further to try; the write that follows will say so if it fails.
+  }
+  failed = false;
+  failure = null;
+  open = true;
+  tell(null);
+}
+
+/** The most recent quarantined copy of the store, or null. Bytes, as they were. */
+export async function quarantinedRaw(): Promise<string | null> {
+  try {
+    const keys = await AsyncStorage.getAllKeys();
+    const mine = keys.filter((k) => k.startsWith(QUARANTINE_PREFIX)).sort();
+    const last = mine[mine.length - 1];
+    return last ? await AsyncStorage.getItem(last) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Close the read latch from outside: the store's own merge threw on a shape
+ * it could not take, which is a blob it must not write over.
+ */
+export function markUnreadable(detail: string): void {
+  latch('read', detail);
+}
+
+function tell(value: StorageFailure | null): void {
+  for (const listener of listeners) {
+    try {
+      listener(value);
+    } catch {
+      // A listener that throws must not stop the others being told.
+    }
+  }
+}
 
 /**
  * Be told when the latch closes.
@@ -87,6 +150,12 @@ export function onStorageFailure(listener: FailureListener): () => void {
 export function resetStorageLatch(): void {
   failed = false;
   failure = null;
+  open = true;
+}
+
+/** Tests only: the state a launch starts in, before the disk has answered. */
+export function closeStorageForTest(): void {
+  open = false;
 }
 
 async function quarantine(key: string, raw: string | null): Promise<void> {
@@ -100,17 +169,17 @@ async function quarantine(key: string, raw: string | null): Promise<void> {
 }
 
 function latch(kind: StorageFailure['kind'], detail: string): void {
-  const first = !failed;
-  failed = true;
+  // A read that failed closes the latch: the person's real data is still
+  // under there, and an empty store written over it is unrecoverable in a
+  // way the original fault was not. A write that failed does not: the disk
+  // holds an older, sound state and memory a newer one, so writing again can
+  // only help — one locked-database error used to drop every save for the
+  // rest of the session, and the banner's advice (restart) discarded them.
+  const first = !failure;
+  if (kind === 'read') failed = true;
   failure = { kind, detail };
   if (!first) return;
-  for (const listener of listeners) {
-    try {
-      listener(failure);
-    } catch {
-      // A listener that throws must not stop the others being told.
-    }
-  }
+  tell(failure);
 }
 
 export const guardedStorage: StateStorage = {
@@ -141,17 +210,23 @@ export const guardedStorage: StateStorage = {
   async setItem(name, value) {
     // The whole point. Once a read has failed, every write is dropped: the
     // person's real data is still under there, and an empty store written over
-    // it is unrecoverable in a way the original fault was not.
-    if (failed) return;
+    // it is unrecoverable in a way the original fault was not. And nothing
+    // is written before the store has been read once (`openStorage`).
+    if (failed || !open) return;
     try {
       await AsyncStorage.setItem(name, value);
+      // A write that landed clears a write failure before it.
+      if (failure?.kind === 'write') {
+        failure = null;
+        tell(null);
+      }
     } catch (err) {
       latch('write', err instanceof Error ? err.message : 'the device would not write to its own storage');
     }
   },
 
   async removeItem(name) {
-    if (failed) return;
+    if (failed || !open) return;
     try {
       await AsyncStorage.removeItem(name);
     } catch {

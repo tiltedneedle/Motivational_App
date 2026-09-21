@@ -4,12 +4,13 @@
  */
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Linking, Platform, Pressable, ScrollView, Share, View } from 'react-native';
+import { Linking, Platform, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { hourOf, boundaryFor, HELPLINES, bookToText, formatDay, plural, sealedOn, type Moment, CHRONOTYPES, DAY_ENDS, EVENING_TIMES, MORNING_TIMES, SUNDAY_HOURS, chronotypeOf, clockLabel, type Profile, SHIFT_EVENINGS, SHIFT_MORNINGS, WEEKDAY_NAMES, WEEK_ORDER, shiftDaysLabel } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, accent, day, TopBar } from '@morrow/ui';
 import { manageSubscriptionUrl } from '../src/billing';
 import { useLatestBook, useMorrow } from '../src/store';
+import { takeAway, takeawayNote } from '../src/takeaway';
 import { hasSupabase } from '../src/supabase';
 
 /**
@@ -34,6 +35,7 @@ export default function Settings() {
   const state = useMorrow((s) => s);
   const setProfile = useMorrow((s) => s.setProfile);
   const reset = useMorrow((s) => s.reset);
+  const storageError = useMorrow((s) => s.storageError);
   const fewerNotifications = useMorrow((s) => s.fewerNotifications);
   const account = useMorrow((s) => s.account);
   const restore = useMorrow((s) => s.restore);
@@ -162,16 +164,12 @@ export default function Settings() {
       iWill: state.iWill,
     };
     const message = book ? `${bookToText(book)}\n\n---\n${JSON.stringify(payload, null, 2)}` : JSON.stringify(payload, null, 2);
-    try {
-      await Share.share({ message, title: 'Morrow export' });
-      setExportError(null);
-    } catch {
-      // Swallowing this made the button do nothing at all, on the one screen
-      // that promises the person their writing is theirs to take away.
-      setExportError(
-        'This device would not open the share sheet, so nothing left the app. Everything is still here, and you can try again.',
-      );
-    }
+    // The sheet, a file, or the clipboard — whichever this device has. The
+    // button used to do nothing at all on a browser with no share sheet, on
+    // the one screen that promises the person their writing is theirs to
+    // take away.
+    const out = await takeAway(message, 'Morrow export', 'morrow-export.txt');
+    setExportError(out.ok ? (out.how === 'shared' ? null : takeawayNote(out, 'everything')) : out.error);
   };
 
   return (
@@ -587,7 +585,13 @@ export default function Settings() {
                 </View>
               </View>
             ) : (
-              <TextButton testID="settings-delete" label="Delete everything" onPress={() => setConfirming(true)} />
+              storageError ? (
+                <Body testID="settings-delete-blocked" style={{ fontSize: 13 }}>
+                  Nothing is being saved on this device right now, so nothing can be deleted from it either. Copy out what is open first; the banner at the top has the way out.
+                </Body>
+              ) : (
+                <TextButton testID="settings-delete" label="Delete everything" onPress={() => setConfirming(true)} />
+              )
             )}
           </View>
         </ScrollView>

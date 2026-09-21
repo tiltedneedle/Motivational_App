@@ -4,7 +4,7 @@
  */
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Share, View , ScrollView } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ANALYSIS_TITLES, bookToHtml, bookToText, formatDay, ordinal, pageCount, restOfIdeal, sealedOn, thenHalf } from '@morrow/core';
 import {
@@ -27,6 +27,7 @@ import {
 } from '@morrow/ui';
 import { printBook } from '../src/print';
 import { useLatestBook, useMorrow, useFirstRun } from '../src/store';
+import { takeAway, takeawayNote } from '../src/takeaway';
 import { DiffPage } from '../src/components/DiffPage';
 
 /**
@@ -104,14 +105,9 @@ export default function BookScreen() {
 
   const onExport = async () => {
     const text = bookToText(book, boundary);
-    try {
-      await Share.share({ message: text, title: book.title });
-      setExportError(null);
-    } catch {
-      // The Toast surface is only rendered by Today, so a message put there
-      // from this screen was written to something nobody was looking at.
-      setExportError('This device would not open the share sheet. Your Book is safe here, and You, the last tab, can export everything as text.');
-    }
+    // The sheet, a file, or the clipboard — whichever this device has.
+    const out = await takeAway(text, book.title, 'morrow-book.txt');
+    setExportError(out.ok ? (out.how === 'shared' ? null : takeawayNote(out, 'the Book')) : out.error);
   };
 
   return (

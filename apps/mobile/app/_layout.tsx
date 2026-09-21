@@ -1,4 +1,4 @@
-import { Stack, useRouter } from 'expo-router';
+import { Stack, usePathname, useRouter } from 'expo-router';
 // For its side effect, and it has to be from here: the browser's back is
 // intercepted by a listener that must be registered before the navigation
 // container below adds its own, and the screens that use the hook are lazy
@@ -59,6 +59,13 @@ export default function RootLayout() {
    * already scheduled or already past. Nothing here can fail loudly — a device
    * with no scheduler, or one that refuses permission, simply stays quiet.
    */
+  // The navigator's own path, for handlers that run outside render.
+  const pathname = usePathname();
+  const pathnameRef = useRef(pathname);
+  useEffect(() => {
+    pathnameRef.current = pathname;
+  }, [pathname]);
+
   const syncNotifications = useMorrow((s) => s.syncNotifications);
   useEffect(() => {
     if (!hydrated) return;
@@ -130,8 +137,11 @@ export default function RootLayout() {
     void setAccount().then(() => {
       if (useMorrow.getState().account) void pushToAccount();
     });
+    // On 'background', not every non-active state: iOS says 'inactive' and
+    // then 'background' on the way out, and pulling down Notification
+    // Centre says 'inactive' alone — each of which started a whole push.
     const sub = AppState.addEventListener('change', (next) => {
-      if (next !== 'active' && useMorrow.getState().account) void pushToAccount();
+      if (next === 'background' && useMorrow.getState().account) void pushToAccount();
     });
     return () => sub.remove();
   }, [hydrated, setAccount, pushToAccount]);
@@ -153,15 +163,21 @@ export default function RootLayout() {
     const handle = async (url: string | null) => {
       const out = await signInFromUrl(url);
       if (!out) return;
+      // Back from Google the tab is already on /account (and a cold start
+      // from morrow://account?code=… lands there too): replace, or the
+      // person lands on the second of two account screens.
+      const here = pathnameRef.current === '/account';
       if (out.ok) {
         await setAccount();
-        // Back from Google the tab is already on /account: replace, or the
-        // person lands on the second of two account screens.
-        const here = Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.pathname === '/account';
         if (here) router.replace('/account');
         else router.push('/account');
       } else {
-        useMorrow.getState().setToast({ text: out.error, kind: 'info' });
+        // Said on the account screen, where the person is, not on a toast
+        // only Today draws; and the used-up ?code= is dropped from the URL
+        // so a reload does not fail the same way again.
+        useMorrow.getState().setSignInNotice(out.error);
+        if (here) router.replace('/account');
+        else router.push('/account');
       }
     };
     void Linking.getInitialURL().then(handle).catch(() => {});
@@ -236,7 +252,16 @@ export default function RootLayout() {
           Above the router, so it is on every screen and cannot be navigated
           away from. A store that will not save is not a per-screen problem.
         */}
-        {storageError ? <StorageWarning onExport={() => router.push('/settings')} /> : null}
+        {storageError ? (
+          <StorageWarning
+            onExport={() => router.push('/settings')}
+            onFresh={() => {
+              useMorrow.getState().reset();
+              useMorrow.setState({ storageError: false });
+              router.replace('/');
+            }}
+          />
+        ) : null}
         <View
           ref={behind}
           style={{ flex: 1 }}

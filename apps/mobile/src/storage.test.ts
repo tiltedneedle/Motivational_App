@@ -23,6 +23,7 @@ vi.mock('@react-native-async-storage/async-storage', () => ({
     removeItem: async (k: string) => {
       disk.delete(k);
     },
+    getAllKeys: async () => [...disk.keys()],
   },
 }));
 
@@ -104,7 +105,7 @@ describe('being told when the latch closes', () => {
   it('tells a listener the moment a write fails, and says it was a write', async () => {
     const { onStorageFailure, storageFailure } = await import('./storage');
     const heard: string[] = [];
-    const off = onStorageFailure((f) => heard.push(f.kind));
+    const off = onStorageFailure((f) => heard.push(f ? f.kind : 'cleared'));
     // A disk that reads fine and then refuses a write, mid-use.
     disk.set('morrow-v1', A_REAL_BOOK);
     expect(await guardedStorage.getItem('morrow-v1')).toBe(A_REAL_BOOK);
@@ -120,8 +121,42 @@ describe('being told when the latch closes', () => {
     }
     expect(heard).toEqual(['write']);
     expect(storageFailure()?.kind).toBe('write');
-    expect(hasFailed()).toBe(true);
+    // A failed write does not close the latch: the disk holds an older
+    // sound state and memory a newer one, so the next write may try.
+    expect(hasFailed()).toBe(false);
+    await guardedStorage.setItem('morrow-v1', '{"state":{"a":1}}');
+    expect(disk.get('morrow-v1')).toBe('{"state":{"a":1}}');
+    // And the listener is told the failure cleared.
+    expect(heard).toEqual(['write', 'cleared']);
+    expect(storageFailure()).toBe(null);
     off();
+  });
+
+  it('gives the read latch an exit, at the person asking', async () => {
+    const { clearLatchAndReplace, quarantinedRaw } = await import('./storage');
+    disk.set('morrow-v1', A_REAL_BOOK.slice(0, 60));
+    await guardedStorage.getItem('morrow-v1');
+    expect(hasFailed()).toBe(true);
+    // The unreadable bytes are kept under a dated key, readable.
+    expect(await quarantinedRaw()).toBe(A_REAL_BOOK.slice(0, 60));
+    await clearLatchAndReplace();
+    expect(hasFailed()).toBe(false);
+    expect(disk.has('morrow-v1')).toBe(false);
+    await guardedStorage.setItem('morrow-v1', '{"state":{"fresh":true}}');
+    expect(disk.get('morrow-v1')).toBe('{"state":{"fresh":true}}');
+  });
+
+  it('writes nothing before the store has been read once', async () => {
+    const { openStorage, resetStorageLatch: reset } = await import('./storage');
+    reset();
+    // The test helper opens storage; close it again the way a launch starts.
+    (await import('./storage')).closeStorageForTest();
+    disk.set('morrow-v1', A_REAL_BOOK);
+    await guardedStorage.setItem('morrow-v1', '{"state":{}}');
+    expect(disk.get('morrow-v1')).toBe(A_REAL_BOOK);
+    openStorage();
+    await guardedStorage.setItem('morrow-v1', '{"state":{}}');
+    expect(disk.get('morrow-v1')).toBe('{"state":{}}');
   });
 
   it('tells a listener that arrives late, once, and a read failure says read', async () => {
@@ -129,7 +164,7 @@ describe('being told when the latch closes', () => {
     readThrows = true;
     await guardedStorage.getItem('morrow-v1');
     const heard: string[] = [];
-    onStorageFailure((f) => heard.push(f.kind));
+    onStorageFailure((f) => heard.push(f ? f.kind : 'cleared'));
     expect(heard).toEqual(['read']);
     // A second failure does not ring twice.
     await guardedStorage.getItem('morrow-v1');

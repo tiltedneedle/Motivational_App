@@ -8,7 +8,8 @@
  */
 import React from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Pressable, ScrollView, Share, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
+import { takeAway, takeawayNote } from '../takeaway';
 import { day, radius, type as fonts } from '@morrow/ui';
 // The key, not a copy of it: read directly off disk, on purpose — see `getOut`.
 import { STORE_KEY } from '../storage';
@@ -60,14 +61,13 @@ export class ErrorBoundary extends React.Component<Props, State> {
       this.setState({ exportError: 'There is nothing stored on this device yet, so there is nothing to lose.' });
       return;
     }
-    try {
-      await Share.share({ message: raw, title: 'Morrow — everything on this device' });
-      this.setState({ exportError: null });
-    } catch {
-      // No share sheet. Put it on the screen instead; it is their writing and
-      // they are entitled to it whatever this platform can and cannot do.
-      this.setState({ spilled: raw, exportError: null });
-    }
+    // The sheet, a file, or the clipboard; and failing all three, the text
+    // on the screen where it can be selected and copied by hand. It is their
+    // writing and they are entitled to it whatever this platform can do.
+    const out = await takeAway(raw, 'Morrow — everything on this device', 'morrow-everything.txt');
+    if (out.ok) this.setState({ exportError: out.how === 'shared' ? null : takeawayNote(out, 'everything') });
+    else if (out.how === 'dismissed') this.setState({ exportError: out.error });
+    else this.setState({ spilled: raw, exportError: null });
   };
 
   override componentDidCatch(error: Error, info: React.ErrorInfo) {

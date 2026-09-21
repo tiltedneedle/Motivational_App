@@ -9,7 +9,7 @@
  * Settings for whenever they change their mind.
  */
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Platform, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Body, Chip, InkButton, Label, Notice, Rule, Statement, Studio, TextButton, TopBar, UserField, day } from '@morrow/ui';
@@ -28,6 +28,13 @@ export default function Account() {
   const markAccountAsked = useMorrow((s) => s.markAccountAsked);
   const setAccount = useMorrow((s) => s.setAccount);
   const afterSignIn = useMorrow((s) => s.afterSignIn);
+  const resolveSignIn = useMorrow((s) => s.resolveSignIn);
+  // What the root layout found when it handled a sign-in link, shown here
+  // where the person is rather than on a toast only Today draws.
+  const signInNotice = useMorrow((s) => s.signInNotice);
+  const setSignInNotice = useMorrow((s) => s.setSignInNotice);
+  /** Both the phone and the account hold writing: their call. */
+  const [conflict, setConflict] = useState(false);
   const account = useMorrow((s) => s.account);
 
   const [stage, setStage] = useState<Stage>('email');
@@ -35,6 +42,11 @@ export default function Account() {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  useEffect(() => {
+    if (!signInNotice) return;
+    setProblem(signInNotice);
+    setSignInNotice(null);
+  }, [signInNotice, setSignInNotice]);
   const [sent, setSent] = useState<string | null>(null);
 
   /**
@@ -86,14 +98,35 @@ export default function Account() {
     track({ name: 'account_signed_in', method, pulled: synced.ok && synced.pulled });
     if (!synced.ok) {
       // Signed in, but the copy did not land. Said plainly: the sign-in is real,
-      // the writing is still here, and the next launch will try again.
+      // the writing is still here, and the next launch will try again. When
+      // both sides hold writing, nothing moved and the choice is theirs.
       setProblem(synced.error);
+      setConflict(synced.conflict === true);
     } else {
       setProblem(null);
       setPulled(synced.pulled);
       setMoved(synced.pulled ? 'pulled' : synced.moved);
     }
     setStage('done');
+  };
+
+  /** The conflict, answered. */
+  const resolve = async (choice: 'pull' | 'push') => {
+    if (busy) return;
+    setBusy(true);
+    setProblem(null);
+    try {
+      const out = await resolveSignIn(choice);
+      if (!out.ok) {
+        setProblem(out.error);
+        return;
+      }
+      setConflict(false);
+      setPulled(out.pulled);
+      setMoved(out.moved);
+    } finally {
+      setBusy(false);
+    }
   };
 
   /**
@@ -201,6 +234,20 @@ export default function Account() {
               <InkButton testID="account-bring-back" label={busy ? 'One moment…' : 'Bring my Book back'} busy={busy} onPress={() => void bringBack()} />
               <Notice testID="account-problem" kind="error" text={problem} />
               <TextButton testID="account-not-now" label="Not now" onPress={onwards} />
+            </View>
+          ) : stage === 'done' && conflict ? (
+            <View testID="account-conflict" style={{ gap: 12 }}>
+              <Rule />
+              <Body style={{ color: day.ink }}>
+                Signed in. This phone and the account both have writing, and neither has been touched. Which copy do you
+                want to keep?
+              </Body>
+              <InkButton testID="account-keep-account" label={busy ? 'One moment…' : 'Bring the account’s Book here'} busy={busy} onPress={() => void resolve('pull')} />
+              <Body style={{ fontSize: 13 }}>The account’s copy replaces what is on this phone. A first line written here is kept.</Body>
+              <Chip testID="account-keep-phone" label="Keep this phone’s writing and replace the copy" onPress={() => void resolve('push')} />
+              <Body style={{ fontSize: 13 }}>What is on the account now is replaced by this phone’s writing, for good.</Body>
+              <Notice testID="account-problem" kind="error" text={problem} />
+              <TextButton testID="account-not-now" label="Decide later" onPress={onwards} />
             </View>
           ) : stage === 'done' ? (
             <View testID="account-done" style={{ gap: 10 }}>
