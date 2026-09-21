@@ -120,7 +120,7 @@ export default function Heard() {
               ? 'Reading it back…'
               : rows.length === 0
                 ? 'Your goals are already named.'
-                : `${rows.length} things you want. Keep the ones that are goals, and name each.`}
+                : `${rows.length} lines I heard. Keep the ones that are goals, and name each.`}
           </Statement>
         </View>
 

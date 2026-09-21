@@ -20,6 +20,7 @@ import {
   scheduleLabel,
   sourceLineFor,
   firstRunCaption,
+  firstRunHeading,
   firstVisit,
     presentStanding,
   halfDone,
@@ -265,7 +266,7 @@ export default function Today() {
           <Rise index={0} reducedMotion={reduced} style={{ gap: 14 }}>
             <Stone size={96} domain={goals[0]?.domain ?? 'health'} polish={firstRun.step === 'interview' ? 0.4 : 0.7} sweep={!reduced && focused} style={{ alignSelf: 'center', marginBottom: 10 }} />
             <Statement testID="today-path">
-              {firstRun.step !== 'interview' ? 'Your Book is not finished yet.' : elsewhere ? whatIsThere() : name ? `Hello, ${name}.` : 'Hello.'}
+              {firstRun.step !== 'interview' ? firstRunHeading(firstRun) : elsewhere ? whatIsThere() : name ? `Hello, ${name}.` : 'Hello.'}
             </Statement>
             <Body testID="today-path-caption">
               {firstRun.step !== 'interview'

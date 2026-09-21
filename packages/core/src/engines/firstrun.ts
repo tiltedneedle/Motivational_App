@@ -75,6 +75,28 @@ export function firstRunStep(input: FirstRunInput): FirstRunStep {
   return { step: 'seal', route: `/portrait?goal=${top.id}&next=/seal-book`, label: 'See the Portrait and seal the Book', goalId: top.id };
 }
 
+/**
+ * The path card's heading, by step. It said "Your Book is not finished yet."
+ * at every step — true, and the first thing a person read a minute after
+ * finishing their first evening.
+ */
+export function firstRunHeading(s: FirstRunStep): string {
+  switch (s.step) {
+    case 'interview':
+      return 'Hello.';
+    case 'fifteen':
+      return 'Your goals are named.';
+    case 'order':
+      return 'That was the first evening.';
+    case 'stones':
+      return s.written === 0 ? 'The Fifteen is written.' : 'Halfway to your Book.';
+    case 'seal':
+      return 'One step from your Book.';
+    case 'done':
+      return '';
+  }
+}
+
 /** One sentence for the person, about where they are. */
 export function firstRunCaption(s: FirstRunStep, goalCount: number): string {
   switch (s.step) {

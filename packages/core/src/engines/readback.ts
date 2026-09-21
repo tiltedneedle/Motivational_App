@@ -202,7 +202,7 @@ export function extractSpansLocally(text: string, limit = 7): ReadBackResult {
     if (chosen.some((x) => overlaps(x, c))) continue;
     chosen.push({ text: c.text, start: c.start, end: c.end, domain: domainOf(c.text) });
   }
-  chosen.sort((a, b) => a.start - b.start);
+  chosen.sort(wantsFirst);
 
   // Suggest a merge when two spans land in the same domain.
   for (let i = 0; i < chosen.length; i++) {
@@ -251,9 +251,29 @@ export function verifySpans(source: string, spans: { text: string; domain?: Doma
     used.push({ start, end });
     out.push({ text, start, end, domain: s.domain ?? domainOf(text) });
   }
-  out.sort((a, b) => a.start - b.start);
+  out.sort(wantsFirst);
   return out;
 }
+
+/**
+ * The order the stones are read back in: the sentences that say "I want"
+ * first, in the order they were written; then the rest, in theirs. A
+ * Fifteen opens with the scene — the kitchen, the shoe, the door — and read
+ * back in page order the first four stones were scenery and the wants were
+ * below the fold. Applied at the gate too, which is the last word.
+ */
+function wantsFirst(a: { text: string; start: number }, b: { text: string; start: number }): number {
+  const wa = SAID_WANT.test(a.text) ? 0 : 1;
+  const wb = SAID_WANT.test(b.text) ? 0 : 1;
+  return wa - wb || a.start - b.start;
+}
+
+/**
+ * A sentence that says it wants, in so many words. Narrower than WANT, which
+ * scores "I can see it from the table" for its "I … can" and is right to as
+ * a hint; for the order of the list only the plain forms count.
+ */
+const SAID_WANT = /\b(?:i|we)\s*(?:'d|'ll|'m|would|will|am|are|really|just|also|still)?\s*(?:want|wants|wanted|need|needs|like to|going to|gonna|intend|hope|plan|wish|aim|mean to|will be|'ll be|would be|am going|'m going|would like|'d like|would love|'d love)\b/i;
 
 /** How much of the read-back survived verification. Logged; a low ratio is a prompt bug. */
 export function verificationRate(proposed: number, verified: number): number {

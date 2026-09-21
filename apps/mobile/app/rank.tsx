@@ -37,7 +37,7 @@ export default function Rank() {
         <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'rank-back' }} where="The order" />
         <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 22 }}>
           <View style={{ gap: 8 }}>
-            <Label>The order</Label>
+            <Label>Your goals</Label>
             <Statement>Put your goals in order. The top one matters most.</Statement>
             <Body style={{ fontSize: 14 }}>{track === 'full' || goals.length <= 3 ? 'Every goal gets all five lines.' : 'The top three get all five lines; the rest get the two that make a plan.'}</Body>
           </View>

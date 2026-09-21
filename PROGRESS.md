@@ -50,6 +50,26 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 64. **The live site walked, three things fixed; Google sign-in wired for
+      the web, 2026-09-21.** A new person's whole first run on the live address, on
+      the real clock, screenshot by screenshot, then a seeded Book through Today,
+      the coach, Envision and the Book: no page errors, no failed requests, the
+      read-back and the account reaching the project. Found: the read-back listed
+      the stones in page order, so a Fifteen that opens with the scene put the
+      kitchen, the shoe and the rent above the three sentences that said "I
+      want" — the sentences that say it in so many words come first now (in the
+      order written, then the rest in theirs; applied at the gate, which is the
+      last word), and the heading says "7 lines I heard" rather than "7 things
+      you want"; the path card said "Your Book is not finished yet." a minute
+      after the first evening — it is headed by where the person is now ("That
+      was the first evening.", "Halfway to your Book.", "One step from your
+      Book."); the order screen said THE ORDER twice. Google: the web half is
+      wired — `signInWithGoogleRedirect` (the standard OAuth redirect back to
+      /account, which the launch handler already turns into a session) behind
+      `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`, a Continue with Google chip when it is
+      set, `[auth.external.google]` in config.toml off until the id and secret
+      exist, and the five steps in the README. Native Google stays behind the
+      iOS client id and a build.
 - [x] 63. **The card a shared link shows, 2026-09-21.** Open Graph and Twitter tags in
       the shell and a 1200×630 card (`public/og.png`: the ground, the coral stone,
       the name, the one line in the serif, the address), so a link pasted into a
@@ -2677,7 +2697,7 @@ program's actual prompt text by someone with a licensed copy.
 - A Mac with Xcode, or an Android SDK, and a device: for the native build and the
   VoiceOver / TalkBack walk. Nothing here can show the native tab bar, the hold gesture,
   Dynamic Type at 200%, or the Android hardware back through the three volumes.
-- Google sign-in: `signInWithGoogle(idToken)` is in `src/supabase.ts`; the native half (`@react-native-google-signin/google-signin`) needs the client's iOS and web OAuth client ids before it can be added and built.
+- Google sign-in: the web half is wired and off until `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` and the project's Google provider exist (README, "Google sign-in", five steps); the native half (`@react-native-google-signin/google-signin`) needs the iOS client id and a build.
 - Crash reporting: Sentry's React Native SDK is a native dependency and a DSN; not added until there is a project to send to. Analytics is a seam already (PostHog key).
 - Sound on the seal: an asset decision. Haptics are in; a placeholder click is worse than silence.
 - The privacy policy and terms (§12): nothing in the app links to them because there is no text and no URL yet; a placeholder page would be worse than the gap. One row in Settings and one on Consent, the day the client's URL exists.

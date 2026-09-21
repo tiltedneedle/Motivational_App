@@ -52,6 +52,18 @@ otp_expiry = 600
 # subject = "Your Morrow code"
 # content_path = "./supabase/templates/magic_link.html"
 
+[auth.external.google]
+# Sign in with Google. The web client id and its secret from Google Cloud
+# (README, "Google sign-in"); the redirect URI registered there is this
+# project's /auth/v1/callback. Off until both exist. The id also goes in the
+# app's environment as EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID, which shows the button.
+enabled = false
+client_id = "env(GOOGLE_CLIENT_ID)"
+secret = "env(GOOGLE_CLIENT_SECRET)"
+# The native module (a later step) signs in with an id token; its iOS client
+# id is listed here too when it exists, so the token is accepted.
+# additional_client_ids = "..."
+
 [auth.external.apple]
 # Sign in with Apple, from the identity token the OS hands the app. The client
 # id is the bundle identifier; the secret is not needed for native sign-in.

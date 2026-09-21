@@ -12,12 +12,22 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
+import { Platform } from 'react-native';
 
 export const SUPABASE_URL = (process.env.EXPO_PUBLIC_SUPABASE_URL ?? '').trim();
 export const SUPABASE_ANON_KEY = (process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '').trim();
 
 /** Whether there is an account service to talk to at all. */
 export const hasSupabase = SUPABASE_URL.length > 0 && SUPABASE_ANON_KEY.length > 0;
+
+/**
+ * Google sign-in on the web. The value is the OAuth web client id — public,
+ * like the anon key — and its presence is the switch: no id, no button. The
+ * project side (the provider enabled with the same id and its secret) is
+ * set up once, per the README.
+ */
+export const GOOGLE_WEB_CLIENT_ID = (process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '').trim();
+export const hasGoogleWeb = hasSupabase && Platform.OS === 'web' && GOOGLE_WEB_CLIENT_ID.length > 0;
 
 /**
  * Where the edge functions live when Supabase is the host for them.
@@ -220,6 +230,29 @@ export async function signInWithGoogle(idToken: string, nonce?: string): Promise
   if (!c) return { ok: false, error: NO_SERVICE };
   try {
     const { error } = await c.auth.signInWithIdToken({ provider: 'google', token: idToken, ...(nonce ? { nonce } : {}) });
+    if (error) return { ok: false, error: plain(error.message) };
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: plain(err instanceof Error ? err.message : 'no network') };
+  }
+}
+
+/**
+ * Sign in with Google on the web, by the redirect: the browser goes to
+ * Google, then back to /account with the session in the URL's fragment,
+ * which the launch handler turns into a session the same way it does the
+ * email link. Nothing about Google is trusted here beyond handing the
+ * person to it; the auth server does the exchange.
+ */
+export async function signInWithGoogleRedirect(): Promise<AuthResult> {
+  const c = await supabase();
+  if (!c) return { ok: false, error: NO_SERVICE };
+  const origin = (globalThis as unknown as { location?: { origin?: string } }).location?.origin ?? '';
+  try {
+    const { error } = await c.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${origin}/account`, queryParams: { prompt: 'select_account' } },
+    });
     if (error) return { ok: false, error: plain(error.message) };
     return { ok: true };
   } catch (err) {

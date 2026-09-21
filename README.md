@@ -204,6 +204,50 @@ Everything runs on local fallbacks without one. To go beyond them:
 5. Put the project URL and the publishable (anon) key in the app's environment (`EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`) — `apps/mobile/.env` works for `expo start`, `expo run:*` and `pnpm build:web`. The tests build with `pnpm build:web:offline`, which blanks every `EXPO_PUBLIC_*` so `pnpm verify` never reaches the network.
 6. The hard delete is on the clock already: migration 0002 schedules a nightly pg_cron job that removes the auth users past their seven days (and the function sweeps on every call as well). Was: schedule a call to the `delete-account` sweep daily if you want it on the clock, e.g. a pg_cron job hitting the function, or leave it: every close of an account runs the sweep for the ones whose week is up.
 
+### Google sign-in (sign in with a Gmail)
+
+How sign-in works today: **email code / link** (Supabase Auth, no password
+anywhere — the address gets a six-digit code, or a link on the free tier),
+and **Sign in with Apple** on iOS. A session is a JWT the auth server issues;
+supabase-js keeps it in the app's own storage and refreshes it; every edge
+function checks it (`verify_jwt = true`); row level security ties every row
+to `auth.uid()`. The app never sees a password, and the account only ever
+holds a copy of the Book.
+
+The web half of Google is wired (`signInWithGoogleRedirect` in
+`apps/mobile/src/supabase.ts`; the button appears when the id below is set).
+It is the standard OAuth redirect: the browser goes to Google, comes back to
+`/account#access_token=…`, and the launch handler turns that into a session
+exactly as it does for the email link. To turn it on:
+
+1. **Google Cloud Console** → *APIs & Services* → *OAuth consent screen*:
+   External, app name "Morrow", your support email, the domain
+   `selfauthoring00.vercel.app` (and the custom domain when there is one).
+   Publish it (or add the demo accounts as test users while it is in
+   Testing).
+2. *Credentials* → *Create credentials* → *OAuth client ID* → **Web
+   application**. Authorised JavaScript origins:
+   `https://selfauthoring00.vercel.app` (and `http://localhost:8790` for
+   the local demo). Authorised redirect URI — this one, exactly:
+   `https://fxsaxganeyajxbcbignq.supabase.co/auth/v1/callback`. Copy the
+   **client id** and **client secret**.
+3. **Supabase** → the client id and secret go into `supabase/.env.local` as
+   `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` (gitignored), then in
+   `supabase/config.toml` set `[auth.external.google] enabled = true` and
+   `pnpm sb config push --yes`. (Or, in the dashboard: Authentication →
+   Providers → Google → on, paste both.) The redirect URL the app comes back
+   to (`https://selfauthoring00.vercel.app/**`) is already on the allow-list.
+4. **Vercel** → add `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` = the same client id
+   (it is public; the secret never goes to Vercel). Redeploy. The account
+   screen now shows **Continue with Google** on the web.
+5. **Phones, later**: the native button uses
+   `@react-native-google-signin/google-signin` and hands the app an id
+   token; `signInWithGoogle(idToken)` is already in `supabase.ts`. That
+   needs an **iOS** client id (bundle id `app.morrow.client`) and, for
+   Android, the app's SHA-1 — both from the same Credentials page — and the
+   iOS id added to `additional_client_ids` in `config.toml`. It is wired
+   the day a native build exists.
+
 ### Putting the web build on Vercel
 
 The web export is a single-page bundle (`web.output: "single"`), so Vercel needs no

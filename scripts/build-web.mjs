@@ -23,7 +23,7 @@ import { join } from 'node:path';
 const offline = process.argv.includes('--offline');
 const env = { ...process.env };
 if (offline) {
-  for (const key of ['EXPO_PUBLIC_SUPABASE_URL', 'EXPO_PUBLIC_SUPABASE_ANON_KEY', 'EXPO_PUBLIC_MORROW_API', 'EXPO_PUBLIC_POSTHOG_KEY', 'EXPO_PUBLIC_RC_IOS', 'EXPO_PUBLIC_RC_ANDROID']) {
+  for (const key of ['EXPO_PUBLIC_SUPABASE_URL', 'EXPO_PUBLIC_SUPABASE_ANON_KEY', 'EXPO_PUBLIC_MORROW_API', 'EXPO_PUBLIC_POSTHOG_KEY', 'EXPO_PUBLIC_RC_IOS', 'EXPO_PUBLIC_RC_ANDROID', 'EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID']) {
     // Blank, not deleted: dotenv fills in only what is absent.
     env[key] = '';
   }

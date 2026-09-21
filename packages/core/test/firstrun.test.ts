@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { analysisPlan, firstRunCaption, firstRunStep } from '../src/engines/firstrun';
+import { analysisPlan, firstRunCaption, firstRunHeading, firstRunStep } from '../src/engines/firstrun';
 import type { BookVersion, Goal, GoalAnalysis } from '../src/types';
 
 const goal = (id: string, rank: number, over: Partial<Goal> = {}): Goal => ({
@@ -37,6 +37,18 @@ describe('where somebody is on the first-run path', () => {
     const s = firstRunStep({ goals: [], hasIdeal: false, hasTitle: false, consented: true, analyses: [], books: [], track: 'starter' });
     expect(s.step).toBe('interview');
     expect(s.route).toBe('/interview');
+  });
+
+  // The card's heading said "Your Book is not finished yet." at every step —
+  // the first thing a person read a minute after finishing their first evening.
+  it('heads the path card by where the person is', () => {
+    const named = firstRunStep({ goals: [goal('g1', 0)], hasIdeal: false, hasTitle: false, analyses: [], books: [], track: 'starter' });
+    expect(firstRunHeading(named)).toBe('Your goals are named.');
+    const written = firstRunStep({ goals: [goal('g1', 0)], hasIdeal: true, hasTitle: false, analyses: [], books: [], track: 'starter' });
+    expect(firstRunHeading(written)).toBe('That was the first evening.');
+    const stones = firstRunStep({ goals: [goal('g1', 0)], hasIdeal: true, hasTitle: true, analyses: [line('g1', 'motives')], books: [], track: 'starter' });
+    expect(firstRunHeading(stones)).toBe('Halfway to your Book.');
+    for (const h of [firstRunHeading(named), firstRunHeading(written), firstRunHeading(stones)]) expect(h).not.toMatch(/not finished/);
   });
 
   it('points at the Fifteen once goals are named', () => {

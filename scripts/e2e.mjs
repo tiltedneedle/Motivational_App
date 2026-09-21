@@ -346,7 +346,7 @@ async function main() {
     await page.clock.runFor(1500);
     await page.waitForTimeout(500);
     check('a launch with goals named does not show Welcome again', !(await seen('screen-welcome')) && (await seen('screen-today')));
-    check('Today, with goals and no Book, is the path', (await text('today-path')).includes('not finished'), await text('today-path'));
+    check('Today, with goals and no Book, is the path, headed by where the person is', (await text('today-path')) === 'Your goals are named.', await text('today-path'));
     check('and its button is the next step', (await text('today-begin')) === 'Write the Fifteen', await text('today-begin'));
     await tap('today-begin');
     check('and it goes to the Fifteen', await seen('screen-authoring'));

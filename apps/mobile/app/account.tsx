@@ -13,7 +13,7 @@ import { useState } from 'react';
 import { Platform, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Body, Chip, InkButton, Label, Notice, Rule, Statement, Studio, TextButton, TopBar, UserField, day } from '@morrow/ui';
-import { confirmCode, hasSupabase, sendCode, signInWithApple } from '../src/supabase';
+import { confirmCode, hasGoogleWeb, hasSupabase, sendCode, signInWithApple, signInWithGoogleRedirect } from '../src/supabase';
 import { useMorrow } from '../src/store';
 import { track } from '../src/analytics';
 
@@ -77,7 +77,7 @@ export default function Account() {
   const hasBook = useMorrow((s) => s.books.length > 0);
 
   /** Signed in: the copy, one way or the other, with the button held busy throughout. */
-  const settle = async (method: 'email' | 'apple') => {
+  const settle = async (method: 'email' | 'apple' | 'google') => {
     await setAccount();
     const synced = await afterSignIn();
     track({ name: 'account_signed_in', method, pulled: synced.ok && synced.pulled });
@@ -124,6 +124,19 @@ export default function Account() {
     } finally {
       setBusy(false);
     }
+  };
+
+  /** The web: away to Google and back to this screen with a session in the URL. */
+  const google = async () => {
+    if (busy) return;
+    setBusy(true);
+    setProblem(null);
+    const out = await signInWithGoogleRedirect();
+    if (!out.ok) {
+      setBusy(false);
+      setProblem(out.error);
+    }
+    // On success the page is leaving; the button stays busy until it does.
   };
 
   const apple = async () => {
@@ -223,6 +236,7 @@ export default function Account() {
                   {Platform.OS === 'ios' ? (
                     <Chip testID="account-apple" label="Sign in with Apple" onPress={() => void apple()} />
                   ) : null}
+                  {hasGoogleWeb ? <Chip testID="account-google" label="Continue with Google" onPress={() => void google()} /> : null}
                 </>
               ) : (
                 <>

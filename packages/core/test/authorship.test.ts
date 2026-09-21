@@ -123,6 +123,19 @@ describe('local read-back', () => {
     expect(out.spans.map((s) => s.text)).toContain('i want to call my mother every sunday');
   });
 
+  // A Fifteen opens with the scene. Read back in page order, the first four
+  // stones were the kitchen, the shoe, the rent and the guitar on the wall,
+  // and the three sentences that said "I want" were below the fold.
+  it('reads the sentences that say "I want" back first, then the rest in their order', () => {
+    const ideal =
+      "It's 6:40 and the kitchen is still blue. I lace the left shoe first, like always, and the door is already open before I've decided anything. Sam is asleep upstairs and the guitar is on the wall where I can see it from the table. I want to run every morning before the kettle boils. I want to have three months put by so a bad month is only a bad month.";
+    const texts = verifySpans(ideal, extractSpansLocally(ideal).spans).map((s) => s.text);
+    expect(texts[0]).toBe('I want to run every morning before the kettle boils');
+    expect(texts[1]).toBe('I want to have three months put by so a bad month is only a bad month');
+    // "I can see it from the table" is not a want said in so many words.
+    expect(texts.indexOf("It's 6:40 and the kitchen is still blue")).toBeLessThan(texts.findIndex((t) => t.startsWith('Sam is asleep')));
+  });
+
   it('leaves "bread and butter" together: a join cuts only before a subject', () => {
     const { spans } = extractSpansLocally(
       'i want to sell bread and butter at the market every saturday morning and i want the stall to pay the rent by the spring and my father to see it once before he stops travelling',
