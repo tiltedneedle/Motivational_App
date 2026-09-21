@@ -40,10 +40,11 @@ const TICK_MS = 250;
  * The one sign, beside the word, that the room is hearing: a coral dot that
  * breathes. Still under reduced motion.
  */
-function Pulse({ reduced }: { reduced: boolean }) {
+function Pulse({ reduced, level }: { reduced: boolean; level: Animated.Value | null }) {
   const [opacity] = useState(() => new Animated.Value(1));
   useEffect(() => {
-    if (reduced) return;
+    // With a real level the dot follows the voice instead of breathing.
+    if (reduced || level) return;
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(opacity, { toValue: 0.25, duration: 700, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
@@ -52,13 +53,14 @@ function Pulse({ reduced }: { reduced: boolean }) {
     );
     loop.start();
     return () => loop.stop();
-  }, [opacity, reduced]);
+  }, [opacity, reduced, level]);
+  const scale = level && !reduced ? level.interpolate({ inputRange: [0, 1], outputRange: [1, 2.2] }) : 1;
   return (
     <Animated.View
       testID="write-pulse"
       aria-hidden
       importantForAccessibility="no"
-      style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: accent.coral, opacity }}
+      style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: accent.coral, opacity: level && !reduced ? 1 : opacity, transform: [{ scale }] }}
     />
   );
 }
@@ -149,6 +151,9 @@ export default function Write() {
   const spokenLastRef = useRef(false);
   const heardRef = useRef(false);
   const absorbedRef = useRef(false);
+  // How loud the room is, when the recogniser can say; the pulse follows it.
+  const levelRef = useRef(new Animated.Value(0));
+  const [hasLevel, setHasLevel] = useState(false);
   const dictationRef = useRef(dictation());
 
   /**
@@ -257,6 +262,11 @@ export default function Write() {
           setMicNote(message);
           setListening(false);
         },
+        onLevel: (v) => {
+          if (gone) return;
+          setHasLevel(true);
+          Animated.timing(levelRef.current, { toValue: v, duration: 110, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
+        },
       })
       .then((ok) => {
         if (!gone) setListening(ok);
@@ -277,6 +287,8 @@ export default function Write() {
       gone = true;
       away.remove();
       dictationRef.current.stop();
+      setHasLevel(false);
+      levelRef.current.setValue(0);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, mode, held, micWanted, micTry]);
@@ -747,7 +759,7 @@ export default function Write() {
                 way back to the microphone; "Type it" above is the way to
                 type.
               */}
-              {listening ? <Pulse reduced={reduced} /> : null}
+              {listening ? <Pulse reduced={reduced} level={hasLevel ? levelRef.current : null} /> : null}
               <Chip
                 testID="write-mic"
                 label={listening ? 'Listening' : held ? 'Paused' : micWanted && !micNote ? 'Starting…' : 'Listen again'}

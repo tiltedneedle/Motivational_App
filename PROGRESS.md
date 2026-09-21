@@ -17,7 +17,7 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 3. apps/mobile screens (all 16 routes)
 - [x] 4. Tests, as of 2026-09-18: 489 core + 48 ui + 8 storage unit tests, the eval harness
       (687 checks over forty profiles and two hundred labelled lines), 68 real-Postgres
-      checks, **525 Playwright e2e checks**, 84 cold-open checks, 8 service-worker checks, axe 0 across 37 screens,
+      checks, **526 Playwright e2e checks**, 84 cold-open checks, 8 service-worker checks, axe 0 across 37 screens,
       the account round-trip 46/46 against the live project — all green, all in `pnpm verify`
 - [x] 5. supabase/: migrations with RLS and three structural authorship guards, edge functions
 - [x] 6. Hardening: the eight-lens audit's findings, worst first (see below) — 95 of 95
@@ -50,6 +50,16 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 60. **The pulse follows the voice, 2026-09-21.** Where the recogniser can
+      say how loud the room is, the coral dot beside "Listening" grows with the
+      voice and settles in the quiet instead of breathing on its own: on a phone
+      from the recogniser's own volume events (`volumeChangeEventOptions`), and in
+      Chromium from an analyser on the microphone, read a few times a second and
+      never kept (WebKit is left to breathe — its recogniser does not share the
+      microphone gracefully). Reduced motion keeps the dot still. The phone's
+      recogniser is also told this is dictation, not a command (`iosTaskHint`).
+      e2e: a scripted microphone level, loud then quiet, and the dot's scale
+      following it. 526/526.
 - [x] 59. **The body of work reviewed, sixteen findings, thirteen fixed, 2026-09-20.**
       One sweep (four lenses, each finding refuted once; 21 agents, 1.5M tokens —
       the last one this month), then every finding read by hand. Fixed: on a
@@ -416,7 +426,7 @@ tested. What is left needs a machine or a key this one does not have; see
   tests, 8 storage tests, the eval harness (687 checks), the edge-function
   guards, the SQL structural guards, 68 checks against a real Postgres, the
   serif authorship guard, the way-back guard (33 screens), the web build
-  (offline), 525 end-to-end checks, the axe pass over 37 screens and 84
+  (offline), 526 end-to-end checks, the axe pass over 37 screens and 84
   cold-open checks. Against the real project: `pnpm test:account`, 46 more.
 - **The account's spend limit is the month's, not the run's.** The fourth
   audit was ten agents and 1.59M tokens and tripped the monthly limit with
@@ -2653,7 +2663,7 @@ program's actual prompt text by someone with a licensed copy.
 
 Everything that can be done on this machine, without a key, is done. Seven
 audits are closed (the last four on the three volumes, each adversarially
-verified), the built app is walked end to end by 525 checks, and the account
+verified), the built app is walked end to end by 526 checks, and the account
 round-trips against the live project. What remains needs either hardware, a
 credential, or a product call.
 

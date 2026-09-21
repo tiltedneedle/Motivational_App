@@ -30,6 +30,12 @@ export interface DictationHandlers {
   onText: (text: string, final: boolean) => void;
   /** One plain sentence. Nothing here is a stack trace. */
   onProblem: (message: string) => void;
+  /**
+   * How loud the room is, 0 to 1, a few times a second — for the one sign
+   * that the room is hearing. Not every recogniser can say; then it is
+   * never called.
+   */
+  onLevel?: (level: number) => void;
 }
 
 export interface Dictation {
@@ -129,10 +135,55 @@ function webRecognitionClass(): WebRecognitionClass | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
+/**
+ * A level meter on the web: the microphone through an analyser, read a few
+ * times a second, nothing kept. Chromium only — WebKit's recogniser does
+ * not share the microphone with a second listener gracefully.
+ */
+type Meter = { stop(): void };
+async function meter(onLevel: (level: number) => void): Promise<Meter | null> {
+  const w = globalThis as unknown as {
+    navigator?: { userAgent?: string; mediaDevices?: { getUserMedia?: (c: { audio: boolean }) => Promise<MediaStream> } };
+    AudioContext?: new () => AudioContext;
+  };
+  const ua = w.navigator?.userAgent ?? '';
+  if (!/Chrom(e|ium)/.test(ua) || !w.AudioContext || !w.navigator?.mediaDevices?.getUserMedia) return null;
+  try {
+    const stream = await w.navigator.mediaDevices.getUserMedia({ audio: true });
+    const ctx = new w.AudioContext();
+    const source = ctx.createMediaStreamSource(stream);
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 512;
+    source.connect(analyser);
+    const buf = new Uint8Array(analyser.fftSize);
+    const tick = setInterval(() => {
+      analyser.getByteTimeDomainData(buf);
+      let sum = 0;
+      for (let i = 0; i < buf.length; i++) {
+        const v = ((buf[i] ?? 128) - 128) / 128;
+        sum += v * v;
+      }
+      // RMS of quiet speech is around 0.05; a raised voice 0.3. Scaled so
+      // ordinary talking fills most of the range.
+      onLevel(Math.min(1, Math.sqrt(sum / buf.length) * 4));
+    }, 120);
+    return {
+      stop() {
+        clearInterval(tick);
+        for (const t of stream.getTracks()) t.stop();
+        void ctx.close().catch(() => undefined);
+      },
+    };
+  } catch {
+    return null;
+  }
+}
+
 function webDictation(): Dictation {
   let wanted = false;
   let rec: WebRecognition | null = null;
   let current: DictationHandlers | null = null;
+  let level: Meter | null = null;
   let restart: ReturnType<typeof setTimeout> | null = null;
   // Errors in a row with no words between them. Three and it stops, rather
   // than a recogniser that fails, restarts and fails again forever.
@@ -308,11 +359,24 @@ function webDictation(): Dictation {
       wanted = true;
       strikes = 0;
       begin();
+      if (handlers.onLevel) {
+        const mine = handlers;
+        void meter((v) => {
+          if (current === mine) mine.onLevel?.(v);
+        }).then((m) => {
+          if (!m) return;
+          // Stopped before the meter came up: let it go at once.
+          if (current !== mine || !wanted) m.stop();
+          else level = m;
+        });
+      }
       return true;
     },
 
     stop() {
       wanted = false;
+      level?.stop();
+      level = null;
       const r = rec;
       if (restart) clearTimeout(restart);
       restart = null;
@@ -386,6 +450,10 @@ function nativeDictation(): Dictation {
         // and the app never sees audio either way.
         requiresOnDeviceRecognition: (onDevice ??= m.ExpoSpeechRecognitionModule.supportsOnDeviceRecognition?.() === true),
         addsPunctuation: true,
+        // Long-form speech, not a command: Apple's recogniser tunes for it.
+        iosTaskHint: 'dictation',
+        // The recogniser's own volume, a few times a second, for the pulse.
+        volumeChangeEventOptions: { enabled: true, intervalMillis: 150 },
       });
     } catch {
       current?.onProblem(NO_MIC);
@@ -452,6 +520,10 @@ function nativeDictation(): Dictation {
       clear();
       const mod = m.ExpoSpeechRecognitionModule;
       subs.push(
+        mod.addListener('volumechange', (e) => {
+          // -2..10, below 0 inaudible.
+          current?.onLevel?.(Math.max(0, Math.min(1, (e.value ?? 0) / 8)));
+        }),
         mod.addListener('result', (e) => {
           const text = e.results?.[0]?.transcript ?? '';
           strikes = 0;

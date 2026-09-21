@@ -973,6 +973,14 @@ async function main() {
       window.SpeechRecognition = ScriptedRecognition;
       window.webkitSpeechRecognition = ScriptedRecognition;
       if (navigator.mediaDevices) navigator.mediaDevices.getUserMedia = () => Promise.resolve({ getTracks: () => [] });
+      // A scripted microphone level: loud when asked, silent otherwise.
+      window.AudioContext = class {
+        createMediaStreamSource() { return { connect() {} }; }
+        createAnalyser() {
+          return { fftSize: 512, connect() {}, getByteTimeDomainData(buf) { buf.fill(sessionStorage.getItem('loud') === '1' ? 200 : 128); } };
+        }
+        close() { return Promise.resolve(); }
+      };
       // The browser's language, on request (the room listens in the person's own English).
       const spoken = sessionStorage.getItem('lang');
       if (spoken) Object.defineProperty(navigator, 'language', { configurable: true, get: () => spoken });
@@ -1003,6 +1011,15 @@ async function main() {
       const lastStarted = () => page.evaluate(() => window.__recs[window.__recs.length - 1]?.started === true);
       check('Say it opens the room listening, with one recogniser', (await text('write-mic')).toLowerCase() === 'listening' && (await recs()) === 1, `chip "${await text('write-mic')}" · ${await recs()} recognisers`);
       check('with a pulse beside the word', await seen('write-pulse'));
+      // The pulse follows the voice where the browser can measure it.
+      const pulseScale = () => page.locator('[data-testid="write-pulse"]').evaluate((el) => { const t = getComputedStyle(el).transform; const m = t.match(/matrix\(([^,]+),/); return m ? parseFloat(m[1]) : 1; });
+      await page.evaluate(() => sessionStorage.setItem('loud', '1'));
+      await page.waitForTimeout(700);
+      const loud = await pulseScale();
+      await page.evaluate(() => sessionStorage.removeItem('loud'));
+      await page.waitForTimeout(700);
+      const quiet = await pulseScale();
+      check('and the pulse grows with the voice and settles in the quiet', loud > 1.4 && quiet < loud, `loud ${loud} · quiet ${quiet}`);
       check('and asks the browser to keep the sound on the device where it can', await page.evaluate(() => window.__recs[0]?.processLocally === true));
       check('in the browser’s own English', await page.evaluate(() => window.__recs[0]?.lang === (/^en-[A-Za-z]{2}$/.test(navigator.language) ? navigator.language : 'en-US')), await page.evaluate(() => window.__recs[0]?.lang));
       check('a spoken room holds the screen awake', (await wake()).held === 1, JSON.stringify(await wake()));
