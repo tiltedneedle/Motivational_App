@@ -40,4 +40,23 @@ config.resolver.extraNodeModules = {
   ),
 };
 
+/**
+ * The web bundle without react-native-reanimated.
+ *
+ * Nothing in the app imports it. It arrived through gesture-handler's
+ * optional wrapper (`require('react-native-reanimated')` in a try/catch,
+ * which Metro cannot leave out) and was a tenth of the web bundle: two
+ * hundred and eighty modules for a phone-only animation runtime a browser
+ * never runs. On the web the require resolves to an empty module; the
+ * wrapper sees no `useSharedValue` and falls back to its own implementation,
+ * exactly as it does when the library is not installed. The phones keep it.
+ */
+const baseResolveRequest = config.resolver.resolveRequest;
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  if (platform === 'web' && moduleName === 'react-native-reanimated') {
+    return { type: 'sourceFile', filePath: path.resolve(projectRoot, 'src', 'stubs', 'empty.js') };
+  }
+  return baseResolveRequest ? baseResolveRequest(context, moduleName, platform) : context.resolveRequest(context, moduleName, platform);
+};
+
 module.exports = config;

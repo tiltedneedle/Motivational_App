@@ -47,7 +47,7 @@ function timezone(): string {
  * rows and one request of that size is one request that times out.
  */
 export async function pushAll(bundle: SyncBundle): Promise<SyncOutcome> {
-  const c = supabase();
+  const c = await supabase();
   const session = await currentSession();
   if (!c || !session) return { ok: false, error: NOT_SIGNED_IN, rows: 0 };
 
@@ -108,7 +108,7 @@ const PAGE = 1000;
  * push wrote the cut as the truth.
  */
 async function allOf(
-  c: NonNullable<ReturnType<typeof supabase>>,
+  c: NonNullable<Awaited<ReturnType<typeof supabase>>>,
   table: string,
   uid: string,
   key: string,
@@ -137,7 +137,7 @@ async function allOf(
  * than let one silently win.
  */
 export async function pullAll(localHasWriting: boolean): Promise<{ ok: true; bundle: SyncBundle } | { ok: false; error: string }> {
-  const c = supabase();
+  const c = await supabase();
   const session = await currentSession();
   if (!c || !session) return { ok: false, error: NOT_SIGNED_IN };
   if (localHasWriting) {

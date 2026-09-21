@@ -24,7 +24,10 @@ import { fileURLToPath } from 'node:url';
 const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 const DIST = join(ROOT, 'apps', 'mobile', 'dist');
 const PORT = Number(process.env.PORT ?? 8797);
-const BASE = `http://localhost:${PORT}`;
+// BASE=https://… walks a deployed site instead of serving dist: every link
+// shape a client might be handed, opened cold against the live address.
+const LIVE = process.env.BASE?.replace(/\/$/, '') ?? null;
+const BASE = LIVE ?? `http://localhost:${PORT}`;
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json', '.png': 'image/png', '.ttf': 'font/ttf', '.woff2': 'font/woff2', '.ico': 'image/x-icon' };
 
 /** Every route the a11y pass renders, with the ids pointed at nothing. */
@@ -103,7 +106,8 @@ function check(name, ok, detail = '') {
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${ok || !detail ? '' : ' — ' + detail}`);
 }
 
-const server = await serve();
+const server = LIVE ? null : await serve();
+if (LIVE) console.log(`walking ${LIVE}`);
 const candidates = [
   process.env.PLAYWRIGHT_CHROMIUM_PATH,
   'C:/Users/HP/AppData/Local/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-win64/chrome-headless-shell.exe',
@@ -131,9 +135,11 @@ async function walk(label, seed) {
 
   for (const [name, path] of Object.entries(ROUTES)) {
     errors.length = 0;
-    await page.goto(`${BASE}${path}`, { waitUntil: 'networkidle' });
+    // A live site never goes network-idle for long (the worker, the CDN's
+    // keep-alives); 'load' and a real-time beat instead.
+    await page.goto(`${BASE}${path}`, { waitUntil: LIVE ? 'load' : 'networkidle', timeout: 45000 });
     await page.clock.runFor(2500);
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(LIVE ? 2500 : 500);
     const state = await page.evaluate(() => {
       const screens = [...document.querySelectorAll('[data-testid^="screen-"]')].map((e) => e.getAttribute('data-testid'));
       const text = (document.body.innerText || '').replace(/\s+/g, ' ').trim();
@@ -172,7 +178,7 @@ try {
   await walk('missing id', seeded);
 } finally {
   await browser.close();
-  server.close();
+  server?.close();
 }
 
 const failures = results.filter((r) => !r.ok).length;

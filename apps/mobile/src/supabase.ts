@@ -11,7 +11,7 @@
  * secrets-shaped things the app ever holds. Nothing else lives in the bundle.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createClient, type Session, type SupabaseClient } from '@supabase/supabase-js';
+import type { Session, SupabaseClient } from '@supabase/supabase-js';
 
 export const SUPABASE_URL = (process.env.EXPO_PUBLIC_SUPABASE_URL ?? '').trim();
 export const SUPABASE_ANON_KEY = (process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '').trim();
@@ -26,27 +26,39 @@ export const hasSupabase = SUPABASE_URL.length > 0 && SUPABASE_ANON_KEY.length >
  */
 export const FUNCTIONS_URL = hasSupabase ? `${SUPABASE_URL.replace(/\/+$/, '')}/functions/v1` : '';
 
-let client: SupabaseClient | null = null;
+let client: Promise<SupabaseClient | null> | null = null;
 
 /**
- * The client, made once.
+ * The client, made once — and the library loaded only then. The account is
+ * dormant for everyone who has not asked for one, and `@supabase/supabase-js`
+ * with auth, storage and realtime behind it was a tenth of the web bundle on
+ * every first load. Now it arrives when a sign-in, a push or a pull needs it.
  *
  * Sessions persist in AsyncStorage — the same store the writing lives in — so
  * signing in survives a relaunch. `detectSessionInUrl` is off because the
  * app's own scheme handles its links, and a web tab's URL is not a place to
  * look for a session.
  */
-export function supabase(): SupabaseClient | null {
-  if (!hasSupabase) return null;
+export function supabase(): Promise<SupabaseClient | null> {
+  if (!hasSupabase) return Promise.resolve(null);
   if (client) return client;
-  client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: {
-      storage: AsyncStorage,
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: false,
-    },
-  });
+  client = import('@supabase/supabase-js')
+    .then((m) =>
+      m.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: {
+          storage: AsyncStorage,
+          autoRefreshToken: true,
+          persistSession: true,
+          detectSessionInUrl: false,
+        },
+      }),
+    )
+    .catch(() => {
+      // The chunk did not arrive (offline before it was ever cached): the
+      // account is unreachable this time, not gone. Asked again next time.
+      client = null;
+      return null;
+    });
   return client;
 }
 
@@ -63,7 +75,7 @@ export async function currentSession(): Promise<Session | null> {
  * store clears the account on the first and leaves it alone on the second.
  */
 export async function sessionState(): Promise<{ session: Session | null; reachable: boolean }> {
-  const c = supabase();
+  const c = await supabase();
   if (!c) return { session: null, reachable: true };
   try {
     const { data, error } = await c.auth.getSession();
@@ -104,7 +116,7 @@ const NO_SERVICE = 'There is no account service in this build, so nothing was se
  * looking at always works.
  */
 export async function sendCode(email: string): Promise<AuthResult> {
-  const c = supabase();
+  const c = await supabase();
   if (!c) return { ok: false, error: NO_SERVICE };
   const address = email.trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) return { ok: false, error: 'That does not look like an email address.' };
@@ -130,7 +142,7 @@ export async function sendCode(email: string): Promise<AuthResult> {
  * beyond handing it to the auth server, which is the one that decides.
  */
 export async function signInFromUrl(url: string | null | undefined): Promise<AuthResult | null> {
-  const c = supabase();
+  const c = await supabase();
   if (!c || !url) return null;
   let params: URLSearchParams;
   try {
@@ -166,7 +178,7 @@ export async function signInFromUrl(url: string | null | undefined): Promise<Aut
 }
 
 export async function confirmCode(email: string, code: string): Promise<AuthResult> {
-  const c = supabase();
+  const c = await supabase();
   if (!c) return { ok: false, error: NO_SERVICE };
   const token = code.replace(/\D/g, '');
   if (token.length < 6) return { ok: false, error: 'The code is six digits.' };
@@ -185,7 +197,7 @@ export async function confirmCode(email: string, code: string): Promise<AuthResu
  * the screen asks for it lazily; this is the half that is the same everywhere.
  */
 export async function signInWithApple(identityToken: string, nonce?: string): Promise<AuthResult> {
-  const c = supabase();
+  const c = await supabase();
   if (!c) return { ok: false, error: NO_SERVICE };
   try {
     const { error } = await c.auth.signInWithIdToken({ provider: 'apple', token: identityToken, ...(nonce ? { nonce } : {}) });
@@ -204,7 +216,7 @@ export async function signInWithApple(identityToken: string, nonce?: string): Pr
  * see PROGRESS.md, "Blocked on the user".
  */
 export async function signInWithGoogle(idToken: string, nonce?: string): Promise<AuthResult> {
-  const c = supabase();
+  const c = await supabase();
   if (!c) return { ok: false, error: NO_SERVICE };
   try {
     const { error } = await c.auth.signInWithIdToken({ provider: 'google', token: idToken, ...(nonce ? { nonce } : {}) });
@@ -216,7 +228,7 @@ export async function signInWithGoogle(idToken: string, nonce?: string): Promise
 }
 
 export async function signOut(): Promise<void> {
-  const c = supabase();
+  const c = await supabase();
   if (!c) return;
   try {
     await c.auth.signOut();
@@ -231,7 +243,7 @@ export async function signOut(): Promise<void> {
  * hold, so it is an edge function; the app only asks.
  */
 export async function deleteAccount(): Promise<AuthResult> {
-  const c = supabase();
+  const c = await supabase();
   if (!c) return { ok: false, error: NO_SERVICE };
   try {
     const { error } = await c.functions.invoke('delete-account', { body: {} });

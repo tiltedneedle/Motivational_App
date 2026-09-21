@@ -50,6 +50,20 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 62. **The first load, a third lighter, 2026-09-21.** The entry chunk was 3.6 MB
+      (876 KB over the wire), and on mobile data a client waits for every byte of
+      it before Welcome. Two things had no business in it: `@supabase/supabase-js`
+      with auth, storage and realtime behind it — a tenth of the bundle for an
+      account most people never open — now arrives on demand (`supabase()` is
+      async; a chunk that does not arrive offline leaves the account unreachable
+      this time, not gone); and `react-native-reanimated`, 280 modules of a
+      phone-only animation runtime that gesture-handler's optional wrapper
+      `require`s in a try/catch Metro cannot leave out — on the web it resolves
+      to an empty module and the wrapper falls back exactly as when the library
+      is not installed; the phones keep it. 2.56 MB, 507 KB over the wire. The
+      web build prints both and fails over 2.9 MB, so a dependency that creeps
+      back is a failed build, not a slower demo. `BASE=https://… pnpm test:cold`
+      opens every route and link shape cold against a deployed site.
 - [x] 61. **Live, 2026-09-21.** https://selfauthoring00.vercel.app — Vercel from
       `main` with the root `vercel.json` (root directory, framework Other), the
       Supabase URL and publishable key and the PostHog host in the project's
