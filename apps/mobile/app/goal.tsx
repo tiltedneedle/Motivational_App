@@ -29,7 +29,9 @@ import {
   Ring,
   Rule,
   Statement,
+  Pop,
   Stone,
+  useReducedMotion,
   Studio,
   UserText,
   accent,
@@ -41,6 +43,7 @@ import { analysisPlan } from './stone';
 import { analysesFor, pendingLetGo, useGoals, useMorrow, cardText } from '../src/store';
 
 export default function GoalScreen() {
+  const reduced = useReducedMotion();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const state = useMorrow((s) => s);
@@ -153,7 +156,10 @@ export default function GoalScreen() {
               width={4}
               accessibilityLabel={plan ? `${plural(doneCount, 'move')} done of ${plan.moves.length}` : 'No plan yet'}
             >
-              <Stone size={50} domain={goal.domain} polish={0.5 + pct * 0.5} />
+              {/* The flight (PRD 8.5) lands here: the stone arrives on the settle spring. */}
+              <Pop reduced={reduced}>
+                <Stone size={50} domain={goal.domain} polish={0.5 + pct * 0.5} />
+              </Pop>
             </Ring>
           </View>
 

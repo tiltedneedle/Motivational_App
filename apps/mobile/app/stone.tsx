@@ -26,7 +26,7 @@ import {
   sameLine,
   stoneNow,
 } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Question, Statement, Stone, Studio, TextButton, TopBar, UserField, accent, announce, day, UserText } from '@morrow/ui';
+import { Body, Chip, InkButton, Label, Pop, Question, Settle, Statement, Stone, Studio, TextButton, TopBar, UserField, UserText, accent, announce, day, useReducedMotion } from '@morrow/ui';
 import { analysesFor, useGoals, useLatestBook, useMorrow, cardText } from '../src/store';
 import { useFirstRunStep } from '../src/analytics';
 
@@ -85,6 +85,7 @@ export default function StoneScreen() {
    */
   const [resumed] = useState(() => (draft && draft.goalId === goalId && draft.kind === kind ? draft : null));
   const [framingId, setFramingId] = useState<string | null>(resumed?.framingId ?? existing?.framingId ?? null);
+  const reduced = useReducedMotion();
   const [line, setLine] = useState(resumed?.line ?? (fresh ? '' : (existing?.line ?? '')));
   const [line2, setLine2] = useState(resumed?.line2 ?? (fresh ? '' : (existing?.line2 ?? '')));
   const [paragraph, setParagraph] = useState(resumed?.paragraph ?? (fresh ? '' : (existing?.paragraph ?? '')));
@@ -258,7 +259,10 @@ export default function StoneScreen() {
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
         <TopBar back={{ onPress: goBack, testID: 'stone-back' }} style={{ paddingTop: 6, minHeight: 44 }} help={{ onPress: showResources }} />
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 2 }}>
-          <Stone size={30} domain={goal.domain} polish={1} />
+          {/* Just kept a line: the stone seats (PRD 8.2) as the next one opens. */}
+          <Settle reduced={reduced} play={stepIndex}>
+            <Stone size={30} domain={goal.domain} polish={1} />
+          </Settle>
           <View style={{ flex: 1 }}>
             {/* Where this goal sits among the others, so "stone 3 of 5" is not the whole count (OFR-06). */}
             <Label testID="stone-goal">{goals.length > 1 ? `${goal.title} · goal ${goals.findIndex((g) => g.id === goalId) + 1} of ${goals.length}` : goal.title}</Label>
@@ -267,19 +271,29 @@ export default function StoneScreen() {
             </Label>
           </View>
           <View style={{ flexDirection: 'row', gap: 6 }}>
-            {plan.map((k, i) => (
-              <View
-                key={k}
-                style={{
-                  width: 10,
-                  height: 10,
-                  borderRadius: 5,
-                  backgroundColor: i < stepIndex ? accent.coral : 'transparent',
-                  borderWidth: i < stepIndex ? 0 : 1.5,
-                  borderColor: day.line,
-                }}
-              />
-            ))}
+            {plan.map((k, i) => {
+              const dot = (
+                <View
+                  key={k}
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: 5,
+                    backgroundColor: i < stepIndex ? accent.coral : 'transparent',
+                    borderWidth: i < stepIndex ? 0 : 1.5,
+                    borderColor: day.line,
+                  }}
+                />
+              );
+              // The dot for the line just kept pops in; the others sit still.
+              return i === stepIndex - 1 ? (
+                <Pop key={k} reduced={reduced}>
+                  {dot}
+                </Pop>
+              ) : (
+                dot
+              );
+            })}
           </View>
         </View>
 

@@ -14,7 +14,7 @@ import { Redirect, useIsFocused, useLocalSearchParams, useRouter } from 'expo-ro
 import { useState } from 'react';
 import { ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Body, GhostButton, InkButton, Label, Rise, Statement, Stone, Studio, TextButton, UserField, useReducedMotion } from '@morrow/ui';
+import { Body, GhostButton, InkButton, Label, Rise, Settle, Statement, Stone, Studio, TextButton, UserField, useReducedMotion } from '@morrow/ui';
 import { useFirstRun, useLatestBook, useMorrow, useHasBegun } from '../src/store';
 import { useFirstRunStep } from '../src/analytics';
 import { hasSupabase } from '../src/supabase';
@@ -67,7 +67,10 @@ export default function Welcome() {
           keyboardDismissMode="on-drag"
         >
           <Rise index={0} reducedMotion={reduced} style={{ alignItems: 'center', gap: 18 }}>
-            <Stone size={124} domain="health" polish={1} sweep={!reduced && focused} testID="welcome-stone" />
+            {/* "A stone settles on the studio floor" (PRD 7.1): the settle spring, once, as the screen arrives. */}
+            <Settle reduced={reduced}>
+              <Stone size={124} domain="health" polish={1} sweep={!reduced && focused} testID="welcome-stone" />
+            </Settle>
             <Statement style={{ fontSize: 48, lineHeight: 52, textAlign: 'center' }}>Morrow</Statement>
             <Statement testID="welcome-page-0" level={2} style={{ fontSize: 24, lineHeight: 30, textAlign: 'center', maxWidth: 320 }}>
               Meet who you’re becoming.

@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Platform, ScrollView, Share, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Chip, HoldBar, Label, Quoted, Statement, Stone, Studio, TopBar, UserField, night, useReducedMotion } from '@morrow/ui';
+import { Chip, HoldBar, Label, Quoted, SealBurst, Settle, Statement, Stone, Studio, TopBar, UserField, accent, night, useReducedMotion } from '@morrow/ui';
 import { dayOf } from '@morrow/core';
 import { feelSealed } from '../src/feel';
 import { dictation } from '../src/dictation';
@@ -169,8 +169,12 @@ export default function SealDay() {
             />
           </View>
 
-          <View style={{ alignItems: 'center', paddingVertical: 10 }}>
-            <Stone size={110} domain="health" polish={sealed ? 1 : 0.6} seated={sealed} />
+          <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 10 }}>
+            {/* PRD 8.5: "completion drops the stone with a spring, two rings pulse out". */}
+            <SealBurst size={110} color={accent.coral} play={sealed} reduced={reduced} />
+            <Settle reduced={reduced} play={sealed ? 1 : 0}>
+              <Stone size={110} domain="health" polish={sealed ? 1 : 0.6} seated={sealed} />
+            </Settle>
           </View>
         </ScrollView>
 

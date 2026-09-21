@@ -40,6 +40,7 @@ import {
   Readout,
   Ring,
   Rise,
+  Settle,
   Statement,
   Stone,
   Studio,
@@ -264,7 +265,9 @@ export default function Today() {
         <SafeAreaView style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 22, justifyContent: 'center', gap: 14 }} showsVerticalScrollIndicator={false}>
           <Rise index={0} reducedMotion={reduced} style={{ gap: 14 }}>
-            <Stone size={96} domain={goals[0]?.domain ?? 'health'} polish={firstRun.step === 'interview' ? 0.4 : 0.7} sweep={!reduced && focused} style={{ alignSelf: 'center', marginBottom: 10 }} />
+            <Settle reduced={reduced} style={{ alignSelf: 'center', marginBottom: 10 }}>
+              <Stone size={96} domain={goals[0]?.domain ?? 'health'} polish={firstRun.step === 'interview' ? 0.4 : 0.7} sweep={!reduced && focused} />
+            </Settle>
             <Statement testID="today-path">
               {firstRun.step !== 'interview' ? firstRunHeading(firstRun) : elsewhere ? whatIsThere() : name ? `Hello, ${name}.` : 'Hello.'}
             </Statement>

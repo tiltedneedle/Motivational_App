@@ -9,7 +9,7 @@ import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ordinal, type PaywallMoment } from '@morrow/core';
-import { Body, HoldBar, InkButton, Label, Notice, Statement, Stone, Studio, TopBar, UserField, useReducedMotion, night } from '@morrow/ui';
+import { Body, HoldBar, InkButton, Label, Notice, SealBurst, Settle, Statement, Stone, Studio, TopBar, UserField, accent, night, useReducedMotion } from '@morrow/ui';
 import { feelDrained, feelSealed } from '../src/feel';
 import { useGoals, useMorrow } from '../src/store';
 import { useFirstRunStep } from '../src/analytics';
@@ -84,9 +84,15 @@ export default function SealBook() {
             />
           </View>
 
-          <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'center', paddingVertical: 10 }}>
-            {goals.slice(0, 6).map((g) => (
-              <Stone key={g.id} size={sealed ? 34 : 30} domain={g.domain} polish={1} seated={sealed} />
+          <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'center', alignItems: 'center', paddingVertical: 10 }}>
+            {/* PRD 8.5: the stones settle as the Book seals, and two rings pulse out of the first. */}
+            {goals.slice(0, 6).map((g, i) => (
+              <View key={g.id} style={{ alignItems: 'center', justifyContent: 'center' }}>
+                {i === 0 ? <SealBurst size={34} color={accent.coral} play={sealed} reduced={reduced} /> : null}
+                <Settle reduced={reduced} play={sealed ? 1 : 0}>
+                  <Stone size={sealed ? 34 : 30} domain={g.domain} polish={1} seated={sealed} />
+                </Settle>
+              </View>
             ))}
           </View>
 

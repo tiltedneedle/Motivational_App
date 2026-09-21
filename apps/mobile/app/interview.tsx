@@ -22,24 +22,7 @@ import {
   toggleArea,
   type InterviewState,
 } from '@morrow/core';
-import {
-  Body,
-  InkButton,
-  Label,
-  Question,
-  Ring,
-  Statement,
-  Stone,
-  Studio,
-  TextButton,
-  TopBar,
-  UserField,
-  accent,
-  announce,
-  day,
-  radius,
-  type as fonts,
-} from '@morrow/ui';
+import { Body, InkButton, Label, Pop, Question, Ring, Slide, Statement, Stone, Studio, TextButton, TopBar, UserField, accent, announce, day, radius, type as fonts, useReducedMotion } from '@morrow/ui';
 import { usePlatformBack } from '../src/platform-back';
 import { useMorrow } from '../src/store';
 import { track, useFirstRunStep } from '../src/analytics';
@@ -108,6 +91,7 @@ export default function Interview() {
   const addGoals = useMorrow((st) => st.addGoals);
 
   const q = question(s);
+  const reduced = useReducedMotion();
   const areas = allAreas(s);
 
   const options = useMemo(() => {
@@ -214,6 +198,8 @@ export default function Interview() {
         ) : (
           <>
             <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18, gap: 10 }}>
+              {/* PRD 7.1: "the next question slides in from the right". A new prompt is a new slide. */}
+              <Slide key={q.prompt} reduced={reduced} style={{ gap: 10 }}>
               <Statement testID="interview-question" style={{ marginBottom: 8 }}>
                 {q.prompt}
               </Statement>
@@ -318,6 +304,7 @@ export default function Interview() {
                   <InkButton testID="custom-use" label="Use this" onPress={useCustom} compact />
                 </View>
               ) : null}
+              </Slide>
             </ScrollView>
 
             <View style={{ paddingTop: 10, paddingBottom: 18, gap: 10 }}>
@@ -346,6 +333,7 @@ export default function Interview() {
 }
 
 function Tray({ s }: { s: InterviewState }) {
+  const reduced = useReducedMotion();
   const picked = pickedAreas(s);
   return (
     <View style={{ gap: 10 }} testID="interview-tray">
@@ -358,7 +346,13 @@ function Tray({ s }: { s: InterviewState }) {
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
         {picked.map((a, i) => {
           const draft = s.drafts.find((d) => d.areaId === a.id);
-          if (draft) return <Stone key={a.id} size={26} domain={a.domain} polish={1} />;
+          // A stone forms in the tray (PRD 7.1): from small, on the settle spring.
+          if (draft)
+            return (
+              <Pop key={a.id} reduced={reduced}>
+                <Stone size={26} domain={a.domain} polish={1} />
+              </Pop>
+            );
           return (
             <View
               key={a.id}

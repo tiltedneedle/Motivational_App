@@ -17,7 +17,7 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 3. apps/mobile screens (all 16 routes)
 - [x] 4. Tests, as of 2026-09-18: 489 core + 48 ui + 8 storage unit tests, the eval harness
       (687 checks over forty profiles and two hundred labelled lines), 68 real-Postgres
-      checks, **527 Playwright e2e checks**, 84 cold-open checks, 8 service-worker checks, axe 0 across 37 screens,
+      checks, **527 Playwright e2e checks**, 84 cold-open checks, 8 service-worker checks, 6 motion checks, axe 0 across 37 screens,
       the account round-trip 46/46 against the live project — all green, all in `pnpm verify`
 - [x] 5. supabase/: migrations with RLS and three structural authorship guards, edge functions
 - [x] 6. Hardening: the eight-lens audit's findings, worst first (see below) — 95 of 95
@@ -50,6 +50,27 @@ Companions: The Authoring Script (every prompt), the Flow Atlas (every flow), th
 - [x] 21. The lock screen (§7.8): the I will line typeset on the night ground at
       lock-screen pixels — to Photos on a phone, a PNG download on the web —
       from the Book and from Envision
+- [x] 65. **Motion (§8.5), and buttons that read as buttons, 2026-09-21.** The
+      client: "see how the initial design had motions… buttons submerged, looking
+      like text". Against §8.5 the app had the stone's sweep, the room's bob, the
+      hold bar and Today's drag, and nothing else moved. Now, in one small layer
+      (`packages/ui/src/motion.tsx`): every screen arrives (fade, eight-point
+      rise; a crossfade under reduce motion); every chip and text button answers
+      a press with a scale to 0.97 sprung back on the standard spring; the ink and
+      ghost buttons' faces drop onto their edge at once and spring back up
+      instead of snapping; the Interview's next question slides in from the
+      right and a stone forms in the tray from small on the settle spring; the
+      stone screen's header stone settles and the dot just filled pops when a
+      line is kept; the seals drop the stone on the settle spring and pulse two
+      coral rings out of it; the Goal screen's stone lands on the settle
+      spring; the toast rises in; Welcome's and the empty Today's stone settle on
+      the floor. Text buttons sit in a soft pill (the top bar's Back and Need
+      someone? stay bare), so a secondary action is a thing to press and not
+      small print. Springs 18/180 and 14/260, fades 180/240, nothing bounces
+      twice, reduce motion honoured. `pnpm test:motion` measures it mid-animation
+      in a real browser — arrival opacity per frame, the chip's scale under a
+      real press, the seal's rings, the question's slide — so a layer gone
+      static fails where a screenshot could not tell. In `verify`.
 - [x] 64. **The live site walked, three things fixed; Google sign-in wired for
       the web, 2026-09-21.** A new person's whole first run on the live address, on
       the real clock, screenshot by screenshot, then a seeded Book through Today,
@@ -531,6 +552,7 @@ pnpm build:web:offline && pnpm test:e2e   # 527 end-to-end checks, serves dist i
 pnpm test:a11y                  # axe over 37 screens (SEED=, DARK= as for shots)
 pnpm test:cold                  # 84 routes opened cold on both stores
 pnpm test:sw                    # the service worker: first load, a second deploy, an outage
+pnpm test:motion                # the motion layer, measured mid-animation in a real browser
 pnpm shots                      # every screen from a seeded store → scripts/shots/
 pnpm journey                    # the whole walk, frame by frame → scripts/shots/journey/
 pnpm demo                       # the built app on :8790 and the Wi-Fi address, to walk it by hand

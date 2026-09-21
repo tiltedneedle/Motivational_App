@@ -23,6 +23,7 @@ import {
 } from 'react-native';
 import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { accent, day, focusRing, ground, inkEdge, isDark, motion, night, radius, shadow, size, subscribeDark, type as fonts, webHover, webOnlyStyle, type Palette } from './tokens';
+import { Arrive, usePress } from './motion';
 
 /**
  * Say something to a screen reader without moving focus: a step changed, a
@@ -84,6 +85,7 @@ export function Studio({
   const globalDark = useSyncExternalStore(subscribeDark, isDark, isDark);
   const isNight = dark || globalDark;
   const p = isNight ? (night as unknown as Palette) : day;
+  const reduced = useReducedMotion();
   return (
     <PaletteContext.Provider value={{ p, dark: isNight }}>
       {/*
@@ -99,9 +101,10 @@ export function Studio({
       */}
       <View testID={testID} style={[{ flex: 1, backgroundColor: p.ground }, style]}>
         <Light dark={isNight} />
-        <View style={{ flex: 1, width: '100%', maxWidth: wide ? TWO_COLUMN : COLUMN, alignSelf: 'center' }}>
+        {/* Every screen arrives (PRD 8.5): a fade with an eight-point rise, a crossfade under reduce motion. */}
+        <Arrive reduced={reduced} style={{ width: '100%', maxWidth: wide ? TWO_COLUMN : COLUMN, alignSelf: 'center' }}>
           {children}
-        </View>
+        </Arrive>
       </View>
     </PaletteContext.Provider>
   );
@@ -492,6 +495,7 @@ export function Chip({
 }) {
   const { p, dark } = usePalette();
   const { hovered, hoverProps } = useHover();
+  const { scale, onPressIn, onPressOut } = usePress();
   const on = selected === true;
   const kind = role ?? (selected === undefined ? 'button' : 'radio');
   const bg = on ? p.ink : ghost ? 'transparent' : p.surface;
@@ -500,32 +504,41 @@ export function Chip({
     <Pressable
       testID={testID}
       onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
       {...hoverProps}
       accessibilityRole={kind}
       aria-checked={kind === 'button' ? undefined : on}
       accessibilityLabel={accessibilityLabel ?? label}
-      style={({ pressed }) => [
-        {
-          minHeight,
-          paddingVertical: 9,
-          paddingHorizontal: 16,
-          borderRadius: radius.chip,
-          backgroundColor: bg,
-          // A hairline on the unselected chip lifts it off the lit ground
-          // without a shadow, which the studio saves for its one card.
-          borderWidth: 1,
-          borderColor: on ? p.ink : hovered ? p.ink2 : ghost ? p.line : dark ? p.line2 : 'rgba(23,24,28,0.06)',
-          opacity: pressed ? 0.85 : 1,
-          transform: [{ scale: pressed ? 0.97 : 1 }],
-          justifyContent: 'center',
-          alignItems: 'center',
-        },
-        // The pointer's lift, after the scale so the press still wins.
-        hoverStyle(hovered && !pressed, dark),
-        style,
-      ]}
+      style={style}
     >
-      <Text style={{ fontFamily: fonts.sansSemi, fontSize: 14, lineHeight: 20, textAlign: 'center', color: ghost ? p.ink2 : fg }}>{label}</Text>
+      {({ pressed }) => (
+        // The face is what moves: down to 0.97 on the press and sprung back
+        // (PRD 8.5), rather than snapping between two sizes.
+        <Animated.View
+          style={[
+            {
+              minHeight,
+              paddingVertical: 9,
+              paddingHorizontal: 16,
+              borderRadius: radius.chip,
+              backgroundColor: bg,
+              // A hairline on the unselected chip lifts it off the lit ground
+              // without a shadow, which the studio saves for its one card.
+              borderWidth: 1,
+              borderColor: on ? p.ink : hovered ? p.ink2 : ghost ? p.line : dark ? p.line2 : 'rgba(23,24,28,0.06)',
+              opacity: pressed ? 0.9 : 1,
+              transform: [{ scale }],
+              justifyContent: 'center',
+              alignItems: 'center',
+            },
+            // The pointer's lift, after the scale so the press still wins.
+            hoverStyle(hovered && !pressed, dark),
+          ]}
+        >
+          <Text style={{ fontFamily: fonts.sansSemi, fontSize: 14, lineHeight: 20, textAlign: 'center', color: ghost ? p.ink2 : fg }}>{label}</Text>
+        </Animated.View>
+      )}
     </Pressable>
   );
 }
@@ -555,10 +568,22 @@ export function InkButton({
   // the press has that point further to drop: a button that answers before
   // it is pressed.
   const lift = hovered && !disabled && !busy ? 1 : 0;
+  // The press: the face drops onto the edge at once (a key does) and comes
+  // back up on the standard spring rather than snapping.
+  const [drop] = useState(() => new Animated.Value(0));
+  const pressIn = () => {
+    if (disabled || busy) return;
+    Animated.timing(drop, { toValue: 1, duration: 60, useNativeDriver: true }).start();
+  };
+  const pressOut = () => {
+    Animated.spring(drop, { toValue: 0, useNativeDriver: true, ...motion.standard }).start();
+  };
   return (
     <Pressable
       testID={testID}
       onPress={disabled || busy ? undefined : onPress}
+      onPressIn={pressIn}
+      onPressOut={pressOut}
       {...hoverProps}
       accessibilityRole="button"
       accessibilityLabel={label}
@@ -584,12 +609,12 @@ export function InkButton({
           style={{
             borderRadius: radius.chip,
             backgroundColor: disabled ? 'transparent' : dark ? inkEdge.night : inkEdge.day,
-            paddingBottom: pressed && !disabled ? 0 : EDGE + lift,
+            paddingBottom: EDGE + lift,
             marginTop: -lift,
             ...(Platform.OS === 'web' ? webHover.transition : {}),
           }}
         >
-          <View
+          <Animated.View
             style={{
               // A floor, not a ceiling. At 200% type a fixed 58 clipped the
               // label inside the button that was supposed to carry it.
@@ -602,8 +627,8 @@ export function InkButton({
               borderColor: disabled ? p.line : p.ink,
               alignItems: 'center',
               justifyContent: 'center',
-              transform: [{ translateY: pressed && !disabled ? EDGE + lift : 0 }],
-              ...(Platform.OS === 'web' ? webHover.transition : {}),
+              // The face slides down over its own edge; the edge stays where it is.
+              transform: [{ translateY: disabled ? 0 : drop.interpolate({ inputRange: [0, 1], outputRange: [0, EDGE + lift] }) }],
             }}
           >
             {busy ? (
@@ -621,7 +646,7 @@ export function InkButton({
                 {label}
               </Text>
             )}
-          </View>
+          </Animated.View>
         </View>
       )}
     </Pressable>
@@ -651,45 +676,52 @@ export function GhostButton({
   const { hovered, hoverProps } = useHover();
   const EDGE = 3;
   const lift = hovered && !disabled ? 1 : 0;
+  const [drop] = useState(() => new Animated.Value(0));
+  const pressIn = () => {
+    if (disabled) return;
+    Animated.timing(drop, { toValue: 1, duration: 60, useNativeDriver: true }).start();
+  };
+  const pressOut = () => {
+    Animated.spring(drop, { toValue: 0, useNativeDriver: true, ...motion.standard }).start();
+  };
   return (
     <Pressable
       testID={testID}
       onPress={disabled ? undefined : onPress}
+      onPressIn={pressIn}
+      onPressOut={pressOut}
       {...hoverProps}
       accessibilityRole="button"
       accessibilityLabel={label}
       disabled={disabled}
       style={style}
     >
-      {({ pressed }) => (
-        <View
+      <View
+        style={{
+          borderRadius: radius.chip,
+          backgroundColor: disabled ? 'transparent' : dark ? inkEdge.night : inkEdge.day,
+          paddingBottom: EDGE + lift,
+          marginTop: -lift,
+          ...(Platform.OS === 'web' ? webHover.transition : {}),
+        }}
+      >
+        <Animated.View
           style={{
+            minHeight: 56,
+            paddingVertical: 14,
+            paddingHorizontal: 22,
             borderRadius: radius.chip,
-            backgroundColor: disabled ? 'transparent' : dark ? inkEdge.night : inkEdge.day,
-            paddingBottom: pressed && !disabled ? 0 : EDGE + lift,
-            marginTop: -lift,
-            ...(Platform.OS === 'web' ? webHover.transition : {}),
+            backgroundColor: p.surface,
+            borderWidth: 1,
+            borderColor: disabled ? p.line : p.ink,
+            alignItems: 'center',
+            justifyContent: 'center',
+            transform: [{ translateY: disabled ? 0 : drop.interpolate({ inputRange: [0, 1], outputRange: [0, EDGE + lift] }) }],
           }}
         >
-          <View
-            style={{
-              minHeight: 56,
-              paddingVertical: 14,
-              paddingHorizontal: 22,
-              borderRadius: radius.chip,
-              backgroundColor: p.surface,
-              borderWidth: 1,
-              borderColor: disabled ? p.line : p.ink,
-              alignItems: 'center',
-              justifyContent: 'center',
-              transform: [{ translateY: pressed && !disabled ? EDGE + lift : 0 }],
-              ...(Platform.OS === 'web' ? webHover.transition : {}),
-            }}
-          >
-            <Text style={{ fontFamily: fonts.sansSemi, fontSize: 17, lineHeight: 22, textAlign: 'center', color: disabled ? p.ink2 : p.ink }}>{label}</Text>
-          </View>
-        </View>
-      )}
+          <Text style={{ fontFamily: fonts.sansSemi, fontSize: 17, lineHeight: 22, textAlign: 'center', color: disabled ? p.ink2 : p.ink }}>{label}</Text>
+        </Animated.View>
+      </View>
     </Pressable>
   );
 }
@@ -746,6 +778,7 @@ export function TopBar({
           label={`← ${back.label ?? 'Back'}`}
           accessibilityLabel={back.label ?? 'Back'}
           onPress={back.onPress}
+          plain
           // The 44-point target reaches past the page margin; the words sit on it.
           style={{ marginLeft: -12 }}
         />
@@ -755,7 +788,7 @@ export function TopBar({
       {help ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 6, flexShrink: 1 }}>
           {rightSide}
-          <TextButton testID={help.testID ?? 'top-help'} label="Need someone?" accessibilityLabel="Need someone? Helplines" onPress={help.onPress} style={{ marginRight: -12 }} />
+          <TextButton testID={help.testID ?? 'top-help'} label="Need someone?" accessibilityLabel="Need someone? Helplines" onPress={help.onPress} plain style={{ marginRight: -12 }} />
         </View>
       ) : (
         rightSide
@@ -797,36 +830,63 @@ export function TextButton({
   testID,
   accessibilityLabel,
   style,
+  plain = false,
 }: {
   label: string;
   onPress?: () => void;
   testID?: string;
   accessibilityLabel?: string;
   style?: StyleProp<ViewStyle>;
+  /**
+   * Bare words, for the top bar's Back and Need someone?. Everywhere else a
+   * text button sits in a soft pill — the client read the bare ones as small
+   * print, not as things to press.
+   */
+  plain?: boolean;
 }) {
-  const { p } = usePalette();
+  const { p, dark } = usePalette();
   const { hovered, hoverProps } = useHover();
+  const { scale, onPressIn, onPressOut } = usePress();
   return (
     <Pressable
       testID={testID}
       onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
       {...hoverProps}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
       // 44 points each way (Apple HIG): "Skip" was thirty wide.
-      style={({ pressed }) => [{ minHeight: 44, minWidth: 44, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 }, style]}
+      style={[{ minHeight: 44, minWidth: 44, alignItems: 'center', justifyContent: 'center', alignSelf: plain ? undefined : 'center' }, style]}
     >
-      <Text
-        style={{
-          fontFamily: fonts.sansMedium,
-          fontSize: 15,
-          lineHeight: 20,
-          color: hovered ? p.ink : p.ink2,
-          ...(Platform.OS === 'web' ? webHover.transition : {}),
-        }}
-      >
-        {label}
-      </Text>
+      {({ pressed }) => (
+        <Animated.View
+          style={{
+            minHeight: plain ? undefined : 40,
+            paddingHorizontal: plain ? 12 : 18,
+            paddingVertical: plain ? 0 : 9,
+            borderRadius: radius.chip,
+            backgroundColor: plain ? 'transparent' : pressed || hovered ? (dark ? 'rgba(255,255,255,0.14)' : 'rgba(23,24,28,0.10)') : dark ? 'rgba(255,255,255,0.08)' : 'rgba(23,24,28,0.06)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            opacity: plain && pressed ? 0.6 : 1,
+            transform: [{ scale }],
+            ...(Platform.OS === 'web' ? webHover.transition : {}),
+          }}
+        >
+          <Text
+            style={{
+              fontFamily: fonts.sansMedium,
+              fontSize: 15,
+              lineHeight: 20,
+              color: plain ? (hovered ? p.ink : p.ink2) : p.ink,
+              ...(Platform.OS === 'web' ? webHover.transition : {}),
+            }}
+          >
+            {label}
+          </Text>
+        </Animated.View>
+      )}
     </Pressable>
   );
 }
@@ -1243,9 +1303,20 @@ export function Toast({
     const message = actionLabel ? `${text}. ${actionLabel} available.` : text;
     AccessibilityInfo.announceForAccessibility(message);
   }, [text, actionLabel]);
+  // Arrives from a little above, on the standard spring; a new text arrives again.
+  const [y] = useState(() => new Animated.Value(-10));
+  const [opacity] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    y.setValue(-10);
+    opacity.setValue(0);
+    Animated.parallel([
+      Animated.timing(opacity, { toValue: 1, duration: motion.fadeFast, useNativeDriver: true }),
+      Animated.spring(y, { toValue: 0, useNativeDriver: true, ...motion.standard }),
+    ]).start();
+  }, [text, y, opacity]);
 
   return (
-    <View
+    <Animated.View
       testID={testID}
       accessibilityLiveRegion="polite"
       role="alert"
@@ -1258,6 +1329,8 @@ export function Toast({
         paddingRight: 8,
         borderRadius: radius.chip,
         backgroundColor: night.ground,
+        opacity,
+        transform: [{ translateY: y }],
       }}
     >
       <Text
@@ -1279,7 +1352,7 @@ export function Toast({
           <Text style={{ fontFamily: fonts.sansBold, fontSize: 13, color: night.ground }}>{actionLabel}</Text>
         </Pressable>
       ) : null}
-    </View>
+    </Animated.View>
   );
 }
 
