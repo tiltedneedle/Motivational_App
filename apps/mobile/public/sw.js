@@ -22,7 +22,7 @@ const MARKER = '/__shell-version';
 // Hashed: their names change when their contents do, so cache-first.
 const STATIC = /^\/(?:_expo\/static\/|assets\/)/;
 // Unhashed and small: network-first, the cache behind it for offline.
-const NAMED = /^\/(?:icons\/|manifest\.webmanifest$|favicon\.ico$)/;
+const NAMED = /^\/(?:icons\/|manifest\.webmanifest$|favicon\.ico$|og\.png$)/;
 
 function hash(text) {
   let h = 5381;
