@@ -2,7 +2,7 @@
  * The Interview (PRD §7.1). Tap-only. "Something else…" is the last pill and
  * the only place anyone types; a custom answer skips the follow-up.
  */
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, View } from 'react-native';
 import {
@@ -28,7 +28,19 @@ import { track, useFirstRunStep } from '../src/analytics';
 
 const LETTERS = 'ABCDEFGH';
 
-export default function Interview() {
+/**
+ * The gate (PRD §12) stands at every writing door: opened by a link on a
+ * fresh browser, this room went straight to the field and the age
+ * affirmation and the privacy line came days later, from Today's card.
+ * Set-up resumes its draft and dismisses to Today when it is done.
+ */
+export default function InterviewGate() {
+  const consented = useMorrow((s) => Boolean(s.profile.consentedAt));
+  if (!consented) return <Redirect href="/setup" />;
+  return <Interview />;
+}
+
+function Interview() {
   const router = useRouter();
   useFirstRunStep('interview');
   const showResources = useMorrow((st) => st.showResources);

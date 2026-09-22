@@ -14,7 +14,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ANALYSIS_TITLES, bookPages, dayOf, distanceLabel, formatDay, horizonReview, plural, sealedOn, thenHalf } from '@morrow/core';
-import { Body, Chip, InkButton, Label, Quoted, Rule, Statement, Studio, TextButton, UserText, fitSentence, night, paper, radius, TopBar } from '@morrow/ui';
+import { Body, Chip, InkButton, Label, Quoted, Rule, Slide, Statement, Studio, TextButton, UserText, fitSentence, night, paper, radius, TopBar, useReducedMotion } from '@morrow/ui';
 import { useGoals, useLatestBook, useMorrow } from '../src/store';
 import { DiffPage } from '../src/components/DiffPage';
 
@@ -60,6 +60,8 @@ export default function Reading() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [book?.id],
   );
+
+  const reducedMotion = useReducedMotion();
 
   if (!book || pages.length === 0) {
     return (
@@ -107,6 +109,7 @@ export default function Reading() {
           onPress={turn}
           style={{ flex: 1 }}
         >
+          <Slide key={index} reduced={reducedMotion} style={{ flex: 1 }}>
           <ScrollView
             showsVerticalScrollIndicator={false}
             style={{ flex: 1, backgroundColor: paper.ground, borderRadius: radius.card }}
@@ -259,6 +262,7 @@ export default function Reading() {
               </>
             ) : null}
           </ScrollView>
+          </Slide>
         </Pressable>
 
         <View style={{ paddingVertical: 14, gap: 10 }}>

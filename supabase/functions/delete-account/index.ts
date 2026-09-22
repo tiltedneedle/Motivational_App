@@ -58,10 +58,29 @@ Deno.serve(async (req) => {
     await admin.auth.admin.deleteUser(row.id);
   }
 
+  // Reopening, on the person's own tap inside the week: the one way a
+  // closed account comes back (the trigger refuses it from a user session).
+  let body: { action?: string } = {};
+  try {
+    body = (await req.json()) ?? {};
+  } catch {
+    body = {};
+  }
+  if (body.action === 'restore') {
+    const { error: restoreError } = await admin.from('profiles').update({ deleted_at: null }).eq('id', userId);
+    if (restoreError) return json({ error: 'could not reopen the account' }, 500);
+    return json({ ok: true, restored: true });
+  }
+
   // The soft delete, now. Stamped rather than removed, so a person who
   // changes their mind inside the week can sign in and be restored — the
-  // writing is still there until the sweep.
-  const { error } = await admin.from('profiles').update({ deleted_at: new Date().toISOString() }).eq('id', userId);
+  // writing is still there until the sweep. Upserted, not updated: an
+  // account that signed in and never copied anything has no profile row,
+  // and an update that matched nothing reported success while the sweep
+  // never found the auth user to remove.
+  const { error } = await admin
+    .from('profiles')
+    .upsert({ id: userId, deleted_at: new Date().toISOString() }, { onConflict: 'id' });
   if (error) return json({ error: 'could not mark the account' }, 500);
 
   // Every session ends. The app signs out locally as well; this is the half

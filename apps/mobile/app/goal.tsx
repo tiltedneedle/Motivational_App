@@ -19,6 +19,9 @@ import {
   sourceLineFor,
   thenHalf,
   virtuesForGoal,
+  canBuildBlueprint,
+  isQuotable,
+  analysisPlan,
 } from '@morrow/core';
 import {
   Body,
@@ -40,16 +43,19 @@ import {
   useTwoColumn,
   TopBar,
 } from '@morrow/ui';
-import { analysisPlan } from './stone';
-import { analysesFor, cardText, darkOf, pendingLetGo, useGoals, useMorrow } from '../src/store';
+import { analysesFor, cardText, darkOf, pendingLetGo, useGoals, useMorrow, entitlementOf, useSnapshot } from '../src/store';
 
 export default function GoalScreen() {
   const reduced = useReducedMotion();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const state = useMorrow((s) => s);
+  const state = useSnapshot();
   const goals = useGoals();
-  const entitled = state.profile.entitled === true;
+  // The store's own gate: a goal let go frees the free plan's one plan,
+  // and `entitled` alone kept the door shut after it.
+  const canBuild = canBuildBlueprint(entitlementOf(state, dayOf(new Date(), state.profile.dayBoundaryHour)));
+  const setToast = useMorrow((s) => s.setToast);
+  const latestBook = state.books[state.books.length - 1] ?? null;
   const dark = useMorrow(darkOf);
   const makePortraitAndPlan = useMorrow((s) => s.makePortraitAndPlan);
   // Never fall back to another goal. An id that no longer resolves means the
@@ -105,6 +111,15 @@ export default function GoalScreen() {
 
   const analyses = analysesFor(state, goal.id);
   const plan = state.plans.find((p) => p.goalId === goal.id);
+  // A line written again since the edition that stands: the new edition is
+  // one hold away, and the page says so (the seal screen promised it).
+  const editedSinceEdition =
+    latestBook !== null &&
+    analyses.some((a) => {
+      if (!isQuotable(a)) return false;
+      const sealed = latestBook.chapters.find((c) => c.goalId === goal.id)?.lines.find((l) => l.kind === a.kind);
+      return sealed ? sealed.text.trim() !== a.line.trim() || (sealed.text2 ?? '').trim() !== (a.line2 ?? '').trim() : a.line.trim().length > 0;
+    });
   const portrait = state.portraits.find((p) => p.goalId === goal.id);
   // The milestone the plan is on: the first not yet reached, or the last one
   // once they all are. "Milestone 1" ninety days in, with the first two
@@ -190,16 +205,31 @@ export default function GoalScreen() {
             because the free plan builds one. Said, with the door, rather
             than a ring labelled "No plan yet" as if it were their omission.
           */}
-          {!plan && analyses.some((a) => a.kind === 'strategies' && a.line.trim()) ? (
+          {editedSinceEdition ? (
+            <View testID="goal-edited" style={{ backgroundColor: day.surface2, borderRadius: radius.card, padding: 16, gap: 10 }}>
+              <Label style={{ color: accent.coralText }}>Written again</Label>
+              <Body style={{ fontSize: 14 }}>A line here has changed since the edition that stands. A new edition is one hold away; the old one stays as it was.</Body>
+              <Chip testID="goal-new-edition" label="Finish a new edition" onPress={() => router.push('/seal-book')} />
+            </View>
+          ) : null}
+          {!plan && analyses.some((a) => a.kind === 'strategies' && a.line.trim() && isQuotable(a)) && analyses.some((a) => a.kind === 'obstacles' && a.line.trim() && isQuotable(a)) ? (
             <View testID="goal-planless" style={{ backgroundColor: day.surface2, borderRadius: radius.card, padding: 16, gap: 10 }}>
               <Label style={{ color: accent.coralText }}>Written, waiting for a plan</Label>
               <Body style={{ fontSize: 14 }}>
-                {entitled
-                  ? 'The five answers are here. Build the plan and its first moves land on Today.'
-                  : 'The five answers are here. The free plan builds one goal’s plan; Pro builds one for every goal, and this one’s moves would land on Today.'}
+                {canBuild.allowed
+                  ? 'The answers are here. Build the plan and its first moves land on Today.'
+                  : 'The answers are here. The free plan builds one goal’s plan; Pro builds one for every goal, and this one’s moves would land on Today.'}
               </Body>
-              {entitled ? (
-                <Chip testID="goal-build-plan" label="Build the plan" onPress={() => makePortraitAndPlan(goal.id)} />
+              {canBuild.allowed ? (
+                <Chip
+                  testID="goal-build-plan"
+                  label="Build the plan"
+                  onPress={() => {
+                    // A refusal is said, not swallowed: the button used to do nothing.
+                    const built = makePortraitAndPlan(goal.id);
+                    if (!built.ok) setToast({ text: built.error, kind: 'info' });
+                  }}
+                />
               ) : (
                 <Chip testID="goal-see-pro" label="See what Pro adds" onPress={() => router.push(`/paywall?moment=second-blueprint&from=/goal?id=${goal.id}`)} />
               )}
@@ -283,13 +313,26 @@ export default function GoalScreen() {
                                 {thenHalf(a.line2).act}
                               </UserText>
                             ) : null}
+                            {/* A written line can be written again, any day: the seal said nothing in the Book is fixed for good. */}
+                            <Chip
+                              testID={`rewrite-${kind}`}
+                              label="Rewrite"
+                              ghost
+                              minHeight={36}
+                              style={{ alignSelf: 'flex-start', marginTop: 4 }}
+                              onPress={() =>
+                                router.push(
+                                  `/stone?goal=${goal.id}&kind=${kind}${latestBook ? '&rewrite=1' : ''}&from=${encodeURIComponent(`/goal?id=${goal.id}`)}`,
+                                )
+                              }
+                            />
                           </>
                         ) : (
                           <Chip
                             testID={`write-${kind}`}
                             label={included ? 'Write this one' : 'Go deeper'}
                             ghost
-                            onPress={() => router.push(`/stone?goal=${goal.id}&kind=${kind}`)}
+                            onPress={() => router.push(`/stone?goal=${goal.id}&kind=${kind}&from=${encodeURIComponent(`/goal?id=${goal.id}`)}`)}
                           />
                         )}
                       </View>
@@ -397,7 +440,7 @@ export default function GoalScreen() {
                       m.status === 'done'
                         ? `Done${when ? ` ${formatDay(when, { weekday: true, today })}` : ''}`
                         : m.status === 'skip'
-                          ? `Not today${when ? ` · was ${formatDay(when, { today })}` : ''}`
+                          ? `Not today${when ? ` · ${when < today ? 'was' : 'due'} ${formatDay(when, { today })}` : ''}`
                           : when
                             ? formatDay(when, { weekday: true, today })
                             : 'Not scheduled';
@@ -468,13 +511,23 @@ export default function GoalScreen() {
                                 {thenHalf(a.line2).act}
                               </UserText>
                         ) : null}
+                        <Chip
+                          testID={`rewrite-${kind}`}
+                          label="Rewrite"
+                          ghost
+                          minHeight={36}
+                          style={{ alignSelf: 'flex-start', marginTop: 4 }}
+                          onPress={() =>
+                            router.push(`/stone?goal=${goal.id}&kind=${kind}${latestBook ? '&rewrite=1' : ''}&from=${encodeURIComponent(`/goal?id=${goal.id}`)}`)
+                          }
+                        />
                       </>
                     ) : (
                       <Chip
                         testID={`write-${kind}`}
                         label={included ? 'Write this one' : 'Go deeper'}
                         ghost
-                        onPress={() => router.push(`/stone?goal=${goal.id}&kind=${kind}`)}
+                        onPress={() => router.push(`/stone?goal=${goal.id}&kind=${kind}&from=${encodeURIComponent(`/goal?id=${goal.id}`)}`)}
                       />
                     )}
                   </View>
@@ -580,7 +633,7 @@ export default function GoalScreen() {
                   m.status === 'done'
                     ? `Done${when ? ` ${formatDay(when, { weekday: true, today })}` : ''}`
                     : m.status === 'skip'
-                      ? `Not today${when ? ` · was ${formatDay(when, { today })}` : ''}`
+                      ? `Not today${when ? ` · ${when < today ? 'was' : 'due'} ${formatDay(when, { today })}` : ''}`
                       : when
                         ? formatDay(when, { weekday: true, today })
                         : 'Not scheduled';

@@ -135,24 +135,36 @@ export function buildDawnBrief(input: BriefInput, newId: (p: string) => string):
 
     // Yesterday: evidence, never blame.
     let yesterdayLine: string;
-    if (!yesterday || (yesterday.done === 0 && yesterday.evidenceCount === 0)) {
+    if (!yesterday) {
+      // No row at all: the morning after the Book was finished, or a day the
+      // app was not opened. Not "in the ledger as a quiet day" — there is
+      // nothing in the ledger for it, and the day the whole Book was written
+      // was not quiet.
+      yesterdayLine = book && sealedYesterday(book, input.day) ? 'Yesterday you finished the Book.' : 'Nothing in the ledger for yesterday yet.';
+    } else if (yesterday.done === 0 && yesterday.evidenceCount === 0) {
       // Never "failure" (PRD §11.4), least of all on the first morning.
-    yesterdayLine = 'Quiet day yesterday. It is in the ledger as a quiet day, and that is all it is.';
+      yesterdayLine = 'Quiet day yesterday. It is in the ledger as a quiet day, and that is all it is.';
     } else {
       const bits: string[] = [];
-      bits.push(`${yesterday.done} of ${plural(Math.max(yesterday.planned, yesterday.done), 'move')}`);
+      // A day that asked for nothing and got a line written is the line,
+      // not "0 of 0 moves".
+      const asked = Math.max(yesterday.planned, yesterday.done);
+      if (asked > 0) bits.push(`${yesterday.done} of ${plural(asked, 'move')}`);
       // Only if the screen did not flag it. The dawn brief is read over
       // breakfast, and this is exactly the sentence that must not come back.
       if (yesterday.proof?.trim() && isQuotable(yesterday) && shorten < 2) {
-        bits.push(`and you wrote “${yesterday.proof.trim()}”`);
+        bits.push(`${bits.length ? 'and ' : ''}you wrote “${yesterday.proof.trim()}”`);
         quotes.push(yesterday.proof.trim());
       }
+      if (bits.length === 0) bits.push('A line in the ledger');
       const delta = input.score - input.previousScore;
       // "avoids numeric targets" (PRD 11.6). The score is still computed and
       // still on Progress if they go looking; it just does not lead the morning.
+      // "Up from 0" is not a trend when there was nothing a week ago — the
+      // same rule the Consistency caption keeps.
       const trend = input.soften
         ? ''
-        : delta > 0
+        : delta > 0 && input.previousScore > 0
           ? `Consistency ${input.score}, up from ${input.previousScore}.`
           : `Consistency ${input.score}.`;
       // Their sentence usually ends in a full stop already, and appending another
@@ -273,6 +285,8 @@ export interface ChipContext {
   today: string;
   returns: number;
   persona: Persona;
+  /** Whether this is the first thing said in the thread; the returning line is said once. Omitted, it is. */
+  firstTurn?: boolean;
 }
 
 export interface CoachReply {
@@ -329,16 +343,25 @@ export function replyToChip(chip: ChipId, ctx: ChipContext): CoachReply {
         // then quoting the edit back as theirs. The Book and the brief both
         // print "then I …", and so does this.
         const written = ifThenOf(obstacle.line, obstacle.line2);
+        // What follows the quotation says what the reply does. It used to
+        // claim the move had been shrunk whether or not there was a move
+        // open, or a smaller version of it to shrink to.
+        const shrinkable = next?.minVersion ? next : null;
+        const then = shrinkable
+          ? 'Start there. The move on Today is its two-minute version for now; Undo puts it back.'
+          : next
+            ? 'Start there, with two minutes of the move on Today.'
+            : 'Start there. Nothing is open on Today; the smallest thing you can name is enough.';
         return {
-          text: `You already wrote the answer: ${endSentence(written.sentence)} Start there. The move on Today is its two-minute version for now; Undo puts it back.`,
+          text: `You already wrote the answer: ${endSentence(written.sentence)} ${then}`,
           quotedSpans: written.spans,
-          action: next
+          action: shrinkable
             ? {
                 kind: 'shrink-move',
-                moveId: next.id,
-                goalId: next.goalId,
-                title: next.title,
-                minVersion: next.minVersion,
+                moveId: shrinkable.id,
+                goalId: shrinkable.goalId,
+                title: shrinkable.title,
+                minVersion: shrinkable.minVersion,
               }
             : null,
         };
@@ -364,18 +387,19 @@ export function replyToChip(chip: ChipId, ctx: ChipContext): CoachReply {
         // What the ledger holds, and what the reply then does: the move on
         // Today shrinks to its two-minute version, so the sentence says so
         // rather than "same size".
+        const shrinkable = next?.minVersion ? next : null;
         return {
           text: `On ${when} you kept ${wentAnyway.done} of ${plural(Math.max(wentAnyway.planned, wentAnyway.done), 'move')} and wrote ${endSentence(
             `“${wentAnyway.proof.trim()}”`,
-          )} Two minutes of it counts today.`,
+          )} ${shrinkable ? 'The move on Today is its two-minute version for now; Undo puts it back.' : 'Two minutes of it counts today.'}`,
           quotedSpans: [wentAnyway.proof.trim()],
-          action: next
+          action: shrinkable
             ? {
                 kind: 'shrink-move',
-                moveId: next.id,
-                goalId: next.goalId,
-                title: next.title,
-                minVersion: next.minVersion,
+                moveId: shrinkable.id,
+                goalId: shrinkable.goalId,
+                title: shrinkable.title,
+                minVersion: shrinkable.minVersion,
               }
             : null,
         };
@@ -403,20 +427,32 @@ export function replyToChip(chip: ChipId, ctx: ChipContext): CoachReply {
       // `returns` too, so this sentence read "12 sealed days and 12 returns"
       // every time, which is not a fact about anybody.
       const returns = ctx.returns > 0 ? ` and ${ctx.returns} ${ctx.returns === 1 ? 'return' : 'returns'}` : '';
+      // Before the first closed day there is no count to open with.
+      const opening = days > 0 ? `${plural(days, 'closed day')}${returns}.` : 'The first closed day is tonight.';
       if (line) {
         return {
-          text: `${plural(days, 'closed day')}${returns}. You wrote ${endSentence(`“${line}”`)} Say it out loud; that is the whole exercise.`,
+          text: `${opening} You wrote ${endSentence(`“${line}”`)} Say it out loud; that is the whole exercise.`,
           quotedSpans: [line],
           action: null,
         };
       }
+      // Since the Book, not since January: the month is theirs, not the
+      // calendar's.
+      const since = ctx.book ? `on ${formatDay(ctx.book.sealedAt.slice(0, 10))}` : 'when you started';
       return {
-        text: `${plural(days, 'closed day')}. Name one thing that is true now that was not in January.`,
+        text: `${opening} Name one thing that is true now that was not true ${since}.`,
         quotedSpans: [],
         action: null,
       };
     }
   }
+}
+
+/** Whether the Book's latest edition was finished on the day before `day` (UTC day of the seal instant, near enough for a morning line). */
+function sealedYesterday(book: BookVersion, day: string): boolean {
+  const sealed = book.sealedAt.slice(0, 10);
+  const before = new Date(new Date(`${day}T00:00:00Z`).getTime() - 86_400_000).toISOString().slice(0, 10);
+  return sealed === before || sealed === day;
 }
 
 /** Free text: acknowledge, ask, and only then offer. Six turns maximum. */
@@ -425,8 +461,11 @@ export function replyToText(text: string, ctx: ChipContext): CoachReply {
   if (risk.risk === 'crisis') {
     return { text: '', quotedSpans: [], action: null };
   }
+  // Once, on the first thing said that day — not as the answer to
+  // everything typed until something is done. Today's card has already
+  // said it; the coach says it once more and then listens.
   const { returning, gapDays } = isReturning(ctx.days, ctx.today);
-  if (returning) {
+  if (returning && ctx.firstTurn !== false) {
     return {
       text: `You have been away ${gapDays} days and you came back, which is the part most people never do. One small thing today.`,
       quotedSpans: [],

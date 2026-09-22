@@ -22,6 +22,15 @@
  * recogniser that stops on its own — silence, an interruption, the
  * browser's own limit — is started again for as long as the caller wants it
  * listening, so a pause for breath is not the end of the room.
+ *
+ * In a browser a stretch is one recogniser session, read as a whole. The
+ * results list is rebuilt into one running text on every event rather than
+ * committed a result at a time, because the browsers do not agree on what a
+ * result is: Chrome grows the list a phrase at a time and finishes each,
+ * Safari keeps one result and grows its text, Android Chrome re-sends what
+ * it has already finished at the head of the next interim. Read a result at
+ * a time, "hello" landed, and the next phrase was laid over it or written
+ * twice. Read as a total, the same text comes out of all three.
  */
 import { Platform } from 'react-native';
 
@@ -108,6 +117,17 @@ let lang = browserEnglish();
  * left where it is.
  */
 let onDevice: boolean | null = null;
+
+/** Whether the recogniser keeps the sound on the device: true, false, or null before the doorway has asked. On a phone, the module's own answer. */
+export function recognisesLocally(): boolean | null {
+  return onDevice;
+}
+
+/** The native half's answer, mirrored into the shared flag. Returns false so it can sit in a spread. */
+function setSharedOnDevice(value: boolean | null): false {
+  onDevice = value;
+  return false;
+}
 
 async function checkOnDevice(): Promise<void> {
   if (onDevice !== null) return;
@@ -199,6 +219,70 @@ async function meter(onLevel: (level: number) => void): Promise<Meter | null> {
   }
 }
 
+/** Lowercased, punctuation and spacing flattened: the shape of a phrase, for telling a re-send from a new one. */
+function shapeOf(text: string): string {
+  return text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+}
+
+/** A results list as the stretches a person said, each once. */
+export interface Stretch {
+  text: string;
+  final: boolean;
+}
+
+/**
+ * The stretches in a results list, whatever the browser did with it.
+ *
+ * Each result in turn: one that begins with everything before it is the
+ * session's total said again (Android sends what it has finished at the
+ * head of the next interim; Safari keeps one result and grows its text),
+ * and only what follows the total is the new stretch; any other result is
+ * a new stretch as it stands. Read a result at a time, "hello" landed and
+ * was then written again in front of the next phrase.
+ */
+export function sessionStretches(results: ArrayLike<{ isFinal: boolean; 0?: { transcript: string } }>): Stretch[] {
+  const out: Stretch[] = [];
+  let total = '';
+  for (let i = 0; i < results.length; i++) {
+    const raw = (results[i]?.[0]?.transcript ?? '').trim();
+    if (!raw) continue;
+    const final = results[i]?.isFinal === true;
+    // Said again: the whole session so far (Safari's one growing result),
+    // or the stretch just finished (Android's re-send). Whichever it is,
+    // only what follows it is new.
+    const lastStretch = out[out.length - 1]?.text ?? '';
+    const priorShape = [shapeOf(total), shapeOf(lastStretch)].find((p) => p && shapeOf(raw).startsWith(p)) ?? '';
+    let text = raw;
+    if (priorShape) {
+      // Counted in words, so their punctuation and case come through as
+      // they said it.
+      const n = priorShape.split(' ').length;
+      const words = raw.split(/\s+/);
+      const head = shapeOf(words.slice(0, n).join(' '));
+      text = head === priorShape ? words.slice(n).join(' ').trim() : '';
+      if (!text) {
+        // The same words again and nothing new: the earlier stretch is now
+        // this final, or still this interim.
+        const last = out[out.length - 1];
+        if (last) last.final = last.final || final;
+        total = raw;
+        continue;
+      }
+    }
+    out.push({ text, final });
+    total = total ? `${total} ${text}` : text;
+  }
+  return out;
+}
+
+/** One running text from a results list: the stretches, a space between. */
+export function sessionText(results: ArrayLike<{ isFinal: boolean; 0?: { transcript: string } }>): string {
+  return sessionStretches(results)
+    .map((s) => s.text)
+    .join(' ')
+    .trim();
+}
+
 function webDictation(): Dictation {
   let wanted = false;
   let rec: WebRecognition | null = null;
@@ -261,16 +345,15 @@ function webDictation(): Dictation {
     r.continuous = true;
     r.interimResults = true;
     r.maxAlternatives = 1;
-    // How many final stretches of this recogniser the caller has been
-    // handed. The browser keeps every stretch of the session in `results`;
-    // the ones before this index are already in the person's text.
+    // How many finished stretches of this session the caller has been
+    // handed; the ones before this index are already in the person's text.
     let committed = 0;
-    // What the browser is still hearing, as last shown on the page. A session
-    // that ends with this unfinished — Chrome ends one on its own every so
-    // often, and on Android after every phrase — used to drop it: the words
-    // were on the page, the next recogniser started clean, and its first
-    // stretch was laid over them. "Hello" and then the next sentence written
-    // over it. Whatever was heard is kept when the session ends.
+    // What the browser is still hearing, as last shown on the page. A
+    // session that ends with this unfinished — Chrome ends one on its own
+    // every so often, and on Android after every phrase — used to drop it:
+    // the words were on the page, the next recogniser started clean, and its
+    // first stretch was laid over them. Whatever was heard is kept when the
+    // session ends.
     let pending = '';
     const keepPending = () => {
       const text = pending.trim();
@@ -279,26 +362,22 @@ function webDictation(): Dictation {
     };
     r.onresult = (ev) => {
       if (rec !== r) return;
-      const results = ev.results;
-      // Every stretch the browser has just finished, oldest first, each as
-      // its own final; then whatever it is still hearing.
-      for (let i = committed; i < results.length; i++) {
-        const stretch = results[i];
-        if (!stretch?.isFinal) break;
-        const text = stretch[0]?.transcript?.trim() ?? '';
+      const stretches = sessionStretches(ev.results);
+      // Every stretch just finished, oldest first, each as its own final;
+      // then whatever is still being heard, as one growing text.
+      for (let i = committed; i < stretches.length; i++) {
+        const s = stretches[i]!;
+        if (!s.final) break;
         committed = i + 1;
         strikes = 0;
         pending = '';
-        if (text) current?.onText(text, true);
+        if (s.text) current?.onText(s.text, true);
       }
-      // Two unfinished stretches at once are two phrases, with a space
-      // between them, not one word run into the next.
-      const parts: string[] = [];
-      for (let i = committed; i < results.length; i++) {
-        const stretch = results[i];
-        if (stretch && !stretch.isFinal) parts.push((stretch[0]?.transcript ?? '').trim());
-      }
-      const interim = parts.filter(Boolean).join(' ');
+      const interim = stretches
+        .slice(committed)
+        .map((s) => s.text)
+        .filter(Boolean)
+        .join(' ');
       pending = interim;
       if (interim) {
         strikes = 0;
@@ -523,8 +602,14 @@ function nativeDictation(): Dictation {
     subs = [];
   };
 
+  /** The last stretch committed, so a recogniser that carries on from it (Apple's does) is not read as saying it again. */
+  let committed = '';
+  /** When a delayed start is due; `end` arriving before it does not start one of its own. */
+  let retryAt = 0;
   const begin = (m: Module) => {
     startedAt = Date.now();
+    committed = '';
+    retryAt = 0;
     try {
       m.ExpoSpeechRecognitionModule.start({
         lang: 'en-US',
@@ -533,6 +618,8 @@ function nativeDictation(): Dictation {
         // On-device when the phone can; the OS recogniser where it cannot,
         // and the app never sees audio either way.
         requiresOnDeviceRecognition: (onDevice ??= m.ExpoSpeechRecognitionModule.supportsOnDeviceRecognition?.() === true),
+        // (mirrored for the doorway's note; see `recognisesLocally`)
+        ...(setSharedOnDevice(onDevice) ? {} : {}),
         addsPunctuation: true,
         // Long-form speech, not a command: Apple's recogniser tunes for it.
         iosTaskHint: 'dictation',
@@ -548,8 +635,16 @@ function nativeDictation(): Dictation {
   const again = (m: Module, after = 0) => {
     if (!listening) return;
     if (Date.now() - startedAt < 300) return;
-    if (after) setTimeout(() => listening && begin(m), after);
-    else begin(m);
+    // Both halves fire `end` right after an `error`. A retry the error
+    // scheduled for later used to be started at once by the `end` behind
+    // it, so three network strikes landed in a second instead of nine.
+    if (after) {
+      retryAt = Date.now() + after;
+      setTimeout(() => listening && Date.now() >= retryAt && begin(m), after);
+      return;
+    }
+    if (Date.now() < retryAt) return;
+    begin(m);
   };
 
   return {
@@ -609,12 +704,17 @@ function nativeDictation(): Dictation {
           current?.onLevel?.(Math.max(0, Math.min(1, (e.value ?? 0) / 8)));
         }),
         mod.addListener('result', (e) => {
-          const text = e.results?.[0]?.transcript ?? '';
+          const raw = (e.results?.[0]?.transcript ?? '').trim();
           strikes = 0;
+          // Apple's recogniser carries the session's text on after a final
+          // rather than starting clean; the part already committed is not
+          // said again. The recogniser is not restarted on a final either —
+          // rebuilt after every sentence, it missed the first words of the
+          // next one.
+          const text = committed && raw.startsWith(committed) ? raw.slice(committed.length).trim() : raw;
+          if (!text) return;
           current?.onText(text, e.isFinal);
-          // A final stretch is committed by the caller; the next one starts
-          // clean rather than growing on top of it.
-          if (e.isFinal) again(m);
+          if (e.isFinal) committed = raw;
         }),
         mod.addListener('end', () => {
           // Silence, or the OS cut it. Still wanted, so listen again.
@@ -623,9 +723,17 @@ function nativeDictation(): Dictation {
         mod.addListener('error', (e) => {
           const code = String(e?.error ?? '');
           if (code === 'aborted') return;
-          // A stretch with nothing in it is not a problem worth a sentence.
-          if (code === 'no-speech' || code === 'nomatch') {
+          // A stretch with nothing in it is not a problem worth a sentence;
+          // nor is the recogniser's own silence limit (Android below 13
+          // ignores the longer one it is asked for).
+          if (code === 'no-speech' || code === 'nomatch' || code === 'speech-timeout') {
             again(m);
+            return;
+          }
+          // A call, Siri, an alarm: the room waits and listens again after
+          // it, rather than counting it against the microphone.
+          if (code === 'interrupted') {
+            again(m, 1500);
             return;
           }
           if ((code === 'language-not-supported' || code === 'service-not-allowed') && onDevice) {

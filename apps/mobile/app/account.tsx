@@ -36,6 +36,10 @@ export default function Account() {
   const setSignInNotice = useMorrow((s) => s.setSignInNotice);
   /** Both the phone and the account hold writing: their call. */
   const [conflict, setConflict] = useState(() => settled === 'conflict');
+  /** The account was closed inside its week: reopen, or leave it. */
+  const [closed, setClosed] = useState(() => settled === 'closed');
+  const reopenAccount = useMorrow((s) => s.reopenAccount);
+  const signOutAccount = useMorrow((s) => s.signOutAccount);
   const account = useMorrow((s) => s.account);
 
   // Arrived from the sign-in screen with the copy already settled there.
@@ -104,12 +108,34 @@ export default function Account() {
       // both sides hold writing, nothing moved and the choice is theirs.
       setProblem(synced.error);
       setConflict(synced.conflict === true);
+      setClosed(synced.closed === true);
     } else {
       setProblem(null);
       setPulled(synced.pulled);
       setMoved(synced.pulled ? 'pulled' : synced.moved);
     }
     setStage('done');
+  };
+
+  /** The closed account, reopened on their tap; the sign-in then carries on as it would have. */
+  const reopen = async () => {
+    if (busy) return;
+    setBusy(true);
+    setProblem(null);
+    try {
+      const out = await reopenAccount();
+      if (!out.ok) {
+        setProblem(out.error);
+        setConflict(out.conflict === true);
+        setClosed(out.closed === true);
+        return;
+      }
+      setClosed(false);
+      setPulled(out.pulled);
+      setMoved(out.moved);
+    } finally {
+      setBusy(false);
+    }
   };
 
   /** The conflict, answered. */
@@ -196,8 +222,9 @@ export default function Account() {
       await settle('apple');
     } catch (err) {
       const m = err instanceof Error ? err.message : '';
+      const code = (err as { code?: string } | null)?.code ?? '';
       // The person closed the sheet. Not an error, and not worth a sentence.
-      if (/cancel/i.test(m)) return;
+      if (/cancel/i.test(m) || code === 'ERR_REQUEST_CANCELED' || code === 'ERR_CANCELED') return;
       setProblem('Sign in with Apple is not available in this build. The email code works everywhere.');
     } finally {
       setBusy(false);
@@ -255,6 +282,21 @@ export default function Account() {
               <Notice testID="account-problem" kind="error" text={problem} />
               <TextButton testID="account-not-now" label="Not now" onPress={onwards} />
             </View>
+          ) : stage === 'done' && closed ? (
+            <View testID="account-closed" style={{ gap: 12 }}>
+              <Rule />
+              <Body style={{ color: day.ink }}>{problem ?? 'This account was closed and its copy will be deleted a week after. Reopen it, or leave it closed.'}</Body>
+              <InkButton testID="account-reopen" label={busy ? 'One moment…' : 'Reopen the account'} busy={busy} onPress={() => void reopen()} />
+              <Body style={{ fontSize: 13 }}>Everything the account held is still there until the week is up.</Body>
+              <Chip
+                testID="account-leave-closed"
+                label="Leave it closed and sign out"
+                onPress={() => {
+                  void signOutAccount();
+                  onwards();
+                }}
+              />
+            </View>
           ) : stage === 'done' && conflict ? (
             <View testID="account-conflict" style={{ gap: 12 }}>
               <Rule />
@@ -311,8 +353,10 @@ export default function Account() {
               ) : (
                 <>
                   <Body style={{ fontSize: 14 }}>
-                    An email is on its way to {sent}. Tap the link in it on this phone and you are signed in. If the email
-                    shows a six-digit code instead, type it here.
+                    An email is on its way to {sent}.{' '}
+                    {Platform.OS === 'web'
+                      ? 'Open the link in it in this same browser and you are signed in. If the email shows a six-digit code instead, type it here.'
+                      : 'Tap the link in it on this phone and you are signed in. If the email shows a six-digit code instead, type it here.'}
                   </Body>
                   <UserField
                     testID="account-code"

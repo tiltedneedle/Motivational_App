@@ -25,7 +25,127 @@
  *    not being saved.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AppState, Platform } from 'react-native';
 import type { StateStorage } from 'zustand/middleware';
+
+/**
+ * How many characters of the store go in one row.
+ *
+ * Android reads a row through a SQLite CursorWindow of two megabytes, and a
+ * row past it cannot be read back at all — the app opened latched, the
+ * writing on the disk and unreachable. A store over this many characters
+ * is written as parts (`<key>#0`, `<key>#1`, …) with a small manifest
+ * under the key itself, and read back joined. Half a million UTF-16 units
+ * is well under the window in UTF-8 for any text this app stores.
+ */
+const PART = 500_000;
+const MANIFEST = '__morrow_parts';
+
+/** The value under a key, joined if it was written as parts. */
+async function readWhole(name: string): Promise<string | null> {
+  const raw = await AsyncStorage.getItem(name);
+  if (raw === null) return null;
+  if (!raw.startsWith(`{"${MANIFEST}"`)) return raw;
+  const parts = (JSON.parse(raw) as { [MANIFEST]: number })[MANIFEST];
+  const keys = Array.from({ length: parts }, (_, i) => `${name}#${i}`);
+  const rows = await AsyncStorage.multiGet(keys);
+  const pieces = rows.map(([, v]) => v);
+  if (pieces.some((p) => p === null)) throw new Error('a part of the stored writing is missing');
+  return pieces.join('');
+}
+
+/** The value written under a key: inline while it fits one row, as parts past that. */
+async function writeWhole(name: string, value: string): Promise<void> {
+  if (value.length <= PART) {
+    await AsyncStorage.setItem(name, value);
+    await dropParts(name, 0);
+    return;
+  }
+  const count = Math.ceil(value.length / PART);
+  const rows: [string, string][] = Array.from({ length: count }, (_, i) => [`${name}#${i}`, value.slice(i * PART, (i + 1) * PART)]);
+  // The parts first, the manifest last: a write cut short leaves the old
+  // value readable under the key rather than a manifest with parts missing.
+  await AsyncStorage.multiSet(rows);
+  await AsyncStorage.setItem(name, JSON.stringify({ [MANIFEST]: count }));
+  await dropParts(name, count);
+}
+
+/** Parts beyond `from`, removed. */
+async function dropParts(name: string, from: number): Promise<void> {
+  try {
+    const keys = (await AsyncStorage.getAllKeys()).filter((k) => k.startsWith(`${name}#`) && Number(k.slice(name.length + 1)) >= from);
+    if (keys.length) await AsyncStorage.multiRemove(keys);
+  } catch {
+    // stale parts cost only space
+  }
+}
+
+/**
+ * Writes coalesced: the newest value, written once the keystrokes pause.
+ *
+ * zustand's persist writes on every `set()`, and seven screens set the
+ * store on every keystroke; each write serialised and wrote the whole
+ * store — half a megabyte after a year, twelve milliseconds and a
+ * SQLite row rewritten over the bridge per character on a phone. One
+ * pending write, flushed the moment the app goes to the background, so a
+ * kill loses at most a third of a second of typing. On the web the write
+ * is localStorage's own synchronous one and stays immediate: a page that
+ * is closed keeps what was typed to the last keystroke, and the checks
+ * that read the stored copy straight after an action read it as it is.
+ */
+const WRITE_DELAY_MS = Platform.OS === 'web' ? 0 : 300;
+let writeDelay = WRITE_DELAY_MS;
+let pending: { name: string; value: string } | null = null;
+let timer: ReturnType<typeof setTimeout> | null = null;
+let inflight: Promise<void> = Promise.resolve();
+
+/** Tests: write at once. */
+export function setWriteDelayForTest(ms: number): void {
+  writeDelay = ms;
+}
+
+async function writeNow(name: string, value: string): Promise<void> {
+  try {
+    await writeWhole(name, value);
+    // A write that landed clears a write failure before it.
+    if (failure?.kind === 'write') {
+      failure = null;
+      tell(null);
+    }
+  } catch (err) {
+    latch('write', err instanceof Error ? err.message : 'the device would not write to its own storage');
+  }
+}
+
+/** Whatever is waiting, written now. Safe to call at any time. */
+export function flushWrites(): Promise<void> {
+  if (timer) clearTimeout(timer);
+  timer = null;
+  const p = pending;
+  pending = null;
+  if (p && !failed && open) inflight = inflight.then(() => writeNow(p.name, p.value));
+  return inflight;
+}
+
+if (Platform.OS === 'web') {
+  const w = globalThis as { addEventListener?: (t: string, f: () => void) => void; document?: { visibilityState?: string; addEventListener?: (t: string, f: () => void) => void } };
+  try {
+    w.addEventListener?.('pagehide', () => void flushWrites());
+    w.document?.addEventListener?.('visibilitychange', () => {
+      if (w.document?.visibilityState === 'hidden') void flushWrites();
+    });
+  } catch {
+    // not a browser
+  }
+} else {
+  try {
+    AppState.addEventListener('change', (next) => {
+      if (next !== 'active') void flushWrites();
+    });
+  } catch {
+    // no app state here (tests)
+  }
+}
 
 /** Where the unreadable bytes go, so a bad read never means a lost Book. */
 export const QUARANTINE_PREFIX = 'morrow-unreadable-';
@@ -89,6 +209,7 @@ export function openStorage(): void {
 export async function clearLatchAndReplace(): Promise<void> {
   try {
     await AsyncStorage.removeItem(STORE_KEY);
+    await dropParts(STORE_KEY, 0);
   } catch {
     // Nothing further to try; the write that follows will say so if it fails.
   }
@@ -96,6 +217,11 @@ export async function clearLatchAndReplace(): Promise<void> {
   failure = null;
   open = true;
   tell(null);
+}
+
+/** The stored writing as one string, joined if it was written as parts — for the exports that read the disk directly. */
+export async function storedRaw(): Promise<string | null> {
+  return readWhole(STORE_KEY);
 }
 
 /** The most recent quarantined copy of the store, or null. Bytes, as they were. */
@@ -161,10 +287,35 @@ export function closeStorageForTest(): void {
 async function quarantine(key: string, raw: string | null): Promise<void> {
   if (!raw) return;
   try {
+    // One copy, not one per launch: the same unreadable bytes were copied
+    // again on every open, and five launches of a large store filled the
+    // 6 MB Android database, after which even "start fresh" could not write.
+    const keys = await AsyncStorage.getAllKeys();
+    const mine = keys.filter((k) => k.startsWith(`${QUARANTINE_PREFIX}${key}-`)).sort();
+    const same = await Promise.all(mine.map(async (k) => (await AsyncStorage.getItem(k)) === raw));
+    if (same.some(Boolean)) return;
     await AsyncStorage.setItem(`${QUARANTINE_PREFIX}${key}-${Date.now()}`, raw);
+    // The newest two are enough; older copies of other failures go.
+    const stale = mine.slice(0, Math.max(0, mine.length - 1));
+    if (stale.length) await AsyncStorage.multiRemove(stale);
   } catch {
     // If even this fails there is nothing further to try, and the important
     // half — not overwriting the original — has already happened.
+  }
+}
+
+/**
+ * Every quarantined copy, gone. For "Delete everything": the confirmation
+ * says nothing of the writing remains on the device, and a copy kept when
+ * storage failed is still the writing.
+ */
+export async function clearQuarantine(): Promise<void> {
+  try {
+    const keys = await AsyncStorage.getAllKeys();
+    const mine = keys.filter((k) => k.startsWith(QUARANTINE_PREFIX));
+    if (mine.length) await AsyncStorage.multiRemove(mine);
+  } catch {
+    // nothing further to try
   }
 }
 
@@ -185,7 +336,7 @@ function latch(kind: StorageFailure['kind'], detail: string): void {
 export const guardedStorage: StateStorage = {
   async getItem(name) {
     try {
-      const raw = await AsyncStorage.getItem(name);
+      const raw = await readWhole(name);
       if (raw === null) return null;
       // Parse here rather than letting the caller do it, so a blob that reads
       // but does not parse latches the store too. That is the commonest shape
@@ -213,22 +364,21 @@ export const guardedStorage: StateStorage = {
     // it is unrecoverable in a way the original fault was not. And nothing
     // is written before the store has been read once (`openStorage`).
     if (failed || !open) return;
-    try {
-      await AsyncStorage.setItem(name, value);
-      // A write that landed clears a write failure before it.
-      if (failure?.kind === 'write') {
-        failure = null;
-        tell(null);
-      }
-    } catch (err) {
-      latch('write', err instanceof Error ? err.message : 'the device would not write to its own storage');
+    if (writeDelay <= 0) {
+      await writeNow(name, value);
+      return;
     }
+    pending = { name, value };
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => void flushWrites(), writeDelay);
   },
 
   async removeItem(name) {
     if (failed || !open) return;
+    if (pending?.name === name) pending = null;
     try {
       await AsyncStorage.removeItem(name);
+      await dropParts(name, 0);
     } catch {
       // Deleting is the one operation whose failure costs nothing.
     }

@@ -21,7 +21,7 @@ import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { dayOf, formatDay, plural, type ReplanChange } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, UserText, accent, day, radius, TopBar } from '@morrow/ui';
-import { analysesFor, useGoals, useMorrow } from '../src/store';
+import { analysesFor, useGoals, useMorrow, useSnapshot } from '../src/store';
 
 const VERB: Record<ReplanChange['op'], string> = {
   add: 'One more',
@@ -34,7 +34,7 @@ export default function Replan() {
   const router = useRouter();
   const { goal: goalId } = useLocalSearchParams<{ goal?: string }>();
   const goals = useGoals();
-  const state = useMorrow((s) => s);
+  const state = useSnapshot();
   const propose = useMorrow((s) => s.proposeReplanFor);
   const apply = useMorrow((s) => s.applyReplanFor);
 

@@ -9,11 +9,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { hourOf, boundaryFor, HELPLINES, bookToText, formatDay, plural, sealedOn, type Moment, CHRONOTYPES, DAY_ENDS, EVENING_TIMES, MORNING_TIMES, SUNDAY_HOURS, chronotypeOf, clockLabel, type Profile, SHIFT_EVENINGS, SHIFT_MORNINGS, WEEKDAY_NAMES, WEEK_ORDER, shiftDaysLabel } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, accent, day, TopBar } from '@morrow/ui';
 import { manageSubscriptionUrl } from '../src/billing';
-import { useLatestBook, useMorrow } from '../src/store';
+import { useLatestBook, useMorrow, useSnapshot } from '../src/store';
 import { FloatingTabs, TAB_BAR_ROOM } from '../src/tabs';
 import { takeAway, takeawayNote } from '../src/takeaway';
 import { hasSupabase } from '../src/supabase';
-import { storageFailure } from '../src/storage';
+import { clearQuarantine, storageFailure } from '../src/storage';
+import { clearAnalyticsId } from '../src/analytics';
+import { openHelpline as dial } from '../src/dial';
 
 /**
  * The moments, in the words the person would use for them.
@@ -34,10 +36,13 @@ const ALL_MOMENTS = Object.keys(MOMENT_WORDS) as Moment[];
 
 export default function Settings() {
   const router = useRouter();
-  const state = useMorrow((s) => s);
+  const state = useSnapshot();
   const setProfile = useMorrow((s) => s.setProfile);
   const reset = useMorrow((s) => s.reset);
   const storageError = useMorrow((s) => s.storageError);
+  // When this device last copied to an account, if ever: signed out, the
+  // account still holds that copy, and "nowhere else" would be untrue.
+  const copiedBefore = useMorrow((s) => Object.values(s.lastSync).sort().reverse()[0] ?? null);
   // Only an unreadable store blocks a delete (its writes are dropped); after
   // a failed write the store still saves, and the delete would land.
   const storeUnreadable = storageError && storageFailure()?.kind === 'read';
@@ -116,21 +121,14 @@ export default function Settings() {
    * that quietly did nothing.
    */
   const openHelpline = async (contact: string) => {
-    const target = contact.includes('.') ? `https://${contact}` : `tel:${contact.replace(/\s/g, '')}`;
-    try {
-      const handled = await Linking.canOpenURL(target).catch(() => true);
-      if (!handled) {
-        setDialFailed(contact);
-        return;
-      }
-      await Linking.openURL(target);
-      setDialFailed(null);
-    } catch {
-      setDialFailed(contact);
-    }
+    const took = await dial(contact);
+    setDialFailed(took ? null : contact);
   };
 
   const exportAll = async () => {
+    // Read at the moment of the tap, drafts included: the screen's own
+    // snapshot leaves the drafts out of what re-renders it.
+    const state = useMorrow.getState();
     const payload = {
       exportedAt: new Date().toISOString(),
       profile: state.profile,
@@ -470,7 +468,7 @@ export default function Settings() {
           <View style={{ gap: 6 }}>
             <Label>About the coach</Label>
             <Body testID="settings-is-ai" style={{ fontSize: 14 }}>
-              Morrow’s coach is an AI. It asks and it quotes you. It never writes a goal, a plan line or a sentence of
+              Morrow’s coach is software, not a person. It asks and it quotes you. It never writes a goal, a plan line or a sentence of
               your Book — and if it produces text that is not yours, the app throws it away rather than showing it to
               you.
             </Body>
@@ -565,7 +563,9 @@ export default function Settings() {
                 ) : (
                   <>
                     <Body testID="settings-account-none" style={{ fontSize: 14, color: day.ink }}>
-                      Not signed in. Everything is on this phone and nowhere else; a lost phone loses the Book.
+                      {copiedBefore
+                        ? `Signed out. The account still holds the copy made ${formatDay(copiedBefore.slice(0, 10))}. Sign in and choose Close the account to delete it.`
+                        : 'Not signed in. Everything is on this phone and nowhere else; a lost phone loses the Book.'}
                     </Body>
                     <Chip testID="settings-account-signin" label="Sign in" onPress={() => router.push('/signin')} />
                   </>
@@ -605,6 +605,11 @@ export default function Settings() {
                       // over the account.
                       void signOutAccount().finally(() => {
                         reset();
+                        // The copies kept when storage failed, and the
+                        // analytics id, go with it: "nothing remains on this
+                        // device" has to be true of both.
+                        void clearQuarantine();
+                        void clearAnalyticsId();
                         setConfirming(false);
                         router.replace('/');
                       });

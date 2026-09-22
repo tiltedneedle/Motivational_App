@@ -3,7 +3,7 @@
  * button, no spell-check. The only help is the user's own earlier words in the
  * margin, and a nudge that is always a question.
  */
-import { useIsFocused, useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, useIsFocused, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { flushSync } from '../src/flush';
 import { AccessibilityInfo, Animated, AppState, Easing, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
@@ -30,11 +30,12 @@ import {
   type WritingKind,
   type WritingMode,
   type WritingSessionState,
+  plural,
 } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Question, Ring, Statement, Stone, Studio, TopBar, UserText, accent, focusRing, night, type as fonts, useReducedMotion, webOnlyStyle } from '@morrow/ui';
 import { useGoals, latestText, useMorrow } from '../src/store';
 import { useFirstRunStep } from '../src/analytics';
-import { dictation, iosHomeScreen, secureEnough } from '../src/dictation';
+import { dictation, iosHomeScreen, recognisesLocally, secureEnough } from '../src/dictation';
 import { KeepAwake } from '../src/components/KeepAwake';
 
 const TICK_MS = 250;
@@ -68,7 +69,41 @@ function Pulse({ reduced, level }: { reduced: boolean; level: Animated.Value | n
   );
 }
 
-export default function Write() {
+/**
+ * A silence this long between stretches is a pause for thought, and the next
+ * words start a line. Five seconds: the recogniser finishes a stretch after
+ * about one second of quiet, and the two or three seconds a person takes to
+ * find the next sentence are still the same paragraph.
+ */
+const PAUSE_MS = 5000;
+
+/**
+ * The gate (PRD §12) stands at every writing door: opened by a link on a
+ * fresh browser, this room went straight to the field and the age
+ * affirmation and the privacy line came days later, from Today's card.
+ * Set-up resumes its draft and dismisses to Today when it is done.
+ */
+/**
+ * Where the sound goes: kept on the device where the browser or phone can
+ * recognise there; sent to its maker's speech service where it cannot. The
+ * doorway used to say "nothing is recorded" either way, which was true of
+ * Morrow and not of the recogniser.
+ */
+function recogniserNote(): string {
+  const local = recognisesLocally();
+  if (Platform.OS !== 'web') return local === false ? 'Your phone’s recogniser sends the sound to its maker’s speech service and hands back words; Morrow keeps no audio.' : 'Your phone’s own recogniser, on the phone; nothing is recorded.';
+  if (local === true) return 'Your browser’s own recogniser, in the browser; nothing is recorded.';
+  if (local === false) return 'Your browser sends the sound to its maker’s speech service and hands back words; Morrow keeps no audio.';
+  return 'Your browser’s recogniser turns it into words; Morrow keeps no audio.';
+}
+
+export default function WriteGate() {
+  const consented = useMorrow((s) => Boolean(s.profile.consentedAt));
+  if (!consented) return <Redirect href="/setup" />;
+  return <Write />;
+}
+
+function Write() {
   const router = useRouter();
   useFirstRunStep('fifteen');
   const showResources = useMorrow((st) => st.showResources);
@@ -154,6 +189,11 @@ export default function Write() {
   const spokenLastRef = useRef(false);
   const heardRef = useRef(false);
   const absorbedRef = useRef(false);
+  // When words last arrived from the recogniser, for telling a breath from
+  // a pause: phrases a breath apart run on as prose; a real pause — a few
+  // seconds with nothing said — starts a line.
+  const lastHeardAtRef = useRef(0);
+  const sepRef = useRef('');
   // How loud the room is, when the recogniser can say; the pulse follows it.
   const levelRef = useRef(new Animated.Value(0));
   const [hasLevel, setHasLevel] = useState(false);
@@ -256,15 +296,23 @@ export default function Write() {
             if (final) absorbedRef.current = false;
             return;
           }
-          // A recogniser that punctuates (a phone, Safari) hands back
-          // sentences, and they run on as prose. One that does not (Chrome)
-          // hands back breaths, and each goes on its own line — the pause is
-          // the only full stop the person gave, and the read-back reads a
-          // line break as one. Typed words are not a breath: what follows
-          // them runs on.
+          // Phrases run on as prose, a space between them, whether or not
+          // the recogniser punctuates. Each breath used to start a line —
+          // "hello" and then the rest of the sentence under it — which read
+          // as the room rewriting what was said. A line starts only after a
+          // real pause: a few seconds with nothing heard, once the last
+          // stretch has been committed. Typed words are not a breath: what
+          // follows them runs on.
           const kept = anchorRef.current.trim();
-          const sep = !kept ? '' : /[.!?…]["'”’)]*$/.test(kept) || !spokenLastRef.current ? ' ' : '\n';
-          const joined = kept + sep + text.trim();
+          const now = Date.now();
+          // Decided when a stretch begins and kept while it grows, or the
+          // line break would flip on and off with every word heard.
+          if (!heardRef.current) {
+            const paused = spokenLastRef.current && lastHeardAtRef.current > 0 && now - lastHeardAtRef.current > PAUSE_MS;
+            sepRef.current = !kept ? '' : paused ? '\n' : ' ';
+          }
+          const joined = kept + sepRef.current + text.trim();
+          lastHeardAtRef.current = now;
           heardRef.current = !final;
           setSession((s) => ({ ...s, body: joined, idleMs: 0, nudge: null }));
           if (final) {
@@ -498,7 +546,7 @@ export default function Write() {
                 />
                 <Label style={{ color: night.ink3, textAlign: 'center' }}>
                   {wordCount(draft.body) > 0
-                    ? `${wordCount(draft.body)} words are still here. You can pick this up once.`
+                    ? `${plural(wordCount(draft.body), 'word')} ${wordCount(draft.body) === 1 ? 'is' : 'are'} still here. You can pick this up once.`
                     : 'Nothing was written yet; the clock picks up where it stopped. You can pick this up once.'}
                 </Label>
               </>
@@ -532,7 +580,7 @@ export default function Write() {
                 <Label style={{ color: night.ink3, textAlign: 'center' }}>
                   {mode === 'type'
                     ? 'Forward only: the page keeps what you type. Close it whenever you are done.'
-                    : `${Platform.OS === 'web' ? 'Your browser’s' : 'Your phone’s'} own recogniser; nothing is recorded. Talking counts as writing.${
+                    : `${recogniserNote()} Talking counts as writing.${
                         mode === 'walk' ? ' The screen stays on and the words are set large.' : ''
                       } Close it whenever you are done.`}
                 </Label>
@@ -728,7 +776,7 @@ export default function Write() {
             track="rgba(255,255,255,0.12)"
             width={3}
             accessibilityLabel={held ? 'The clock is paused' : hideClock ? 'Words so far' : 'Time left in this session'}
-            valueText={hideClock ? `${words} words` : `${formatRemaining(remaining(session))} left, ${words} words`}
+            valueText={hideClock ? plural(words, 'word') : `${formatRemaining(remaining(session))} left, ${plural(words, 'word')}`}
           >
             <Animated.View style={{ transform: [{ translateY: bob }] }}>
               <Stone size={64} domain="health" polish={polish(words)} />

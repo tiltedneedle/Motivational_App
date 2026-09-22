@@ -73,8 +73,8 @@ export default function SignIn() {
     // still owed shows as the two choices there, a pull as "your Book is
     // back", a failure as the line under the button. Set on this screen
     // alone it was on a screen being replaced.
-    const outcome = !synced.ok ? (synced.conflict ? 'conflict' : 'failed') : synced.pulled ? 'pulled' : synced.moved;
-    if (!synced.ok && !synced.conflict) setSignInNotice(synced.error);
+    const outcome = !synced.ok ? (synced.conflict ? 'conflict' : synced.closed ? 'closed' : 'failed') : synced.pulled ? 'pulled' : synced.moved;
+    if (!synced.ok && !synced.conflict && !synced.closed) setSignInNotice(synced.error);
     const q = [to ? `next=${to}` : '', `settled=${outcome}`].filter(Boolean).join('&');
     router.replace(`/account?${q}` as never);
   };
@@ -115,7 +115,13 @@ export default function SignIn() {
         return;
       }
       await settle('apple');
-    } catch {
+    } catch (err) {
+      // Cancel on the system sheet is not a fault, and not "not available".
+      const code = (err as { code?: string } | null)?.code ?? '';
+      if (code === 'ERR_REQUEST_CANCELED' || code === 'ERR_CANCELED') {
+        setProblem(null);
+        return;
+      }
       setProblem('Sign in with Apple is not available in this build. Google or the email code work everywhere.');
     } finally {
       setBusy(null);
@@ -140,6 +146,7 @@ export default function SignIn() {
             : 'There is no account service in this build. Everything you write stays on this phone, and that is a complete way to use it.'
         }
         testID="signin-heading"
+        lineTestID="signin-line"
       />
 
       {hasSupabase && !account ? (
@@ -154,7 +161,7 @@ export default function SignIn() {
           <Chip testID="signin-email" label="Continue with email" onPress={onwards} style={{ minHeight: 54 }} />
           <Notice testID="signin-problem" kind="error" text={problem} style={{ color: accent.coralText }} />
           <Body style={{ fontSize: 13, color: day.ink2, textAlign: 'center', marginTop: 6 }}>
-            {hasGoogle ? 'Google or Apple hand the app your email address and name, nothing more. ' : ''}No password is ever made or kept. The account only ever holds a copy of the Book.
+            {hasGoogle ? 'Google or Apple hand the app your email address and name, nothing more. ' : ''}No password is ever made or kept. The account holds a copy of your writing and your settings — nothing else, and never for advertising.
           </Body>
         </View>
       ) : hasSupabase && account ? (

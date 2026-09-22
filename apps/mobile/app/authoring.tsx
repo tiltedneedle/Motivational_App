@@ -11,7 +11,7 @@ import { useGoals, useMorrow } from '../src/store';
 import { useFirstRunStep } from '../src/analytics';
 
 const TRACKS: { id: DepthTrack; title: string; caption: string }[] = [
-  { id: 'starter', title: 'Starter · three sessions', caption: 'Fifteen minutes of writing, then one line per question. The way in.' },
+  { id: 'starter', title: 'Starter · one line per question', caption: 'Fifteen minutes of writing, then one line per question. The way in.' },
   { id: 'full', title: 'Full · two weeks', caption: 'The dose the studies tested: a paragraph per question, the other road, five to seven sessions.' },
 ];
 
@@ -33,7 +33,7 @@ export default function Authoring() {
       // the clock) is where the fifteen minutes begin, and two screens in a
       // row that both said "Begin · 15 minutes" read as one that did not work.
       cta={{ label: 'Continue', onPress: () => router.push('/write?kind=ideal'), testID: 'authoring-begin' }}
-      secondary={{ label: 'Not tonight', onPress: () => router.dismissTo('/today'), testID: 'authoring-later' }}
+      secondary={{ label: 'Not now', onPress: () => router.dismissTo('/today'), testID: 'authoring-later' }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 }}>
         {goals.slice(0, 4).map((g) => (

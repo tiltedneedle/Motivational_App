@@ -22,7 +22,7 @@ import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MEMORY_ABOUT_ORDER, memoryEditOf, plural, type MemoryLine } from '@morrow/core';
 import { Body, Chip, Label, Rule, Statement, Studio, TextButton, TopBar, UserField, UserText, day, radius } from '@morrow/ui';
-import { memoryLines, useMorrow } from '../src/store';
+import { memoryLines, useMorrow, useSnapshot } from '../src/store';
 
 /**
  * What Change starts from: their words. For an if-then, both halves with the
@@ -58,7 +58,7 @@ const ABOUT_LABEL: Record<MemoryLine['about'], string> = {
 export default function MemoryScreen() {
   const router = useRouter();
   const showResources = useMorrow((st) => st.showResources);
-  const state = useMorrow((s) => s);
+  const state = useSnapshot();
   const edits = useMorrow((s) => s.memoryEdits);
   const edit = useMorrow((s) => s.editMemory);
   const forget = useMorrow((s) => s.forgetMemory);

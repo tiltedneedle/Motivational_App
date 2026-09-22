@@ -443,6 +443,23 @@ export default function BookScreen() {
               <Chip testID="book-moved" label="Something moved" onPress={() => router.push('/reading?moved=1')} />
             </View>
           )}
+          {/* The editions before this one: nothing is overwritten, and here is where they are. */}
+          {book === latest && books.length > 1 ? (
+            <View testID="book-editions" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+              <Label style={{ color: night.ink3 }}>Earlier</Label>
+              {books
+                .filter((b) => b.version !== latest?.version)
+                .map((b) => (
+                  <Chip
+                    key={b.version}
+                    testID={`book-edition-${b.version}`}
+                    label={`${ordinal(b.version)} edition · ${formatDay(sealedOn(b.sealedAt, boundary))}`}
+                    ghost
+                    onPress={() => router.push(`/book?version=${b.version}`)}
+                  />
+                ))}
+            </View>
+          ) : null}
           {/* The ways out of the app: quieter than the ways through it. */}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 18, alignItems: 'center' }}>
             <TextButton testID="book-export" label="Export" onPress={onExport} />

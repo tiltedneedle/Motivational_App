@@ -82,7 +82,7 @@ describe('the Book as a document', () => {
 
   it('prints the edition, the count and the seal date', () => {
     expect(html).toContain('Second edition · 2 goals');
-    expect(html).toContain('Sealed 11 Sep');
+    expect(html).toContain('Finished 11 Sep');
   });
 
   it('never trusts what they wrote as markup', () => {

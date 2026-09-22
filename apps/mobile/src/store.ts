@@ -6,6 +6,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
+import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { useSyncExternalStore } from 'react';
 import { isDark, setDark, subscribeDark } from '@morrow/ui';
 import { STORE_KEY, failureReason, guardedStorage, hasFailed, markUnreadable, onStorageFailure, openStorage } from './storage';
@@ -13,8 +14,8 @@ import { scheduler, syncNotices } from './notify';
 import type { Notice } from '@morrow/core';
 import { billing, type BillingResult, type PlanId } from './billing';
 import { FUNCTIONS_URL, deleteAccount, functionHeaders, hasSupabase, sessionState, signOut } from './supabase';
-import { newDeviceId, pullAll, pushAll, stampAccount } from './sync';
-import { track } from './analytics';
+import { newDeviceId, pullAll, pushAll, stampAccount, restoreAccount, CLOSED } from './sync';
+import { track, analyticsConsent } from './analytics';
 import {
   DEFAULT_PROFILE,
   AnthropicProvider,
@@ -122,6 +123,12 @@ import {
   type PastEpochRow,
   type PastEventRow,
   halfDone,
+  formatDay,
+  PortraitIncomplete,
+  BlueprintInvalid,
+  ANALYSIS_TITLES,
+  carryForward,
+  isReturning,
 } from '@morrow/core';
 
 /**
@@ -137,9 +144,11 @@ import {
 export interface SafetyPause {
   risk: SafetyRisk;
   at: string;
-  source?: { kind: 'text' | 'analysis' | 'evidence' | 'day' | 'present' | 'past' | 'lesson' | 'memory'; id: string } | null;
+  source?: { kind: 'text' | 'analysis' | 'evidence' | 'day' | 'present' | 'past' | 'lesson' | 'memory' | 'iwill'; id: string } | null;
   /** Asked for by the person ("Need someone?"), not raised by the screen. */
   voluntary?: boolean;
+  /** Raised by the remote screen's reading, not the device's own: the text did leave the phone, once. */
+  remote?: boolean;
 }
 
 /**
@@ -241,6 +250,8 @@ export interface AccountState {
    * set; `resolveSignIn` clears it.
    */
   needsChoice?: boolean;
+  /** The account was closed (Close the account, on some device) and not yet reopened; nothing is pushed while this is set. */
+  closedAt?: string | null;
 }
 
 export interface ToastState {
@@ -381,6 +392,8 @@ export interface MorrowState {
    */
   setupDraft: { step: number; areas: string[]; custom: string; when: 'morning' | 'evening' | 'any' | null; voice: Persona | null; name: string; sixteen: boolean } | null;
   dayDraft: DayDraft | null;
+  /** A letter to the future mid-way, so Back or a kill is not the letter lost. Device-only. */
+  letterDraft: { body: string; days: number; updatedAt: string } | null;
   interviewDraft: InterviewDraft | null;
   readBackDraft: { rows: ReadBackRow[]; leftOut?: string; source: string; updatedAt: string } | null;
   /** The coach's single invitation to the Full track, once ever. */
@@ -393,6 +406,8 @@ export interface MorrowState {
    */
   bookTitleFraming: string | null;
   iWill: string;
+  /** The person's word that the last line, screened as crisis, is not about them: the seal takes it. Reset when the line changes. */
+  iWillCleared: boolean;
 
   // profile
   setProfile: (patch: Partial<Profile>) => void;
@@ -466,7 +481,7 @@ export interface MorrowState {
   applyReplanFor: (goalId: string, accepted: ReplanChange[]) => { ok: true } | { ok: false; error: string; moment?: PaywallMoment };
   makePortraitAndPlan: (
     goalId: string,
-  ) => { ok: true } | { ok: false; error: string; moment?: PaywallMoment };
+  ) => { ok: true } | { ok: false; error: string; moment?: PaywallMoment; missing?: AnalysisKind[] };
 
   // practices
   /**
@@ -505,6 +520,12 @@ export interface MorrowState {
 
   // today
   setMoveStatus: (moveId: string, status: 'todo' | 'done' | 'skip') => void;
+  /**
+   * Each plan whose week is finished rolls into the next, in the person's
+   * own moves (see `carryForward`). Run on every open and after a move
+   * closes; nothing happens while a move is open or the season is over.
+   */
+  carryPlansForward: () => number;
   /**
    * Returns whether the move was actually created. The coach used to announce
    * "Added" over the top of this action's own refusal toast, so a person was
@@ -584,7 +605,9 @@ export interface MorrowState {
    * this device and the account hold writing and nothing was moved — the
    * account screen offers the two honest choices, through `resolveSignIn`.
    */
-  afterSignIn: () => Promise<{ ok: true; pulled: boolean; moved: 'pushed' | 'pulled' | 'nothing' } | { ok: false; error: string; conflict?: true }>;
+  afterSignIn: () => Promise<{ ok: true; pulled: boolean; moved: 'pushed' | 'pulled' | 'nothing' } | { ok: false; error: string; conflict?: true; closed?: true }>;
+  /** Reopen an account closed inside its week, then carry on as a sign-in would. */
+  reopenAccount: () => Promise<{ ok: true; pulled: boolean; moved: 'pushed' | 'pulled' | 'nothing' } | { ok: false; error: string; conflict?: true; closed?: true }>;
   /** The person's answer to a conflict: bring the account's Book here, or replace the account's copy with this device's. */
   resolveSignIn: (choice: 'pull' | 'push') => Promise<{ ok: true; pulled: boolean; moved: 'pushed' | 'pulled' | 'nothing' } | { ok: false; error: string }>;
   /** Everything on the device, up. Safe to call on every launch. */
@@ -638,6 +661,7 @@ export interface MorrowState {
   saveStoneDraft: (draft: Omit<StoneDraft, 'updatedAt'>) => void;
   clearStoneDraft: () => void;
   saveDayDraft: (draft: Omit<DayDraft, 'updatedAt'>) => void;
+  saveLetterDraft: (draft: { body: string; days: number } | null) => void;
   clearDayDraft: () => void;
   savePresentDraft: (draft: Omit<PresentDraft, 'updatedAt'>) => void;
   clearPresentDraft: () => void;
@@ -746,12 +770,14 @@ const EMPTY = {
   memoryDraft: null,
   setupDraft: null,
   dayDraft: null,
+  letterDraft: null,
   interviewDraft: null,
   readBackDraft: null,
   fullTrackInvited: false,
   bookTitle: '',
   bookTitleFraming: null,
   iWill: '',
+  iWillCleared: false,
 };
 
 const store = create<MorrowState>()(
@@ -824,7 +850,7 @@ const store = create<MorrowState>()(
        * those rows stay and simply stop pointing at a goal.
        */
       dropGoal: (id) =>
-        set((s) => ({
+        set((s) => withToday(s, {
           goals: denseRanks(s.goals.filter((g) => g.id !== id)),
           analyses: s.analyses.filter((a) => a.goalId !== id),
           letGoDrafts: Object.fromEntries(Object.entries(s.letGoDrafts).filter(([k]) => k !== id)),
@@ -852,7 +878,7 @@ const store = create<MorrowState>()(
             g.id === id ? { ...g, status: 'archived' as const, lesson: line, letGoAt: at, lessonRisk: risk.risk } : g,
           );
           const { [id]: _draft, ...letGoDrafts } = s.letGoDrafts;
-          return {
+          return withToday(s, {
             // Ranks stay dense over the goals in play: `analysisPlan` gives
             // the full five stones to `rank < 3`, and an archived goal holding
             // a slot pushed a live one past it.
@@ -863,7 +889,7 @@ const store = create<MorrowState>()(
             practices: s.practices.map((p) => (p.goalId === id && !p.archivedAt ? { ...p, archivedAt: at } : p)),
             letGoDrafts,
             safetyPause: risk.risk === 'crisis' ? pauseOn(risk.risk, 'lesson', id) : s.safetyPause,
-          };
+          });
         });
       },
 
@@ -905,7 +931,7 @@ const store = create<MorrowState>()(
           if (!goal || goal.status !== 'archived') return {};
           const at = goal.letGoAt;
           const liveCount = s.goals.filter((g) => g.status !== 'archived').length;
-          return {
+          return withToday(s, {
             goals: denseRanks(
               s.goals.map((g) => {
                 if (g.id !== id) return g;
@@ -914,7 +940,7 @@ const store = create<MorrowState>()(
               }),
             ),
             practices: s.practices.map((p) => (p.goalId === id && at && p.archivedAt === at ? { ...p, archivedAt: null } : p)),
-          };
+          });
         }),
 
       rankGoals: (ids) =>
@@ -975,7 +1001,8 @@ const store = create<MorrowState>()(
               if (!isWorse(second.risk, risk.risk)) return;
               set((s) => ({
                 texts: s.texts.map((t) => (t.id === text.id ? { ...t, safetyRisk: second.risk } : t)),
-                safetyPause: second.risk === 'crisis' ? pauseOn(second.risk, 'text', text.id) : s.safetyPause,
+                // Raised by the service's reading, and the card says so.
+                safetyPause: second.risk === 'crisis' ? { ...pauseOn(second.risk, 'text', text.id), remote: true } : s.safetyPause,
               }));
             })
             .catch(() => {
@@ -1011,10 +1038,21 @@ const store = create<MorrowState>()(
         // the way — which is where the worst sentence of somebody's week
         // routinely lands. Screening only the Fifteen meant a line typed here
         // was read back in the dawn brief and sealed into the Book.
-        const risk = screen([line, input.line2 ?? '', input.paragraph ?? ''].join(' '));
+        const screened = screen([line, input.line2 ?? '', input.paragraph ?? ''].join(' '));
         const spec = scoreSpecificity(input.paragraph?.trim() || line);
         set((s) => {
           const existing = s.analyses.find((a) => a.goalId === goalId && a.kind === kind);
+          // The verdict belongs to the words it was given. The stone screen
+          // writes on Back whether or not anything was typed, so an appealed
+          // line ("This was not about me") was screened again on the way
+          // out and re-flagged. The same three texts keep the verdict they
+          // have; changed ones are screened afresh.
+          const unchanged =
+            existing !== undefined &&
+            existing.line === line &&
+            (existing.line2 ?? '') === (input.line2?.trim() ?? '') &&
+            (existing.paragraph ?? '') === (input.paragraph?.trim() ?? '');
+          const risk = unchanged ? { risk: existing.safetyRisk ?? screened.risk } : screened;
           const row: GoalAnalysis = {
             id: existing?.id ?? newId('an'),
             goalId,
@@ -1036,17 +1074,29 @@ const store = create<MorrowState>()(
           return {
             analyses,
             goals,
-            safetyPause: risk.risk === 'crisis' ? pauseOn(risk.risk, 'analysis', row.id) : s.safetyPause,
+            safetyPause: !unchanged && risk.risk === 'crisis' ? pauseOn(risk.risk, 'analysis', row.id) : s.safetyPause,
           };
         });
       },
 
       setBookTitle: (t) => set({ bookTitle: t }),
       setBookTitleFraming: (f) => set({ bookTitleFraming: f }),
-      setIWill: (t) => set({ iWill: t }),
+      setIWill: (t) => set((s) => ({ iWill: t, iWillCleared: s.iWillCleared && t.trim() === s.iWill.trim() })),
 
       sealBook: () => {
         const s = get();
+        // The "I will" line is the most-quoted line in the product — the
+        // lock screen after three days away, the Returns card, the Celebrate
+        // chip, the memory screen — and it was the one free-text line never
+        // screened. Screened here, before the seal, and refused with the
+        // resources card when it lands in the crisis band; the person's own
+        // word that it is not about them ("This was not about me") lets the
+        // same line through.
+        const lastLine = screen(s.iWill);
+        if (lastLine.risk === 'crisis' && !s.iWillCleared) {
+          set({ safetyPause: pauseOn(lastLine.risk, 'iwill', 'iwill') });
+          return { ok: false, error: 'The last line can wait. What is on the card above matters more tonight.' };
+        }
         // Writing done in crisis stays on the device but is never sealed into
         // the Book. It is theirs to keep and to export; it is not material.
         const ideal = latestText(s.texts, 'ideal');
@@ -1200,8 +1250,8 @@ const store = create<MorrowState>()(
             day,
           );
           const stamped = new Date().toISOString();
-          set((st) => ({
-            plans: st.plans.map((p) =>
+          set((st) => {
+            const plans = st.plans.map((p) =>
               p.goalId === goalId
                 ? {
                     ...next,
@@ -1210,8 +1260,16 @@ const store = create<MorrowState>()(
                     replannedAt: [...(plan.replannedAt ?? []), stamped],
                   }
                 : p,
-            ),
-          }));
+            );
+            // Every day a move was dated on, before and after: a move
+            // re-dated off today leaves today's tally, and lands on its new day's.
+            const touched = new Set<string>([day]);
+            for (const m of [...plan.moves, ...next.moves]) if (m.scheduledFor) touched.add(m.scheduledFor);
+            let days = st.days;
+            const live = livePlans({ ...st, plans });
+            for (const d of touched) if (d <= day) days = recomputeDay({ ...st, days }, live, st.evidence, d);
+            return { plans, days };
+          });
           return { ok: true };
         } catch (err) {
           // `applyReplan` re-validates: an accepted row that would put a move
@@ -1313,7 +1371,21 @@ const store = create<MorrowState>()(
           if (!refreshed) track({ name: 'blueprint_built', moves: plan.moves.length, milestones: plan.milestones.length });
           return { ok: true };
         } catch (err) {
-          return { ok: false, error: err instanceof Error ? err.message : 'The plan could not be built.' };
+          // In the app's words, never the engine's: "Portrait needs
+          // strategies, obstacles" was printed on the finish screen as the
+          // reason, internal names and all.
+          if (err instanceof PortraitIncomplete) {
+            const names = err.missing.map((k) => ANALYSIS_TITLES[k]);
+            return {
+              ok: false,
+              error: `Needs ${names.length === 1 ? 'its' : 'two more'} ${names.join(' and ')} ${names.length === 1 ? 'line' : 'lines'}.`,
+              missing: err.missing,
+            };
+          }
+          if (err instanceof BlueprintInvalid) {
+            return { ok: false, error: 'Nothing to plan from yet: the How line is not written.', missing: ['strategies'] };
+          }
+          return { ok: false, error: 'The plan could not be built.' };
         }
       },
 
@@ -1345,11 +1417,10 @@ const store = create<MorrowState>()(
       },
 
       archivePractice: (id) =>
-        set((st) => ({
-          practices: st.practices.map((p) =>
-            p.id === id ? { ...p, archivedAt: new Date().toISOString() } : p,
-          ),
-        })),
+        set((st) => {
+          const practices = st.practices.map((p) => (p.id === id ? { ...p, archivedAt: new Date().toISOString() } : p));
+          return { practices, days: recomputeToday({ ...st, practices }) };
+        }),
 
       logRun: (runner) => {
         const s = get();
@@ -1367,7 +1438,9 @@ const store = create<MorrowState>()(
         // every backgrounding, so a routine finished in the morning and opened
         // again at night — then interrupted by a notification on step one —
         // used to be recorded as step one, and the day lost its credit.
-        const upgrade = existing?.minimal && !fresh.minimal && fresh.stepsDone > 0;
+        // A finished full run outranks a finished two-minute one; a full run
+        // interrupted on step one does not, or the day's credit fell.
+        const upgrade = existing?.minimal && !fresh.minimal && fresh.stepsTotal > 0 && fresh.stepsDone >= fresh.stepsTotal;
         if (existing && !upgrade && practiceValue(existing) >= practiceValue(fresh)) return;
         const log = fresh;
         const logs = [...s.practiceLogs.filter((l) => l.id !== existing?.id), log];
@@ -1443,11 +1516,12 @@ const store = create<MorrowState>()(
         }
       },
 
-      setMoveStatus: (moveId, status) =>
+      setMoveStatus: (moveId, status) => {
         set((s) => {
           const boundary = s.profile.dayBoundaryHour;
           const day = dayOf(new Date(), boundary);
           let title = '';
+          let done = '';
 
           // Every day this change touches, not only today. Undoing a move that
           // was kept on an earlier day removed that day's ledger row and left
@@ -1471,9 +1545,16 @@ const store = create<MorrowState>()(
             moves: p.moves.map((m) => {
               if (m.id !== moveId) return m;
               title = m.title;
+              // What was actually done: the small version when it was in
+              // force, as a practice run records its two-minute version.
+              done = m.doingMinVersion && m.minVersion ? m.minVersion : m.title;
               return {
                 ...m,
                 status,
+                // A move brought forward from a later day and parked is
+                // parked today, not on its own day: scored there, it wrote
+                // "not today" into a day that had not begun and closed it.
+                ...(status === 'skip' && m.scheduledFor && m.scheduledFor > day ? { scheduledFor: day } : {}),
                 completedAt: status === 'done' ? new Date().toISOString() : null,
                 // The day, as the app counted it here and now. Worked out
                 // again later from the instant, a move kept at 22:00 in
@@ -1492,7 +1573,7 @@ const store = create<MorrowState>()(
                     goalId: plans.find((p) => p.moves.some((m) => m.id === moveId))?.goalId ?? null,
                     moveId,
                     kind: 'move' as const,
-                    text: title,
+                    text: done || title,
                     day,
                     createdAt: new Date().toISOString(),
                   },
@@ -1507,7 +1588,25 @@ const store = create<MorrowState>()(
           const live = livePlans({ ...s, plans });
           for (const d of touched) days = recomputeDay({ ...s, days }, live, ev, d);
           return { plans, evidence: ev, days };
-        }),
+        });
+        get().carryPlansForward();
+      },
+
+      carryPlansForward: () => {
+        const s = get();
+        const day = dayOf(new Date(), s.profile.dayBoundaryHour);
+        const live = new Set(livePlans(s).map((p) => p.id));
+        let rolled = 0;
+        const plans = s.plans.map((p) => {
+          if (!live.has(p.id)) return p;
+          const next = carryForward(p, day, newId);
+          if (!next) return p;
+          rolled += next.length;
+          return { ...p, moves: [...p.moves, ...next] };
+        });
+        if (rolled > 0) set({ plans });
+        return rolled;
+      },
 
       addMove: (goalId, title, minutes, opts) => {
         const s = get();
@@ -1518,10 +1617,13 @@ const store = create<MorrowState>()(
         // already knows which sentence it came from, and re-deriving it here
         // attributed the move to whatever Strategies line happened to belong
         // to the goal being written to.
+        // And only a line the screen let through, as addPractice and the
+        // plan builder require: this was the one path by which a flagged
+        // line reached Today's Now card and the morning brief.
         const given = opts?.sourceLineId
-          ? s.analyses.find((a) => a.id === opts.sourceLineId && a.goalId === goalId)
+          ? s.analyses.find((a) => a.id === opts.sourceLineId && a.goalId === goalId && isQuotable(a))
           : undefined;
-        const source = given ?? s.analyses.find((a) => a.goalId === goalId && a.kind === 'strategies');
+        const source = given ?? s.analyses.find((a) => a.goalId === goalId && a.kind === 'strategies' && a.line.trim() && isQuotable(a));
         if (!source) {
           // Without a line of theirs behind it there is no move.
           set({ toast: { text: 'Write how you’ll do this goal first — the How stone.', kind: 'info' } });
@@ -1555,10 +1657,15 @@ const store = create<MorrowState>()(
           sourceLineId: source.id,
           order: topOrder,
         };
-        set((st) => ({
-          plans: st.plans.map((p) => (p.id === plan.id ? { ...p, moves: [...p.moves, move] } : p)),
-          toast: { text: `Added · ${clean}`, kind: 'add' },
-        }));
+        set((st) => {
+          const plans = st.plans.map((p) => (p.id === plan.id ? { ...p, moves: [...p.moves, move] } : p));
+          return {
+            plans,
+            // Today asks for one more: the day's tally says so at once.
+            days: recomputeDay(st, livePlans({ ...st, plans }), st.evidence, move.scheduledFor as string),
+            toast: { text: `Added · ${clean}`, kind: 'add' },
+          };
+        });
         return true;
       },
 
@@ -1630,9 +1737,22 @@ const store = create<MorrowState>()(
           // The proof line is typed at night, is free text, and the coach reads
           // it back the next morning as "and you wrote …". It gets the same
           // screen as everything else the app quotes.
-          const wrote = proof.trim().length > 0 || gladOf.trim().length > 0;
-          const risk = screen([proof, gladOf].join(' '));
           const text = proof.trim();
+          const glad = gladOf.trim();
+          // Changed text, not non-empty text: the closing screen opens on
+          // what was written, so a mood word changed on a re-close used to
+          // screen the same proof again and re-raise an appealed verdict.
+          const prev = s.days[day];
+          const priorRow = s.evidence.find((e) => e.kind === 'seal' && e.day === day);
+          const proofChanged = text.length > 0 && text !== (prev?.proof ?? '');
+          const gladChanged = glad.length > 0 && glad !== (prev?.gladOf ?? '');
+          const wrote = proofChanged || gladChanged;
+          // Each field screened on its own, so the ledger row carries the
+          // proof's verdict and not the glad line's.
+          const worst = (a: SafetyRisk, b: SafetyRisk): SafetyRisk => (a === 'crisis' || b === 'crisis' ? 'crisis' : a === 'concern' || b === 'concern' ? 'concern' : 'none');
+          const proofRisk: SafetyRisk = proofChanged ? screen(text).risk : (priorRow?.safetyRisk ?? prev?.safetyRisk ?? 'none');
+          const gladRisk: SafetyRisk = gladChanged ? screen(glad).risk : 'none';
+          const risk = { risk: worst(proofRisk, gladRisk) };
           // A second close of the same day is an edit of the first: the
           // screen opens on what was written, so a changed sentence is the
           // same line corrected, and the day's one proof row takes the new
@@ -1647,7 +1767,7 @@ const store = create<MorrowState>()(
           const evidence = !text
             ? s.evidence
             : mine
-              ? s.evidence.map((e) => (e.id === mine.id ? { ...e, text, safetyRisk: risk.risk } : e))
+              ? s.evidence.map((e) => (e.id === mine.id ? { ...e, text, safetyRisk: proofRisk } : e))
               : [
                   ...s.evidence,
                   {
@@ -1656,7 +1776,7 @@ const store = create<MorrowState>()(
                     kind: 'seal' as const,
                     text,
                     day,
-                    safetyRisk: risk.risk,
+                    safetyRisk: proofRisk,
                     createdAt: new Date().toISOString(),
                   },
                 ];
@@ -1668,7 +1788,7 @@ const store = create<MorrowState>()(
               sealedAt: new Date().toISOString(),
               moodWord: moodWord || existing.moodWord || null,
               proof: text || existing.proof || null,
-              gladOf: gladOf.trim() || existing.gladOf || null,
+              gladOf: glad || existing.gladOf || null,
               // The verdict belongs to the words it was given. With nothing
               // new written the old one stands — including one the person
               // has already appealed, which re-screening would re-raise.
@@ -1859,7 +1979,10 @@ const store = create<MorrowState>()(
         const occasions = dueLetters({
           today: day,
           portraitReady: s.portraits.length > 0,
-          returns: detectReturns(Object.values(s.days), day).length,
+          // The morning the person comes back is a return already — the
+          // Today card says "Return #1" — and the letter for it is due that
+          // morning, not the next day after something was done.
+          returns: detectReturns(Object.values(s.days), day).length + (isReturning(Object.values(s.days), day).returning ? 1 : 0),
           reachedMilestones: livePlans(s)
             .flatMap((p) => p.milestones)
             .filter((m) => m.reachedAt)
@@ -1959,7 +2082,11 @@ const store = create<MorrowState>()(
         // on day 90, the morning's "the Book is waiting" is no longer true.
         const waitingNow = reauthorLabelFor(s, day) !== null;
         const saidWaiting = existing ? /^Day [a-z0-9 ]+: the Book is waiting/.test(existing.today) : false;
-        if (existing && (existing.firstMoveId || !nowHasMove) && saidWaiting === waitingNow) return existing;
+        // And when the move it opens on has been kept or parked since: "Start
+        // with …" over a move already done was the brief a day behind.
+        const openMoves = todaysMoves(s);
+        const firstStillOpen = existing?.firstMoveId ? openMoves.some((m) => m.id === existing.firstMoveId && m.status === 'todo') : false;
+        if (existing && (firstStillOpen || !nowHasMove) && saidWaiting === waitingNow) return existing;
         const daysArr = Object.values(s.days);
         const r = reading(daysArr, day);
         const yesterdayKey = new Date(new Date(`${day}T00:00:00Z`).getTime() - 86_400_000).toISOString().slice(0, 10);
@@ -2036,6 +2163,18 @@ const store = create<MorrowState>()(
         // one line and then pruned the whole Book off the account.
         const pulled = await pullAll(false);
         if (!pulled.ok) return { ok: false, error: pulled.error };
+        // Closed inside its week: the person is asked, and nothing moves
+        // either way until they answer.
+        if (pulled.stamp.closedAt) {
+          const closedAt = pulled.stamp.closedAt;
+          set((st) => (st.account ? { account: { ...st.account, closedAt } } : {}));
+          return {
+            ok: false,
+            closed: true,
+            error: `This account was closed on ${formatDay(closedAt.slice(0, 10))} and its copy will be deleted a week after. Reopen it, or leave it closed.`,
+          };
+        }
+        set((st) => (st.account?.closedAt ? { account: { ...st.account, closedAt: null } } : {}));
         const b = pulled.bundle;
         const accountHas = hasWriting(b);
         const deviceHas = hasSubstance(s);
@@ -2067,13 +2206,22 @@ const store = create<MorrowState>()(
         return { ok: true, pulled: true, moved: 'pulled' as const };
       },
 
+      reopenAccount: async () => {
+        const out = await restoreAccount();
+        if (!out.ok) return { ok: false, error: out.error };
+        set((st) => (st.account ? { account: { ...st.account, closedAt: null } } : {}));
+        return get().afterSignIn();
+      },
+
       resolveSignIn: async (choice) => {
         if (choice === 'push') {
           // Their word that this device is the copy: the prune may run, and
           // another device's newer copy is replaced. Through the same gate
           // as every other push, so two never run at once.
           if (pushInFlight) await pushInFlight.catch(() => undefined);
-          set((st) => (st.account ? { account: { ...st.account, needsChoice: false } } : {}));
+          // `needsChoice` clears when the push lands (`markPushed`), not
+          // before: cleared first, a push that failed offline forgot that a
+          // choice was still owed, and Settings showed the account as settled.
           pushInFlight = (async () => {
             try {
               const out = await pushAll(bundleOf(get()), { device: get().deviceId, reconcile: true, force: true });
@@ -2108,20 +2256,32 @@ const store = create<MorrowState>()(
         if (get().account?.needsChoice) {
           return { ok: false, error: 'This phone and the account both have writing. Choose which copy to keep — under You.', conflict: true };
         }
+        if (get().account?.closedAt) return { ok: false, error: CLOSED };
         // One at a time. iOS backgrounds with 'inactive' then 'background',
         // and two whole pushes ran at once, each pruning from its own snapshot.
         if (pushInFlight) return pushInFlight;
+        // Nothing changed since the copy that landed: nothing to send. Every
+        // backgrounding used to upload every row of every table again — a
+        // year's ledger, ten times a day.
+        const bundle = bundleOf(get());
+        const shape = bundleShape(bundle);
+        const account = get().account;
+        if (account?.lastPushAt && account.userId === lastPushed.userId && shape === lastPushed.shape) return { ok: true };
         pushInFlight = (async () => {
           try {
             // The prune runs only from a device that has copied up before,
             // and never over another device's newer copy.
-            const out = await pushAll(bundleOf(get()), {
+            const out = await pushAll(bundle, {
               device: get().deviceId,
               reconcile: Boolean(get().account?.lastPushAt),
               lastPushAt: get().account?.lastPushAt ?? null,
             });
-            if (!out.ok) return { ok: false as const, error: out.error, ...(out.conflict ? { conflict: true as const } : {}) };
+            if (!out.ok) {
+              if (out.closed) set((st) => (st.account ? { account: { ...st.account, closedAt: new Date().toISOString() } } : {}));
+              return { ok: false as const, error: out.error, ...(out.conflict ? { conflict: true as const } : {}) };
+            }
             markPushed(set, get);
+            lastPushed = { userId: get().account?.userId ?? null, shape };
             return { ok: true as const };
           } finally {
             pushInFlight = null;
@@ -2293,11 +2453,15 @@ const store = create<MorrowState>()(
       tickClock: () => {
         const day = dayOf(new Date(), get().profile.dayBoundaryHour);
         if (day !== get().clockDay) set({ clockDay: day });
+        // Every open, every foreground, every boundary: a finished week
+        // rolls into the next before Today reads.
+        if (get().hydrated) get().carryPlansForward();
       },
       showResources: () => set({ safetyPause: { risk: 'none', at: new Date().toISOString(), source: null, voluntary: true } }),
       saveStoneDraft: (draft) => set({ stoneDraft: { ...draft, updatedAt: new Date().toISOString() } }),
       clearStoneDraft: () => set({ stoneDraft: null }),
       saveDayDraft: (draft) => set({ dayDraft: { ...draft, updatedAt: new Date().toISOString() } }),
+      saveLetterDraft: (draft) => set({ letterDraft: draft ? { ...draft, updatedAt: new Date().toISOString() } : null }),
       clearDayDraft: () => set({ dayDraft: null }),
       savePresentDraft: (draft) => set({ presentDraft: { ...draft, updatedAt: new Date().toISOString() } }),
       clearPresentDraft: () => set({ presentDraft: null }),
@@ -2344,14 +2508,20 @@ const store = create<MorrowState>()(
                 memoryEdits: st.memoryEdits.map((e) => (e.key === source.id ? { ...e, risk: 'none' as const } : e)),
                 safetyPause: null,
               };
+            case 'iwill':
+              return { iWillCleared: true, safetyPause: null };
           }
         }),
 
       clearSafety: () => set({ safetyPause: null }),
       // The storage flag survives a reset: with the latch closed the reset
       // cannot reach the disk, and a banner that went away said it had.
-      // The device keeps its name through a reset: the install is the same.
-      reset: () => set((s) => ({ profile: DEFAULT_PROFILE, ...EMPTY, storageError: s.storageError, deviceId: s.deviceId || newDeviceId() })),
+      // A new device name: what this phone holds after a reset is a
+      // different body of writing, and under the old name the account's
+      // stamp still said "this device's copy" — so a sign-in after Delete
+      // everything pushed the fresh start over the Book without the choice,
+      // and the next push pruned the Book from the account.
+      reset: () => set((s) => ({ profile: DEFAULT_PROFILE, ...EMPTY, storageError: s.storageError, deviceId: newDeviceId() })),
     }),
     {
       name: STORE_KEY,
@@ -2503,6 +2673,20 @@ let pushInFlight: Promise<{ ok: true } | { ok: false; error: string; conflict?: 
 type Set = (partial: Partial<MorrowState> | ((s: MorrowState) => Partial<MorrowState>)) => void;
 
 /** A push landed: this device is the account's latest copy, and remembers it per account. */
+/** The copy that last landed on the account, by its shape — a hash of the bundle, per launch. */
+let lastPushed: { userId: string | null; shape: string } = { userId: null, shape: '' };
+
+/** A cheap hash of a bundle: the same bytes give the same string. */
+function bundleShape(bundle: unknown): string {
+  const s = JSON.stringify(bundle);
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  return `${s.length}:${h.toString(16)}`;
+}
+
 function markPushed(set: Set, get: () => MorrowState): void {
   const at = new Date().toISOString();
   const userId = get().account?.userId;
@@ -2563,6 +2747,10 @@ function takeBundle(set: (partial: Partial<MorrowState>) => void, s: MorrowState
     practices: b.practices,
     practiceLogs: b.practiceLogs,
     scenes: b.scenes,
+    // A copy made before the portraits travelled has none: rebuilt below for
+    // every goal with a plan, the person's own identity line kept where the
+    // row carries one.
+    portraits: b.portraits,
     letters: b.letters,
     briefs: b.briefs,
     presentPicks: b.presentPicks,
@@ -2574,6 +2762,24 @@ function takeBundle(set: (partial: Partial<MorrowState>) => void, s: MorrowState
     bookTitleFraming: latest?.titleFraming ?? s.bookTitleFraming,
     iWill: latest?.iWill?.trim() ? latest.iWill : s.iWill,
   });
+  // A goal with a plan and no portrait in the copy (made before portraits
+  // travelled): built again from its lines, which are all here.
+  for (const plan of b.plans) {
+    if (b.portraits.some((pt) => pt.goalId === plan.goalId)) continue;
+    const goal = b.goals.find((g) => g.id === plan.goalId);
+    if (!goal || goal.status === 'archived') continue;
+    try {
+      const built = buildPortrait({
+        goal,
+        analyses: quotable(b.analyses.filter((a) => a.goalId === goal.id)),
+        ideal: latestText(b.texts, 'ideal')?.body ?? '',
+        firstName: b.profile.displayName,
+      });
+      useMorrow.setState((st) => ({ portraits: [...st.portraits.filter((pt) => pt.goalId !== goal.id), built] }));
+    } catch {
+      // lines missing: the Goal page offers to write them
+    }
+  }
 }
 
 /** The store as the sync sees it: everything that is theirs, nothing that is the screen's. */
@@ -2581,7 +2787,11 @@ function bundleOf(s: MorrowState): SyncBundle {
   return {
     profile: s.profile,
     goals: s.goals,
-    texts: s.texts,
+    // A sitting the screen flagged stays on the device: the pause says
+    // "nothing was sent anywhere", and it was true only until the next
+    // background push. Appealed ("This was not about me"), it goes up with
+    // the rest.
+    texts: s.texts.filter((t) => t.safetyRisk !== 'crisis'),
     analyses: s.analyses,
     books: s.books,
     plans: s.plans,
@@ -2590,6 +2800,7 @@ function bundleOf(s: MorrowState): SyncBundle {
     practices: s.practices,
     practiceLogs: s.practiceLogs,
     scenes: s.scenes,
+    portraits: s.portraits,
     letters: s.letters,
     briefs: s.briefs,
     presentPicks: s.presentPicks,
@@ -2615,6 +2826,21 @@ function framingLabelFor(id: string | null): string | null {
 }
 
 /** A pause on the screen, stamped with the row that raised it. */
+/** Today's summary, recomputed from the state as it will be. */
+function recomputeToday(s: MorrowState): Record<string, DaySummary> {
+  return recomputeDay(s, livePlans(s), s.evidence, dayOf(new Date(), s.profile.dayBoundaryHour), s.practiceLogs);
+}
+
+/**
+ * A change laid onto the state, with today's tally recomputed from the
+ * result. Letting a goal go, taking one back, archiving a practice: each
+ * changes what today asks for, and the Consistency number on Today read
+ * the old ask until some unrelated action recomputed the day.
+ */
+function withToday<T extends Partial<MorrowState>>(s: MorrowState, change: T): T & { days: Record<string, DaySummary> } {
+  return { ...change, days: recomputeToday({ ...s, ...change }) };
+}
+
 function pauseOn(risk: SafetyRisk, kind: NonNullable<SafetyPause['source']>['kind'] | null, id?: string): SafetyPause {
   return { risk, at: new Date().toISOString(), source: kind && id ? { kind, id } : null };
 }
@@ -2966,10 +3192,18 @@ export function firstRunOf(s: MorrowState): FirstRunStep {
     // A Fifteen with words in it. The clock can close over an empty page,
     // and an empty text counted as the future written.
     hasIdeal: (latestText(s.texts, 'ideal')?.body.trim().length ?? 0) > 0,
-    readBackOpen:
-      s.readBackDraft !== null &&
-      s.readBackDraft.source === (latestText(s.texts, 'ideal')?.body ?? '') &&
-      s.readBackDraft.rows.some((r) => r.state === 'kept'),
+    hasShadow: (latestText(s.texts, 'shadow')?.body.trim().length ?? 0) > 0,
+    // Open while there are kept rows not yet made goals — and open when
+    // it was never reached at all: a kill while "Reading it back…" spun
+    // used to skip the one step that turns their phrases into goals, for
+    // good. A read-back seen and left with nothing kept was their choice.
+    readBackOpen: (() => {
+      const ideal = latestText(s.texts, 'ideal')?.body ?? '';
+      if (!ideal.trim()) return false;
+      const draft = s.readBackDraft;
+      if (draft && draft.source === ideal) return draft.rows.some((r) => r.state === 'kept');
+      return !s.goals.some((g) => g.sourceSpan && ideal.includes(g.sourceSpan)) && s.analyses.length === 0 && !s.bookTitle.trim();
+    })(),
     hasTitle: s.bookTitle.trim().length > 0,
     consented: Boolean(s.profile.consentedAt),
     // Only the lines the plan can use. A line the screen held out of the
@@ -2981,6 +3215,42 @@ export function firstRunOf(s: MorrowState): FirstRunStep {
   });
 }
 export const useFirstRun = () => useMorrow(useShallow(firstRunOf));
+
+/**
+ * The whole store, for a screen that reads most of it — without a render
+ * for every keystroke. `useMorrow((s) => s)` re-rendered on every write,
+ * and the per-keystroke draft saves on a stone or the closing screen
+ * re-rendered Today, Settings and whatever else was mounted beneath. The
+ * drafts, the toast and the clock are read through their own hooks by the
+ * screens that need them; a change to them alone is not a change here.
+ */
+const VOLATILE = new Set<keyof MorrowState>([
+  'drafts',
+  'stoneDraft',
+  'dayDraft',
+  'letterDraft',
+  'memoryDraft',
+  'letGoDrafts',
+  'setupDraft',
+  'interviewDraft',
+  'readBackDraft',
+  'presentDraft',
+  'pastDraft',
+  'toast',
+  'clockDay',
+  'signInNotice',
+  'newVersionReady',
+  'systemDark',
+]);
+function sameButVolatile(a: MorrowState, b: MorrowState): boolean {
+  if (a === b) return true;
+  for (const k of Object.keys(a) as (keyof MorrowState)[]) {
+    if (VOLATILE.has(k)) continue;
+    if (a[k] !== b[k]) return false;
+  }
+  return true;
+}
+export const useSnapshot = (): MorrowState => useStoreWithEqualityFn(useMorrow, (s) => s, sameButVolatile);
 
 /**
  * Whether anything has begun, anywhere — the gate between Welcome and Today.
@@ -3057,3 +3327,7 @@ export const useAnalysesFor = (goalId: string) =>
   useMorrow(useShallow((s: MorrowState) => analysesFor(s, goalId)));
 
 declare const __DEV__: boolean;
+
+// Analytics count nothing until the person has consented (the consent page
+// lists them among what leaves the phone).
+analyticsConsent(() => Boolean(useMorrow.getState().profile.consentedAt));

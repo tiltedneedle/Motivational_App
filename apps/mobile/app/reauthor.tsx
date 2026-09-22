@@ -37,7 +37,7 @@ import {
   framingSet,
 } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, TopBar, UserField, UserText, accent, day, radius } from '@morrow/ui';
-import { activeGoals, entitlementOf, pendingLetGo, useMorrow } from '../src/store';
+import { activeGoals, entitlementOf, pendingLetGo, useMorrow, useSnapshot } from '../src/store';
 
 export default function ReauthorScreen() {
   const router = useRouter();
@@ -52,7 +52,7 @@ export default function ReauthorScreen() {
   const write = useMorrow((s) => s.writeAnalysis);
   const letGoDrafts = useMorrow((s) => s.letGoDrafts);
   const setLetGoDraft = useMorrow((s) => s.setLetGoDraft);
-  const state = useMorrow((s) => s);
+  const state = useSnapshot();
 
   const previous = books[books.length - 1];
   const today = dayOf(new Date(), boundary);
@@ -119,7 +119,7 @@ export default function ReauthorScreen() {
                 ))}
                 {activeGoals(state).length === 0 ? (
                   <Body testID="reauthor-nothing-left" style={{ fontSize: 14, color: day.ink }}>
-                    A Book needs at least one goal. Take one back before sealing.
+                    A Book needs at least one goal. Take one back before finishing it.
                   </Body>
                 ) : null}
                 <InkButton
@@ -169,7 +169,7 @@ export default function ReauthorScreen() {
             </Label>
             <Statement testID="reauthor-title">Time to write it again.</Statement>
             <Body>
-              Every line you sealed, and a choice for each: keep it, or write it again with the old one above. A goal that has done its work can be let go, with one line on what it turned out to be instead.
+              Every line you finished, and a choice for each: keep it, or write it again with the old one above. A goal that has done its work can be let go, with one line on what it turned out to be instead.
             </Body>
           </View>
 
@@ -364,10 +364,10 @@ export default function ReauthorScreen() {
             </Body>
             {nothingLeft ? (
               <Body testID="reauthor-nothing-left" style={{ fontSize: 14, color: day.ink }}>
-                A Book needs at least one goal. Take one back, or name a new one from Today, before sealing.
+                A Book needs at least one goal. Take one back, or name a new one from Today, before finishing it.
               </Body>
             ) : null}
-            <InkButton testID="reauthor-seal" label={`Seal the ${nextEdition} edition`} disabled={nothingLeft} onPress={() => router.push('/seal-book?from=reauthor')} />
+            <InkButton testID="reauthor-seal" label={`Finish the ${nextEdition} edition`} disabled={nothingLeft} onPress={() => router.push('/seal-book?from=reauthor')} />
             <Body style={{ fontSize: 13 }}>
               Nothing is overwritten. The {ordinal(previous.version).toLowerCase()} edition stays as it was, and what changed is the new one’s first page.
             </Body>

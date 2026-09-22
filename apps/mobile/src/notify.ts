@@ -65,6 +65,9 @@ let resolved: Scheduler | null = null;
  * every launch is a stack trace in the console every launch, and the answer
  * will not have changed.
  */
+/** The one Android notification channel. */
+const CHANNEL = 'morrow';
+
 export async function scheduler(): Promise<Scheduler> {
   if (resolved) return resolved;
   if (Platform.OS === 'web') {
@@ -76,6 +79,23 @@ export async function scheduler(): Promise<Scheduler> {
     if (!mod?.scheduleNotificationAsync) {
       resolved = noScheduler;
       return resolved;
+    }
+    // Android delivers through a channel, and with none made every notice
+    // fell into the library's own "Miscellaneous" one: high importance,
+    // vibration, the default sound — a heads-up banner for a morning line
+    // that iOS delivers silently. One channel, quiet, named for the app.
+    if (Platform.OS === 'android' && mod.setNotificationChannelAsync) {
+      try {
+        await mod.setNotificationChannelAsync(CHANNEL, {
+          name: 'Morrow',
+          importance: mod.AndroidImportance?.DEFAULT ?? 3,
+          vibrationPattern: [0],
+          sound: null,
+          enableVibrate: false,
+        });
+      } catch {
+        // the channel is a nicety; the notice still lands
+      }
     }
     resolved = {
       async ids() {
@@ -112,7 +132,7 @@ export async function scheduler(): Promise<Scheduler> {
           // A wall-clock date, in the device's own zone, which is what the
           // planner produces and what "07:30 on the 14th" has to mean whatever
           // zone the person is in that morning.
-          trigger: { type: 'date', date: new Date(notice.at) },
+          trigger: { type: 'date', date: new Date(notice.at), ...(Platform.OS === 'android' ? { channelId: CHANNEL } : {}) },
         });
       },
       async cancel(id) {

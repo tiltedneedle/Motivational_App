@@ -148,7 +148,7 @@ export function buildMemory(input: MemoryInput): MemoryLine[] {
   // ---- the Book
   const latest = books[books.length - 1];
   if (latest) {
-    lines.push({ key: 'book.edition', about: 'the Book', text: `${ordinal(latest.version)} edition of your Book, sealed ${formatDay(sealedOn(latest.sealedAt, profile.dayBoundaryHour))}.` });
+    lines.push({ key: 'book.edition', about: 'the Book', text: `${ordinal(latest.version)} edition of your Book, finished ${formatDay(sealedOn(latest.sealedAt, profile.dayBoundaryHour))}.` });
     if (latest.firstSentence.trim()) lines.push({ key: 'book.first', about: 'the Book', text: 'It opens:', quote: latest.firstSentence.trim() });
     if (latest.iWill.trim()) lines.push({ key: 'book.iwill', about: 'the Book', text: 'It closes:', quote: latest.iWill.trim() });
   }
@@ -166,12 +166,17 @@ export function buildMemory(input: MemoryInput): MemoryLine[] {
       const dow = new Date(`${d.day}T00:00:00Z`).getUTCDay();
       byWeekday.set(dow, (byWeekday.get(dow) ?? 0) + 1);
     }
-    const best = [...byWeekday.entries()].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0];
-    if (best && sealed.length >= 3) lines.push({ key: 'days.weekday', about: 'your days', text: `Your closed days fall most often on a ${WEEKDAYS[best[0]]}.` });
+    // "Most often" only when one day (one word) actually leads: on a tie,
+    // or with every count at one, the line was a fact invented about them.
+    const ranked = [...byWeekday.entries()].sort((a, b) => b[1] - a[1] || a[0] - b[0]);
+    const best = ranked[0];
+    const leads = best && best[1] >= 2 && (ranked[1] === undefined || ranked[1][1] < best[1]);
+    if (best && leads && sealed.length >= 3) lines.push({ key: 'days.weekday', about: 'your days', text: `Your closed days fall most often on a ${WEEKDAYS[best[0]]}.` });
     const words = new Map<string, number>();
     for (const d of sealed) if (d.moodWord?.trim()) words.set(d.moodWord.trim(), (words.get(d.moodWord.trim()) ?? 0) + 1);
-    const word = [...words.entries()].sort((a, b) => b[1] - a[1])[0];
-    if (word) lines.push({ key: 'days.word', about: 'your days', text: 'The word you close a day with most often:', quote: word[0] });
+    const wordsRanked = [...words.entries()].sort((a, b) => b[1] - a[1]);
+    const word = wordsRanked[0];
+    if (word && word[1] >= 2 && (wordsRanked[1] === undefined || wordsRanked[1][1] < word[1])) lines.push({ key: 'days.word', about: 'your days', text: 'The word you close a day with most often:', quote: word[0] });
     const last = [...sealed].reverse().find((d) => d.proof?.trim() && isQuotable(d));
     if (last) lines.push({ key: 'days.proof', about: 'your days', text: `Your last proof, ${formatDay(last.day)}:`, quote: last.proof!.trim() });
   }

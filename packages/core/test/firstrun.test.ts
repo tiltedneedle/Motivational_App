@@ -60,7 +60,10 @@ describe('where somebody is on the first-run path', () => {
     const written = firstRunStep({ goals: [goal('g1', 0)], hasIdeal: true, hasTitle: false, consented: true, analyses: [], books: [], track: 'starter' });
     expect(firstRunHeading(written)).toBe('Your future is written.');
     const stones = firstRunStep({ goals: [goal('g1', 0)], hasIdeal: true, hasTitle: true, consented: true, analyses: [line('g1', 'motives')], books: [], track: 'starter' });
-    expect(firstRunHeading(stones)).toBe('Halfway to your Book.');
+    // One of five is not halfway; the caption under it counts, and the two used to disagree.
+    expect(firstRunHeading(stones)).toBe('Planning each goal.');
+    const three = firstRunStep({ goals: [goal('g1', 0)], hasIdeal: true, hasTitle: true, consented: true, analyses: [line('g1', 'motives'), line('g1', 'impact'), line('g1', 'strategies')], books: [], track: 'starter' });
+    expect(firstRunHeading(three)).toBe('Halfway to your Book.');
     for (const h of [firstRunHeading(named), firstRunHeading(written), firstRunHeading(stones)]) expect(h).not.toMatch(/not finished/);
   });
 

@@ -141,7 +141,7 @@ export default function Runner() {
             label="Stop"
             onPress={() => finish(pauseRun(run))}
           />
-          <Label style={{ color: night.ink3 }}>
+          <Label testID="run-where" style={{ color: night.ink3 }}>
             {run.minimal ? 'The small version' : `Step ${run.stepIndex + 1} of ${total}`}
           </Label>
         </View>

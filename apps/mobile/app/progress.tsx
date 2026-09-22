@@ -25,6 +25,7 @@ import {
   dayOf,
   quotable,
   type AlmanacMark,
+  isReturning,
 } from '@morrow/core';
 import {
   Body,
@@ -42,7 +43,7 @@ import {
   keyboardScroll,
   TopBar,
 } from '@morrow/ui';
-import { useConsistency, useMorrow } from '../src/store';
+import { useConsistency, useSnapshot } from '../src/store';
 
 /** Kinds of evidence, and what each one is called when it is read back. */
 const EVIDENCE_LABEL: Record<string, string> = {
@@ -60,7 +61,7 @@ function monthName(iso: string): string {
 
 export default function Progress() {
   const router = useRouter();
-  const state = useMorrow((s) => s);
+  const state = useSnapshot();
   const score = useConsistency();
   const goBack = () => (router.canGoBack() ? router.back() : router.replace('/today'));
 
@@ -68,6 +69,9 @@ export default function Progress() {
   const year = Number(today.slice(0, 4));
   const days = useMemo(() => Object.values(state.days), [state.days]);
   const returns = useMemo(() => detectReturns(days, today), [days, today]);
+  // The return under way this morning: Today already calls it Return #1,
+  // and this page said "no gaps yet" until something was done.
+  const back = useMemo(() => isReturning(days, today), [days, today]);
   const marks = useMemo(() => almanac(days, year), [days, year]);
 
   // Newest first: the ledger is read from the top, like a diary opened at today.
@@ -119,7 +123,11 @@ export default function Progress() {
           {/* ---- returns */}
           <View style={{ gap: 8 }}>
             <Label>Returns</Label>
-            {returns.length === 0 ? (
+            {returns.length === 0 && back.returning ? (
+              <Body testID="progress-return-today">
+                {`Back today, after ${back.gapDays} days away. Return #1 — it counts from the first thing you do.`}
+              </Body>
+            ) : returns.length === 0 ? (
               <Body>
                 No gaps to come back from yet. When there is one, coming back is the thing that gets counted.
               </Body>

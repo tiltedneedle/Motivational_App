@@ -5,7 +5,7 @@
  * hand on the shoulder; nothing counts until the line is written. Vague
  * Strategies and Monitoring lines earn ONE follow-up and never a second.
  */
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,17 +27,28 @@ import {
   stoneNow,
 } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Pop, ProgressBar, Question, Settle, Statement, Stone, Studio, TextButton, TopBar, UserField, UserText, accent, announce, day, useReducedMotion } from '@morrow/ui';
-import { analysesFor, useGoals, useLatestBook, useMorrow, cardText } from '../src/store';
+import { analysesFor, useGoals, useLatestBook, useMorrow, cardText, useSnapshot } from '../src/store';
 import { useFirstRunStep } from '../src/analytics';
 
 // The plan of analyses per goal lives in core now (`firstRunStep` needs it
 // too); re-exported so the screens that import it from here keep working.
-export { analysisPlan };
 
 /** PRD 7.2: the Full track's soft floor. Polish, never an error. */
 const FULL_FLOOR = 600;
 
-export default function StoneScreen() {
+/**
+ * The gate (PRD §12) stands at every writing door: opened by a link on a
+ * fresh browser, this room went straight to the field and the age
+ * affirmation and the privacy line came days later, from Today's card.
+ * Set-up resumes its draft and dismisses to Today when it is done.
+ */
+export default function StoneScreenGate() {
+  const consented = useMorrow((s) => Boolean(s.profile.consentedAt));
+  if (!consented) return <Redirect href="/setup" />;
+  return <StoneScreen />;
+}
+
+function StoneScreen() {
   const router = useRouter();
   useFirstRunStep('stone');
   const showResources = useMorrow((st) => st.showResources);
@@ -48,11 +59,13 @@ export default function StoneScreen() {
   const draft = useMorrow((s) => s.stoneDraft);
   const saveDraft = useMorrow((s) => s.saveStoneDraft);
   const clearDraft = useMorrow((s) => s.clearStoneDraft);
-  const state = useMorrow((s) => s);
+  const state = useSnapshot();
 
   const goalId = params.goal ?? goals[0]?.id ?? '';
   const goal = goals.find((g) => g.id === goalId);
-  const kind = (params.kind ?? 'motives') as AnalysisKind;
+  // One of the five, or the first: `/stone?kind=wrong` from a mistyped
+  // link crashed on `set.question`.
+  const kind = (ANALYSIS_ORDER as readonly string[]).includes(params.kind ?? '') ? (params.kind as AnalysisKind) : 'motives';
 
   const existing = analysesFor(state, goalId).find((a) => a.kind === kind);
   /**
@@ -222,6 +235,14 @@ export default function StoneScreen() {
       return;
     }
 
+    // A question outside this goal's plan ("Go deeper" on the Goal page),
+    // or any stone opened once the Book exists, is one line written and
+    // then back where it was opened from — not the whole walk to the finish.
+    if (stepIndex < 0 || !onPath) {
+      if (router.canGoBack()) router.back();
+      else router.replace(`/goal?id=${goalId}`);
+      return;
+    }
     const nextKind = plan[stepIndex + 1];
     if (nextKind) {
       router.replace(`/stone?goal=${goalId}&kind=${nextKind}`);
@@ -283,7 +304,7 @@ export default function StoneScreen() {
             {/* Where this goal sits among the others, so "stone 3 of 5" is not the whole count (OFR-06). */}
             <Label testID="stone-goal">{goals.length > 1 ? `${goal.title} · goal ${goals.findIndex((g) => g.id === goalId) + 1} of ${goals.length}` : goal.title}</Label>
             <Label testID="stone-step" style={{ color: accent.coralText, marginTop: 2 }}>
-              {ANALYSIS_TITLES[kind]} · question {stepIndex + 1} of {plan.length}
+              {stepIndex < 0 ? `${ANALYSIS_TITLES[kind]} · one more question` : `${ANALYSIS_TITLES[kind]} · question ${stepIndex + 1} of ${plan.length}`}
             </Label>
           </View>
           <View style={{ flexDirection: 'row', gap: 6 }}>
@@ -352,7 +373,7 @@ export default function StoneScreen() {
 
           {before && latest ? (
             <View testID="stone-before" style={{ gap: 4, backgroundColor: day.surface2, borderRadius: 18, padding: 14 }}>
-              <Label>What you sealed, {formatDay(sealedOn(latest.sealedAt, boundary))}</Label>
+              <Label>What you finished, {formatDay(sealedOn(latest.sealedAt, boundary))}</Label>
               <UserText style={{ fontSize: 17, lineHeight: 26, color: day.ink2 }}>{before.text}</UserText>
               {before.text2 ? (
                 <UserText italic framing={thenHalf(before.text2).framing} style={{ fontSize: 15, lineHeight: 23, color: day.ink3 }}>

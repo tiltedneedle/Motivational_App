@@ -13,7 +13,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { day } from '@morrow/ui';
 import { darkOf, useMorrow } from '../src/store';
 import { StatusBar } from 'expo-status-bar';
-import { signInFromUrl } from '../src/supabase';
+import { hasStoredSession, signInFromUrl } from '../src/supabase';
 import { onNotificationOpened } from '../src/notify';
 import { armAnalytics, track } from '../src/analytics';
 import { SafetyGate } from '../src/components/SafetyGate';
@@ -76,7 +76,22 @@ export default function RootLayout() {
     const sub = AppState.addEventListener('change', (next) => {
       if (next === 'active') void syncNotifications();
     });
-    return () => sub.remove();
+    // And whenever what the notices are planned from changes — a day
+    // closed, a move kept or parked, a plan built or replanned — after a
+    // beat. Reconciled only on the next foreground, the evening line asked
+    // to close a day closed an hour before, and the morning line named a
+    // move parked the night before.
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const unsub = useMorrow.subscribe((s, prev) => {
+      if (s.days === prev.days && s.plans === prev.plans && s.practices === prev.practices && s.goals === prev.goals) return;
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => void syncNotifications(), 1500);
+    });
+    return () => {
+      sub.remove();
+      unsub();
+      if (timer) clearTimeout(timer);
+    };
   }, [hydrated, syncNotifications]);
 
   /**
@@ -181,9 +196,15 @@ export default function RootLayout() {
     // keyed on the account as well, this re-ran the moment someone signed
     // in and pushed an empty device's defaults over the account's profile
     // while the sign-in screen was still pulling it down.
-    void setAccount().then(() => {
+    // Only when there is an account to ask about: the store knows one, or
+    // the auth layer holds a session from a sign-in on a previous launch.
+    // Asked unconditionally, this loaded the account library on every
+    // launch for a person who had never signed in.
+    void (async () => {
+      if (!useMorrow.getState().account && !(await hasStoredSession())) return;
+      await setAccount();
       if (useMorrow.getState().account) void pushToAccount();
-    });
+    })();
     // On 'background', not every non-active state: iOS says 'inactive' and
     // then 'background' on the way out, and pulling down Notification
     // Centre says 'inactive' alone — each of which started a whole push.
@@ -327,6 +348,10 @@ export default function RootLayout() {
           <StorageWarning
             onExport={() => router.push('/settings')}
             onFresh={() => {
+              // Signed out as well, as Settings' delete is: a session kept
+              // through the reset was adopted on the next launch, and the
+              // fresh start pushed itself over the account's Book.
+              void useMorrow.getState().signOutAccount();
               useMorrow.getState().reset();
               useMorrow.setState({ storageError: false });
               router.replace('/');

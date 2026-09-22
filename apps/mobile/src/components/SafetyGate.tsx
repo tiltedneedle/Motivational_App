@@ -17,10 +17,11 @@
  *    the screen behind is hidden from assistive technology explicitly.
  */
 import { useEffect, useRef, useState } from 'react';
-import { Linking, Platform, Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
+import { Platform, Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { HELPLINES, RESOURCES_COPY } from '@morrow/core';
 import { day, night, radius, type as fonts } from '@morrow/ui';
-import { hasRemoteProvider, useMorrow } from '../store';
+import { useMorrow } from '../store';
+import { openHelpline } from '../dial';
 import { track } from '../analytics';
 
 /**
@@ -84,34 +85,12 @@ export function SafetyGate() {
 
   if (!pause) return null;
 
+  // One dialler with Settings (src/dial.ts): a tablet with no dialler, a
+  // locked-down device, a browser that refuses tel: links — say what
+  // happened and leave the number readable.
   const open = async (contact: string) => {
-    const target = contact.includes('.')
-      ? `https://${contact}`
-      : `tel:${contact.replace(/\s/g, '')}`;
-    try {
-      // `canOpenURL` is only asked on iOS. On Android 11 and later it answers
-      // "no" for tel: unless the manifest declares a dial query, so every
-      // helpline read as undiallable on exactly the phones that could dial
-      // it; on the web it is hard-coded to "yes", so it says nothing. Both
-      // of those platforms go straight to `openURL` and treat a rejection as
-      // the failure — which is what Android actually gives when there is no
-      // dialler, and what the note under the numbers already covers on the
-      // web, where a browser with no handler simply does nothing.
-      if (Platform.OS === 'ios') {
-        const handled = await Linking.canOpenURL(target).catch(() => true);
-        if (!handled) {
-          setDialFailed(contact);
-          return;
-        }
-      }
-      await Linking.openURL(target);
-      setDialFailed(null);
-    } catch {
-      // A tablet with no dialler, a locked-down device, a browser that refuses
-      // tel: links. Swallowing this left the person tapping a number that did
-      // nothing at all, so say what happened and leave the number readable.
-      setDialFailed(contact);
-    }
+    const took = await openHelpline(contact);
+    setDialFailed(took ? null : contact);
   };
 
   return (
@@ -236,7 +215,7 @@ export function SafetyGate() {
 
           {asked ? null : (
             <Text style={{ fontFamily: fonts.sans, fontSize: 14, lineHeight: 20, color: day.ink2, marginTop: 18 }}>
-              {hasRemoteProvider ? RESOURCES_COPY.noteRemote : RESOURCES_COPY.note}
+              {pause.remote ? RESOURCES_COPY.noteRemote : RESOURCES_COPY.note}
             </Text>
           )}
         </ScrollView>

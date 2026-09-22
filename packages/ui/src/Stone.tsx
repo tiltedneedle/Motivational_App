@@ -27,7 +27,11 @@ export interface StoneProps {
   style?: ViewStyle;
 }
 
-export function Stone({
+/**
+ * Memoised: every prop is a primitive, and the Almanac draws one of these
+ * per day of the year — re-rendered together on every store write.
+ */
+export const Stone = React.memo(function Stone({
   size,
   domain = 'health',
   gradient,
@@ -120,7 +124,7 @@ export function Stone({
       ) : null}
     </View>
   );
-}
+});
 
 /**
  * A band of light crossing the sphere, once every six seconds, clipped to

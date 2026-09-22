@@ -316,8 +316,11 @@ export function planNotices(input: NoticeInput): Notice[] {
       at: at(input.day, wakeAt),
       title: input.reauthorDay ? `${input.reauthorDay}. This morning` : 'This morning',
       route: '/today',
-      body: wakeLine(endSentence(`Start with ${lower(first.title)}`)),
-      quotes: [first.title],
+      // Quoted, as the brief prints it: grafted onto "Start with" and
+      // lowercased it read "start with on payday, £250 goes to the rent
+      // account", their sentence altered in the app's voice.
+      body: wakeLine(endSentence(`Start with “${first.title.trim()}”`)),
+      quotes: [first.title.trim()],
     });
   }
 

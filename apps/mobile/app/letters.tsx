@@ -54,8 +54,18 @@ export default function Letters() {
   const markLetterRead = useMorrow((s) => s.markLetterRead);
   const boundary = useMorrow((s) => s.profile.dayBoundaryHour);
 
-  const [draft, setDraft] = useState('');
-  const [days, setDays] = useState(WHEN[0]!.days);
+  // Seeded from the store's draft, and written back as it is typed: the one
+  // free-text room whose words lived only in screen state, so Back or a
+  // phone call took three paragraphs with it.
+  const saved = useMorrow((s) => s.letterDraft);
+  const saveLetterDraft = useMorrow((s) => s.saveLetterDraft);
+  const [draft, setDraft] = useState(() => saved?.body ?? '');
+  const [days, setDays] = useState(() => saved?.days ?? WHEN[0]!.days);
+  useEffect(() => {
+    if (!draft.trim() && !saved) return;
+    saveLetterDraft(draft.trim() ? { body: draft, days } : null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft, days]);
   const [problem, setProblem] = useState<string | null>(null);
   const [sent, setSent] = useState<string | null>(null);
 
@@ -84,6 +94,7 @@ export default function Letters() {
     }
     setProblem(null);
     setDraft('');
+    saveLetterDraft(null);
     setSent(out.letter.deliverAt);
   };
 

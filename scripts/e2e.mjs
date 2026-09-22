@@ -92,12 +92,12 @@ async function main() {
     'C:/Users/HP/AppData/Local/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-win64/chrome-headless-shell.exe',
   ].filter(Boolean);
   let browser = null;
-  for (const executablePath of [...fallbacks, undefined]) {
+  for (const executablePath of [explicit, undefined, ...fallbacks.filter((x) => x !== explicit)]) {
     try {
       browser = await chromium.launch(executablePath ? { executablePath } : {});
       break;
     } catch (err) {
-      if (executablePath === undefined) throw err;
+      if (executablePath === fallbacks[fallbacks.length - 1]) throw err;
     }
   }
   if (!browser) throw new Error('no chromium available');
@@ -179,6 +179,10 @@ async function main() {
     await snap(id);
   };
   const seen = async (id) => (await page.locator(`[data-testid="${id}"]`).count()) > 0;
+  // A screen behind a route chunk that has not been fetched yet (async
+  // routes: the first visit to the writing room) arrives a beat after the
+  // tap; this waits for it rather than reading the gap as its absence.
+  const appears = (id, ms = 4000) => page.locator(`[data-testid="${id}"]`).first().waitFor({ state: 'attached', timeout: ms }).then(() => true, () => false);
   const text = async (id) => (await page.locator(`[data-testid="${id}"]`).first().innerText()).trim();
 
   /**
@@ -391,7 +395,7 @@ async function main() {
 
     // ---- the Fifteen
     await tap('authoring-begin');
-    check('doorway', await seen('screen-write-doorway'));
+    check('doorway', await appears('screen-write-doorway'));
     await tap('write-begin');
     check('writing room', await seen('screen-write'));
 
@@ -625,7 +629,7 @@ async function main() {
     await page.clock.runFor(1500);
     await page.waitForTimeout(600);
     check('the sign-in screen opens cold', await seen('screen-signin'));
-    check('and says plainly when there is no account service', (await text('signin-heading')).toLowerCase().includes('no account service') || (await text('signin-heading')).toLowerCase().includes('sign in'), await text('signin-heading'));
+    check('and says plainly when there is no account service', (await text('signin-line')).toLowerCase().includes('no account service'), await text('signin-line'));
     check('with no Google button in a build without the id', !(await seen('signin-google')));
     check('and the privacy details a tap away', await seen('signin-privacy'));
     await tap('signin-privacy');
@@ -1102,7 +1106,7 @@ async function main() {
       check('and the stretch it was still hearing is kept, not lost', (await spoken()).endsWith('this time. hello how are you'), JSON.stringify((await spoken()).slice(-40)));
       await page.evaluate(() => window.__hear([['Sam is asleep.', true]]));
       await page.waitForTimeout(200);
-      check('and what comes next is added after it, not over it', (await spoken()).endsWith('hello how are you\nSam is asleep.'), JSON.stringify((await spoken()).slice(-50)));
+      check('and what comes next is added after it, not over it', (await spoken()).endsWith('hello how are you Sam is asleep.'), JSON.stringify((await spoken()).slice(-50)));
       await tap('write-hold');
       await page.waitForTimeout(400);
       check('a pause of the clock is a pause of the microphone', !(await lastStarted()) && (await text('write-mic')).toLowerCase() === 'paused', await text('write-mic'));
@@ -1114,11 +1118,23 @@ async function main() {
       await page.evaluate(() => window.__hear([['The kettle is on.', true]]));
       await page.waitForTimeout(200);
       check('with nothing said before the pause lost', (await spoken()).endsWith('Sam is asleep. The kettle is on.'), await spoken());
-      // Breaths without full stops go on their own lines; sentences run on.
+      // Phrases run on as prose, a space between them, full stop or not:
+      // each breath on its own line read as the room rewriting what was
+      // said. A real pause — a few seconds with nothing heard — starts a line.
       await page.evaluate(() => window.__hear([['The kettle is on.', true], ['no full stop here', true]]));
       await page.evaluate(() => window.__hear([['The kettle is on.', true], ['no full stop here', true], ['and another breath', true]]));
       await page.waitForTimeout(200);
-      check('a breath with no full stop starts its own line', (await spoken()).endsWith('The kettle is on. no full stop here\nand another breath'), JSON.stringify((await spoken()).slice(-60)));
+      check('a breath with no full stop runs on, a space between', (await spoken()).endsWith('The kettle is on. no full stop here and another breath'), JSON.stringify((await spoken()).slice(-60)));
+      // Android's shape: what was finished, sent again at the head of the next interim.
+      await page.evaluate(() => window.__hear([['The kettle is on.', true], ['no full stop here', true], ['and another breath', true], ['and another breath then more', false]]));
+      await page.waitForTimeout(200);
+      check('a stretch sent again with more on the end is not written twice', (await spoken()).endsWith('no full stop here and another breath then more'), JSON.stringify((await spoken()).slice(-60)));
+      await page.evaluate(() => window.__hear([['The kettle is on.', true], ['no full stop here', true], ['and another breath', true], ['and another breath then more', true]]));
+      await page.clock.runFor(6000);
+      await page.waitForTimeout(100);
+      await page.evaluate(() => window.__hear([['The kettle is on.', true], ['no full stop here', true], ['and another breath', true], ['and another breath then more', true], ['after a pause', true]]));
+      await page.waitForTimeout(200);
+      check('a real pause starts a line', (await spoken()).endsWith('then more\nafter a pause'), JSON.stringify((await spoken()).slice(-60)));
       await tap('write-mic');
       await page.waitForTimeout(400);
       check('the Listening chip switches the microphone off', !(await lastStarted()) && (await text('write-mic')).toLowerCase() === 'listen again', await text('write-mic'));
@@ -1458,6 +1474,19 @@ async function main() {
           await page.waitForTimeout(400);
           check('a step whose time runs out waits for the person', (await text('run-step')) === before);
 
+          // Stop after the first step: the step done is kept, and opening
+          // the practice again starts on the next one, not on step one.
+          const total = Number((await text('run-where')).match(/of (\d+)/)?.[1] ?? '0');
+          if (total > 1) {
+            await tap('run-next');
+            await page.waitForTimeout(250);
+            await tap('run-stop');
+            await page.waitForTimeout(600);
+            check('Stop leaves the runner for Today', await seen('screen-today'));
+            await stone.click();
+            await page.waitForTimeout(600);
+            check('and the run resumes on the step after the one done', (await text('run-where')).startsWith('Step 2 of'), await text('run-where'));
+          }
           // Walk it to the end.
           for (let i = 0; i < 6; i++) {
             if (await seen('run-close')) break;
@@ -3216,6 +3245,57 @@ async function main() {
     await page.clock.runFor(1500);
     await page.waitForTimeout(700);
     check('once through, never asked again', (await seen('screen-present')) && !(await seen('screen-consent')));
+
+    // ---- Sunday: the reading is a card on the day it belongs to, and none other
+    {
+      const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('morrow-v1') ?? '{}'));
+      if (stored.state?.books?.length) {
+        await page.clock.setSystemTime(new Date('2026-09-20T11:00:00'));
+        await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
+        await page.clock.runFor(1500);
+        await page.waitForTimeout(800);
+        check('on a Sunday, Today offers the reading', await seen('today-sunday'));
+        if (await seen('today-sunday')) {
+          await tap('today-sunday');
+          check('and the card opens the reading', await appears('screen-reading'));
+          await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
+        }
+        await page.clock.setSystemTime(new Date('2026-09-21T11:00:00'));
+        await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
+        await page.clock.runFor(1500);
+        await page.waitForTimeout(800);
+        check('and not on the Monday', !(await seen('today-sunday')));
+      }
+    }
+
+    // ---- the storage banner: an unreadable store is quarantined, offered back, and Start again writes again
+    {
+      const stored = await page.evaluate(() => localStorage.getItem('morrow-v1') ?? '');
+      if (stored.length > 400) {
+        await page.evaluate(() => localStorage.setItem('morrow-v1', (localStorage.getItem('morrow-v1') ?? '').slice(0, 400)));
+        await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
+        await page.clock.runFor(1500);
+        await page.waitForTimeout(900);
+        check('a store that will not read back raises the banner', await seen('storage-warning'));
+        const quarantined = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('morrow-unreadable-')).length);
+        check('and the bytes are quarantined, once', quarantined === 1, `${quarantined} copies`);
+        await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
+        await page.clock.runFor(1500);
+        await page.waitForTimeout(600);
+        const again = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('morrow-unreadable-')).length);
+        check('a second launch does not quarantine the same bytes again', again === 1, `${again} copies`);
+        if (await seen('storage-warning-fresh')) {
+          await tap('storage-warning-fresh');
+          await tap('storage-warning-fresh-confirm');
+          await page.waitForTimeout(900);
+          check('Start again clears the banner', !(await seen('storage-warning')));
+          await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
+          await page.clock.runFor(1500);
+          await page.waitForTimeout(700);
+          check('and the app writes again from a fresh store', !(await seen('storage-warning')) && (await seen('screen-today')));
+        }
+      }
+    }
 
     check('no uncaught page errors', pageErrors.length === 0, pageErrors.join(' | '));
   } catch (err) {

@@ -5,7 +5,7 @@
  * a kill or a call mid-line loses nothing, and Continue keeps it as a
  * `warmup` text and opens the mirror.
  */
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { AREAS, screen, startWriting, warmupPrompt, wordCount, type DomainId } from '@morrow/core';
@@ -17,7 +17,19 @@ import { usePlatformBack } from '../src/platform-back';
 
 const MIN_WORDS = 3;
 
-export default function FirstWrite() {
+/**
+ * The gate (PRD §12) stands at every writing door: opened by a link on a
+ * fresh browser, this room went straight to the field and the age
+ * affirmation and the privacy line came days later, from Today's card.
+ * Set-up resumes its draft and dismisses to Today when it is done.
+ */
+export default function FirstWriteGate() {
+  const consented = useMorrow((s) => Boolean(s.profile.consentedAt));
+  if (!consented) return <Redirect href="/setup" />;
+  return <FirstWrite />;
+}
+
+function FirstWrite() {
   const router = useRouter();
   useFirstRunStep('first-write');
   const reduced = useReducedMotion();

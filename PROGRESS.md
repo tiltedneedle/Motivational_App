@@ -141,11 +141,17 @@ by hand before it was acted on. What was confirmed and fixed:
 - [x] 1. packages/core: domain model, stores (zustand + persist), engines
 - [x] 2. packages/ui: Studio tokens, Stone/Socket/Ring, HoldBar, Chip, Field, Sheet, text primitives
 - [x] 3. apps/mobile screens (all 16 routes)
-- [x] 4. Tests, as of 2026-09-22 (the completeness pass): 515 core + 61 ui + 10 storage unit
-      tests, the eval harness (687 checks; safety recall 77/78, 0 ordinary lines flagged), 73
-      real-Postgres checks, **558 Playwright e2e checks**, 94 cold-open checks, 8 service-worker
-      checks, 8 motion checks, axe 0 across 42 screens — all green in `pnpm verify`, and the
-      same subset now runs in CI (`.github/workflows/verify.yml`) on every push.
+- [x] 4. Tests, as of 2026-09-22 (the third turn): 517 core + 61 ui + 27 app unit tests
+      (storage 11, dictation 8, the two-device account decision 8), the eval harness (687
+      checks; safety recall 77/78, 0 ordinary lines flagged), 75 real-Postgres checks,
+      **565 Playwright e2e checks**, 94 cold-open checks, 9 service-worker checks, 8 motion
+      checks, axe 0 across 42 screens (each one now proving it opened the screen it names)
+      — all green in `pnpm verify`, and the same subset runs in CI
+      (`.github/workflows/verify.yml`) on every push. The web build's first load is 1729 KB
+      raw / 378 KB brotli (was 2255 / 455 before zod left the types), 54 chunks on demand.
+      Was, as of 2026-09-22 (the completeness pass): 515 core + 61 ui + 10 storage unit
+      tests, the eval harness (687), 73 real-Postgres checks, 558 e2e, 94 cold-open, 8
+      service-worker, 8 motion, axe 0 across 42 screens.
       Was, as of 2026-09-21 (the rebuild): 508 core + 48 ui + 8 storage unit tests, the eval
       harness (687 checks), 71 real-Postgres checks, 558 Playwright e2e checks, 94 cold-open
       checks, 8 service-worker checks, 8 motion checks, axe 0 across 42 screens.
@@ -720,6 +726,98 @@ this list. Tick as done; on resume continue from the first unticked item.
       the session encrypted at rest on a phone (expo-secure-store key + AES-CTR
       ciphertext in AsyncStorage, plain storage on the web, a fallback when the
       native modules are absent); metro's inert singleton pin removed.
+- [x] The third turn (2026-09-22, evening): a fresh nine-lens sweep with lenses framed
+      differently from the first (one person's month day by day, every string a person
+      reads, every store action, what the app says back, the code only a phone runs,
+      the tests' blind spots, performance, what leaves the phone, every screen in
+      every state) — 106 findings, ~90 distinct, all confirmed by hand and fixed except
+      the ones listed under Next steps 0b. The owner also reported the voice room
+      writing "hello" and then rewriting the next phrase over it, and asked for the
+      motion and the buttons to be finished. What changed:
+      - **Dictation.** The browser's results list is read as stretches with a re-sent
+        total (Android) or a growing single result (Safari) reduced to what is new in
+        it (`sessionStretches`, unit-tested against all three shapes); phrases run on
+        as prose, a space between, and only a real pause (five seconds heard nothing)
+        starts a line; on a phone, a final no longer restarts the recogniser (it
+        clipped the next sentence on iOS 18), a delayed retry is not doubled by the
+        `end` behind an `error`, `speech-timeout` is silence and `interrupted` a pause.
+      - **The plan through the season.** `buildPlan` dates the first fortnight (§7.4),
+        and `carryForward` rolls each finished week into the next in the person's own
+        moves (run on every open and after a move closes); the replan proposes the
+        same moves again when nothing is dated ahead; Today's done card names the real
+        next date. Before this a twelve-week season had nothing after day five.
+      - **The store.** Every action that changes what today asks for recomputes the
+        day (let go, take back, archive a practice, add a move, replan); an unchanged
+        stone or proof keeps its verdict (an appeal was re-raised by Back); a move
+        parked before its own day is parked today; the ledger records the small
+        version when it was in force; a full run outranks the two-minute one only
+        when finished; `reset` mints a new device id (a wiped phone under the old name
+        pushed itself over the Book without the choice); the choice clears only when
+        the forced push lands; the brief is rewritten once its move is kept; the
+        first-return letter is written on the morning of the return; the "I will" line
+        is screened (the most-quoted line in the product never was), refused with the
+        card and let through on appeal; the letter to the future has a draft; the
+        read-back stays open until it has been seen; portraits travel with the Book
+        (migration 0015); a push with nothing changed sends nothing; notices are
+        reconciled when the days or plans change, not only on foreground.
+      - **Closed accounts** (migration 0014): no push clears the soft delete (the
+        trigger refuses it from a user session); a sign-in inside the week is told
+        and offered "Reopen the account" or "Leave it closed"; an account that never
+        pushed a row is still swept.
+      - **What the app says back.** The coach's "I'm stuck" says what happens (no
+        claimed shrink of a move with no small version, or of no move); the brief
+        never says "0 of 0 moves", "up from 0" or "quiet day" for a day with no row;
+        the wake notice quotes the move rather than lowercasing it; the letter
+        composer's fallback obeys its own forbidden list (letters were refused for
+        good); the memory says "most often" only when one leads; "a week ago" not
+        "last Sunday"; Celebrate has no January and no "0 closed days"; "From your
+        words" and the closing screen's rule read what the coach reads (quotable, not
+        forgotten, goals in play; obstacles as the whole if-then).
+      - **Copy that was false.** Set-up's privacy line and the consent page say what
+        the code does (a sitting goes once to be read back and checked; analytics
+        listed when keyed, and sent only after consent); a crisis-flagged sitting is
+        kept off the account so "nothing was sent anywhere" holds; the email link is
+        opened "in this same browser" on the web; the paywall lists only what Pro
+        gates; the Book's exports say Finished / Starter / your future; "when you
+        write" shapes tonight/this morning/today; the counts (questions, halfway, five
+        steps); the coach is "software, not a person"; "1 word"; Seal/Blueprint/sealed
+        gone from every screen; the crisis card says who read the text; Settings'
+        signed-out line names the copy the account still holds; the exports leave the
+        account id, email and device id out.
+      - **A phone.** The session store's SecureStore key had a colon and every sign-in
+        would have failed; one quiet Android notification channel; WRITE_EXTERNAL_STORAGE
+        unblocked below 13 and no READ_MEDIA_*; the image picker's purpose strings;
+        one dialler for the helplines (Android's `canOpenURL` lie); Apple's cancel is
+        not "not available"; the edge swipe is off while a step can be undone.
+      - **The tests.** The a11y pass fails a route that did not open (set-up, the
+        first line and the mirror are seeded from where a person meets them); the
+        account round-trip's build guard reads every chunk; Playwright's own browser
+        before the machine's old shell; `sw.js` stamped per build so an open tab learns
+        of a deploy; `check-functions` parses `_shared` and requires the rate limit
+        where a model is spent; `check-sql` reads every migration; the motion check's
+        fresh Interview is fresh; the sign-in line has its own id; unit tests for the
+        two-device decision (8, against a scripted account), the dictation shapes (8)
+        and a store too big for one Android row.
+      - **Performance.** The persisted store is written as parts past half a million
+        characters (Android's 2 MB row window latched the app shut for good) and, on a
+        phone, coalesced 300 ms after the last keystroke; ten screens subscribe through
+        `useSnapshot` (a change to a draft, the toast or the clock alone is not a
+        render); `Stone` memoised and `MoveStone`'s gesture made once; zod is out of
+        the first load (`types.ts` is type-only, the schemas in `schemas.ts`); the
+        account library loads only when there is an account or a stored session;
+        the stone route is its own chunk again.
+      - **The shell.** Chips are keys with an edge they press into and a border that
+        reads on the ground; the tertiary pill has a hairline; the tappable panels on
+        Today are `TapCard`s with an arrow, a lift and a press; every `Screen`'s parts
+        rise in sequence; the reading's page turns slide; the doorway names where the
+        sound goes; Progress agrees with Today on a return morning; the primer says
+        which notes quote the Book.
+      - **The doors.** A written line can be rewritten from the Goal page any day, and
+        a changed line offers "Finish a new edition"; "Build the plan" goes through
+        the store's own gate and says a refusal; "Write this one" comes back to the
+        Goal page; `/stone?kind=wrong` is the first question; the Full track's other
+        road is a step of the path; earlier editions open from the Book; the four
+        Future rooms are behind the consent gate by URL; the first line is shown whole.
 - [x] Then: `pnpm verify` green (2026-09-22), the journey re-walked (297 frames, read),
       deployed to the live address; the schema (0012, 0013), the auth config and the
       functions pushed to the live project. The lenses' 103 findings: all confirmed by
@@ -2988,6 +3086,24 @@ first run, the home with its loop, the sign-in with Google, the five-lens review
 folded in, 558 end-to-end checks, `pnpm verify` green. What remains needs either
 hardware, a credential, or a product call — plus the items the rebuild opened:
 
+0b. **After the third turn (2026-09-22, evening)** — what was seen and left, on
+   purpose or for the next turn. Left: (a) a delta push (every backgrounding still
+   sends every row of every table; a push with nothing changed now sends nothing,
+   which removes the common case; the fix is a dirty set per table); (b) the
+   Almanac as one SVG per month with shared gradients (366 memoised Stones today;
+   fine on a laptop, worth doing before a low-end Android build); (c) the e2e
+   sections still missing — the Sunday card, the keep notice, the storage banner's
+   Start again, the runner's Stop/resume, the seal screen with a goal missing its
+   line — and a pinned check count; the a11y pass over the account UI (it needs a
+   configured build); (d) `freezeOnBlur` on the Stack (screens beneath still render;
+   `useSnapshot` removed the keystroke re-renders, which was the cost that
+   mattered); (e) the goal chip's "flight" to the Goal header (PRD 8.5) — the header
+   settles in instead; (f) the migrations 0014 and 0015 and the delete-account
+   function are written and pass the Postgres test but are **not yet applied to the
+   live project** (`pnpm db:push` and a function deploy, with the owner's CLI login);
+   (g) on a real phone: the voice room on iOS 18 and Android 12 with the new stretch
+   handling, the notification channel, the media-library save on Android 10–12, the
+   session store's first sign-in, the edge swipe held while a step can be undone.
 0a. **After the completeness pass (2026-09-22)** — what a person or a device can
    still show that this machine cannot: (a) the account round trip on two real
    devices (phone + laptop): sign in on both, write on each, and watch the "another

@@ -119,8 +119,26 @@ export function useFirstRunStep(step: Extract<Event, { name: 'first_run_step' }>
   }, [step]);
 }
 
+/** Whether the person has consented; asked of the store without importing it (the store imports this file). */
+let consented: () => boolean = () => false;
+export function analyticsConsent(check: () => boolean): void {
+  consented = check;
+}
+
+/** The device's analytics id, gone — with "Delete everything", so the person before and after are not one line. */
+export async function clearAnalyticsId(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(ID_KEY);
+  } catch {
+    // nothing to remove
+  }
+}
+
 export function track(event: Event): void {
   if (!hasAnalytics) return;
+  // Nothing before consent: the consent page lists what leaves the phone,
+  // and counts sent from the welcome screen were not on the list yet.
+  if (!consented()) return;
   const { name, ...props } = event;
   queue.push({
     event: name,

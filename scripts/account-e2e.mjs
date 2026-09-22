@@ -27,7 +27,7 @@
  */
 import { chromium } from 'playwright';
 import { createServer } from 'node:http';
-import { readFile, stat } from 'node:fs/promises';
+import { readFile, stat, readdir } from 'node:fs/promises';
 import { join, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -56,9 +56,19 @@ if (!URL_ || !ANON || !SERVICE) {
 const REF = new URL(URL_).hostname.split('.')[0];
 
 // The bundle must be the configured one, or the app has no account service.
-const entry = (await readFile(join(DIST, 'index.html'), 'utf8')).match(/\/_expo\/static\/js\/web\/entry-[a-z0-9]+\.js/)?.[0];
-const bundle = entry ? await readFile(join(DIST, entry), 'utf8') : '';
-if (!bundle.includes(REF)) {
+// With async routes the URL is inlined in the shared chunk, not the entry;
+// every chunk is searched.
+const jsDir = join(DIST, '_expo', 'static', 'js', 'web');
+const chunks = await readdir(jsDir).catch(() => []);
+let configured = false;
+for (const f of chunks) {
+  if (!f.endsWith('.js')) continue;
+  if ((await readFile(join(jsDir, f), 'utf8')).includes(REF)) {
+    configured = true;
+    break;
+  }
+}
+if (!configured) {
   console.error(`apps/mobile/dist is not built for ${REF}: run \`pnpm build:web\` (not the offline one) first`);
   process.exit(2);
 }
@@ -150,9 +160,18 @@ try {
     ];
     up.pastListed = true;
   }
-  browser = await chromium.launch({
-    executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH ?? 'C:/Users/HP/AppData/Local/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-win64/chrome-headless-shell.exe',
-  });
+  // Playwright's own browser first; the machine's older shell only as a
+  // fallback, so any other machine runs this at all.
+  for (const executablePath of [process.env.PLAYWRIGHT_CHROMIUM_PATH, undefined, 'C:/Users/HP/AppData/Local/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-win64/chrome-headless-shell.exe']) {
+    if (executablePath === undefined && process.env.PLAYWRIGHT_CHROMIUM_PATH) continue;
+    try {
+      browser = await chromium.launch(executablePath ? { executablePath } : {});
+      break;
+    } catch {
+      // next
+    }
+  }
+  if (!browser) throw new Error('no Chromium: run `npx playwright install chromium`');
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const page = await context.newPage();
   const pageErrors = [];

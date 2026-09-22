@@ -33,8 +33,8 @@ import type {
   PastEpochRow,
   PastEventRow,
   MemoryEdit,
+  Portrait,
 } from '../types';
-import { MemoryEdit as MemoryEditSchema } from '../types';
 import type { PracticeLog } from './practices';
 
 /** Everything the store persists that belongs to the person's account. */
@@ -50,6 +50,8 @@ export interface SyncBundle {
   practices: Practice[];
   practiceLogs: PracticeLog[];
   scenes: Scene[];
+  /** The Portraits, one per goal with a plan: derived, except for an identity line the person wrote. */
+  portraits: Portrait[];
   letters: Letter[];
   briefs: Brief[];
   presentPicks: PresentPickRow[];
@@ -96,6 +98,7 @@ export const TABLE_ORDER = [
   'evidence',
   'day_summaries',
   'scenes',
+  'portraits',
   'letters',
   'briefs',
   'present_picks',
@@ -172,9 +175,11 @@ export function toRows(bundle: SyncBundle, userId: string, timezone: string, dev
           // Which device copied, and when: the next device to push reads
           // these and stops when they are newer than its own last copy.
           ...(device ? { pushed_by: device.id, pushed_at: device.at } : {}),
-          // A push from a signed-in device is a person still here: a soft
-          // delete inside its week is undone by it.
-          deleted_at: null,
+          // `deleted_at` is not sent. It used to be sent as null — "a push
+          // from a signed-in device is a person still here" — and a second
+          // phone with an hour of token left, or a sign-in inside the week,
+          // reopened an account the person had closed without a word to
+          // them. Reopening is the person's own tap, through the function.
           consented_at: p.consentedAt,
           // Not sent. The entitlement is the billing webhook's column, and the
           // server refuses a user session that tries to change it — a push
@@ -482,6 +487,17 @@ export function toRows(bundle: SyncBundle, userId: string, timezone: string, dev
       })),
     },
     {
+      table: 'portraits',
+      rows: bundle.portraits
+        .filter((pt) => goalIds.has(pt.goalId))
+        .map((pt) => ({
+          id: `pt_${pt.goalId}`,
+          user_id: userId,
+          goal_id: pt.goalId,
+          document: pt,
+        })),
+    },
+    {
       table: 'scenes',
       rows: bundle.scenes.map((sc) => ({
         id: sc.id,
@@ -769,6 +785,12 @@ export function fromRows(tables: Partial<Record<(typeof TABLE_ORDER)[number], Ro
     completedAt: strOrNull(r.completed_at),
   }));
 
+  // The document as it was sent, when it is one: a row from a build that
+  // wrote something else is left out rather than trusted.
+  const portraits: Portrait[] = t('portraits')
+    .map((r) => (r.document && typeof r.document === 'object' ? (r.document as Portrait) : null))
+    .filter((pt): pt is Portrait => pt !== null && typeof pt.goalId === 'string' && typeof pt.identityLine === 'string' && Array.isArray(pt.firstMoves));
+
   const scenes: Scene[] = t('scenes').map((r) => ({
     id: str(r.id),
     goalId: str(r.goal_id),
@@ -862,6 +884,7 @@ export function fromRows(tables: Partial<Record<(typeof TABLE_ORDER)[number], Ro
     practices,
     practiceLogs,
     scenes,
+    portraits,
     letters,
     briefs,
     presentPicks,
@@ -876,12 +899,23 @@ export function fromRows(tables: Partial<Record<(typeof TABLE_ORDER)[number], Ro
   };
 }
 
+/**
+ * The edits column, row by row, kept only where the row has the shape.
+ * Checked by hand rather than with the zod schema: this module rides in
+ * the app's first load, and the schema was the one thing that kept the
+ * whole validator there.
+ */
 function memoryEditsOf(raw: unknown): MemoryEdit[] {
   if (!Array.isArray(raw)) return [];
   const out: MemoryEdit[] = [];
   for (const e of raw) {
-    const parsed = MemoryEditSchema.safeParse(e);
-    if (parsed.success) out.push(parsed.data);
+    if (!e || typeof e !== 'object') continue;
+    const row = e as Record<string, unknown>;
+    if (typeof row.key !== 'string' || typeof row.editedAt !== 'string') continue;
+    if (!(row.text === null || typeof row.text === 'string')) continue;
+    const risk = row.risk;
+    if (risk !== undefined && risk !== 'none' && risk !== 'concern' && risk !== 'crisis') continue;
+    out.push({ key: row.key, text: row.text, editedAt: row.editedAt, ...(risk !== undefined ? { risk } : {}) });
   }
   return out;
 }

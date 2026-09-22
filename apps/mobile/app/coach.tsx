@@ -22,7 +22,7 @@ import {
   type CoachReply,
 } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Quoted, Rule, Statement, Stone, Studio, TabBar, Toast, TopBar, UserField, UserText, accent, day, type as fonts } from '@morrow/ui';
-import { coachAnalyses, useConsistency, useFirstRun, useLatestBook, useMorrow, useTodaysMoves } from '../src/store';
+import { coachAnalyses, useConsistency, useFirstRun, useLatestBook, useMorrow, useTodaysMoves, useSnapshot } from '../src/store';
 import { useGoTab } from '../src/tabs';
 import { dictation } from '../src/dictation';
 
@@ -30,7 +30,7 @@ export default function Coach() {
   const router = useRouter();
   const goTab = useGoTab('coach');
   const showResources = useMorrow((st) => st.showResources);
-  const state = useMorrow((s) => s);
+  const state = useSnapshot();
   const book = useLatestBook();
   const firstRun = useFirstRun();
   const moves = useTodaysMoves();
@@ -142,6 +142,7 @@ export default function Coach() {
     // twice: "12 sealed days and 12 returns".
     returns: detectReturns(days, today).length,
     persona: state.profile.persona,
+    firstTurn: thread.length === 0,
   };
 
   const say = (chip: ChipId, label: string) => {
@@ -228,7 +229,7 @@ export default function Coach() {
         */}
         {thread.length === 0 ? (
           <Body testID="coach-is-ai" style={{ fontSize: 13, color: day.ink2, paddingTop: 10 }}>
-            Morrow’s coach is an AI. It asks and it quotes you. It never writes a goal, a plan line or a sentence of
+            Morrow’s coach is software, not a person. It asks and it quotes you. It never writes a goal, a plan line or a sentence of
             your Book.
           </Body>
         ) : null}
@@ -282,6 +283,10 @@ export default function Coach() {
                     {intended === firstMove.id ? (
                       <Body testID="intention-set" style={{ fontSize: 13 }}>
                         Said today. Nothing is counting; it is on Today when you want it.
+                      </Body>
+                    ) : firstMove.status !== 'todo' ? (
+                      <Body testID="intention-closed" style={{ fontSize: 13 }}>
+                        {firstMove.status === 'done' ? 'Done, and in the ledger.' : 'Parked for today.'}
                       </Body>
                     ) : (
                       <Chip

@@ -14,12 +14,17 @@
  *
  * Run: node scripts/check-sql.mjs
  */
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
+import { join } from 'node:path';
 
-const FILE = 'supabase/migrations/0001_init.sql';
+// Every migration, in order: tables and pointers added after 0001 were
+// outside every guard here.
+const dir = 'supabase/migrations';
+const files = (await readdir(dir)).filter((f) => /^\d+_.*\.sql$/.test(f)).sort();
 // Normalised to LF. This tree is checked out with CRLF, and a check that
 // matches across a line break is a check that quietly never matches on it.
-const sql = (await readFile(FILE, 'utf8')).replace(/\r\n/g, '\n');
+let sql = '';
+for (const f of files) sql += (await readFile(join(dir, f), 'utf8')).replace(/\r\n/g, '\n') + '\n';
 const lower = sql.toLowerCase();
 
 /**
@@ -55,7 +60,11 @@ const rls = new Set([...sql.matchAll(/alter table public\.(\w+)\s+enable row lev
 check(`every table has row level security (${tables.length} tables)`, tables.every((t) => rls.has(t)), tables.filter((t) => !rls.has(t)).join(', '));
 
 const policied = new Set([...sql.matchAll(/create policy "[^"]+" on public\.(\w+)/g)].map((m) => m[1]));
-check('every table has at least one policy', tables.every((t) => policied.has(t)), tables.filter((t) => !policied.has(t)).join(', '));
+// A table closed to every user on purpose (the rate limit, touched only by
+// the functions with the service role) has no policy and needs none: RLS
+// with no policy denies everything, and the grant is revoked as well.
+const closed = new Set([...sql.matchAll(/revoke all on public\.(\w+) from anon, authenticated/g)].map((m) => m[1]));
+check('every table has at least one policy, or is closed to users outright', tables.every((t) => policied.has(t) || closed.has(t)), tables.filter((t) => !policied.has(t) && !closed.has(t)).join(', '));
 
 // ---- the authorship guards, which are the product's central promise
 

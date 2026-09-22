@@ -49,6 +49,24 @@ let client: Promise<SupabaseClient | null> | null = null;
  * app's own scheme handles its links, and a web tab's URL is not a place to
  * look for a session.
  */
+/**
+ * Whether a session is on the device, answered without loading the account
+ * library: the auth client's own storage key, looked for in the storage it
+ * keeps it in. The layout used to load the whole library on every launch
+ * for everyone, signed in or not, to ask the same question.
+ */
+export async function hasStoredSession(): Promise<boolean> {
+  if (!hasSupabase) return false;
+  try {
+    const ref = new URL(SUPABASE_URL).hostname.split('.')[0] ?? '';
+    const key = `sb-${ref}-auth-token`;
+    const raw = await authStorage().getItem(key);
+    return typeof raw === 'string' && raw.length > 0;
+  } catch {
+    return false;
+  }
+}
+
 export function supabase(): Promise<SupabaseClient | null> {
   if (!hasSupabase) return Promise.resolve(null);
   if (client) return client;

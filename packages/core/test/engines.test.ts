@@ -1121,8 +1121,11 @@ describe('a plan whose first step the user put a week away', () => {
     // Monday as well — "Saturday at 7am, park run with Sam", as a card for a
     // Monday, contradicting itself in their own words.
     const plan = buildPlan({ goal, analyses } as never, { today: '2026-09-06', newId });
-    expect(plan.moves.map((m) => m.scheduledFor)).toEqual(['2026-09-12']);
-    expect(plan.moves[0]!.title).toBe('Saturday at 7am, park run with Sam');
+    const weekOne = plan.moves.filter((m) => m.week === 1);
+    expect(weekOne.map((m) => m.scheduledFor)).toEqual(['2026-09-12']);
+    expect(weekOne[0]!.title).toBe('Saturday at 7am, park run with Sam');
+    // The fortnight: the same move a week on, on its own day.
+    expect(plan.moves.filter((m) => m.week === 2).map((m) => m.scheduledFor)).toEqual(['2026-09-19']);
     expect(validatePlan(plan, analyses as never, '2026-09-06')).toEqual([]);
   });
 
@@ -1136,7 +1139,7 @@ describe('a plan whose first step the user put a week away', () => {
   it('never makes a copy of a day-named move for a day it is not on', () => {
     const days = [{ ...analyses[0]!, line: 'Tuesday, Thursday and Saturday at 6:40, out the back door' }, analyses[1]!];
     // 2026-09-06 is a Sunday: Tuesday is two days out.
-    expect(buildPlan({ goal, analyses: days } as never, { today: '2026-09-06', newId }).moves.map((m) => m.title)).toEqual([
+    expect(buildPlan({ goal, analyses: days } as never, { today: '2026-09-06', newId }).moves.filter((m) => m.week === 1).map((m) => m.title)).toEqual([
       'Tuesday: at 6:40, out the back door',
       'Thursday: at 6:40, out the back door',
       'Saturday: at 6:40, out the back door',
@@ -1144,7 +1147,7 @@ describe('a plan whose first step the user put a week away', () => {
     // On a Saturday evening the soonest is Tuesday, three days out: the plan
     // opens on Tuesday, and there is no Sunday card that says "Tuesday".
     const fromSaturday = buildPlan({ goal, analyses: days } as never, { today: '2026-09-12', newId });
-    const titles = fromSaturday.moves.map((m) => m.title);
+    const titles = fromSaturday.moves.filter((m) => m.week === 1).map((m) => m.title);
     expect(new Set(titles).size).toBe(titles.length);
     expect([...fromSaturday.moves].sort((a, b) => a.order - b.order)[0]!.scheduledFor).toBe('2026-09-15');
     expect(validatePlan(fromSaturday, days as never, '2026-09-12')).toEqual([]);
@@ -1164,7 +1167,7 @@ describe('a plan whose first step the user put a week away', () => {
   it('labels effort honestly, and opens with a smaller piece when a long one comes first', () => {
     const hour = [{ ...analyses[0]!, line: 'One hour of writing at the desk by the window; ten minutes reading the last page back' }, analyses[1]!];
     const plan = buildPlan({ goal, analyses: hour } as never, { today: '2026-09-06', newId });
-    const ordered = [...plan.moves].sort((a, b) => a.order - b.order);
+    const ordered = plan.moves.filter((m) => m.week === 1).sort((a, b) => a.order - b.order);
     expect(ordered.map((m) => m.effort)).toEqual(['S', 'L']);
     expect(ordered[0]!.title).toBe('ten minutes reading the last page back');
     expect(validatePlan(plan, hour as never, '2026-09-06')).toEqual([]);
@@ -1185,7 +1188,7 @@ describe('a plan whose first step the user put a week away', () => {
     ];
     // 2026-09-05 is a Saturday: the Tuesday is three days out.
     const plan = buildPlan({ goal, analyses: two } as never, { today: '2026-09-05', newId });
-    const titles = plan.moves.map((m) => m.title);
+    const titles = plan.moves.filter((m) => m.week === 1).map((m) => m.title);
     expect(new Set(titles).size).toBe(titles.length);
     expect(plan.moves.find((m) => m.title.startsWith('bring the list'))?.scheduledFor).toBe('2026-09-06');
     expect(plan.moves.find((m) => m.title.startsWith('Book 30'))?.scheduledFor).toBe('2026-09-08');

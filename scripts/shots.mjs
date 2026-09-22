@@ -122,12 +122,12 @@ const server = await serve();
 const explicit = process.env.PLAYWRIGHT_CHROMIUM_PATH;
 const candidates = [explicit, 'C:/Users/HP/AppData/Local/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-win64/chrome-headless-shell.exe'].filter(Boolean);
 let browser = null;
-for (const executablePath of [...candidates, undefined]) {
+for (const executablePath of [process.env.PLAYWRIGHT_CHROMIUM_PATH, undefined, ...candidates.filter((x) => x !== process.env.PLAYWRIGHT_CHROMIUM_PATH)]) {
   try {
     browser = await chromium.launch(executablePath ? { executablePath } : {});
     break;
   } catch (err) {
-    if (executablePath === undefined) throw err;
+    if (executablePath === candidates[candidates.length - 1]) throw err;
   }
 }
 const context = await browser.newContext({

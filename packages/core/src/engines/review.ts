@@ -53,10 +53,10 @@ export function horizonReview(input: ReviewInput): HorizonReview {
       : firstWeek
         ? `Consistency ${r.score}. The first week in the ledger.`
         : r.delta > 0
-        ? `Consistency ${r.score}, up from ${r.previous} last Sunday.`
+        ? `Consistency ${r.score}, up from ${r.previous} a week ago.`
         : r.delta < 0
-          ? `Consistency ${r.score}, down from ${r.previous} last Sunday.`
-          : `Consistency ${r.score}, the same as last Sunday.`;
+          ? `Consistency ${r.score}, down from ${r.previous} a week ago.`
+          : `Consistency ${r.score}, the same as a week ago.`;
 
   const next = input.goals
     .map((g) => {

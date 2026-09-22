@@ -5,7 +5,7 @@
  * the same thing, because a drag is not available to everyone and the gesture
  * must never be the only way to say it.
  */
-import { useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Animated, Platform, Pressable, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Ring, Socket, Stone, accent, day, useHover, webHover } from '@morrow/ui';
@@ -46,26 +46,36 @@ export function MoveStone({
   const [hint] = useState(() => new Animated.Value(0));
   const socket = size * 1.35;
 
+  // The latest handlers, read by a gesture made once: rebuilt on every
+  // render, the gesture re-attached its native handler on every store
+  // write Today re-rendered for.
+  const latest = useRef({ onPark, reducedMotion });
+  latest.current = { onPark, reducedMotion };
   const settle = () => {
     Animated.spring(dy, { toValue: 0, useNativeDriver: true, damping: 14, stiffness: 260, mass: 1 }).start();
     Animated.timing(hint, { toValue: 0, duration: 140, useNativeDriver: true }).start();
   };
 
-  const pan = Gesture.Pan()
-    .activeOffsetY([-8, 8])
-    .onUpdate((e) => {
-      const clamped = Math.max(-64, Math.min(8, e.translationY));
-      dy.setValue(reducedMotion ? 0 : clamped);
-      hint.setValue(e.translationY < -PARK_THRESHOLD ? 1 : 0);
-    })
-    .onEnd((e) => {
-      if (e.translationY < -PARK_THRESHOLD) {
-        feelPark();
-        onPark();
-      }
-      settle();
-    })
-    .onFinalize(settle);
+  const pan = useMemo(
+    () =>
+      Gesture.Pan()
+        .activeOffsetY([-8, 8])
+        .onUpdate((e) => {
+          const clamped = Math.max(-64, Math.min(8, e.translationY));
+          dy.setValue(latest.current.reducedMotion ? 0 : clamped);
+          hint.setValue(e.translationY < -PARK_THRESHOLD ? 1 : 0);
+        })
+        .onEnd((e) => {
+          if (e.translationY < -PARK_THRESHOLD) {
+            feelPark();
+            latest.current.onPark();
+          }
+          settle();
+        })
+        .onFinalize(settle),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [dy, hint],
+  );
 
   const seated = status === 'done';
   const parked = status === 'skip';

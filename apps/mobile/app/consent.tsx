@@ -7,8 +7,8 @@ import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Body, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, TopBar, day, keyboardScroll } from '@morrow/ui';
+import { hasAnalytics, useFirstRunStep } from '../src/analytics';
 import { useMorrow } from '../src/store';
-import { useFirstRunStep } from '../src/analytics';
 
 const ROWS: { label: string; body: string; items?: string[] }[] = [
   {
@@ -19,14 +19,22 @@ const ROWS: { label: string; body: string; items?: string[] }[] = [
     label: 'What is sent to an AI service, and when',
     body: 'Only when a screen needs it, and never for advertising:',
     items: [
-      'when you ask for your own phrases to be read back to you;',
-      'when a piece of writing is checked for signs you may need a person rather than an app;',
-      'when you ask for a scene drawn from a detail you wrote.',
+      'when you finish a piece of writing, so your own phrases can be read back to you;',
+      'when a piece of writing is checked, once, for signs you may need a person rather than an app;',
+      'when you ask for a scene, drawn from what you wrote about your future.',
     ],
   },
+  ...(hasAnalytics
+    ? [
+        {
+          label: 'Counts, so we can see where people stop',
+          body: 'Which step of the first evening was reached, whether a day was closed, whether a card was shown — counts and step names, never a word you wrote, never your email, sent to an analytics service (PostHog, in the United States). Nothing is sent before you tap Continue on set-up.',
+        },
+      ]
+    : []),
   {
     label: 'If you say it rather than type it',
-    body: 'Your phone’s own recogniser turns it into words, on the phone where it can. Nothing is recorded.',
+    body: 'Your phone’s or browser’s own recogniser turns it into words — on the device where it can; where it cannot, its maker’s speech service does, and hands back words. Morrow keeps no audio.',
   },
   {
     label: 'What the AI is not allowed to do',

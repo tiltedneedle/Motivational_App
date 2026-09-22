@@ -111,6 +111,20 @@ export function usePlatformBack(canStepBack: boolean, stepBack: () => void): voi
     latest.current = { canStepBack, stepBack, path };
   });
 
+  // iOS's interactive pop completes before `beforeRemove` can refuse it:
+  // the screen slides away, is put back, and only then steps back. While a
+  // step can be undone the edge swipe is off, and the hardware/back button
+  // path below still answers. Android's predictive gesture takes the same
+  // native-first path, so it is off there too.
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    try {
+      (navigation as { setOptions?: (o: Record<string, unknown>) => void }).setOptions?.({ gestureEnabled: !canStepBack });
+    } catch {
+      // not a stack
+    }
+  }, [navigation, canStepBack]);
+
   useEffect(() => {
     const off = navigation.addListener('beforeRemove', (e: { preventDefault: () => void; data?: { action?: { type?: string } } }) => {
       if (!latest.current.canStepBack) return;

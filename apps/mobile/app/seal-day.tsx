@@ -11,7 +11,8 @@ import { dayOf } from '@morrow/core';
 import { feelSealed } from '../src/feel';
 import { dictation } from '../src/dictation';
 import { track } from '../src/analytics';
-import { useMorrow } from '../src/store';
+import { activeGoals, coachAnalyses, useMorrow } from '../src/store';
+import { useShallow } from 'zustand/react/shallow';
 
 const WORDS = ['Calm', 'Tired', 'Proud', 'Steady'];
 
@@ -20,7 +21,17 @@ export default function SealDay() {
   const showResources = useMorrow((st) => st.showResources);
   const reduced = useReducedMotion();
   const sealDay = useMorrow((s) => s.sealDay);
-  const analyses = useMorrow((s) => s.analyses);
+  // The lines the coach may quote (quotable, not forgotten, goals in play),
+  // in goal order: the rule printed every evening used to be whichever
+  // Monitoring line was written first, flagged or let go or not.
+  const rules = useMorrow(
+    useShallow((s) => {
+      const live = coachAnalyses(s);
+      return activeGoals(s)
+        .map((g) => live.find((a) => a.goalId === g.id && a.kind === 'monitoring' && a.line.trim())?.line.trim() ?? '')
+        .filter(Boolean);
+    }),
+  );
   // A day already sealed opens on what was written, so sealing it again is
   // visibly an edit of that and not an empty form that would replace it.
   // Captured once, at mount: the evening this screen opened for. Read from
@@ -112,7 +123,7 @@ export default function SealDay() {
   useEffect(() => () => dictationRef.current.stop(), []);
 
   // The evidence rule is the user's own Monitoring line.
-  const rule = analyses.find((a) => a.kind === 'monitoring')?.line;
+  const rule = rules[0];
 
   return (
     <Studio dark testID="screen-seal-day">

@@ -16,9 +16,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { splitFirstMoves } from '@morrow/core';
+import { splitFirstMoves, canBuildBlueprint, dayOf } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Statement, Stone, Studio, UserField, UserText, accent, day, radius, TopBar } from '@morrow/ui';
-import { analysesFor, useGoals, useMorrow } from '../src/store';
+import { analysesFor, useGoals, useMorrow, entitlementOf, useSnapshot } from '../src/store';
 
 const LENGTHS = ['2 min', '10 min', '25 min', '45 min'] as const;
 
@@ -26,7 +26,7 @@ export default function NewMove() {
   const router = useRouter();
   const params = useLocalSearchParams<{ mode?: string }>();
   const goals = useGoals();
-  const state = useMorrow((s) => s);
+  const state = useSnapshot();
   const addMove = useMorrow((s) => s.addMove);
   const addEvidence = useMorrow((s) => s.addEvidence);
 
@@ -51,8 +51,10 @@ export default function NewMove() {
   // needs a plan to sit in. Said here, with the door, rather than refused
   // after the person has picked one of their own lines.
   const planless = Boolean(goalId && source && !state.plans.some((p) => p.goalId === goalId));
-  const entitled = state.profile.entitled === true;
+  const canBuild = canBuildBlueprint(entitlementOf(state, dayOf(new Date(), state.profile.dayBoundaryHour)));
+  const entitled = canBuild.allowed;
   const makePortraitAndPlan = useMorrow((s) => s.makePortraitAndPlan);
+  const setToast = useMorrow((s) => s.setToast);
 
   const back = () => (router.canGoBack() ? router.back() : router.dismissTo('/today'));
 
@@ -127,7 +129,15 @@ export default function NewMove() {
               {entitled ? (
                 <>
                   <Body>This goal is written and waiting for its plan. Build it, and its first moves land on Today — then a move of your own can go under it.</Body>
-                  <Chip testID="new-move-build-plan" label="Build the plan" onPress={() => goalId && makePortraitAndPlan(goalId)} />
+                  <Chip
+                    testID="new-move-build-plan"
+                    label="Build the plan"
+                    onPress={() => {
+                      if (!goalId) return;
+                      const built = makePortraitAndPlan(goalId);
+                      if (!built.ok) setToast({ text: built.error, kind: 'info' });
+                    }}
+                  />
                 </>
               ) : (
                 <>

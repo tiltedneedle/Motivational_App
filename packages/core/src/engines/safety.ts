@@ -303,7 +303,7 @@ export const RESOURCES_COPY = {
    * back from a service, so "sent nowhere" would be untrue; what is true is
    * that the service keeps nothing, and that Morrow does not either.
    */
-  noteRemote: 'Nothing you wrote was added to what Morrow remembers. The screen that read it keeps nothing.',
+  noteRemote: 'Nothing you wrote was added to what Morrow remembers. It was read once by the AI service named under You, which keeps it under its own retention policy; Morrow keeps none of it.',
   /** The same card, asked for from "Need someone?" rather than raised by the screen. */
   askedTitle: 'Someone to talk to.',
   askedBody: 'These lines are free and answered by people. If you are in danger right now, contact your local emergency number.',

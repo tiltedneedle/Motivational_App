@@ -5,10 +5,10 @@
  * The hold is the same gesture as sealing a day, so it means one thing.
  */
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ordinal, type PaywallMoment } from '@morrow/core';
+import { ordinal, type AnalysisKind, type PaywallMoment } from '@morrow/core';
 import { Body, HoldBar, InkButton, Label, Notice, ProgressBar, SealBurst, Settle, Statement, Stone, Studio, TopBar, UserField, accent, night, useReducedMotion } from '@morrow/ui';
 import { feelDrained, feelSealed } from '../src/feel';
 import { useGoals, useMorrow } from '../src/store';
@@ -41,10 +41,14 @@ export default function SealBook() {
 
   const [error, setError] = useState<string | null>(null);
   const [sealed, setSealed] = useState(false);
-  /** Goals whose Blueprint could not be built from the lines they have. */
-  const [unplanned, setUnplanned] = useState<{ id: string; title: string; why: string; moment?: PaywallMoment }[]>(
+  /** Goals whose plan could not be built from the lines they have. */
+  const [unplanned, setUnplanned] = useState<{ id: string; title: string; why: string; moment?: PaywallMoment; missing?: AnalysisKind[] }[]>(
     [],
   );
+  // Read as they stood before the hold: the loop below builds plans as it goes.
+  const plans = useMorrow((s) => s.plans);
+  const hadPlanBefore = useMemo(() => new Set(plans.map((p) => p.goalId)), [plans]);
+  const firstDaySealed = useMorrow((s) => Object.values(s.days).some((d) => d.sealedAt));
 
   const onSeal = () => {
     const res = sealBook();
@@ -60,12 +64,18 @@ export default function SealBook() {
     // The Book is sealed either way — it is their writing and it is valid. But
     // a goal whose plan could not be built used to fail in silence, and the
     // person met the gap days later as an empty Today with no explanation.
-    const failed: { id: string; title: string; why: string; moment?: PaywallMoment }[] = [];
+    const failed: { id: string; title: string; why: string; moment?: PaywallMoment; missing?: AnalysisKind[] }[] = [];
     for (const g of goals) {
       const built = makePlan(g.id);
-      if (!built.ok) {
-        failed.push({ id: g.id, title: g.title, why: built.error, ...(built.moment ? { moment: built.moment } : {}) });
-      }
+      if (built.ok) continue;
+      // The free plan's one plan is expected, not a fault to explain here:
+      // on the first evening the after-plan moment carries it, once the
+      // first Today has been a Today (`paywallMoment` waits for that on
+      // purpose), and on every later edition a goal that had no plan
+      // before this seal is not news. Only a goal whose lines are missing
+      // is worth a paragraph on the finish screen.
+      if (built.moment && (!firstDaySealed || !hadPlanBefore.has(g.id))) continue;
+      failed.push({ id: g.id, title: g.title, why: built.error, ...(built.moment ? { moment: built.moment } : {}), ...(built.missing ? { missing: built.missing } : {}) });
     }
     setUnplanned(failed);
     if (failed.length === 0) setTimeout(() => router.replace('/book?from=seal'), 900);
@@ -132,7 +142,7 @@ export default function SealBook() {
                   </Statement>
                   <Body style={{ color: night.ink2 }}>
                     Everything you wrote for {unplanned.length === 1 ? 'it' : 'them'} is in the Book. The free plan
-                    builds one Blueprint, and the first goal has it.
+                    builds one goal’s plan, and the first goal has it.
                   </Body>
                 </>
               ) : (
@@ -175,8 +185,9 @@ export default function SealBook() {
                     unplanned.filter((u) => !u.moment).length === 1 ? 'Write that line now' : 'Start with the first one'
                   }
                   onPress={() => {
+                    // The stone that is actually missing, not always the How one.
                     const first = unplanned.find((u) => !u.moment);
-                    if (first) router.replace(`/stone?goal=${first.id}&kind=strategies`);
+                    if (first) router.replace(`/stone?goal=${first.id}&kind=${first.missing?.[0] ?? 'strategies'}&from=${encodeURIComponent('/seal-book')}`);
                   }}
                 />
               ) : null}

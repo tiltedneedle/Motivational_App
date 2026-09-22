@@ -120,12 +120,12 @@ const candidates = [
   'C:/Users/HP/AppData/Local/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-win64/chrome-headless-shell.exe',
 ].filter(Boolean);
 let browser = null;
-for (const executablePath of [...candidates, undefined]) {
+for (const executablePath of [candidates[0], undefined, ...candidates.slice(1)]) {
   try {
     browser = await chromium.launch(executablePath ? { executablePath } : {});
     break;
   } catch (err) {
-    if (executablePath === undefined) throw err;
+    if (executablePath === candidates[candidates.length - 1]) throw err;
   }
 }
 const context = await browser.newContext({
@@ -137,9 +137,43 @@ const page = await context.newPage();
 
 const seed = JSON.parse(await readFile(process.env.SEED ? join(ROOT, process.env.SEED) : join(ROOT, 'scripts', 'fixtures', 'seeded-state.json'), 'utf8'));
 if (process.env.DARK) seed.state.profile.appearance = 'dark';
+// Three screens a finished Book sends away (set-up and the mirror dismiss
+// to Today; the first line is already written): seeded from where a
+// person actually meets them, or the audit ran on Today three times and
+// called it set-up.
+const fresh = JSON.parse(await readFile(join(ROOT, 'scripts', 'fixtures', 'empty.json'), 'utf8'));
+fresh.state.profile.consentedAt = null;
+// The mirror: a first line written and nothing after it.
+const mirrored = JSON.parse(await readFile(join(ROOT, 'scripts', 'fixtures', 'empty.json'), 'utf8'));
+mirrored.state.texts = [
+  {
+    id: 'text_a11y_warm',
+    sessionId: 'sess_a11y_warm',
+    kind: 'warmup',
+    body: 'I want the mornings back: the kitchen before anyone is up, and the kettle on.',
+    wordCount: 15,
+    secondsWriting: 90,
+    mode: 'type',
+    sealedUntil: '2026-09-13T09:00:00.000Z',
+    safetyRisk: 'none',
+    createdAt: '2026-09-12T08:00:00.000Z',
+  },
+];
+const SEED_FOR = { setup: fresh, 'first-write': JSON.parse(await readFile(join(ROOT, 'scripts', 'fixtures', 'empty.json'), 'utf8')), mirror: mirrored };
 await page.addInitScript((s) => {
-  localStorage.setItem('morrow-v1', JSON.stringify(s));
+  const override = sessionStorage.getItem('a11y-seed');
+  localStorage.setItem('morrow-v1', override ?? JSON.stringify(s));
 }, seed);
+/** The screen id a route must land on; a route with more than one face lists them. */
+const SCREEN_FOR = {
+  welcome: ['screen-welcome'],
+  'consent-details': ['screen-consent'],
+  'write-doorway': ['screen-write-doorway'],
+  'present-virtues': ['screen-present', 'screen-present-narrow', 'screen-present-write'],
+  present: ['screen-present', 'screen-present-narrow', 'screen-present-write', 'screen-present-done'],
+  past: ['screen-past-doorway', 'screen-past-age', 'screen-past-events', 'screen-past-choose', 'screen-past-analyse', 'screen-past-done'],
+  'stone-obstacles': ['screen-stone'],
+};
 await page.clock.install({ time: new Date('2026-09-12T09:00:00') });
 const axeSource = await readFile(AXE, 'utf8');
 
@@ -153,9 +187,22 @@ for (const name of names) {
     console.log(`skip ${name}: no such route`);
     continue;
   }
+  const override = SEED_FOR[name];
+  await page.goto(`${BASE}/`, { waitUntil: 'commit' });
+  await page.evaluate((s) => (s ? sessionStorage.setItem('a11y-seed', s) : sessionStorage.removeItem('a11y-seed')), override ? JSON.stringify(override) : null);
   await page.goto(`${BASE}${route}`, { waitUntil: 'networkidle' });
   await page.clock.runFor(1800);
   await page.waitForTimeout(400);
+  // The audit is of the screen named, or it is of nothing: a route that
+  // redirected used to be axe'd as whatever it landed on and reported
+  // under the name it was asked for.
+  const landed = await page.evaluate(() => [...document.querySelectorAll('[data-testid^="screen-"]')].map((e) => e.getAttribute('data-testid')));
+  const expected = SCREEN_FOR[name] ?? [`screen-${name}`];
+  if (!landed.some((id) => expected.includes(id))) {
+    serious += 1;
+    console.log(`FAIL  ${name.padEnd(14)} did not open: landed on ${landed.join(', ') || 'nothing'}`);
+    continue;
+  }
   await page.addScriptTag({ content: axeSource });
   const result = await page.evaluate(
     async (disabled) =>

@@ -30,6 +30,8 @@ export function StorageWarning({ onExport, onFresh }: { onExport?: () => void; o
       setNote('There is no earlier copy to hand back.');
       return;
     }
+    // Unreadable by definition, so the identifiers cannot be stripped from
+    // it the way the other exports strip them: the note says so.
     const out = await takeAway(raw, 'Morrow — the copy that could not be read', 'morrow-unreadable.txt');
     setNote(takeawayNote(out, 'the copy'));
   };

@@ -216,6 +216,21 @@ const bundle: SyncBundle = {
     },
   ],
   practiceLogs: [{ id: 'pl_1', practiceId: 'pr_1', day: '2026-09-15', stepsDone: 1, stepsTotal: 1, minimal: false, completedAt: '2026-09-15T06:45:00.000Z' }],
+  portraits: [
+    {
+      goalId: 'g_1',
+      title: 'Run the loop',
+      why: 'Because I said I would.',
+      identityLine: 'somebody who starts before deciding',
+      identityFraming: null,
+      identityLineEdited: true,
+      obstacle: 'I stay up too late',
+      ifThen: 'If I stay up too late, then I put the phone in the hall',
+      firstMoves: ['out the back door'],
+      letterFromFuture: 'I have been reading it.',
+      quotedSpans: ['Because I said I would.'],
+    },
+  ],
   scenes: [
     {
       id: 'sc_1',
@@ -555,5 +570,22 @@ describe('the Past and Present volumes on the wire', () => {
     expect(back.pastEvents[0]!.joinsBook).toBe(false);
     expect(back.pastEvents[0]!.analysed).toBe(false);
     expect(back.pastEvents[0]!.safetyRisk).toBe('none');
+  });
+});
+
+describe('the portraits', () => {
+  it('travel as their document and come back whole, with the line the person wrote', () => {
+    const rows = toRows(bundle, USER, 'Europe/London');
+    const table = rows.find((t) => t.table === 'portraits')!;
+    expect(table.rows).toHaveLength(1);
+    expect(table.rows[0]!.goal_id).toBe('g_1');
+    const back = fromRows(Object.fromEntries(rows.map((t) => [t.table, t.rows])), bundle.profile);
+    expect(back.portraits[0]?.identityLine).toBe('somebody who starts before deciding');
+    expect(back.portraits[0]?.identityLineEdited).toBe(true);
+  });
+
+  it('leaves out a portrait whose goal is not in the copy', () => {
+    const rows = toRows({ ...bundle, portraits: [{ ...bundle.portraits[0]!, goalId: 'g_gone' }] }, USER, 'Europe/London');
+    expect(rows.find((t) => t.table === 'portraits')!.rows).toHaveLength(0);
   });
 });

@@ -17,7 +17,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View, type
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { accent, radius, shadow, type as fonts, webHover, webOnlyStyle } from './tokens';
-import { Body, InkButton, Label, Statement, Studio, TopBar, TextButton, useHover, usePalette, useReducedMotion } from './primitives';
+import { Body, InkButton, Label, Rise, Statement, Studio, TopBar, TextButton, useHover, usePalette, useReducedMotion } from './primitives';
 import { usePress } from './motion';
 import { Animated } from 'react-native';
 
@@ -235,10 +235,27 @@ export function Screen({
   keyboard?: boolean;
 }) {
   const { p } = usePalette();
+  const reduced = useReducedMotion();
+  // The screen's parts rise in sequence (PRD 8.5: "the screen's parts rise
+  // in sequence; entry sequences stagger at 0.08–0.1 s"): each direct child
+  // one beat after the last, the beats capped so a long list is not a wait.
+  // A fragment is opened one level so a screen written as <>…</> staggers
+  // its own parts rather than arriving as one block.
+  const parts = React.Children.toArray(
+    React.isValidElement(children) && children.type === React.Fragment ? (children.props as { children?: ReactNode }).children : children,
+  );
+  // A screen that lays itself out (scroll off: a list that fills the
+  // height) keeps its children as they are; a wrapper would take their flex.
   const body = (
     <>
       {progress ? <ProgressBar value={progress.value} label={progress.label} testID={progress.testID ?? 'progress'} style={{ marginBottom: 18 }} /> : null}
-      {children}
+      {scroll
+        ? parts.map((part, i) => (
+            <Rise key={(React.isValidElement(part) && part.key) || i} index={Math.min(i, 5)} reducedMotion={reduced}>
+              {part}
+            </Rise>
+          ))
+        : children}
     </>
   );
   const foot =

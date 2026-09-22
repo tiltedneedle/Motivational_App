@@ -25,18 +25,27 @@ const server = createServer(async (req, res) => {
 });
 await new Promise((r) => server.listen(PORT, r));
 const seed = JSON.parse(await readFile(join(ROOT, 'scripts', 'fixtures', 'seeded-state.json'), 'utf8'));
+// A fresh install that has been through set-up: the Interview is the first
+// screen with a slide, and it sits behind the consent gate.
+const fresh = JSON.parse(await readFile(join(ROOT, 'scripts', 'fixtures', 'empty.json'), 'utf8'));
 const candidates = [process.env.PLAYWRIGHT_CHROMIUM_PATH, 'C:/Users/HP/AppData/Local/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-win64/chrome-headless-shell.exe'].filter(Boolean);
 let browser = null;
-for (const executablePath of [...candidates, undefined]) {
+for (const executablePath of [process.env.PLAYWRIGHT_CHROMIUM_PATH, undefined, ...candidates.filter((x) => x !== process.env.PLAYWRIGHT_CHROMIUM_PATH)]) {
   try {
     browser = await chromium.launch(executablePath ? { executablePath } : {});
     break;
   } catch (err) {
-    if (executablePath === undefined) throw err;
+    if (executablePath === candidates[candidates.length - 1]) throw err;
   }
 }
 const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
-await context.addInitScript((s) => localStorage.setItem('morrow-v1', JSON.stringify(s)), seed);
+// The seed is written once per tab, so a later `localStorage.clear()` sticks.
+await context.addInitScript((s) => {
+  if (!sessionStorage.getItem('seeded')) {
+    localStorage.setItem('morrow-v1', JSON.stringify(s));
+    sessionStorage.setItem('seeded', '1');
+  }
+}, seed);
 const page = await context.newPage();
 let fails = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${ok ? '' : ' — ' + detail}`); if (!ok) fails++; };
@@ -59,7 +68,8 @@ await page.goto(`${BASE}/seal-day`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(900);
 const chip = page.locator('[role="radio"]').first();
 const box = await chip.boundingBox();
-const face = '[role="radio"] > div';
+// The face sits on its edge (a chip is a key): the wrapper is the edge, the face the child under it.
+const face = '[role="radio"] > div > div';
 await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
 await page.mouse.down();
 await page.waitForTimeout(120);
@@ -87,7 +97,7 @@ check('and the day is sealed', /Closed|Sealed|screen-today/.test((await page.loc
 
 // 5. The Interview: the next question slides in from the right.
 await context.clearCookies();
-await page.evaluate(() => localStorage.clear());
+await page.evaluate((s) => localStorage.setItem('morrow-v1', JSON.stringify(s)), fresh);
 await page.goto(`${BASE}/interview`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(900);
 await page.locator('[data-testid="option-0"]').click();
@@ -122,7 +132,7 @@ const box2 = await chip2.boundingBox();
 await quiet.mouse.move(box2.x + box2.width / 2, box2.y + box2.height / 2);
 await quiet.mouse.down();
 await quiet.waitForTimeout(120);
-const pressedStill = await quiet.evaluate(() => { const el = document.querySelector('[role="radio"] > div'); return el ? getComputedStyle(el).transform : null; });
+const pressedStill = await quiet.evaluate(() => { const el = document.querySelector('[role="radio"] > div > div'); return el ? getComputedStyle(el).transform : null; });
 await quiet.mouse.up();
 check('and a chip does not scale under a press', !/0\.9[0-9]/.test(pressedStill ?? ''), pressedStill ?? 'none');
 await still.close();

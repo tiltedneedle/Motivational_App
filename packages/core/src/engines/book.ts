@@ -317,7 +317,7 @@ export function bookToText(book: BookVersion, boundaryHour = 3): string {
   // The framing is the app's words and the title is theirs; the plain text has
   // no second face to say so, so they simply run together as one line.
   out.push([book.titleFraming, book.title].filter(Boolean).join(' ').toUpperCase());
-  out.push(`Sealed ${formatDay(sealedOn(book.sealedAt, boundaryHour))} · ${plural(book.chapters.length, 'goal')} · ${book.track}`);
+  out.push(`Finished ${formatDay(sealedOn(book.sealedAt, boundaryHour))} · ${plural(book.chapters.length, 'goal')} · ${book.track === 'full' ? 'Full' : 'Starter'}`);
   out.push('');
   if (book.diff && book.version > 1) {
     out.push(`SINCE THE ${ordinal(book.version - 1).toUpperCase()} EDITION`);
@@ -325,7 +325,7 @@ export function bookToText(book: BookVersion, boundaryHour = 3): string {
     for (const l of book.diff.lessons ?? []) out.push(`  ${l.name} — ${l.line}`);
     out.push('');
   }
-  out.push('CHAPTER ONE · THE FIFTEEN');
+  out.push('CHAPTER ONE · YOUR FUTURE');
   out.push(book.ideal);
   out.push('');
   if (book.shadow) {

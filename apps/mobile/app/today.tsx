@@ -26,14 +26,15 @@ import {
   firstVisit,
   streakOf,
   weekOf,
-  isQuotable,
-    presentStanding,
+  presentStanding,
   halfDone,
   reauthorDue,
   reauthorLabel,
   clockLabel,
   hourOf,
   shiftDaysLabel,
+  ifThenOf,
+  whenWord,
 } from '@morrow/core';
 import {
   Body,
@@ -63,6 +64,7 @@ import {
   radius,
   type as fonts,
   useReducedMotion,
+  TapCard,
 } from '@morrow/ui';
 import { MoveStone } from '../src/components/MoveStone';
 import { hasSupabase } from '../src/supabase';
@@ -79,6 +81,9 @@ import {
   interviewKept,
   latestText,
   pendingLetGo,
+  coachAnalyses,
+  livePlans,
+  useSnapshot,
 } from '../src/store';
 import { scheduler } from '../src/notify';
 
@@ -88,7 +93,7 @@ export default function Today() {
   // The sweep runs only while Today is the screen in front: a loop under a
   // screen that is not showing is battery spent on nothing.
   const focused = useIsFocused();
-  const state = useMorrow((s) => s);
+  const state = useSnapshot();
   const goals = useGoals();
   const moves = useTodaysMoves();
   const book = useLatestBook();
@@ -254,7 +259,12 @@ export default function Today() {
    * day so it changes each morning and holds still through it.
    */
   const fromYourWords = (() => {
-    const lines = state.analyses.filter((a) => isQuotable(a) && a.line.trim().length >= 12).map((a) => a.line.trim());
+    // What the coach reads, and nothing else: quotable, not forgotten on the
+    // memory screen, not a goal let go — and an Obstacles line as the whole
+    // if-then, not its bare "If…" half.
+    const lines = coachAnalyses(state)
+      .filter((a) => a.line.trim().length >= 12)
+      .map((a) => (a.kind === 'obstacles' && a.line2?.trim() ? ifThenOf(a.line, a.line2).sentence.replace(/^if/, 'If') : a.line.trim()));
     if (!lines.length) return null;
     let h = 0;
     for (let i = 0; i < today.length; i++) h = (h * 31 + today.charCodeAt(i)) >>> 0;
@@ -299,6 +309,13 @@ export default function Today() {
   const now = open[0];
   const later = open.slice(1);
   const done = moves.filter((m) => m.status !== 'todo');
+  // The next move dated after today, across the plans in play — named on
+  // the done card rather than "tomorrow", which it often was not.
+  const nextDated = livePlans(state)
+    .flatMap((p) => p.moves)
+    .filter((m) => m.status === 'todo' && m.scheduledFor && m.scheduledFor > today)
+    .map((m) => m.scheduledFor as string)
+    .sort()[0] ?? null;
 
   const plansById = useMemo(() => new Map(state.plans.map((p) => [p.goalId, p])), [state.plans]);
 
@@ -345,13 +362,13 @@ export default function Today() {
                     ? 'Five short steps to a Book you wrote.'
                     : firstRun.step === 'interview'
                       ? 'Find your goals, by tapping.'
-                      : firstRun.step === 'fifteen' || firstRun.step === 'readback'
+                      : firstRun.step === 'fifteen' || firstRun.step === 'shadow' || firstRun.step === 'readback'
                         ? 'Fifteen minutes on your future.'
                         : firstRun.step === 'order' || firstRun.step === 'stones'
                           ? 'Plan each goal, one line at a time.'
                           : 'Finish your Book.'
                 }
-                caption={fresh || firstRun.step === 'warmup' ? 'About forty minutes in all, tonight or over a few days. You write every word.' : undefined}
+                caption={fresh || firstRun.step === 'warmup' ? `About forty minutes in all, ${whenWord(state.profile.writeWhen)} or over a few days. You write every word.` : undefined}
                 steps={path.steps.map((st) => ({ label: st.label, minutes: st.minutes, done: st.done }))}
                 at={path.at}
                 cta={{ label: firstRun.label, onPress: () => router.push(firstRun.route as never), testID: 'today-begin' }}
@@ -360,7 +377,7 @@ export default function Today() {
             {warmLine ? (
               <View testID="today-first-line" style={{ backgroundColor: day.surface2, borderRadius: radius.card, padding: 18, gap: 6 }}>
                 <Label style={{ color: accent.coralText }}>Your first line</Label>
-                <UserText italic numberOfLines={4} style={{ fontSize: 18, lineHeight: 26 }}>{`“${warmLine}”`}</UserText>
+                <UserText italic style={{ fontSize: 18, lineHeight: 26 }}>{`“${warmLine}”`}</UserText>
                 <Label>Kept as you wrote it. It goes with you into the fifteen minutes.</Label>
               </View>
             ) : null}
@@ -459,18 +476,17 @@ export default function Today() {
             reminded to read three times is a notification.
           */}
           {unreadLetters > 0 ? (
-            <Pressable
+            <TapCard
               testID="today-letters"
-              accessibilityRole="button"
               accessibilityLabel={`${unreadLetters === 1 ? 'A letter' : plural(unreadLetters, 'letter')}: waiting, from the other end of this`}
               onPress={() => router.push('/letters')}
-              style={{ marginTop: 16, backgroundColor: day.surface2, borderRadius: radius.card, padding: 18, gap: 6 }}
+              style={{ marginTop: 16 }}
             >
               <Label style={{ color: accent.coralText }}>
                 {unreadLetters === 1 ? 'A letter' : plural(unreadLetters, 'letter')}
               </Label>
               <Body style={{ color: day.ink, fontSize: 16 }}>Waiting, from the other end of this.</Body>
-            </Pressable>
+            </TapCard>
           ) : null}
 
           {/*
@@ -480,9 +496,8 @@ export default function Today() {
             one of the moments the PRD names; Not now comes straight back here.
           */}
           {reauthor || pending.length ? (
-            <Pressable
+            <TapCard
               testID="today-reauthor"
-              accessibilityRole="button"
               accessibilityLabel={
                 reauthor
                   ? `${reauthorLabel(reauthor.cycle)}: time to write the Book again`
@@ -491,7 +506,7 @@ export default function Today() {
               // A let-go waiting goes to the screen that can take it back
               // whatever the plan; the gated branch offers exactly that.
               onPress={() => router.push(entitled || pending.length ? '/reauthor?from=/today' : '/paywall?moment=reauthor&from=/today')}
-              style={{ marginTop: 16, backgroundColor: day.surface2, borderRadius: radius.card, padding: 18, gap: 6 }}
+              style={{ marginTop: 16 }}
             >
               <Label style={{ color: accent.coralText }}>{reauthor ? reauthorLabel(reauthor.cycle) : 'Unfinished'}</Label>
               <Body style={{ color: day.ink, fontSize: 16 }}>
@@ -501,7 +516,7 @@ export default function Today() {
                     ? 'A goal was let go and no edition finished since. Finish it, or take it back.'
                     : `${plural(pending.length, 'goal')} were let go and no edition finished since. Finish the edition, or take them back.`}
               </Body>
-            </Pressable>
+            </TapCard>
           ) : null}
 
           {/*
@@ -510,16 +525,15 @@ export default function Today() {
             in the app that asks for ten minutes rather than two.
           */}
           {book && isSunday ? (
-            <Pressable
+            <TapCard
               testID="today-sunday"
-              accessibilityRole="button"
               accessibilityLabel="Sunday reading: ten minutes with the Book"
               onPress={() => router.push('/reading')}
-              style={{ marginTop: 16, backgroundColor: day.surface2, borderRadius: radius.card, padding: 18, gap: 6 }}
+              style={{ marginTop: 16 }}
             >
               <Label style={{ color: accent.coralText }}>Sunday</Label>
               <Body style={{ color: day.ink, fontSize: 16 }}>Ten minutes with what you wrote.</Body>
-            </Pressable>
+            </TapCard>
           ) : null}
 
           {/*
@@ -572,7 +586,7 @@ export default function Today() {
                 </Body>
               ) : null}
               {/* What the planner sends, all of it (PRD §7.11): the two lines, the Sunday reading, one word after three days away. */}
-              <Body style={{ fontSize: 13 }}>The Sunday reading, and one line if you have been away three days, are the only others. The times are yours to change under You.</Body>
+              <Body style={{ fontSize: 13 }}>The Sunday reading, and one line if you have been away three days, are the only others. Two of them quote you — the Book’s first sentence, and your “I will” line — and anyone who sees your lock screen sees those. The times are yours to change under You.</Body>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                 <Chip testID="today-notify-yes" label="Yes, at those times" onPress={() => void allowNotifications()} />
                 <Chip testID="today-notify-no" label="Not now" ghost onPress={declineNotifications} />
@@ -610,7 +624,9 @@ export default function Today() {
                   : 'Today is closed.'}
               </Statement>
               <Body style={{ fontSize: 14 }}>
-                Nothing else is due. The next one is tomorrow, and it will be here then.
+                {nextDated
+                  ? `Nothing else is due. The next one is ${formatDay(nextDated, { weekday: true, today })}, and it will be here then.`
+                  : 'Nothing else is due, and nothing is dated after this yet. The plus adds one; Replan on a goal’s page lays the week out again.'}
               </Body>
               {/*
                 The morning intention closes here too. Saying it back on the
@@ -829,17 +845,16 @@ export default function Today() {
           ) : null}
 
           {fromYourWords ? (
-            <Pressable
+            <TapCard
               testID="today-from-your-words"
-              accessibilityRole="button"
               accessibilityLabel={`From your words: ${endSentence(`“${fromYourWords}”`)} Opens the coach.`}
               onPress={() => router.push('/coach')}
-              style={{ marginTop: 22, backgroundColor: day.surface2, borderRadius: radius.card, padding: 18, gap: 6 }}
+              style={{ marginTop: 22 }}
             >
               <Label style={{ color: accent.coralText }}>From your words</Label>
               <UserText italic style={{ fontSize: 18, lineHeight: 26 }}>{`“${fromYourWords}”`}</UserText>
               <Label>Think on it today · the coach is one tap away</Label>
-            </Pressable>
+            </TapCard>
           ) : null}
 
           {/*

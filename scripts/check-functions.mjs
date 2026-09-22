@@ -10,10 +10,39 @@ const dir = 'supabase/functions';
 const names = await readdir(dir);
 let bad = 0;
 
+// The shared modules every function imports: parsed like the rest, and the
+// rate limit's own file held to its rule.
+for (const shared of ['limit.ts', 'llm.ts']) {
+  const file = join(dir, '_shared', shared);
+  let src;
+  try { src = await readFile(file, 'utf8'); } catch { continue; }
+  const sf = ts.createSourceFile(file, src, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
+  const diags = sf.parseDiagnostics ?? [];
+  if (diags.length) {
+    bad++;
+    console.log(`FAIL _shared/${shared}: ${ts.flattenDiagnosticMessageText(diags[0].messageText, ' ')}`);
+    continue;
+  }
+  if (shared === 'limit.ts' && !/rate_limit_hit/.test(src)) {
+    bad++;
+    console.log('FAIL _shared/limit.ts: the rate limit no longer counts hits');
+    continue;
+  }
+  console.log(`PASS _shared/${shared}: parses`);
+}
+
 for (const name of names) {
+  if (name.startsWith('_')) continue;
   const file = join(dir, name, 'index.ts');
   let src;
   try { src = await readFile(file, 'utf8'); } catch { continue; }
+  // Every function that spends a model call is rate limited; delete-account
+  // is one authenticated update and is not.
+  if (/_shared\/llm\.ts/.test(src) && !/tooMany\(|allow\(/.test(src)) {
+    bad++;
+    console.log(`FAIL ${name}: no rate limit call`);
+    continue;
+  }
   const sf = ts.createSourceFile(file, src, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
   const diags = sf.parseDiagnostics ?? [];
   if (diags.length) {

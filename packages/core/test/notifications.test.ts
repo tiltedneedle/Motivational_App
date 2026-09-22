@@ -204,7 +204,7 @@ describe('what one day is allowed to contain', () => {
 
   it('quotes the person rather than describing them', () => {
     const [wake] = planNotices(base);
-    expect(wake?.body).toContain('out the back door at 6:40');
+    expect(wake?.body).toContain('“Out the back door at 6:40”');
     expect(wake?.quotes[0]).toBe('Out the back door at 6:40');
   });
 

@@ -7,12 +7,11 @@
  * gets out of the way.
  */
 import React from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { takeAway, takeawayNote } from '../takeaway';
 import { day, radius, type as fonts } from '@morrow/ui';
 // The key, not a copy of it: read directly off disk, on purpose — see `getOut`.
-import { STORE_KEY } from '../storage';
+import { storedRaw } from '../storage';
 
 interface Props {
   children: React.ReactNode;
@@ -25,6 +24,32 @@ interface State {
   /** The raw store, when the share sheet could not take it. */
   spilled: string | null;
   exportError: string | null;
+}
+
+/** The stored state with the account's and the device's identifiers removed; the bytes as they were when they do not parse. */
+export function withoutIdentifiers(raw: string): string {
+  try {
+    const parsed = JSON.parse(raw) as { state?: Record<string, unknown> };
+    if (parsed && typeof parsed === 'object' && parsed.state && typeof parsed.state === 'object') {
+      const { account: _a, deviceId: _d, lastSync: _l, ...rest } = parsed.state;
+      return JSON.stringify({ ...parsed, state: rest });
+    }
+    return raw;
+  } catch {
+    return raw;
+  }
+}
+
+/**
+ * The reason in plain words. A chunk that did not arrive — a deploy landed
+ * between the page load and the first tap on a tab — used to print
+ * "Requiring unknown module '777'" here.
+ */
+function plainReason(error: Error): string {
+  if (/Loading module|Requiring unknown module|dynamically imported module|ChunkLoadError|Failed to fetch/i.test(error.message)) {
+    return 'This part of Morrow could not be loaded — most often because a newer Morrow shipped while this one was open. Reload the page to get it.';
+  }
+  return error.message;
 }
 
 export class ErrorBoundary extends React.Component<Props, State> {
@@ -48,7 +73,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
   private getOut = async () => {
     let raw: string | null = null;
     try {
-      raw = await AsyncStorage.getItem(STORE_KEY);
+      raw = await storedRaw();
     } catch (err) {
       this.setState({
         exportError: `The device would not hand back what is stored (${
@@ -64,13 +89,16 @@ export class ErrorBoundary extends React.Component<Props, State> {
     // The sheet, a file, or the clipboard; and failing all three, the text
     // on the screen where it can be selected and copied by hand. It is their
     // writing and they are entitled to it whatever this platform can do.
-    const out = await takeAway(raw, 'Morrow — everything on this device', 'morrow-everything.txt');
+    // Without the account's id and email or the device's name — Settings'
+    // export keeps them out on purpose, and this one went to whoever the
+    // share sheet was pointed at.
+    const out = await takeAway(withoutIdentifiers(raw), 'Morrow — everything on this device', 'morrow-everything.txt');
     // Handed to the sheet, it went somewhere they chose. Anything else —
     // a file, the clipboard, nothing — and the text is put on the screen as
     // well, where it can be selected and copied by hand; a download that
     // may or may not have landed is not enough here.
     if (out.ok && out.how === 'shared') this.setState({ exportError: null });
-    else this.setState({ spilled: raw, exportError: out.ok ? takeawayNote(out, 'everything') : out.how === 'dismissed' ? out.error : null });
+    else this.setState({ spilled: withoutIdentifiers(raw), exportError: out.ok ? takeawayNote(out, 'everything') : out.how === 'dismissed' ? out.error : null });
   };
 
   override componentDidCatch(error: Error, info: React.ErrorInfo) {
@@ -95,7 +123,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
         <ScrollView
           style={{ maxHeight: 140, marginTop: 18, backgroundColor: day.surface2, borderRadius: radius.field, padding: 12 }}
         >
-          <Text style={{ fontFamily: fonts.sans, fontSize: 12, color: day.ink3 }}>{error.message}</Text>
+          <Text style={{ fontFamily: fonts.sans, fontSize: 12, color: day.ink3 }}>{plainReason(error)}</Text>
         </ScrollView>
 
         {this.state.exportError ? (

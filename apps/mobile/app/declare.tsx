@@ -190,7 +190,7 @@ export default function Declare() {
               placeholder="The name you call them"
             />
             <Body style={{ color: night.ink3, fontSize: 13 }}>
-              A name, kept with your profile. They get this image when you send it, and on a sealed evening you can tell them the count. Nothing else, and nothing you do not choose.
+              A name, kept with your profile. They get this image when you send it, and on a closed evening you can tell them the count. Nothing else, and nothing you do not choose.
             </Body>
           </View>
 

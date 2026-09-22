@@ -206,24 +206,32 @@ export function buildPlan(input: BuildInput, opts: BlueprintOptions): Plan {
   }
   const weekOnePieces = scheduledPieces.slice(0, 3);
 
-  const moves: Move[] = weekOnePieces.map(({ text, scheduled, effort }, i) => {
-    return {
-      id: opts.newId('mv'),
-      goalId: goal.id,
-      milestoneId: firstMilestone?.id ?? null,
-      title: text,
-      effort,
-      energy: energyFor(text),
-      ifThen: obstacles?.line2?.trim() ? ifThenOf(obstacles.line, obstacles.line2).sentence.replace(/^if/, 'If') : null,
-      scheduledFor: scheduled,
-      week: 1,
-      status: 'todo',
-      completedAt: null,
-      minVersion: minVersionOf(text),
-      sourceLineId: strategies.id,
-      order: i,
-    };
+  // The first fortnight (§7.4: at most three moves a week in the first
+  // fortnight), not the first week alone. Dated for week one only, a
+  // twelve-week season had nothing after day five: Today read "Nothing
+  // scheduled" and the morning line fell silent. Week two is the same
+  // pieces a week on — their sentences, on the same days; `carryForward`
+  // rolls each finished week into the next from there.
+  const moveOf = ({ text, scheduled, effort }: { text: string; scheduled: string; effort: Move['effort'] }, week: number, i: number): Move => ({
+    id: opts.newId('mv'),
+    goalId: goal.id,
+    milestoneId: firstMilestone?.id ?? null,
+    title: text,
+    effort,
+    energy: energyFor(text),
+    ifThen: obstacles?.line2?.trim() ? ifThenOf(obstacles.line, obstacles.line2).sentence.replace(/^if/, 'If') : null,
+    scheduledFor: addDays(scheduled, (week - 1) * 7),
+    week,
+    status: 'todo',
+    completedAt: null,
+    minVersion: minVersionOf(text),
+    sourceLineId: strategies.id,
+    order: i,
   });
+  const moves: Move[] = [
+    ...weekOnePieces.map((p, i) => moveOf(p, 1, i)),
+    ...(seasonWeeks > 1 ? weekOnePieces.map((p, i) => moveOf(p, 2, i)) : []),
+  ];
 
   if (moves.length === 0) {
     moves.push({
@@ -464,7 +472,9 @@ export function proposeReplan(plan: Plan, opts: { done: number; planned: number;
       });
     }
   }
-  if (rate >= 0.8 && plan.moves.length < 6) {
+  // Room in the week ahead, not in the season: the fortnight already
+  // dated is six rows.
+  if (rate >= 0.8 && active.filter((m) => m.week === highestWeek(plan.moves)).length < 6) {
     const seed = plan.moves[0];
     if (seed) {
       changes.push({
@@ -475,6 +485,29 @@ export function proposeReplan(plan: Plan, opts: { done: number; planned: number;
         after: seed.title,
         reason: `You kept ${opts.done} of ${opts.planned}. Room for one more of the same.`,
         sourceLineId: seed.sourceLineId,
+      });
+    }
+  }
+  // Nothing open and nothing dated ahead, with weeks of the season left:
+  // the same moves again, a week on. The rows carry the plan's own titles,
+  // so the gate that checks an added title against its line lets them
+  // through, and "Keep mine" on every row leaves the plan as it is.
+  if (active.length === 0 && weeksLeft(plan, opts.today) > 0) {
+    const seen = new Set<string>();
+    const kept = [...plan.moves].sort((a, b) => a.order - b.order).filter((m) => {
+      if (m.status !== 'done' || seen.has(m.title)) return false;
+      seen.add(m.title);
+      return true;
+    });
+    for (const m of kept.slice(0, 3)) {
+      changes.push({
+        op: 'add',
+        target: 'move',
+        id: null,
+        before: null,
+        after: m.title,
+        reason: 'Nothing is dated ahead. The same move again, next week, or drop it.',
+        sourceLineId: m.sourceLineId,
       });
     }
   }
@@ -615,6 +648,56 @@ function isCutFrom(title: string, line: GoalAnalysis): boolean {
   const needle = norm(title).replace(/^(?:mon|tues|wednes|thurs|fri|satur|sun)day:\s*/, '');
   if (!needle) return false;
   return [line.line, line.line2 ?? '', line.paragraph ?? ''].some((s) => norm(s).includes(needle));
+}
+
+/** Whole weeks of the season still to come after `today`, by the day the plan was built. */
+export function weeksLeft(plan: Plan, today: string): number {
+  const end = addDays(plan.createdAt.slice(0, 10), plan.seasonWeeks * 7);
+  return Math.max(0, Math.ceil(daysBetween(today, end) / 7));
+}
+
+/**
+ * The plan's next week, cut from its own moves — or null when nothing is owed.
+ *
+ * `buildPlan` dates the first fortnight and no more. After it, each week
+ * that is finished rolls into the next: every piece kept in the latest week
+ * is dated again a week on, in the same words, on the same weekday. The
+ * app writes no new move — it cannot; a move is the person's sentence — it
+ * only dates the ones they kept. A piece parked stays open where it is
+ * (that is what parking means) and is not doubled; a piece still to do
+ * holds the week open. Null while a move is open or dated ahead, when
+ * nothing in the latest week was kept, and once the season is over.
+ */
+export function carryForward(plan: Plan, today: string, newId: (p: string) => string): Move[] | null {
+  if (plan.status !== 'active') return null;
+  if (plan.moves.some((m) => m.status === 'todo')) return null;
+  const latestWeek = plan.moves.reduce((n, m) => Math.max(n, m.week ?? 0), 0);
+  if (latestWeek === 0 || latestWeek >= plan.seasonWeeks || weeksLeft(plan, today) === 0) return null;
+  const seen = new Set<string>();
+  const kept = plan.moves
+    .filter((m) => m.week === latestWeek && m.status === 'done' && m.scheduledFor)
+    .sort((a, b) => a.order - b.order)
+    .filter((m) => {
+      if (seen.has(m.title)) return false;
+      seen.add(m.title);
+      return true;
+    });
+  if (kept.length === 0) return null;
+  return kept.map((m, i) => {
+    let date = m.scheduledFor as string;
+    while (date <= today) date = addDays(date, 7);
+    return {
+      ...m,
+      id: newId('mv'),
+      scheduledFor: date,
+      week: latestWeek + 1,
+      status: 'todo' as const,
+      completedAt: null,
+      completedOn: null,
+      doingMinVersion: false,
+      order: i,
+    };
+  });
 }
 
 /** A move with no week belongs to none, so it cannot raise the count. */

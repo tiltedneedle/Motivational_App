@@ -26,7 +26,7 @@ import { currentSession, plain, supabase } from './supabase';
 export type SyncOutcome =
   | { ok: true; rows: number }
   /** `error` is for the person; `detail` is the service's own words, for a log; `conflict` means another device copied since. */
-  | { ok: false; error: string; detail?: string; conflict?: true; rows: number };
+  | { ok: false; error: string; detail?: string; conflict?: true; closed?: true; rows: number };
 
 const ANOTHER_DEVICE = 'Another phone or browser has copied to this account since this one last did. Bring that copy here first, or replace it with this one — under You.';
 
@@ -49,6 +49,23 @@ async function accountHasWriting(c: NonNullable<Awaited<ReturnType<typeof supaba
  * pulled the account's copy, so its next push is not read as another
  * device's overwrite. Only the stamp; nothing else on the row changes.
  */
+/** The message every refused push into a closed account carries. */
+export const CLOSED = 'This account was closed. Reopen it under You, or leave it to be deleted.';
+
+/** Reopen a closed account, on the person's own tap: the service role clears the stamp. */
+export async function restoreAccount(): Promise<{ ok: true } | { ok: false; error: string }> {
+  const c = await supabase();
+  const session = await currentSession();
+  if (!c || !session) return { ok: false, error: NOT_SIGNED_IN };
+  try {
+    const { error } = await c.functions.invoke('delete-account', { body: { action: 'restore' } });
+    if (error) return { ok: false, error: plain(error.message) };
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: plain(err instanceof Error ? err.message : 'no network') };
+  }
+}
+
 export async function stampAccount(device: string): Promise<{ ok: true; at: string } | { ok: false; error: string }> {
   const c = await supabase();
   const session = await currentSession();
@@ -96,8 +113,10 @@ export async function pushAll(
   // stamped (a copy made before the stamp existed has none). `force` is
   // the person's answer.
   if (!opts.force) {
-    const { data, error } = await c.from('profiles').select('pushed_by, pushed_at').eq('id', uid).maybeSingle();
+    const { data, error } = await c.from('profiles').select('pushed_by, pushed_at, deleted_at').eq('id', uid).maybeSingle();
     if (error && !/PGRST116|0 rows/i.test(error.message)) return { ok: false, error: plain(error.message), detail: error.message, rows: 0 };
+    // A closed account takes nothing until the person reopens it.
+    if (data?.deleted_at) return { ok: false, closed: true, error: CLOSED, rows: 0 };
     const stampedBy = data?.pushed_by ? String(data.pushed_by) : null;
     const stampedAt = data?.pushed_at ? Date.parse(String(data.pushed_at)) : NaN;
     const mine = opts.lastPushAt ? Date.parse(opts.lastPushAt) : 0;
@@ -208,7 +227,7 @@ async function allOf(
  */
 export async function pullAll(
   localHasWriting: boolean,
-): Promise<{ ok: true; bundle: SyncBundle; stamp: { by: string | null; at: string | null } } | { ok: false; error: string; detail?: string }> {
+): Promise<{ ok: true; bundle: SyncBundle; stamp: { by: string | null; at: string | null; closedAt: string | null } } | { ok: false; error: string; detail?: string }> {
   const c = await supabase();
   const session = await currentSession();
   if (!c || !session) return { ok: false, error: NOT_SIGNED_IN };
@@ -240,7 +259,11 @@ export async function pullAll(
     tables[table] = rows;
   }
   const row = tables.profiles?.[0] as Record<string, unknown> | undefined;
-  const stamp = { by: row?.pushed_by ? String(row.pushed_by) : null, at: row?.pushed_at ? String(row.pushed_at) : null };
+  const stamp = {
+    by: row?.pushed_by ? String(row.pushed_by) : null,
+    at: row?.pushed_at ? String(row.pushed_at) : null,
+    closedAt: row?.deleted_at ? String(row.deleted_at) : null,
+  };
   return { ok: true, bundle: fromRows(tables, DEFAULT_PROFILE), stamp };
 }
 

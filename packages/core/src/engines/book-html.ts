@@ -158,7 +158,7 @@ export function bookToHtml(book: BookVersion, boundaryHour = 3): string {
   <div class="label" style="margin-top:0">${ordinal(book.version)} edition · ${plural(
     book.chapters.length,
     'goal',
-  )} · ${escapeHtml(book.track)}</div>
+  )} · ${book.track === 'full' ? 'Full' : 'Starter'}</div>
   <hr class="rule" />
 
 ${
@@ -186,7 +186,7 @@ ${
   <hr class="rule" />
   <div class="label">I will</div>
   <p class="iwill theirs">${escapeHtml(book.iWill)}</p>
-  <div class="label colophon">Sealed ${escapeHtml(formatDay(sealedOn(book.sealedAt, boundaryHour)))} · written by you</div>
+  <div class="label colophon">Finished ${escapeHtml(formatDay(sealedOn(book.sealedAt, boundaryHour)))} · written by you</div>
 </main>
 </body>
 </html>`;

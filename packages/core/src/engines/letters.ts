@@ -215,7 +215,7 @@ export function canDeliverOn(days: number): { ok: boolean; reason?: string } {
 // ---------------------------------------------------------------- composing
 
 const OPENERS: Record<LetterTrigger, string> = {
-  portrait: 'I have been reading what you wrote, the night you wrote it.',
+  portrait: 'I have been reading what you wrote, the day you wrote it.',
   'first-return': 'You came back. I want to be the one to say that plainly.',
   milestone: 'You reached one. Not the whole thing — one, which is how the whole thing happens.',
   monthly: 'A month. I have been keeping the receipts, so here they are.',
@@ -429,8 +429,13 @@ function firstSentenceOf(text: string, avoid: readonly string[] = []): { first: 
   const forbidden = avoid.map(normalise).filter((a) => a.length >= 8);
   const sentences = t.match(/[^.!?]+[.!?]+["'”’)\]]*(?=\s|$)/g)?.map((x) => x.trim()) ?? [];
   const fuller = sentences.find((x) => x.split(/\s+/).length >= 5 && !forbidden.some((f) => normalise(x).includes(f)));
+  // The fallback — the first sentence, whatever its length — obeys the same
+  // list: a letter built on a sentence that names the plan is refused by
+  // the check and then never written, on every launch, for good.
   const m = t.match(/^.*?[.!?]+["'”’)\]]*(?=\s|$)/);
-  const s = (fuller ?? m?.[0] ?? t).trim();
+  const fallback = (m?.[0] ?? t).trim();
+  if (!fuller && forbidden.some((f) => normalise(fallback).includes(f))) return { first: '', cut: false };
+  const s = (fuller ?? fallback).trim();
   if (s.length <= 160) return { first: s, cut: false };
   const window = s.slice(0, 161);
   const lastSpace = window.lastIndexOf(' ');

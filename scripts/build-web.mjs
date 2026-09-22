@@ -45,7 +45,10 @@ if (r.status) process.exit(r.status);
 // With async routes on the web the first load is the entry plus the shared
 // `__common` chunk; the forty screens arrive on demand. The ceiling covers
 // the pair.
-const ENTRY_CEILING_KB = 2900;
+// The first load, raw: the entry plus the shared chunk. 1729 KB after zod
+// left types.ts (it was 2255); the ceiling comes down with it so the
+// validator — or anything else that size — cannot drift back in unnoticed.
+const ENTRY_CEILING_KB = 2000;
 const dir = join('apps', 'mobile', 'dist', '_expo', 'static', 'js', 'web');
 const entry = readdirSync(dir).find((f) => f.startsWith('entry-'));
 const common = readdirSync(dir).find((f) => f.startsWith('__common-'));
@@ -72,6 +75,20 @@ const FONTS = ['Outfit_400Regular', 'Outfit_500Medium', 'Outfit_600SemiBold', 'O
     walk(fontsDir);
   } catch {
     // no fonts in this build: nothing to preload
+  }
+  // The worker's bytes were identical across deploys, so `registration.update()`
+  // found nothing and a tab left open never learned a newer Morrow had
+  // shipped. Stamped with the entry's name, each deploy is a new worker: it
+  // installs, keeps the new shell, and tells the open pages.
+  {
+    const sw = join('apps', 'mobile', 'dist', 'sw.js');
+    try {
+      const entryName = readFileSync(html, 'utf8').match(/entry-[a-z0-9]+\.js/)?.[0] ?? String(Date.now());
+      const src = readFileSync(sw, 'utf8');
+      if (!src.includes('// build ')) writeFileSync(sw, `${src}\n// build ${entryName}\n`);
+    } catch {
+      // no worker in this build
+    }
   }
   if (found.length) {
     // The rules themselves, in the element expo-font keeps its own in

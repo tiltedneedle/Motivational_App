@@ -371,7 +371,7 @@ export function letterFromFuture(opener: string, name?: string): string {
   const who = name?.trim() ? `${name.trim()}, ` : '';
   // Their full stop comes off inside the quotation: “…still blue.” for a
   // while now is two sentences' punctuation in one, and the sentence is ours.
-  const quoted = opener ? `“${opener.replace(/[.!?]+$/, '')}”` : 'what you wrote tonight';
+  const quoted = opener ? `“${opener.replace(/[.!?]+$/, '')}”` : 'what you wrote';
   return [
     `${who}I have been reading ${quoted} for a while now.`,
     'It is not the finish I remember most. It is the ordinary morning you did it anyway, when nobody would have known either way.',

@@ -109,8 +109,11 @@ export function annualAgainstMonthly(plans: PricePlan[] = PLANS): string | null 
 /** The lines on the paywall. App chrome; never set in the serif. */
 export const BENEFITS = [
   'Every goal gets its own plan, not just the first.',
-  'A scene for every goal, drawn from what you wrote about it.',
-  'The coach every day, with the whole Book in front of it.',
+  // Only what Pro gates in this build (PRD §8.9: no invented benefits).
+  // Scenes are not gated anywhere, and the coach is free every day at
+  // twenty turns; both used to be listed as things you would pay for.
+  'A replan whenever a week needs one, not once a month.',
+  'The coach for two hundred turns a day, not twenty.',
   // What Pro gates in this build, and nothing it does not: this line waited
   // until the re-authoring was built, because a paywall that promises a
   // later release is a paywall that lies.

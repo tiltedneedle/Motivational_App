@@ -24,7 +24,6 @@
       },
       "blockedPermissions": [
         "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.SYSTEM_ALERT_WINDOW"
       ]
     },
@@ -59,7 +58,8 @@
         "expo-media-library",
         {
           "savePhotosPermission": "Morrow saves your lock screen — your own line, typeset — to Photos. It never reads your photos.",
-          "photosPermission": "Morrow only ever adds an image to Photos; it does not look at what is there."
+          "photosPermission": "Morrow only ever adds an image to Photos; it does not look at what is there.",
+          "granularPermissions": []
         }
       ],
       [
@@ -73,8 +73,7 @@
         "expo-notifications",
         {
           "icon": "./assets/notification-icon.png",
-          "color": "#EA4B2E",
-          "defaultChannel": "morrow"
+          "color": "#EA4B2E"
         }
       ],
       [
@@ -85,7 +84,15 @@
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Morrow uses the camera only for the photo of you on your Declaration. It stays on this phone.",
+          "photosPermission": "Only the one photo you pick reaches Morrow, for the Declaration; nothing else is read.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": false,

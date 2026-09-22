@@ -552,6 +552,26 @@ export function Chip({
   const kind = role ?? (selected === undefined ? 'button' : 'radio');
   const bg = on ? p.ink : ghost ? 'transparent' : p.surface;
   const fg = on ? p.onInk : p.ink;
+  // A chip is a key (PRD 8.1: controls press into a physical edge). A white
+  // pill with a six-percent hairline sat flush on the lit ground and read
+  // as a label; two points of edge under it, and the face dropping onto
+  // that edge when pressed, make it a thing to press. The selected chip is
+  // ink and keeps its own edge; the ghost is an outline and has none.
+  const EDGE = ghost ? 0 : 2;
+  const edgeColor = on ? (dark ? inkEdge.night : inkEdge.day) : dark ? 'rgba(0,0,0,0.55)' : 'rgba(23,24,28,0.16)';
+  const border = on
+    ? p.ink
+    : ghost
+      ? hovered
+        ? p.ink
+        : dark
+          ? 'rgba(255,255,255,0.28)'
+          : 'rgba(23,24,28,0.26)'
+      : hovered
+        ? p.ink2
+        : dark
+          ? p.line
+          : 'rgba(23,24,28,0.10)';
   return (
     <Pressable
       testID={testID}
@@ -565,33 +585,120 @@ export function Chip({
       style={style}
     >
       {({ pressed }) => (
-        // The face is what moves: down to 0.97 on the press and sprung back
-        // (PRD 8.5), rather than snapping between two sizes.
+        <View
+          style={{
+            borderRadius: radius.chip,
+            backgroundColor: EDGE ? edgeColor : 'transparent',
+            paddingBottom: EDGE,
+          }}
+        >
+          {/*
+            The face is what moves: down to 0.97 on the press and sprung back
+            (PRD 8.5), and down onto its edge while the finger is on it.
+          */}
+          <Animated.View
+            style={[
+              {
+                minHeight: minHeight - EDGE,
+                paddingVertical: 9,
+                paddingHorizontal: 16,
+                borderRadius: radius.chip,
+                backgroundColor: bg,
+                borderWidth: 1,
+                borderColor: border,
+                // The pointer's lift and the press's scale in one transform:
+                // a second transform key would replace the animated one and
+                // the spring back would drive nothing.
+                transform: [{ translateY: pressed ? EDGE : hovered ? -1 : 0 }, { scale }],
+                justifyContent: 'center',
+                alignItems: 'center',
+              },
+              Platform.OS === 'web' ? webHover.transitionStill : null,
+              hovered && !pressed && Platform.OS === 'web' ? { boxShadow: dark ? webHover.liftNight.boxShadow : webHover.lift.boxShadow } : null,
+            ]}
+          >
+            <Text style={{ fontFamily: fonts.sansSemi, fontSize: 14, lineHeight: 20, textAlign: 'center', color: fg }}>{label}</Text>
+          </Animated.View>
+        </View>
+      )}
+    </Pressable>
+  );
+}
+
+/**
+ * A card that is a door: a panel with a heading, a line and an arrow, that
+ * lifts under a pointer and presses under a finger. The tappable panels on
+ * Today — the letter, the Sunday reading, "From your words" — were plain
+ * grey blocks with nothing to say they could be tapped, and read as text.
+ */
+export function TapCard({
+  children,
+  onPress,
+  testID,
+  accessibilityLabel,
+  style,
+  arrow = true,
+}: {
+  children: React.ReactNode;
+  onPress?: () => void;
+  testID?: string;
+  accessibilityLabel?: string;
+  style?: StyleProp<ViewStyle>;
+  /** The arrow at the right edge; off for a panel whose own button is the door. */
+  arrow?: boolean;
+}) {
+  const { p, dark } = usePalette();
+  const { hovered, hoverProps } = useHover();
+  const reduced = useReducedMotion();
+  const { scale, onPressIn, onPressOut } = usePress(reduced);
+  return (
+    <Pressable
+      testID={testID}
+      onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      {...hoverProps}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+    >
+      {({ pressed }) => (
         <Animated.View
           style={[
             {
-              minHeight,
-              paddingVertical: 9,
-              paddingHorizontal: 16,
-              borderRadius: radius.chip,
-              backgroundColor: bg,
-              // A hairline on the unselected chip lifts it off the lit ground
-              // without a shadow, which the studio saves for its one card.
+              backgroundColor: p.surface2,
+              borderRadius: radius.card,
+              padding: 18,
+              paddingRight: arrow ? 44 : 18,
+              gap: 6,
               borderWidth: 1,
-              borderColor: on ? p.ink : hovered ? p.ink2 : ghost ? p.line : dark ? p.line2 : 'rgba(23,24,28,0.06)',
-              opacity: pressed ? 0.9 : 1,
-              // The pointer's lift and the press's scale in one transform:
-              // a second transform key would replace the animated one and
-              // the spring back would drive nothing.
+              borderColor: hovered ? p.ink2 : dark ? p.line2 : 'rgba(23,24,28,0.05)',
               transform: [{ translateY: hovered && !pressed ? -1 : 0 }, { scale }],
-              justifyContent: 'center',
-              alignItems: 'center',
             },
             Platform.OS === 'web' ? webHover.transitionStill : null,
             hovered && !pressed && Platform.OS === 'web' ? { boxShadow: dark ? webHover.liftNight.boxShadow : webHover.lift.boxShadow } : null,
+            style,
           ]}
         >
-          <Text style={{ fontFamily: fonts.sansSemi, fontSize: 14, lineHeight: 20, textAlign: 'center', color: ghost ? p.ink2 : fg }}>{label}</Text>
+          {children}
+          {arrow ? (
+            <View pointerEvents="none" style={{ position: 'absolute', right: 14, top: 0, bottom: 0, justifyContent: 'center' }}>
+              <View
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 14,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: hovered ? p.ink : p.surface,
+                  borderWidth: 1,
+                  borderColor: hovered ? p.ink : dark ? p.line : 'rgba(23,24,28,0.10)',
+                  ...(Platform.OS === 'web' ? webHover.transition : {}),
+                }}
+              >
+                <Text style={{ fontFamily: fonts.sansSemi, fontSize: 15, lineHeight: 18, color: hovered ? p.onInk : p.ink }}>→</Text>
+              </View>
+            </View>
+          ) : null}
         </Animated.View>
       )}
     </Pressable>
@@ -931,7 +1038,11 @@ export function TextButton({
             paddingHorizontal: plain ? 12 : 18,
             paddingVertical: plain ? 0 : 9,
             borderRadius: radius.chip,
-            backgroundColor: plain ? 'transparent' : pressed || hovered ? (dark ? 'rgba(255,255,255,0.14)' : 'rgba(23,24,28,0.10)') : dark ? 'rgba(255,255,255,0.08)' : 'rgba(23,24,28,0.06)',
+            // A tint alone (six percent on the cream ground) was a pill
+            // nobody could see; with a hairline it is a button.
+            backgroundColor: plain ? 'transparent' : pressed || hovered ? (dark ? 'rgba(255,255,255,0.16)' : 'rgba(23,24,28,0.12)') : dark ? 'rgba(255,255,255,0.09)' : 'rgba(23,24,28,0.07)',
+            borderWidth: plain ? 0 : 1,
+            borderColor: plain ? 'transparent' : hovered ? p.ink2 : dark ? 'rgba(255,255,255,0.22)' : 'rgba(23,24,28,0.18)',
             justifyContent: 'center',
             alignItems: 'center',
             opacity: plain && pressed ? 0.6 : 1,
@@ -941,7 +1052,7 @@ export function TextButton({
         >
           <Text
             style={{
-              fontFamily: fonts.sansMedium,
+              fontFamily: plain ? fonts.sansMedium : fonts.sansSemi,
               fontSize: 15,
               lineHeight: 20,
               color: plain ? (hovered ? p.ink : p.ink2) : p.ink,

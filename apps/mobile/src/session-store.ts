@@ -26,7 +26,12 @@ type Storage = {
   removeItem(key: string): Promise<void>;
 };
 
-const KEY_PREFIX = 'morrow-session-key:';
+// SecureStore accepts only [A-Za-z0-9._-] in a key. The auth client's own
+// key is `sb-<ref>-auth-token` (and `-code-verifier` for PKCE), which is
+// fine; the prefix used to end in a colon, which is not, so every keychain
+// read and write threw and no sign-in could complete on a phone.
+const KEY_PREFIX = 'morrow-session-key.';
+const keyId = (name: string): string => KEY_PREFIX + name.replace(/[^A-Za-z0-9._-]/g, '_');
 
 let modules: Promise<{ secure: any; crypto: any; aes: any } | null> | null = null;
 
@@ -51,15 +56,22 @@ class LargeSecureStore implements Storage {
   private async keyFor(name: string, make: boolean): Promise<Uint8Array | null> {
     const m = await load();
     if (!m) return null;
-    const id = KEY_PREFIX + name;
-    const held: string | null = await m.secure.getItemAsync(id);
-    if (held) return m.aes.utils.hex.toBytes(held);
-    if (!make) return null;
-    const fresh: Uint8Array = await m.crypto.getRandomBytesAsync(32);
-    await m.secure.setItemAsync(id, m.aes.utils.hex.fromBytes(fresh), {
-      keychainAccessible: m.secure.AFTER_FIRST_UNLOCK,
-    });
-    return fresh;
+    const id = keyId(name);
+    try {
+      const held: string | null = await m.secure.getItemAsync(id);
+      if (held) return m.aes.utils.hex.toBytes(held);
+      if (!make) return null;
+      const fresh: Uint8Array = await m.crypto.getRandomBytesAsync(32);
+      await m.secure.setItemAsync(id, m.aes.utils.hex.fromBytes(fresh), {
+        keychainAccessible: m.secure.AFTER_FIRST_UNLOCK,
+      });
+      return fresh;
+    } catch {
+      // A keychain that refuses (a locked device at the wrong moment, an
+      // entitlement missing): plain storage rather than a sign-in that
+      // cannot complete.
+      return null;
+    }
   }
 
   private fallback(): Storage {
@@ -110,7 +122,7 @@ class LargeSecureStore implements Storage {
     const m = await load();
     if (m) {
       try {
-        await m.secure.deleteItemAsync(KEY_PREFIX + key);
+        await m.secure.deleteItemAsync(keyId(key));
       } catch {
         // no key to remove
       }

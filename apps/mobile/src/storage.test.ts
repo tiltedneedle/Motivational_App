@@ -24,10 +24,22 @@ vi.mock('@react-native-async-storage/async-storage', () => ({
       disk.delete(k);
     },
     getAllKeys: async () => [...disk.keys()],
+    multiGet: async (keys: string[]) => keys.map((k) => [k, disk.has(k) ? (disk.get(k) as string) : null]),
+    multiSet: async (rows: [string, string][]) => {
+      for (const [k, v] of rows) {
+        if (v.length > 2_000_000) throw new Error('Row too big to fit into CursorWindow');
+        disk.set(k, v);
+      }
+    },
+    multiRemove: async (keys: string[]) => {
+      for (const k of keys) disk.delete(k);
+    },
   },
 }));
+vi.mock('react-native', () => ({ Platform: { OS: 'ios' }, AppState: { addEventListener: () => ({ remove() {} }) } }));
 
-const { QUARANTINE_PREFIX, guardedStorage, hasFailed, resetStorageLatch } = await import('./storage');
+const { QUARANTINE_PREFIX, guardedStorage, hasFailed, resetStorageLatch, setWriteDelayForTest, storedRaw } = await import('./storage');
+setWriteDelayForTest(0);
 
 const A_REAL_BOOK = JSON.stringify({
   state: { books: [{ title: 'A year of small mornings' }], texts: [{ body: 'It is 6:40 and the kitchen is still blue.' }] },
@@ -169,5 +181,25 @@ describe('being told when the latch closes', () => {
     // A second failure does not ring twice.
     await guardedStorage.getItem('morrow-v1');
     expect(heard).toEqual(['read']);
+  });
+});
+
+describe('a store too big for one Android row', () => {
+  it('is written as parts and read back whole', async () => {
+    resetStorageLatch();
+    disk.clear();
+    const { openStorage } = await import('./storage');
+    openStorage();
+    const big = JSON.stringify({ state: { texts: [{ body: 'x'.repeat(1_200_000) }] } });
+    await guardedStorage.setItem('morrow-v1', big);
+    expect([...disk.keys()].filter((k) => k.startsWith('morrow-v1#')).length).toBe(3);
+    expect(disk.get('morrow-v1')).toContain('__morrow_parts');
+    expect(await guardedStorage.getItem('morrow-v1')).toBe(big);
+    expect(await storedRaw()).toBe(big);
+    // Shrunk back under the limit: inline again, the parts gone.
+    await guardedStorage.setItem('morrow-v1', '{"state":{}}');
+    expect(disk.get('morrow-v1')).toBe('{"state":{}}');
+    expect([...disk.keys()].filter((k) => k.startsWith('morrow-v1#')).length).toBe(0);
+    expect(hasFailed()).toBe(false);
   });
 });

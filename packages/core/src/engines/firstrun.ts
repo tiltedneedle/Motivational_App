@@ -26,6 +26,7 @@ export type FirstRunStep =
   | { step: 'readback'; route: '/heard'; label: string }
   | { step: 'order'; route: '/rank'; label: string }
   | { step: 'stones'; route: string; label: string; goalId: string; kind: AnalysisKind; written: number; total: number }
+  | { step: 'shadow'; route: '/write?kind=shadow'; label: string }
   | { step: 'seal'; route: string; label: string; goalId: string }
   | { step: 'done'; route: '/today'; label: string };
 
@@ -35,6 +36,8 @@ export interface FirstRunInput {
   hasWarmup?: boolean;
   /** Whether the Fifteen (the ideal) has been written. */
   hasIdeal: boolean;
+  /** Whether the other road (the shadow) has been written — required on the Full track, before the read-back (PRD §7.2). */
+  hasShadow?: boolean;
   /**
    * Whether the read-back of the Fifteen was begun and left: rows kept or
    * named and not yet made goals. Left out of the path, the kept phrases
@@ -60,6 +63,12 @@ export function firstRunStep(input: FirstRunInput): FirstRunStep {
     return { step: 'interview', route: '/interview', label: 'Find your goals · 2 min' };
   }
   if (!input.hasIdeal) return { step: 'fifteen', route: '/authoring', label: 'Write your future · 15 min' };
+  // Full: the other road, required, before the read-back. Left out of the
+  // path, a person who left its doorway was sent on to rank the goals and
+  // finished a Full-track Book with no shadow in it.
+  if (input.track === 'full' && !input.hasShadow && input.analyses.length === 0 && !input.hasTitle) {
+    return { step: 'shadow', route: '/write?kind=shadow', label: 'Write the other road · 15 min' };
+  }
   if (input.readBackOpen) return { step: 'readback', route: '/heard', label: 'Carry on with what I heard · 2 min' };
   // The order and the title come between the Fifteen and the stones; once a
   // stone is written the person has been past that screen, titled or not.
@@ -81,7 +90,7 @@ export function firstRunStep(input: FirstRunInput): FirstRunStep {
     return {
       step: 'stones',
       route: `/stone?goal=${first.goalId}&kind=${first.kind}`,
-      label: written === 0 ? 'Plan each goal · five questions' : `Carry on planning (${written} of ${total})`,
+      label: written === 0 ? `Plan each goal · ${plural(total, 'question')}` : `Carry on planning (${written} of ${total})`,
       goalId: first.goalId,
       kind: first.kind,
       written,
@@ -110,7 +119,7 @@ export interface PathStepInfo {
 export function firstRunPath(s: FirstRunStep): { steps: PathStepInfo[]; at: number } {
   const order: PathStepInfo['key'][] = ['warmup', 'interview', 'fifteen', 'plan', 'finish'];
   const current: PathStepInfo['key'] =
-    s.step === 'setup' || s.step === 'warmup' ? 'warmup' : s.step === 'interview' ? 'interview' : s.step === 'fifteen' || s.step === 'readback' ? 'fifteen' : s.step === 'order' || s.step === 'stones' ? 'plan' : 'finish';
+    s.step === 'setup' || s.step === 'warmup' ? 'warmup' : s.step === 'interview' ? 'interview' : s.step === 'fifteen' || s.step === 'shadow' || s.step === 'readback' ? 'fifteen' : s.step === 'order' || s.step === 'stones' ? 'plan' : 'finish';
   const at = s.step === 'done' ? order.length : order.indexOf(current);
   const labels: Record<PathStepInfo['key'], { label: string; minutes: string }> = {
     warmup: { label: 'Write a first line', minutes: '2 min' },
@@ -130,6 +139,16 @@ export function firstRunPath(s: FirstRunStep): { steps: PathStepInfo[]; at: numb
  * at every step — true, and the first thing a person read a minute after
  * finishing their first evening.
  */
+/**
+ * The word for the next sitting's time, from the set-up answer: "tonight"
+ * for somebody who said evenings, "this morning" for mornings, "today" for
+ * whenever. Set-up promised the answer "shapes how the app talks about the
+ * next step", and for a while nothing read it.
+ */
+export function whenWord(writeWhen: 'morning' | 'evening' | 'any' | undefined): 'tonight' | 'this morning' | 'today' {
+  return writeWhen === 'morning' ? 'this morning' : writeWhen === 'any' ? 'today' : 'tonight';
+}
+
 export function firstRunHeading(s: FirstRunStep): string {
   switch (s.step) {
     case 'setup':
@@ -140,12 +159,15 @@ export function firstRunHeading(s: FirstRunStep): string {
       return 'Your first line is kept.';
     case 'fifteen':
       return 'Your goals are named.';
+    case 'shadow':
+      return 'Your future is written.';
     case 'readback':
       return 'Your future is written.';
     case 'order':
       return 'Your future is written.';
     case 'stones':
-      return s.written === 0 ? 'Now plan each goal.' : 'Halfway to your Book.';
+      // "Halfway" only past the middle: it used to say so at one of fifteen.
+      return s.written === 0 ? 'Now plan each goal.' : s.written * 2 >= s.total ? 'Halfway to your Book.' : 'Planning each goal.';
     case 'seal':
       return 'One step from your Book.';
     case 'done':
@@ -164,10 +186,12 @@ export function firstRunCaption(s: FirstRunStep, goalCount: number): string {
       return 'Next, find your goals: about eight taps, no typing.';
     case 'fifteen':
       return `${goalCount === 1 ? 'One goal is' : `${goalCount} goals are`} named. Next: fifteen minutes on the life you want, three to five years out.`;
+    case 'shadow':
+      return 'On Full the other road comes next: fifteen minutes on the life where none of it happened. Then what I heard.';
     case 'readback':
       return 'The phrases you kept from it are where you left them. Finish naming them, then the goals go in order.';
     case 'order':
-      return 'Next: put the goals in order and name the Book, then five short questions per goal.';
+      return 'Next: put the goals in order and name the Book, then a few short questions per goal.';
     case 'stones':
       return s.written === 0
         ? `${plural(s.total, 'short question')} ${goalCount === 1 ? 'about your goal' : 'across your goals'}, one line each, in your words.`

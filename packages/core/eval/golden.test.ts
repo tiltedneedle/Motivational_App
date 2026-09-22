@@ -21,14 +21,11 @@
  * builder cannot land without the eval passing.
  */
 import { afterAll, describe, expect, it } from 'vitest';
+import { BookVersion as BookVersionSchema, Brief as BriefSchema, Plan as PlanSchema, Portrait as PortraitSchema } from '../src/schemas';
 import {
-  BookVersion as BookVersionSchema,
-  Brief as BriefSchema,
   CHIPS,
   LocalProvider,
   MIN_AUTHORSHIP_RATIO,
-  Plan as PlanSchema,
-  Portrait as PortraitSchema,
   bookPages,
   bookToHtml,
   daysBetween,
@@ -397,13 +394,21 @@ describe.each(built)('$profile.id', (b) => {
       expect(words(move.title), `a move fits on a card: "${move.title.slice(0, 50)}"`).toBeLessThanOrEqual(40);
       if (move.ifThen) expect(move.ifThen.startsWith('If ')).toBe(true);
       expect(move.title, 'a move does not end in a comma').not.toMatch(/[,;:]$/);
-      // One card per sentence: the 48-hour opening no longer copies a
-      // day-named sentence onto a day it contradicts.
-      expect(plan.moves.filter((m) => m.title === move.title), `one card per sentence: "${move.title.slice(0, 40)}"`).toHaveLength(1);
-      // A move that names its day is dated on that day; the rest within 48 hours.
+      // One card per sentence a week: the 48-hour opening no longer copies a
+      // day-named sentence onto a day it contradicts. The fortnight (§7.4)
+      // dates the same sentences again a week on.
+      expect(plan.moves.filter((m) => m.title === move.title && m.week === move.week), `one card per sentence: "${move.title.slice(0, 40)}"`).toHaveLength(1);
+      // A move that names its day is dated on that day; the rest within 48
+      // hours — in week one. Week two is week one, seven days on.
       const own = ownDate(move.title, TODAY);
-      if (own) expect(move.scheduledFor).toBe(own);
-      else expect(daysBetween(TODAY, move.scheduledFor!)).toBeLessThanOrEqual(3);
+      if (move.week === 1) {
+        if (own) expect(move.scheduledFor).toBe(own);
+        else expect(daysBetween(TODAY, move.scheduledFor!)).toBeLessThanOrEqual(3);
+      } else {
+        const twin = plan.moves.find((m) => m.title === move.title && m.week === 1);
+        expect(twin, `a week-two move has its week-one twin: "${move.title.slice(0, 40)}"`).toBeTruthy();
+        expect(daysBetween(twin!.scheduledFor!, move.scheduledFor!)).toBe(7);
+      }
     }
 
     // Two moves may share their sentence on two dates (the 48-hour opening),
@@ -483,6 +488,10 @@ describe.each(built)('$profile.id', (b) => {
       expect(brief.support).toBeTruthy();
     } else if (yesterdayKind === 'kept') {
       expect(brief.yesterday).toContain('Consistency 63, up from 59.');
+    } else if (yesterdayKind === 'none') {
+      // No row at all: the first morning after the Book, or a day the app
+      // was not opened — never "in the ledger as a quiet day".
+      expect(['Yesterday you finished the Book.', 'Nothing in the ledger for yesterday yet.']).toContain(brief.yesterday);
     } else {
       expect(brief.yesterday).toBe('Quiet day yesterday. It is in the ledger as a quiet day, and that is all it is.');
     }

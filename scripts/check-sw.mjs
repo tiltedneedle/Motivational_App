@@ -63,12 +63,12 @@ const fallbacks = [
   'C:/Users/HP/AppData/Local/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-win64/chrome-headless-shell.exe',
 ].filter(Boolean);
 let browser = null;
-for (const executablePath of [...fallbacks, undefined]) {
+for (const executablePath of [explicit, undefined, ...fallbacks.filter((x) => x !== explicit)]) {
   try {
     browser = await chromium.launch(executablePath ? { executablePath } : {});
     break;
   } catch (err) {
-    if (executablePath === undefined) throw err;
+    if (executablePath === fallbacks[fallbacks.length - 1] || (!fallbacks.length && executablePath === undefined)) throw err;
   }
 }
 const context = await browser.newContext({ viewport: { width: 420, height: 900 } });

@@ -9,7 +9,7 @@
 import { Redirect, useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { View } from 'react-native';
-import { AREAS, firstRunPath, mirrorLocally, type DomainId } from '@morrow/core';
+import { AREAS, firstRunPath, mirrorLocally, type DomainId, whenWord } from '@morrow/core';
 import { Body, Card, Glyph, Label, PathCard, Rise, Screen, Statement, UserText, accent, day, useReducedMotion } from '@morrow/ui';
 import { latestText, useFirstRun, useMorrow } from '../src/store';
 import { useFirstRunStep } from '../src/analytics';
@@ -83,7 +83,7 @@ export default function MirrorScreen() {
         <PathCard
           testID="mirror-path"
           title={remaining === 0 ? 'Your Book is written.' : `${remaining === 1 ? 'One more step' : `${remaining} more steps`} to a Book you wrote.`}
-          caption={remaining === 0 ? undefined : 'Tonight or over a few days. Nothing you write is ever lost.'}
+          caption={remaining === 0 ? undefined : `${whenWord(profile.writeWhen).replace(/^./, (c) => c.toUpperCase())} or over a few days. Nothing you write is ever lost.`}
           steps={path.steps.map((s) => ({ label: s.label, minutes: s.minutes, done: s.done }))}
           at={path.at}
           cta={{ label: firstRun.label, onPress: onward, testID: 'mirror-continue' }}
