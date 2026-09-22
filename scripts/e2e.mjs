@@ -361,7 +361,12 @@ async function main() {
     // app's, and which entry it lands on depends on the machine.
     await page.goBack({ waitUntil: 'commit' }).catch(() => {});
     await page.waitForTimeout(600);
-    check('the platform back undoes one answer rather than leaving', (await appears('screen-interview')) && (await text('interview-question')) !== 'How far?', await text('interview-question'));
+    const whyBack = () => page.evaluate(() => JSON.stringify(window.__morrowBack ?? null));
+    check(
+      'the platform back undoes one answer rather than leaving',
+      (await appears('screen-interview')) && (await text('interview-question')) !== 'How far?',
+      `${await text('interview-question')} · ${await whyBack()}`,
+    );
     await tap('option-0'); // Finish a race, once more
     check('and the follow-up comes back', (await text('interview-question')) === 'How far?');
 
@@ -2487,7 +2492,15 @@ async function main() {
     check(
       "the platform's back there is one step back, to the deck",
       await appears('screen-present'),
-      await page.evaluate(() => [...document.querySelectorAll('[data-testid^="screen-"]')].map((e) => e.getAttribute('data-testid')).join(',') + ' @ ' + location.pathname + location.search),
+      await page.evaluate(
+        () =>
+          [...document.querySelectorAll('[data-testid^="screen-"]')].map((e) => e.getAttribute('data-testid')).join(',') +
+          ' @ ' +
+          location.pathname +
+          location.search +
+          ' · ' +
+          JSON.stringify(window.__morrowBack ?? null),
+      ),
     );
     const nineKept = (await store()).presentDraft?.selected?.length ?? 0;
     check('in the order they were kept', nineKept === 9, String(nineKept));

@@ -38,24 +38,12 @@ interface Handler {
 }
 
 /**
- * The path the browser was on before the pop being handled. A pop that
- * leaves some other screen — the privacy details pushed over set-up — is
- * that screen's, and no handler underneath it may take it as its own. The
- * browser has already moved by the time popstate fires, so the path is
- * tracked as it changes.
+ * Kept for the root layout, which called it while this module tracked where
+ * the app was. It tracks nothing now — see `onPopState` — and the call is
+ * harmless; the export stays so the layout needs no special knowledge.
  */
-// On React Native `window` is the global and has no `location`; only the
-// web build reads it (a module-level read here crashed a native boot).
-let currentPath = Platform.OS === 'web' && typeof window !== 'undefined' && window.location ? window.location.pathname : '/';
-if (Platform.OS === 'web' && typeof window !== 'undefined') {
-  for (const method of ['pushState', 'replaceState'] as const) {
-    const original = window.history[method].bind(window.history);
-    window.history[method] = ((...args: Parameters<History['pushState']>) => {
-      const out = original(...args);
-      currentPath = window.location.pathname;
-      return out;
-    }) as History['pushState'];
-  }
+export function setAppPath(_next: string): void {
+  // nothing: the pop says for itself where it landed
 }
 
 /** The screens mounted right now that use this, the one on top last. */
@@ -67,33 +55,50 @@ const mounted: { current: Handler }[] = [];
 let restoring = false;
 
 function onPopState(e: { stopImmediatePropagation: () => void }): void {
-  const leaving = currentPath;
-  currentPath = window.location.pathname;
   if (restoring) {
     restoring = false;
     e.stopImmediatePropagation();
     return;
   }
-  // The pop belongs to the screen the browser is leaving — the newest
-  // handler standing at that path, not simply the newest handler. A screen
-  // underneath — set-up under the privacy details — stays out of the way;
-  // it used to take that pop as its own step back. And a handler left on
-  // top by a screen that has not unmounted no longer swallows the answer
-  // for the screen the person is actually on. (The navigator's own focus is
-  // no help: on web it reports the screen underneath as focused, and
-  // re-renders it after the URL has moved.)
-  let top: Handler | undefined;
-  for (let i = mounted.length - 1; i >= 0; i--) {
-    if (mounted[i]?.current.path === leaving) {
-      top = mounted[i]?.current;
-      break;
-    }
-  }
-  if (!top?.canStepBack) return;
+  /**
+   * Where the browser has landed. This is the whole question, and the only
+   * thing that can be known for certain when a pop arrives.
+   *
+   * The rule: a pop that lands somewhere other than the top screen's own
+   * path is the browser leaving that screen, and the screen answers it with
+   * one step back. A pop that lands on the top screen's own path is
+   * something above it closing — the privacy details over set-up — and is
+   * the browser's to finish.
+   *
+   * This used to ask instead where the app *was*, tracked by patching
+   * `history.pushState`. That held here and not on CI's machine, where the
+   * router moves the URL by some other route: the tracked value stayed at
+   * whatever the page first loaded with, never matched the screen asking,
+   * and the browser's back simply left every screen that had promised to
+   * undo. Reading the router's own path instead was worse: on a back the
+   * app asks for, the route updates before the URL does, so "where we were"
+   * was already the destination and the details' Back ate a set-up step.
+   */
+  const landing = window.location.pathname;
+  const top = mounted[mounted.length - 1]?.current;
+  const acted = Boolean(top?.canStepBack) && top?.path !== landing;
+  note({ landing, screens: mounted.map((m) => m.current.path), acted });
+  if (!acted || !top) return;
   e.stopImmediatePropagation();
   restoring = true;
   window.history.go(1);
   top.stepBack();
+}
+
+/**
+ * The last pop, on `window.__morrowBack`, so a check that fails can say why
+ * rather than "false". Web only, a few bytes, and nothing reads it in the
+ * product: three checks failed on CI's machine and on no machine here, and
+ * a bare pass/fail is not evidence.
+ */
+function note(what: { landing: string; screens: string[]; acted: boolean }): void {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+  (window as unknown as { __morrowBack?: unknown }).__morrowBack = what;
 }
 
 if (Platform.OS === 'web' && typeof window !== 'undefined') {

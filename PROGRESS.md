@@ -3086,6 +3086,26 @@ first run, the home with its loop, the sign-in with Google, the five-lens review
 folded in, 558 end-to-end checks, `pnpm verify` green. What remains needs either
 hardware, a credential, or a product call — plus the items the rebuild opened:
 
+0d. **The web back, rewritten (2026-09-22, evening)** — CI failed three checks
+   that pass on every machine here, all of them a browser Back that left a
+   screen instead of undoing a step inside it. The cause: the handler asked
+   *where the app was*, tracked by patching `history.pushState`, which the
+   router on CI's browser does not always go through — the tracked value
+   stayed at the page's first path, never matched the screen asking, and the
+   back simply left. Two attempts at a better source failed in their own
+   ways (every screen writing the router's path let a screen underneath
+   report a stale one; one writer in the layout was worse, because on a back
+   the app asks for, the route updates before the URL does — the privacy
+   details' Back then ate a set-up step, reproduced by hand). What it does
+   now needs no tracking at all: **a pop that lands somewhere other than the
+   top screen's own path is the browser leaving that screen**, and the
+   screen answers with one step back; a pop that lands on the screen's own
+   path is something above it closing, and the browser finishes it. The
+   handler records its reasoning on `window.__morrowBack` (web only) so a
+   check that fails says why. Verified by hand: Welcome → set-up step 4 →
+   browser Back → step 3, URL unmoved; set-up → the privacy details → Back →
+   the details close and step 4 is untouched.
+
 0c. **Google, as it stands (2026-09-22, evening)** — driven from a configured
    build to Google's own page: "Sign in to continue to
    fxsaxganeyajxbcbignq.supabase.co", no `invalid_client` and no

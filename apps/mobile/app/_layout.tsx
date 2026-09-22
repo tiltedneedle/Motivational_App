@@ -14,6 +14,7 @@ import { day } from '@morrow/ui';
 import { darkOf, useMorrow } from '../src/store';
 import { StatusBar } from 'expo-status-bar';
 import { hasStoredSession, signInFromUrl } from '../src/supabase';
+import { setAppPath } from '../src/platform-back';
 import { onNotificationOpened } from '../src/notify';
 import { armAnalytics, track } from '../src/analytics';
 import { SafetyGate } from '../src/components/SafetyGate';
@@ -67,6 +68,12 @@ export default function RootLayout() {
   const pathnameRef = useRef(pathname);
   useEffect(() => {
     pathnameRef.current = pathname;
+    // And the one place the back handler reads for "where the app is": after
+    // the navigation has committed, from the router itself. It used to learn
+    // this by patching history.pushState, which the router does not always
+    // go through — and then the browser's back left every screen that had
+    // promised to undo.
+    setAppPath(pathname);
   }, [pathname]);
 
   const syncNotifications = useMorrow((s) => s.syncNotifications);
