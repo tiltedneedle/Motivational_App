@@ -74,14 +74,22 @@ function onPopState(e: { stopImmediatePropagation: () => void }): void {
     e.stopImmediatePropagation();
     return;
   }
-  const top = mounted[mounted.length - 1]?.current;
+  // The pop belongs to the screen the browser is leaving — the newest
+  // handler standing at that path, not simply the newest handler. A screen
+  // underneath — set-up under the privacy details — stays out of the way;
+  // it used to take that pop as its own step back. And a handler left on
+  // top by a screen that has not unmounted no longer swallows the answer
+  // for the screen the person is actually on. (The navigator's own focus is
+  // no help: on web it reports the screen underneath as focused, and
+  // re-renders it after the URL has moved.)
+  let top: Handler | undefined;
+  for (let i = mounted.length - 1; i >= 0; i--) {
+    if (mounted[i]?.current.path === leaving) {
+      top = mounted[i]?.current;
+      break;
+    }
+  }
   if (!top?.canStepBack) return;
-  // The pop belongs to the screen the browser is leaving. A handler for a
-  // screen underneath it — set-up under the privacy details — stays out
-  // of the way; it used to take that pop as its own step back. (The
-  // navigator's own focus is no help here: on web it reports the screen
-  // underneath as focused, and re-renders it after the URL has moved.)
-  if (top.path !== leaving) return;
   e.stopImmediatePropagation();
   restoring = true;
   window.history.go(1);

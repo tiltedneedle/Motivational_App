@@ -3252,11 +3252,22 @@ async function main() {
     await page.waitForTimeout(200);
     await tap('consent-continue');
     await page.waitForTimeout(800);
-    check('and through the gate, the door that sent them there', await appears('screen-present'));
+    const where = async () =>
+      page.evaluate(() => {
+        const ids = [...document.querySelectorAll('[data-testid^="screen-"]')].map((e) => e.getAttribute('data-testid')).join(',');
+        let consented = '?';
+        try {
+          consented = String(JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state?.profile?.consentedAt ?? null);
+        } catch {
+          consented = 'unreadable';
+        }
+        return `${ids || 'no screen'} @ ${location.pathname}${location.search} · consentedAt ${consented}`;
+      });
+    check('and through the gate, the door that sent them there', await appears('screen-present', 8000), await where());
     await page.goto(`${BASE}/present`, { waitUntil: 'networkidle' });
     await page.clock.runFor(1500);
     await page.waitForTimeout(700);
-    check('once through, never asked again', (await appears('screen-present')) && !(await seen('screen-consent')));
+    check('once through, never asked again', (await appears('screen-present', 8000)) && !(await seen('screen-consent')), await where());
 
     // ---- Sunday: the reading is a card on the day it belongs to, and none other
     {
