@@ -3468,6 +3468,22 @@ async function main() {
     }
 
     check('no uncaught page errors', pageErrors.length === 0, pageErrors.join(' | '));
+
+    /**
+     * The suite ran all of itself.
+     *
+     * Several sections stand behind a condition — a store with a Book in it,
+     * a safety card that was raised, a pop the app actually saw — and a
+     * condition that turns out false skips its checks in silence. Two whole
+     * sections were written, run green, and contributed nothing for an
+     * evening on exactly that: the walk's store had no Book left by the time
+     * they ran, and "567 passed" looked the same as "579 passed" from the
+     * outside.
+     *
+     * Raise the floor when you add checks. A drop below it means a section
+     * went missing, not that a check failed.
+     */
+    check('the suite ran every section it has', results.length >= 576, `${results.length} checks`);
   } catch (err) {
     check('the run completed', false, err instanceof Error ? err.message : String(err));
     await page.screenshot({ path: join(ROOT, 'e2e-failure.png') }).catch(() => undefined);

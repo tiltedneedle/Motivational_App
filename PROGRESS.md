@@ -3279,8 +3279,15 @@ hardware, a credential, or a product call — plus the items the rebuild opened:
    e2e sections that were missing are written: the Sunday card, the storage
    banner's Start again, the runner's Stop/resume, the keep notice (a phone's
    user agent, scripted) and the finish screen with a goal missing its How line.
-   Still open there: a pinned check count, and the a11y pass over the account UI
-   (it needs a configured build); (d) `freezeOnBlur` on the Stack is **left off
+   The check count is pinned now as well — the suite fails if it runs fewer
+   checks than its floor, because two of those sections were written, ran green
+   and contributed nothing for an evening (the store they needed had been wiped
+   by the walk before them, and "567 passed" looks exactly like "579 passed").
+   And the account UI has had its axe pass, against a **configured** build:
+   the sign-in with its email field and its Google button, and the screen's
+   three other faces — the choice between two copies, a closed account, and
+   the copy that came back — each opened by its own query. 45 screens, 0
+   serious, 0 minor; (d) `freezeOnBlur` on the Stack is **left off
    on purpose**: it freezes a blurred screen by suspending it, which tears down
    that screen's effects — including the undo it has just armed (0g) — and the
    cost it would save was the keystroke re-renders, which `useSnapshot` already

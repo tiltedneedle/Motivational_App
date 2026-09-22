@@ -78,6 +78,14 @@ const ROUTES = {
   settings: '/settings',
   paywall: '/paywall?moment=second-blueprint',
   account: '/account',
+  // The account's other faces, which a build with no service never shows:
+  // the choice between two copies, a closed account, and the copy that came
+  // back. Each is a query the screen opens on, so axe can see all four
+  // without a session. In an offline build they render the "no account
+  // service" page, which is worth a pass of its own anyway.
+  'account-conflict': '/account?settled=conflict',
+  'account-closed': '/account?settled=closed',
+  'account-pulled': '/account?settled=pulled',
   wallpaper: '/wallpaper',
   declare: '/declare',
   reauthor: '/reauthor',
@@ -161,6 +169,10 @@ const SCREEN_FOR = {
   present: ['screen-present', 'screen-present-narrow', 'screen-present-write', 'screen-present-done'],
   past: ['screen-past-doorway', 'screen-past-age', 'screen-past-events', 'screen-past-choose', 'screen-past-analyse', 'screen-past-done'],
   'stone-obstacles': ['screen-stone'],
+  // The account's other faces are the same screen, opened on another state.
+  'account-conflict': ['screen-account'],
+  'account-closed': ['screen-account'],
+  'account-pulled': ['screen-account'],
 };
 await page.clock.install({ time: new Date('2026-09-12T09:00:00') });
 const axeSource = await readFile(AXE, 'utf8');
