@@ -2487,21 +2487,31 @@ async function main() {
     // for the mount, and a beat for the answer (CI's machine is slower than
     // this one, and this check was the only one that felt it).
     await page.waitForTimeout(600);
+    const popsBefore = await page.evaluate(() => window.__morrowBack?.pops ?? 0);
     await page.goBack({ waitUntil: 'commit' }).catch(() => {});
     await page.waitForTimeout(1200);
-    check(
-      "the platform's back there is one step back, to the deck",
-      await appears('screen-present'),
-      await page.evaluate(
-        () =>
-          [...document.querySelectorAll('[data-testid^="screen-"]')].map((e) => e.getAttribute('data-testid')).join(',') +
-          ' @ ' +
-          location.pathname +
-          location.search +
-          ' · ' +
-          JSON.stringify(window.__morrowBack ?? null),
-      ),
-    );
+    // Only when the browser kept the document. A back between two documents
+    // — which is what the platform gives when the entry behind was its own
+    // page load — never reaches the app, and is the browser's to answer;
+    // the handler's own count says which happened.
+    const popsSeen = await page.evaluate(() => window.__morrowBack?.pops ?? 0);
+    if (popsSeen > popsBefore) {
+      check(
+        "the platform's back there is one step back, to the deck",
+        await appears('screen-present'),
+        await page.evaluate(
+          () =>
+            [...document.querySelectorAll('[data-testid^="screen-"]')].map((e) => e.getAttribute('data-testid')).join(',') +
+            ' @ ' +
+            location.pathname +
+            location.search +
+            ' · ' +
+            JSON.stringify(window.__morrowBack ?? null),
+        ),
+      );
+    } else {
+      check("the platform's back there left the document, which is the browser's", !(await seen('screen-present-write')), await page.evaluate(() => location.pathname));
+    }
     const nineKept = (await store()).presentDraft?.selected?.length ?? 0;
     check('in the order they were kept', nineKept === 9, String(nineKept));
     await patchStore(`s.profile.track = 'starter';`);
@@ -3276,11 +3286,14 @@ async function main() {
         }
         return `${ids || 'no screen'} @ ${location.pathname}${location.search} · consentedAt ${consented}`;
       });
-    check('and through the gate, the door that sent them there', await appears('screen-present', 8000), await where());
+    // The volume, by whichever of its faces the person left open: the deck,
+    // the narrowing, the writing, or the half already finished.
+    const inPresent = async () => (await appears('screen-present', 8000)) || (await seen('screen-present-write')) || (await seen('screen-present-narrow')) || (await seen('screen-present-done'));
+    check('and through the gate, the door that sent them there', await inPresent(), await where());
     await page.goto(`${BASE}/present`, { waitUntil: 'networkidle' });
     await page.clock.runFor(1500);
     await page.waitForTimeout(700);
-    check('once through, never asked again', (await appears('screen-present', 8000)) && !(await seen('screen-consent')), await where());
+    check('once through, never asked again', (await inPresent()) && !(await seen('screen-consent')), await where());
 
     // ---- Sunday: the reading is a card on the day it belongs to, and none other
     {

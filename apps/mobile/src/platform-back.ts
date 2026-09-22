@@ -96,9 +96,14 @@ function onPopState(e: { stopImmediatePropagation: () => void }): void {
  * product: three checks failed on CI's machine and on no machine here, and
  * a bare pass/fail is not evidence.
  */
+let pops = 0;
 function note(what: { landing: string; screens: string[]; acted: boolean }): void {
   if (Platform.OS !== 'web' || typeof window === 'undefined') return;
-  (window as unknown as { __morrowBack?: unknown }).__morrowBack = what;
+  pops += 1;
+  // The count matters as much as the rest: a back that leaves the document
+  // never reaches this listener at all, and without a count a check cannot
+  // tell that from a pop this handler saw and stood aside from.
+  (window as unknown as { __morrowBack?: unknown }).__morrowBack = { ...what, pops };
 }
 
 if (Platform.OS === 'web' && typeof window !== 'undefined') {
