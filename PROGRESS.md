@@ -701,6 +701,25 @@ this list. Tick as done; on resume continue from the first unticked item.
       speech permission on the doorway; Settings' notification copy on the web;
       overscroll, theme-color, http-equiv; the dictation 'network' retry loop.
 - [x] Batch F: backend (0012+0013 applied live, a Book id per person, the device stamp, sign-in hardening, functions bounded and deployed), the shell's a11y (a live region on the web, roles, values, keyboard avoidance, growing fields, contrast, targets, one h1), tooling (scene support, status bar, SDK-pinned reanimated, CI, eas.json, engines, first paint).
+- [x] A second turn of the loop (2026-09-22, later): the live account round-trip re-run
+      against the new sync (46/46 — the test now puts the session where a real device
+      holds it, since tokens in a URL are no longer honoured); expo-doctor 18/18 and an
+      Android prebuild after the plugin changes; a three-lens review of the pass's own
+      diff (28 findings, all confirmed by hand) fixed — chiefly the device-stamp logic
+      (a device that pulled is stamped as in step; the device id lives in the store;
+      an unresolved choice blocks the background push; a device that never copied
+      stops against any account with writing; sign-out/in on one phone is no
+      conflict), the sign-in screen carrying the outcome, the closing screen's day
+      captured once, the back hook answering only GO_BACK/POP, the Portrait's Back on
+      both branches, the field measuring its content both ways, the SW never retiring
+      statics a served page uses, the chrome colour following the room on top, fonts
+      as rules fetched once and started with the page, the room's keyboard on a phone,
+      pinch-zoom not read as a keyboard, group roles on the web / text on a phone.
+      Also: async routes on the web (first load 452 KB brotli, was 529; 53 screen
+      chunks on demand, precached transitively by the SW, opening offline — checked);
+      the session encrypted at rest on a phone (expo-secure-store key + AES-CTR
+      ciphertext in AsyncStorage, plain storage on the web, a fallback when the
+      native modules are absent); metro's inert singleton pin removed.
 - [x] Then: `pnpm verify` green (2026-09-22), the journey re-walked (297 frames, read),
       deployed to the live address; the schema (0012, 0013), the auth config and the
       functions pushed to the live project. The lenses' 103 findings: all confirmed by
@@ -2979,11 +2998,11 @@ hardware, a credential, or a product call — plus the items the rebuild opened:
    (the notice on Today for a browser that is not installed); (d) a deploy while a
    tab is open — the "A newer Morrow is ready" line and the reload; (e) the morning
    line at 07:00 the day after a close on a phone build (notices are planned a
-   week ahead now; nothing here has a scheduler). Left as is, on purpose: the web
+   week ahead now; nothing here has a scheduler); (f) the encrypted session store
+   on a real phone (`session-store.ts`: the first sign-in writes the key to the
+   keychain; a relaunch must still be signed in). Left as is, on purpose: the web
    back-as-undo's `history.go(1)` (a rewrite to real history entries was judged
-   riskier than the iOS swipe-back snapshot it would fix); the session token in
-   plain AsyncStorage on a phone (expo-secure-store when there is a device to test
-   it on); metro's inert `extraNodeModules` (harmless under the hoisted linker).
+   riskier than the iOS swipe-back snapshot it would fix).
 0. **After the rebuild.** (a) The Google round trip through the *live* project has
    only been driven to Google's own page (no credentials are entered by the tooling);
    the first real sign-in on the deployed site should be watched once: Google → back
