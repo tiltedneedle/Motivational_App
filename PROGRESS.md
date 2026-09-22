@@ -3086,6 +3086,30 @@ first run, the home with its loop, the sign-in with Google, the five-lens review
 folded in, 558 end-to-end checks, `pnpm verify` green. What remains needs either
 hardware, a credential, or a product call — plus the items the rebuild opened:
 
+0e. **The motion the spec names, finished (2026-09-22, evening)** — the
+   owner: "work towards animations and motion now… overall motions should be
+   top notch". Against PRD §8.5–8.6 two signature pieces were missing and are
+   now built. **The flight**: a goal's stone crosses from Today's chip to the
+   Goal screen's header — 620 ms, a twelve-degree roll out and back, 42 pt to
+   50 — because the goal a person taps and the goal they arrive at should
+   obviously be the same object. The two screens are different routes, so
+   what travels is a memory: the chip records where its stone is on the glass
+   (`packages/ui/src/flight.tsx`), and the Goal screen draws one copy there
+   and runs it to its own header, which waits, empty, until it lands. Under
+   reduce motion there is no flight at all. Two things had to be learned the
+   hard way: a screen mounts more than once on its way in, so the memory is
+   *looked at*, not taken, and spent when a flight lands; and the ring's own
+   child reports no `onLayout` on the web, so the landing is measured from an
+   effect (`measureOnGlass`, `getBoundingClientRect` in a browser and
+   `measureInWindow` on a phone). **The hold's tick**: five `selection` taps,
+   one per fifth of the 1.6 s fill (§8.6), and the seal itself is the heavy
+   impact the spec asks for with the success pattern behind it. Four new
+   motion checks (12/12): the stone travels, it is gone once it has landed,
+   the header keeps its own, and nothing flies under reduce motion.
+   **Sound is still deliberately absent** (§8.6 asks for six CC0 clips): a
+   placeholder click is worse than silence, and the six files are the owner's
+   to choose — `feel.ts` says so where anyone adding them will look.
+
 0d. **The web back, rewritten (2026-09-22, evening)** — CI failed three checks
    that pass on every machine here, all of them a browser Back that left a
    screen instead of undoing a step inside it. The cause: the handler asked

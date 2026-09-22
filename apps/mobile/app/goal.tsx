@@ -3,6 +3,7 @@
  * the sentence the user wrote that it came from.
  */
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -42,11 +43,29 @@ import {
   radius,
   useTwoColumn,
   TopBar,
+  StoneFlight,
+  peekStone,
+  measureOnGlass,
 } from '@morrow/ui';
 import { analysesFor, cardText, darkOf, pendingLetGo, useGoals, useMorrow, entitlementOf, useSnapshot } from '../src/store';
 
 export default function GoalScreen() {
   const reduced = useReducedMotion();
+  // The flight: what Today handed over (taken once, on the first render of
+  // this goal), and where this screen's own stone sits once it has been laid
+  // out. The copy in the air is drawn over everything until it lands.
+  const [inFlight] = useState(() => peekStone());
+  const [landing, setLanding] = useState<{ x: number; y: number; size: number } | null>(null);
+  const [landed, setLanded] = useState(false);
+  const header = useRef<View>(null);
+  const flying = Boolean(inFlight) && !landed && !reduced;
+  // Measured after the screen has been laid out, not from `onLayout`: the
+  // ring's own child does not report one on the web, and a flight that
+  // never learns where to land never starts.
+  useEffect(() => {
+    if (!inFlight || reduced) return;
+    measureOnGlass(header.current, (r) => setLanding({ x: r.x + (r.width - 50) / 2, y: r.y + (r.height - 50) / 2, size: 50 }));
+  }, [inFlight, reduced]);
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const state = useSnapshot();
@@ -175,10 +194,16 @@ export default function GoalScreen() {
               width={4}
               accessibilityLabel={plan ? `${plural(doneCount, 'move')} done of ${plan.moves.length}` : 'No plan yet'}
             >
-              {/* The flight (PRD 8.5) lands here: the stone arrives on the settle spring. */}
-              <Pop reduced={reduced}>
-                <Stone size={50} domain={goal.domain} polish={0.5 + pct * 0.5} />
-              </Pop>
+              {/* The flight (PRD 8.5) lands here. While one is in the air this
+                  place is empty; arriving any other way, the stone simply pops in. */}
+              <View
+                ref={header}
+                style={{ opacity: flying ? 0 : 1 }}
+              >
+                <Pop reduced={reduced}>
+                  <Stone size={50} domain={goal.domain} polish={0.5 + pct * 0.5} />
+                </Pop>
+              </View>
             </Ring>
           </View>
 
@@ -671,6 +696,9 @@ export default function GoalScreen() {
           )}
         </ScrollView>
       </SafeAreaView>
+      {/* The stone in the air, over the page and touching nothing (PRD 8.5).
+          Gone the moment it lands, so the header's own stone is the only one. */}
+      {flying ? <StoneFlight from={inFlight} to={landing} reduced={reduced} onDone={() => setLanded(true)} /> : null}
     </Studio>
   );
 }

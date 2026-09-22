@@ -8,7 +8,7 @@ import { Platform, ScrollView, Share, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Chip, HoldBar, Label, Quoted, SealBurst, Settle, Statement, Stone, Studio, TopBar, UserField, accent, night, useReducedMotion } from '@morrow/ui';
 import { dayOf } from '@morrow/core';
-import { feelSealed } from '../src/feel';
+import { feelSealed, feelTick } from '../src/feel';
 import { dictation } from '../src/dictation';
 import { track } from '../src/analytics';
 import { activeGoals, coachAnalyses, useMorrow } from '../src/store';
@@ -201,6 +201,7 @@ export default function SealDay() {
           ) : null}
           <HoldBar
             testID="seal-day-hold"
+            onTick={feelTick}
             label="Hold to close the day"
             doneLabel={`Closed · ${word}`}
             done={sealed}

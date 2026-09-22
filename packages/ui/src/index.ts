@@ -4,6 +4,7 @@ export * from './Path';
 export * from './Ring';
 export * from './primitives';
 export * from './motion';
+export * from './flight';
 export * from './quoted';
 export * from './fit';
 export * from './shell';

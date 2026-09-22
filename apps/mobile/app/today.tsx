@@ -35,6 +35,7 @@ import {
   shiftDaysLabel,
   ifThenOf,
   whenWord,
+  type DomainId,
 } from '@morrow/core';
 import {
   Body,
@@ -65,6 +66,9 @@ import {
   type as fonts,
   useReducedMotion,
   TapCard,
+  forgetStone,
+  rememberStone,
+  measureOnGlass,
 } from '@morrow/ui';
 import { MoveStone } from '../src/components/MoveStone';
 import { hasSupabase } from '../src/supabase';
@@ -756,6 +760,12 @@ export default function Today() {
                     key={g.id}
                     testID={`goal-chip-${g.id}`}
                     accessibilityLabel={`${g.title}, ${Math.round(pct * 100)} percent`}
+                    // The flight (PRD 8.5) starts here: where this stone is
+                    // on the glass, handed to the Goal screen, which runs it
+                    // to its own header. Measured on the press rather than
+                    // kept on every render — four of these re-measuring on
+                    // every store write is a lot of layout for a card.
+                    stone={{ domain: g.domain, polish: 0.5 + pct * 0.5, size: 42, inset: 10 }}
                     onPress={() => router.push(`/goal?id=${g.id}`)}
                   >
                     <Ring size={62} progress={pct} color={domainMeta(g.domain).hex} width={3} track={day.line2}>
@@ -1011,19 +1021,43 @@ function GoalStone({
   onPress,
   accessibilityLabel,
   testID,
+  stone,
 }: {
   children: ReactNode;
   onPress: () => void;
   accessibilityLabel: string;
   testID?: string;
+  /** What is inside, for the flight: the stone's own look, its size, and how far in from this chip's top-left it sits. */
+  stone?: { domain: DomainId; polish: number; size: number; inset: number };
 }) {
   const { hovered, hoverProps } = useHover();
+  const box = useRef<View>(null);
+  const press = () => {
+    if (!stone || !box.current) {
+      forgetStone();
+      onPress();
+      return;
+    }
+    // Measured, then pushed: the measurement is a frame at most, and a
+    // stone that starts from the wrong place is worse than none.
+    measureOnGlass(box.current, (r) => {
+      rememberStone({
+        x: r.x + (r.width - stone.size) / 2,
+        y: r.y + stone.inset,
+        size: stone.size,
+        domain: stone.domain,
+        polish: stone.polish,
+      });
+      onPress();
+    });
+  };
   return (
     <Pressable
+      ref={box}
       testID={testID}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      onPress={onPress}
+      onPress={press}
       {...hoverProps}
       // Four of these have to share a 320-point screen with 44 points of
       // margin: a fixed 78 each did not, and the fourth stone was pushed

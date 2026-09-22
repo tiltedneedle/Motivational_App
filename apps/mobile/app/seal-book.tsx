@@ -10,7 +10,7 @@ import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ordinal, type AnalysisKind, type PaywallMoment } from '@morrow/core';
 import { Body, HoldBar, InkButton, Label, Notice, ProgressBar, SealBurst, Settle, Statement, Stone, Studio, TopBar, UserField, accent, night, useReducedMotion } from '@morrow/ui';
-import { feelDrained, feelSealed } from '../src/feel';
+import { feelDrained, feelSealed, feelTick } from '../src/feel';
 import { useGoals, useMorrow } from '../src/store';
 import { useFirstRunStep } from '../src/analytics';
 
@@ -204,6 +204,7 @@ export default function SealBook() {
         <View style={{ paddingBottom: 22, gap: 10 }}>
           <HoldBar
             testID="seal-hold"
+            onTick={feelTick}
             label={iWill.trim() ? 'Hold to finish' : 'Write the last line first'}
             // `editions` counts the Books in the store, which the seal has
             // just added to: read after the seal, "first edition" said second.

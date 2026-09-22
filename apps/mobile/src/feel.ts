@@ -48,10 +48,26 @@ export function feelPark(): void {
   void haptics().then((h) => h?.impactAsync(h.ImpactFeedbackStyle.Light).catch(() => {}));
 }
 
+/**
+ * One fifth of the way through a hold (PRD §8.6: "1.6 s fill with a
+ * `selection` tick every 20%"). The hold is the one gesture in the product
+ * that asks a person to wait, and a hold that says nothing while it fills
+ * is a hold people let go of.
+ */
+export function feelTick(): void {
+  if (!allowed()) return;
+  void haptics().then((h) => h?.selectionAsync().catch(() => {}));
+}
+
 /** A seal completing: the one success the product has a feeling for. */
 export function feelSealed(): void {
   if (!allowed()) return;
-  void haptics().then((h) => h?.notificationAsync(h.NotificationFeedbackType.Success).catch(() => {}));
+  // Heavy, as the spec asks, and the notification's own success pattern
+  // behind it: the first is the drop, the second is the word for it.
+  void haptics().then((h) => {
+    h?.impactAsync(h.ImpactFeedbackStyle.Heavy).catch(() => {});
+    setTimeout(() => void h?.notificationAsync(h.NotificationFeedbackType.Success).catch(() => {}), 90);
+  });
 }
 
 /** The hold refused or released early: a small, honest nothing-happened. */

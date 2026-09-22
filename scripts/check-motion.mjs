@@ -128,7 +128,54 @@ await quiet.mouse.up();
 check('and a chip does not scale under a press', !/0\.9[0-9]/.test(pressedStill ?? ''), pressedStill ?? 'none');
 await still.close();
 
+// 7. The flight (PRD 8.5): a goal's stone crosses from Today's chip to the
+//    Goal screen's header, and the header's own stone waits until it lands.
+{
+  const flight = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  await flight.addInitScript((s) => localStorage.setItem('morrow-v1', JSON.stringify(s)), seed);
+  const page2 = await flight.newPage();
+  await page2.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
+  await page2.waitForTimeout(1200);
+  const chipEl = page2.locator('[data-testid^="goal-chip-"]').first();
+  if (await chipEl.count()) {
+    await chipEl.click();
+    // Long enough to see it land: the flight starts once the header has been
+    // measured (a frame or two after the screen arrives) and runs 620 ms.
+    const frames = [];
+    for (let i = 0; i < 24; i++) {
+      frames.push(
+        await page2.evaluate(() => {
+          const el = document.querySelector('[data-testid="stone-flight"]');
+          return el ? getComputedStyle(el).transform : null;
+        }),
+      );
+      await page2.waitForTimeout(70);
+    }
+    const drawn = frames.filter(Boolean);
+    const dx = (t) => { const m = /matrix\(([^)]*)\)/.exec(t ?? ''); return m ? Math.abs(parseFloat(m[1].split(',')[4])) + Math.abs(parseFloat(m[1].split(',')[5])) : 0; };
+    const travelled = Math.max(0, ...drawn.map(dx));
+    check('a goal opened from Today flies its stone to the header', drawn.length > 0 && travelled > 40, `${drawn.length} frames, furthest ${Math.round(travelled)} pt`);
+    check('and the flight is over by the time the screen has settled', frames[frames.length - 1] === null, String(frames[frames.length - 1]));
+    check('the header keeps its stone once the flight has landed', (await page2.locator('[data-testid="screen-goal"]').count()) > 0);
+  }
+  await flight.close();
+
+  // Under reduce motion there is no flight at all.
+  const quietFlight = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });
+  await quietFlight.addInitScript((s) => localStorage.setItem('morrow-v1', JSON.stringify(s)), seed);
+  const page3 = await quietFlight.newPage();
+  await page3.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
+  await page3.waitForTimeout(1200);
+  const chip3 = page3.locator('[data-testid^="goal-chip-"]').first();
+  if (await chip3.count()) {
+    await chip3.click();
+    await page3.waitForTimeout(250);
+    check('and under reduce motion nothing flies', (await page3.locator('[data-testid="stone-flight"]').count()) === 0);
+  }
+  await quietFlight.close();
+}
+
 await browser.close();
 server.close();
-console.log(fails ? `${fails} failed` : '8/8 motion checks passed');
+console.log(fails ? `${fails} failed` : '12/12 motion checks passed');
 process.exit(fails ? 1 : 0);

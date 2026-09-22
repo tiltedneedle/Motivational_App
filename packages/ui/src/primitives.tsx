@@ -1217,6 +1217,7 @@ export function HoldBar({
   label,
   doneLabel,
   onComplete,
+  onTick,
   durationMs = motion.holdMs,
   done = false,
   testID,
@@ -1230,6 +1231,8 @@ export function HoldBar({
    * shut and strand the person on Seal the Book with nothing left to press.
    */
   onComplete: () => void | boolean | Promise<void | boolean>;
+  /** Every fifth of the way through the hold (PRD 8.6). The caller decides what that feels like. */
+  onTick?: () => void;
   durationMs?: number;
   done?: boolean;
   testID?: string;
@@ -1241,6 +1244,12 @@ export function HoldBar({
   const [screenReader, setScreenReader] = useState(false);
   const anim = useRef<Animated.CompositeAnimation | null>(null);
   const completed = useRef(done);
+  const ticks = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const stopTicks = useCallback(() => {
+    for (const t of ticks.current) clearTimeout(t);
+    ticks.current = [];
+  }, []);
+  useEffect(() => stopTicks, [stopTicks]);
 
   useEffect(() => {
     let live = true;
@@ -1282,6 +1291,11 @@ export function HoldBar({
   const start = useCallback(() => {
     if (completed.current) return;
     setHolding(true);
+    // Five ticks, one per fifth, the last of them at the end — the seal's
+    // own feeling takes over there, so only four are scheduled.
+    if (onTick) {
+      for (let i = 1; i < 5; i++) ticks.current.push(setTimeout(onTick, (durationMs / 5) * i));
+    }
     // Reduced motion still needs the hold, or the gesture stops meaning
     // anything, and it still needs to SHOW the hold, or there is nothing on
     // screen saying how much longer to keep pressing.
@@ -1306,16 +1320,18 @@ export function HoldBar({
         )
       : Animated.timing(fill, { toValue: 1, duration: durationMs, useNativeDriver: false, easing: Easing.linear });
     anim.current.start(({ finished }: { finished: boolean }) => {
+      stopTicks();
       if (finished && !completed.current) {
         completed.current = true;
         setHolding(false);
         settle(onComplete());
       }
     });
-  }, [durationMs, fill, onComplete, reducedMotion, settle]);
+  }, [durationMs, fill, onComplete, onTick, reducedMotion, settle, stopTicks]);
 
   const cancel = useCallback(() => {
     if (completed.current) return;
+    stopTicks();
     anim.current?.stop();
     setHolding(false);
     Animated.timing(fill, { toValue: 0, duration: 450, useNativeDriver: false, easing: Easing.out(Easing.quad) }).start();
@@ -1324,6 +1340,7 @@ export function HoldBar({
   /** Seal without the gesture. The one path assistive technology can take. */
   const sealDirectly = useCallback(() => {
     if (completed.current) return;
+    stopTicks();
     anim.current?.stop();
     completed.current = true;
     setHolding(false);
