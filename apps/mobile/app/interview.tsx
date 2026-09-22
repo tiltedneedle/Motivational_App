@@ -3,8 +3,8 @@
  * the only place anyone types; a custom answer skips the follow-up.
  */
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Platform, View } from 'react-native';
 import {
   addAnother,
   addCustomArea,
@@ -45,6 +45,7 @@ export default function Interview() {
     savedRaw && typeof savedRaw.s?.stage === 'string' && Array.isArray(savedRaw.s.picked) && Array.isArray(savedRaw.s.drafts) && Array.isArray(savedRaw.history)
       ? savedRaw
       : null;
+  const questionRef = useRef<View>(null);
   const [s, setS] = useState<InterviewState>(() => saved?.s ?? initialInterview());
   // Every answer is a step forward that can be stepped back from, with
   // everything before it kept (§7.1: "Back always keeps answers"). A wrong
@@ -64,6 +65,7 @@ export default function Interview() {
   // the list under the cursor changes and nothing else moves.
   useEffect(() => {
     announce(s.stage === 'summary' ? 'Here is what I heard.' : question(s).prompt);
+    if (Platform.OS === 'web') setTimeout(() => (questionRef.current as unknown as { focus?: () => void } | null)?.focus?.(), 60);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [s.answered, s.stage, s.cursor]);
   const stepBack = () => {
@@ -223,9 +225,15 @@ export default function Interview() {
       </View>
       {/* PRD 7.1: "the next question slides in from the right". A new prompt is a new slide. */}
       <Slide key={q.prompt} reduced={reduced} style={{ gap: 10 }}>
-        <Statement testID="interview-question" style={{ marginBottom: 6 }}>
-          {q.prompt}
-        </Statement>
+        {/*
+          Focus lands on the new question. The slide remounts on each one,
+          which removed the tile a keyboard user had just activated and left
+          them on the document with nothing said; the heading takes focus so
+          the next Tab is the first answer.
+        */}
+        <View ref={questionRef} {...(Platform.OS === 'web' ? { tabIndex: -1 } : {})} style={{ marginBottom: 6 }}>
+          <Statement testID="interview-question">{q.prompt}</Statement>
+        </View>
         {options.map((label, i) => (
           <OptionTile
             key={label}

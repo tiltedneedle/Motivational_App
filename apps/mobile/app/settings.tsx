@@ -392,17 +392,20 @@ export default function Settings() {
           */}
           <View style={{ gap: 10 }}>
             <Label>When Morrow speaks</Label>
+            {Platform.OS === 'web' ? (
+              <Body testID="notify-web-note" style={{ fontSize: 13, color: day.ink2 }}>
+                A browser cannot send these; the phone app can, and the choice below is kept for it.
+              </Body>
+            ) : null}
             <Body testID="notify-state" style={{ fontSize: 14 }}>
-              {Platform.OS === 'web'
-                ? 'This browser copy cannot send reminders; the phone app can. Nothing is scheduled here, and nothing is missed.'
-                : state.profile.notificationsOff
+              {state.profile.notificationsOff
                 ? 'Nothing. You will hear from it when you open it, and not before.'
                 : muted.length === 0
                   ? 'A line in the morning, one in the evening, the Sunday reading, and a milestone when one lands. Never inside quiet hours, and never a count of what you missed.'
                   : `${plural(left.length, 'moment')} left: ${left.map((m) => MOMENT_WORDS[m]).join(', ')}.`}
             </Body>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              {Platform.OS === 'web' ? null : state.profile.notificationsOff ? (
+              {state.profile.notificationsOff ? (
                 <Chip
                   testID="notify-on"
                   label="Turn them back on"

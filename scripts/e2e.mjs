@@ -977,7 +977,9 @@ async function main() {
       await page.waitForTimeout(400);
       if (await seen('write-remaining')) {
         check('the room shows no digits', (await text('write-remaining')).toLowerCase() === 'clock hidden', await text('write-remaining'));
-        check('but a screen reader still hears the minutes', /left$/.test((await page.locator('[data-testid="write-remaining"]').getAttribute('aria-label')) ?? ''));
+        // Hidden is hidden: the person who put the clock away is not told
+        // the minutes by another route. The ring says the words instead.
+        check('and a screen reader is not told the minutes either', /clock hidden/i.test((await page.locator('[data-testid="write-remaining"]').getAttribute('aria-label')) ?? ''));
       }
       await page.goto(`${BASE}/write?kind=addition`, { waitUntil: 'networkidle' });
       await page.clock.runFor(1200);
