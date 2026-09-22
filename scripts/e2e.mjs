@@ -2470,11 +2470,16 @@ async function main() {
     await tap(`present-narrow-card-${fullCards[3]}`);
     await tap('present-narrow-continue');
     check('nine go through to the writing', await seen('screen-present-write'));
-    await page.goBack({ waitUntil: 'commit' }).catch(() => {});
+    // The undo is a listener the screen adds on mount; pressing back before
+    // it is there is the browser's own back, which leaves the volume. A beat
+    // for the mount, and a beat for the answer (CI's machine is slower than
+    // this one, and this check was the only one that felt it).
     await page.waitForTimeout(600);
+    await page.goBack({ waitUntil: 'commit' }).catch(() => {});
+    await page.waitForTimeout(1200);
     check(
       "the platform's back there is one step back, to the deck",
-      await seen('screen-present'),
+      await appears('screen-present'),
       await page.evaluate(() => [...document.querySelectorAll('[data-testid^="screen-"]')].map((e) => e.getAttribute('data-testid')).join(',') + ' @ ' + location.pathname + location.search),
     );
     const nineKept = (await store()).presentDraft?.selected?.length ?? 0;
@@ -3240,11 +3245,11 @@ async function main() {
     await page.waitForTimeout(200);
     await tap('consent-continue');
     await page.waitForTimeout(800);
-    check('and through the gate, the door that sent them there', await seen('screen-present'));
+    check('and through the gate, the door that sent them there', await appears('screen-present'));
     await page.goto(`${BASE}/present`, { waitUntil: 'networkidle' });
     await page.clock.runFor(1500);
     await page.waitForTimeout(700);
-    check('once through, never asked again', (await seen('screen-present')) && !(await seen('screen-consent')));
+    check('once through, never asked again', (await appears('screen-present')) && !(await seen('screen-consent')));
 
     // ---- Sunday: the reading is a card on the day it belongs to, and none other
     {

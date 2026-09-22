@@ -3086,6 +3086,21 @@ first run, the home with its loop, the sign-in with Google, the five-lens review
 folded in, 558 end-to-end checks, `pnpm verify` green. What remains needs either
 hardware, a credential, or a product call — plus the items the rebuild opened:
 
+0c. **Google, as it stands (2026-09-22, evening)** — driven from a configured
+   build to Google's own page: "Sign in to continue to
+   fxsaxganeyajxbcbignq.supabase.co", no `invalid_client` and no
+   `redirect_uri_mismatch`, so the Cloud OAuth app, the Supabase provider
+   (`pnpm sb config diff` shows no drift on `auth.external.google`) and the
+   redirect allow-list are all right. **The live site shows no Google button**:
+   the button renders on `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`, which is in
+   `apps/mobile/.env` here and not in Vercel's project environment, so the
+   deployed bundle carries no client id. Add it there (README §"Google
+   sign-in", step 4) and redeploy. The last hop — Google back to `/account`
+   with `?code=` — is the one thing no test can do: it needs real credentials
+   typed into Google. It is the same PKCE exchange the email link uses.
+   (Also fixed while looking: with no Google button and not on iOS, the "or"
+   divider on the sign-in screen stood alone above the one door there was.)
+
 0b. **After the third turn (2026-09-22, evening)** — what was seen and left, on
    purpose or for the next turn. Left: (a) a delta push (every backgrounding still
    sends every row of every table; a push with nothing changed now sends nothing,

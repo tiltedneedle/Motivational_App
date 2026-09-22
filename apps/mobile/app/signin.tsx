@@ -153,11 +153,16 @@ export default function SignIn() {
         <View style={{ gap: 12, marginTop: 6 }}>
           {hasGoogle ? <GoogleButton testID="signin-google" onPress={() => void google()} busy={busy === 'google'} /> : null}
           {Platform.OS === 'ios' ? <Chip testID="signin-apple" label={busy === 'apple' ? 'One moment…' : 'Sign in with Apple'} onPress={() => void apple()} style={{ minHeight: 54 }} /> : null}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 4 }}>
-            <Rule style={{ flex: 1 }} />
-            <Label>or</Label>
-            <Rule style={{ flex: 1 }} />
-          </View>
+          {/* Only between two things. With no Google button and not on iOS —
+              a web build with no Google client id — "or" sat alone above the
+              one door there was. */}
+          {hasGoogle || Platform.OS === 'ios' ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 4 }}>
+              <Rule style={{ flex: 1 }} />
+              <Label>or</Label>
+              <Rule style={{ flex: 1 }} />
+            </View>
+          ) : null}
           <Chip testID="signin-email" label="Continue with email" onPress={onwards} style={{ minHeight: 54 }} />
           <Notice testID="signin-problem" kind="error" text={problem} style={{ color: accent.coralText }} />
           <Body style={{ fontSize: 13, color: day.ink2, textAlign: 'center', marginTop: 6 }}>
