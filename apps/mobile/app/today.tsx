@@ -759,7 +759,12 @@ export default function Today() {
           {later.length || done.length ? (
             <View style={{ marginTop: 24 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingBottom: 6 }}>
-                <Label>Later today</Label>
+                {/*
+                  Honest about the day: a move dated an earlier day that is
+                  still open is carried here, and "Later today" over one
+                  titled Thursday, on a Tuesday, read as the app confused.
+                */}
+                <Label>{later.some((m) => m.scheduledFor && m.scheduledFor < today) ? 'Still open' : 'Later today'}</Label>
                 <Label testID="left-count">{open.length ? `${open.length} left` : 'all placed'}</Label>
               </View>
               {[...later, ...done].map((m) => {
