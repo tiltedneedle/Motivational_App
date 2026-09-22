@@ -141,9 +141,14 @@ by hand before it was acted on. What was confirmed and fixed:
 - [x] 1. packages/core: domain model, stores (zustand + persist), engines
 - [x] 2. packages/ui: Studio tokens, Stone/Socket/Ring, HoldBar, Chip, Field, Sheet, text primitives
 - [x] 3. apps/mobile screens (all 16 routes)
-- [x] 4. Tests, as of 2026-09-21 (the rebuild): 508 core + 48 ui + 8 storage unit tests, the eval
-      harness (687 checks), 71 real-Postgres checks, **558 Playwright e2e checks**, 94 cold-open
-      checks, 8 service-worker checks, 8 motion checks, axe 0 across 42 screens — all green.
+- [x] 4. Tests, as of 2026-09-22 (the completeness pass): 515 core + 61 ui + 10 storage unit
+      tests, the eval harness (687 checks; safety recall 77/78, 0 ordinary lines flagged), 73
+      real-Postgres checks, **558 Playwright e2e checks**, 94 cold-open checks, 8 service-worker
+      checks, 8 motion checks, axe 0 across 42 screens — all green in `pnpm verify`, and the
+      same subset now runs in CI (`.github/workflows/verify.yml`) on every push.
+      Was, as of 2026-09-21 (the rebuild): 508 core + 48 ui + 8 storage unit tests, the eval
+      harness (687 checks), 71 real-Postgres checks, 558 Playwright e2e checks, 94 cold-open
+      checks, 8 service-worker checks, 8 motion checks, axe 0 across 42 screens.
       Was, as of 2026-09-18: 489 core + 48 ui + 8 storage unit tests, the eval harness
       (687 checks over forty profiles and two hundred labelled lines), 68 real-Postgres
       checks, **529 Playwright e2e checks**, 84 cold-open checks, 8 service-worker checks, 8 motion checks, axe 0 across 37 screens,
@@ -696,7 +701,10 @@ this list. Tick as done; on resume continue from the first unticked item.
       speech permission on the doorway; Settings' notification copy on the web;
       overscroll, theme-color, http-equiv; the dictation 'network' retry loop.
 - [x] Batch F: backend (0012+0013 applied live, a Book id per person, the device stamp, sign-in hardening, functions bounded and deployed), the shell's a11y (a live region on the web, roles, values, keyboard avoidance, growing fields, contrast, targets, one h1), tooling (scene support, status bar, SDK-pinned reanimated, CI, eas.json, engines, first paint).
-- [ ] Then: `pnpm verify` green, the journey re-walked, deploy, PROGRESS closed out.
+- [x] Then: `pnpm verify` green (2026-09-22), the journey re-walked (297 frames, read),
+      deployed to the live address; the schema (0012, 0013), the auth config and the
+      functions pushed to the live project. The lenses' 103 findings: all confirmed by
+      hand except the three left as they are (listed under Next steps, 0a).
 
 Nothing is half-done. Four audits are closed — 95, 37, 47, then 43 — the
 eval harness has been run and reviewed, and the app has been walked end to
