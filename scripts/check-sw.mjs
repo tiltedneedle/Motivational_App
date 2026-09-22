@@ -8,11 +8,11 @@
  *
  *   pnpm build:web:offline && node scripts/check-sw.mjs
  */
-import { chromium } from 'playwright';
 import { createServer } from 'node:http';
 import { readFile, stat, readdir } from 'node:fs/promises';
 import { join, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { launchBrowser } from './browser.mjs';
 
 const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 const DIST = join(ROOT, 'apps', 'mobile', 'dist');
@@ -57,20 +57,7 @@ const server = createServer(async (req, res) => {
 });
 await new Promise((resolve) => server.listen(PORT, resolve));
 
-const explicit = process.env.PLAYWRIGHT_CHROMIUM_PATH;
-const fallbacks = [
-  explicit,
-  'C:/Users/HP/AppData/Local/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-win64/chrome-headless-shell.exe',
-].filter(Boolean);
-let browser = null;
-for (const executablePath of [explicit, undefined, ...fallbacks.filter((x) => x !== explicit)]) {
-  try {
-    browser = await chromium.launch(executablePath ? { executablePath } : {});
-    break;
-  } catch (err) {
-    if (executablePath === fallbacks[fallbacks.length - 1] || (!fallbacks.length && executablePath === undefined)) throw err;
-  }
-}
+const browser = await launchBrowser();
 const context = await browser.newContext({ viewport: { width: 420, height: 900 } });
 await context.addInitScript(() => Object.defineProperty(navigator, 'webdriver', { get: () => false }));
 const page = await context.newPage();

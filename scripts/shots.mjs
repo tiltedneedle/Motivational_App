@@ -17,11 +17,11 @@
  *   DAY=2026-09-13 node scripts/shots.mjs  # another day on the clock (a Sunday) → …/2026-09-13/
  *   DAY=2026-09-12T22:00 node scripts/shots.mjs   # an evening → …/2026-09-12T22-00/
  */
-import { chromium } from 'playwright';
 import { createServer } from 'node:http';
 import { mkdir, readFile, stat } from 'node:fs/promises';
 import { basename, join, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { launchBrowser } from './browser.mjs';
 
 const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 const DIST = join(ROOT, 'apps', 'mobile', 'dist');
@@ -119,17 +119,7 @@ function serve() {
 }
 
 const server = await serve();
-const explicit = process.env.PLAYWRIGHT_CHROMIUM_PATH;
-const candidates = [explicit, 'C:/Users/HP/AppData/Local/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-win64/chrome-headless-shell.exe'].filter(Boolean);
-let browser = null;
-for (const executablePath of [process.env.PLAYWRIGHT_CHROMIUM_PATH, undefined, ...candidates.filter((x) => x !== process.env.PLAYWRIGHT_CHROMIUM_PATH)]) {
-  try {
-    browser = await chromium.launch(executablePath ? { executablePath } : {});
-    break;
-  } catch (err) {
-    if (executablePath === candidates[candidates.length - 1]) throw err;
-  }
-}
+const browser = await launchBrowser();
 const context = await browser.newContext({
   viewport: { width: W, height: H },
   deviceScaleFactor: 2,

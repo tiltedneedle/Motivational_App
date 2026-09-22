@@ -9,13 +9,13 @@
  *   node scripts/e2e.mjs            # expects a server on :8799
  *   PORT=8799 node scripts/e2e.mjs
  */
-import { chromium } from 'playwright';
 import { createServer } from 'node:http';
 import { mkdir, readFile, stat } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { PNG } from 'pngjs';
 import { join, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { launchBrowser } from './browser.mjs';
 
 const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 const AXE = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
@@ -84,23 +84,9 @@ const IDEALISH = ['back door', '6:40', 'tuesday', 'thursday', 'saturday', 'stair
 
 async function main() {
   const server = await serve();
-  // Reuse a Chromium that is already on this machine rather than downloading a
-  // second copy; CI sets PLAYWRIGHT_CHROMIUM_PATH or lets Playwright resolve it.
-  const explicit = process.env.PLAYWRIGHT_CHROMIUM_PATH;
-  const fallbacks = [
-    explicit,
-    'C:/Users/HP/AppData/Local/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-win64/chrome-headless-shell.exe',
-  ].filter(Boolean);
-  let browser = null;
-  for (const executablePath of [explicit, undefined, ...fallbacks.filter((x) => x !== explicit)]) {
-    try {
-      browser = await chromium.launch(executablePath ? { executablePath } : {});
-      break;
-    } catch (err) {
-      if (executablePath === fallbacks[fallbacks.length - 1]) throw err;
-    }
-  }
-  if (!browser) throw new Error('no chromium available');
+  // See scripts/browser.mjs: Playwright's own Chromium, then a shell already
+  // on this machine.
+  const browser = await launchBrowser();
   const context = await browser.newContext({ viewport: { width: 420, height: 900 } });
   const page = await context.newPage();
 

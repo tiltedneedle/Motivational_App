@@ -15,11 +15,11 @@
  *
  * Run: pnpm build:web && node scripts/check-cold.mjs
  */
-import { chromium } from 'playwright';
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { join, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { launchBrowser } from './browser.mjs';
 
 const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 const DIST = join(ROOT, 'apps', 'mobile', 'dist');
@@ -113,19 +113,7 @@ function check(name, ok, detail = '') {
 
 const server = LIVE ? null : await serve();
 if (LIVE) console.log(`walking ${LIVE}`);
-const candidates = [
-  process.env.PLAYWRIGHT_CHROMIUM_PATH,
-  'C:/Users/HP/AppData/Local/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-win64/chrome-headless-shell.exe',
-].filter(Boolean);
-let browser = null;
-for (const executablePath of [candidates[0], undefined, ...candidates.slice(1)]) {
-  try {
-    browser = await chromium.launch(executablePath ? { executablePath } : {});
-    break;
-  } catch (err) {
-    if (executablePath === candidates[candidates.length - 1]) throw err;
-  }
-}
+const browser = await launchBrowser();
 
 const empty = JSON.parse(await readFile(join(ROOT, 'scripts', 'fixtures', 'empty.json'), 'utf8'));
 const seeded = JSON.parse(await readFile(join(ROOT, 'scripts', 'fixtures', 'seeded-state.json'), 'utf8'));

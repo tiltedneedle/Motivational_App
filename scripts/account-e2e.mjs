@@ -25,11 +25,11 @@
  *
  *   pnpm build:web && node scripts/account-e2e.mjs
  */
-import { chromium } from 'playwright';
 import { createServer } from 'node:http';
 import { readFile, stat, readdir } from 'node:fs/promises';
 import { join, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { launchBrowser } from './browser.mjs';
 
 const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 const DIST = join(ROOT, 'apps', 'mobile', 'dist');
@@ -160,18 +160,7 @@ try {
     ];
     up.pastListed = true;
   }
-  // Playwright's own browser first; the machine's older shell only as a
-  // fallback, so any other machine runs this at all.
-  for (const executablePath of [process.env.PLAYWRIGHT_CHROMIUM_PATH, undefined, 'C:/Users/HP/AppData/Local/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-win64/chrome-headless-shell.exe']) {
-    if (executablePath === undefined && process.env.PLAYWRIGHT_CHROMIUM_PATH) continue;
-    try {
-      browser = await chromium.launch(executablePath ? { executablePath } : {});
-      break;
-    } catch {
-      // next
-    }
-  }
-  if (!browser) throw new Error('no Chromium: run `npx playwright install chromium`');
+  browser = await launchBrowser();
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const page = await context.newPage();
   const pageErrors = [];

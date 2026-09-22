@@ -14,12 +14,12 @@
  *   DARK=1 node scripts/a11y.mjs     # the night studio
  *   SEED=scripts/fixtures/empty.json node scripts/a11y.mjs   # another store
  */
-import { chromium } from 'playwright';
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { join, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { launchBrowser } from './browser.mjs';
 
 const require = createRequire(import.meta.url);
 const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '..');
@@ -115,19 +115,7 @@ function serve() {
 }
 
 const server = await serve();
-const candidates = [
-  process.env.PLAYWRIGHT_CHROMIUM_PATH,
-  'C:/Users/HP/AppData/Local/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-win64/chrome-headless-shell.exe',
-].filter(Boolean);
-let browser = null;
-for (const executablePath of [candidates[0], undefined, ...candidates.slice(1)]) {
-  try {
-    browser = await chromium.launch(executablePath ? { executablePath } : {});
-    break;
-  } catch (err) {
-    if (executablePath === candidates[candidates.length - 1]) throw err;
-  }
-}
+const browser = await launchBrowser();
 const context = await browser.newContext({
   viewport: { width: 390, height: 844 },
   deviceScaleFactor: 2,

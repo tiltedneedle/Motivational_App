@@ -7,11 +7,11 @@
  *
  *   pnpm build:web:offline && node scripts/check-motion.mjs
  */
-import { chromium } from 'playwright';
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { join, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { launchBrowser } from './browser.mjs';
 const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 const DIST = join(ROOT, 'apps', 'mobile', 'dist');
 const PORT = Number(process.env.PORT ?? 8794);
@@ -28,16 +28,7 @@ const seed = JSON.parse(await readFile(join(ROOT, 'scripts', 'fixtures', 'seeded
 // A fresh install that has been through set-up: the Interview is the first
 // screen with a slide, and it sits behind the consent gate.
 const fresh = JSON.parse(await readFile(join(ROOT, 'scripts', 'fixtures', 'empty.json'), 'utf8'));
-const candidates = [process.env.PLAYWRIGHT_CHROMIUM_PATH, 'C:/Users/HP/AppData/Local/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-win64/chrome-headless-shell.exe'].filter(Boolean);
-let browser = null;
-for (const executablePath of [process.env.PLAYWRIGHT_CHROMIUM_PATH, undefined, ...candidates.filter((x) => x !== process.env.PLAYWRIGHT_CHROMIUM_PATH)]) {
-  try {
-    browser = await chromium.launch(executablePath ? { executablePath } : {});
-    break;
-  } catch (err) {
-    if (executablePath === candidates[candidates.length - 1]) throw err;
-  }
-}
+const browser = await launchBrowser();
 const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
 // The seed is written once per tab, so a later `localStorage.clear()` sticks.
 await context.addInitScript((s) => {
