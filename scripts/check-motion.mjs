@@ -93,9 +93,9 @@ await page.waitForTimeout(900);
 await page.locator('[data-testid="option-0"]').click();
 await page.locator('[data-testid="interview-continue"]').click();
 await page.waitForTimeout(40);
-const mid = await page.evaluate(() => { const el = document.querySelector('[data-testid="interview-question"]')?.parentElement; return el ? getComputedStyle(el).transform : null; });
+const mid = await page.evaluate(() => { const slideOf = () => { let el = document.querySelector('[data-testid="interview-question"]'); for (let i = 0; el && i < 5; i++) { el = el.parentElement; if (el && getComputedStyle(el).transform !== 'none') return getComputedStyle(el).transform; } return el ? getComputedStyle(el).transform : null; }; return slideOf(); });
 await page.waitForTimeout(800);
-const end = await page.evaluate(() => { const el = document.querySelector('[data-testid="interview-question"]')?.parentElement; return el ? getComputedStyle(el).transform : null; });
+const end = await page.evaluate(() => { const el = document.querySelector('[data-testid="interview-question"]')?.parentElement?.parentElement; return el ? getComputedStyle(el).transform : null; });
 const tx = (t) => { const m = /matrix\(([^)]*)\)/.exec(t ?? ''); return m ? parseFloat(m[1].split(',')[4]) : 0; };
 check('the next question slides in from the right', tx(mid) > 2 && Math.abs(tx(end)) < 0.5, `mid ${mid} end ${end}`);
 

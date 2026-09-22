@@ -2922,7 +2922,8 @@ program's actual prompt text by someone with a licensed copy.
   project itself is connected and live (schema through 0011, four functions, the account
   round-trip in `pnpm test:account`).
 - Supabase Pro, or custom SMTP, before the six-digit-code email template can be pushed; the
-  free tier refuses template changes, so the email carries a link and the app signs in from it.
+  free tier refuses template changes, so the email carries a link and the app signs in from it
+  (on the web the link comes back to the same browser now; on a phone it opens the app).
 - A Mac with Xcode, or an Android SDK, and a device: for the native build and the
   VoiceOver / TalkBack walk. Nothing here can show the native tab bar, the hold gesture,
   Dynamic Type at 200%, or the Android hardware back through the three volumes.
@@ -2960,6 +2961,21 @@ first run, the home with its loop, the sign-in with Google, the five-lens review
 folded in, 558 end-to-end checks, `pnpm verify` green. What remains needs either
 hardware, a credential, or a product call — plus the items the rebuild opened:
 
+0a. **After the completeness pass (2026-09-22)** — what a person or a device can
+   still show that this machine cannot: (a) the account round trip on two real
+   devices (phone + laptop): sign in on both, write on each, and watch the "another
+   phone has copied since" choice appear under You rather than a silent overwrite;
+   (b) iOS Safari's keyboard over `Screen`'s footer button, the room's keyboard on
+   Begin (the `flushSync` focus), Share → Save Image for the lock screen, the
+   speech prompt on the doorway; (c) the seven-day storage rule on a real iPhone
+   (the notice on Today for a browser that is not installed); (d) a deploy while a
+   tab is open — the "A newer Morrow is ready" line and the reload; (e) the morning
+   line at 07:00 the day after a close on a phone build (notices are planned a
+   week ahead now; nothing here has a scheduler). Left as is, on purpose: the web
+   back-as-undo's `history.go(1)` (a rewrite to real history entries was judged
+   riskier than the iOS swipe-back snapshot it would fix); the session token in
+   plain AsyncStorage on a phone (expo-secure-store when there is a device to test
+   it on); metro's inert `extraNodeModules` (harmless under the hoisted linker).
 0. **After the rebuild.** (a) The Google round trip through the *live* project has
    only been driven to Google's own page (no credentials are entered by the tooling);
    the first real sign-in on the deployed site should be watched once: Google → back
