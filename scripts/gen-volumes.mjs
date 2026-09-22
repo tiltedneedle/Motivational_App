@@ -72,10 +72,10 @@ const CHOOSER = {
   'past.line': 'Your life in periods, the events that still matter, and what they made of you.',
   'past.time': 'Two or three sittings. The longest of the three.',
   // The client's own wording, kept.
-  'explore.label': "Not sure? Let's explore.",
+  'explore.label': "Not sure? Let’s explore.",
   'present.time': 'One or two sittings, about twenty minutes a deck.',
   'future.time': 'Three sittings over two days. Twenty-five minutes, then fifteen, then twenty.',
-  'reentry': "You've written one. The other two are here when you want them, and what you wrote stays as it is.",
+  'reentry': "You’ve written one. The other two are here when you want them, and what you wrote stays as it is.",
 };
 
 const EXPLAINER = {

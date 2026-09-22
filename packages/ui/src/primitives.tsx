@@ -1405,7 +1405,11 @@ export function HoldBar({
 
   sealDirectlyRef.current = sealDirectly;
 
-  const width = fill.interpolate({ inputRange: [0, 1], outputRange: ['2%', '100%'] });
+  // Nothing at rest. A two per cent stub left a coral chip sitting in the
+  // left-hand corner of the bar on every screen that seals, which reads as a
+  // drawing mistake rather than as an invitation; the fill belongs to the
+  // hold, and starts when the hold does.
+  const width = fill.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
 
   return (
     <Pressable

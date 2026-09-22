@@ -163,7 +163,7 @@ export default function PortraitScreen() {
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                   <InkButton
                     testID="portrait-identity-save"
-                    label="That's better"
+                    label="That’s better"
                     onPress={() => {
                       editIdentityLine(goal.id, line);
                       setEditing(false);

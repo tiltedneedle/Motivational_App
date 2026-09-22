@@ -128,9 +128,9 @@ export function withoutDanglingWord(text: string, floor: number): string {
 }
 
 /** The fixed words the identity clause is set against. Chrome, never the user's. */
-export const IDENTITY_FRAMING = "I'm becoming someone who is";
+export const IDENTITY_FRAMING = 'I’m becoming someone who is';
 /** The same framing for a clause that carries its own verb: "…someone who" + "runs three mornings a week". */
-export const IDENTITY_FRAMING_BARE = "I'm becoming someone who";
+export const IDENTITY_FRAMING_BARE = 'I’m becoming someone who';
 
 export interface IdentityProposal {
   /** The user's own clause, verbatim. Empty when nothing they wrote fits. */

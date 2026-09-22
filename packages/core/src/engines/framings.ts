@@ -25,7 +25,7 @@ export interface FramingSet {
 
 const MOTIVE_FRAMINGS: Framing[] = [
   { id: 'm-shame', label: "Mine, and it would shame me to drop it" },
-  { id: 'm-enjoy', label: "Mine, and I'd enjoy the doing" },
+  { id: 'm-enjoy', label: "Mine, and I’d enjoy the doing" },
   { id: 'm-other', label: 'Someone wants it for me' },
   { id: 'm-demand', label: 'Life is demanding it' },
 ];
@@ -33,8 +33,8 @@ const MOTIVE_FRAMINGS: Framing[] = [
 const IMPACT_FRAMINGS: Framing[] = [
   { id: 'i-home', label: 'The people I live with' },
   { id: 'i-work', label: 'The people I work with' },
-  { id: 'i-unmet', label: "People I haven't met" },
-  { id: 'i-me', label: "Mostly me, and that's enough" },
+  { id: 'i-unmet', label: "People I haven’t met" },
+  { id: 'i-me', label: "Mostly me, and that’s enough" },
 ];
 
 const STRATEGY_FRAMINGS: Framing[] = [
@@ -46,23 +46,23 @@ const STRATEGY_FRAMINGS: Framing[] = [
 
 const OBSTACLE_FRAMINGS: Framing[] = [
   { id: 'o-drift', label: 'I start and drift' },
-  { id: 'o-others', label: "Other people's needs come first" },
+  { id: 'o-others', label: "Other people’s needs come first" },
   { id: 'o-runout', label: 'Money or time runs out' },
-  { id: 'o-talkout', label: "I'll talk myself out of it" },
+  { id: 'o-talkout', label: "I’ll talk myself out of it" },
 ];
 
 const MONITOR_FRAMINGS: Framing[] = [
   { id: 'n-number', label: 'A number I can check' },
   { id: 'n-notice', label: 'Something someone else would notice' },
-  { id: 'n-feel', label: "A feeling I'd recognise" },
-  { id: 'n-date', label: "A date I'd hit" },
+  { id: 'n-feel', label: "A feeling I’d recognise" },
+  { id: 'n-date', label: "A date I’d hit" },
 ];
 
 /** The Motives question changes by domain so the fourth goal never reads like the first. */
 const MOTIVE_QUESTION: Record<DomainId, string> = {
   health: 'Whose goal is this, honestly?',
-  money: "What does this buy that money can't?",
-  craft: "Who is the one person you'd want to show it to?",
+  money: "What does this buy that money can’t?",
+  craft: "Who is the one person you’d want to show it to?",
   mind: 'What would you stop carrying?',
   people: 'What would you have said sooner?',
   home: 'What would you stop noticing?',
@@ -70,13 +70,13 @@ const MOTIVE_QUESTION: Record<DomainId, string> = {
 };
 
 const IMPACT_QUESTION: Record<DomainId, string> = {
-  health: "Say it's done. Who changes besides you?",
-  money: "Say it's done. What stops being a conversation?",
-  craft: "Say it's done. Who sees it first?",
-  mind: "Say it's done. Who gets the calmer version of you?",
-  people: "Say it's done. What does the other person feel?",
-  home: "Say it's done. Who else lives in it?",
-  custom: "Say it's done. Who changes besides you?",
+  health: "Say it’s done. Who changes besides you?",
+  money: "Say it’s done. What stops being a conversation?",
+  craft: "Say it’s done. Who sees it first?",
+  mind: "Say it’s done. Who gets the calmer version of you?",
+  people: "Say it’s done. What does the other person feel?",
+  home: "Say it’s done. Who else lives in it?",
+  custom: "Say it’s done. Who changes besides you?",
 };
 
 export function framingSet(kind: AnalysisKind, domain: DomainId): FramingSet {
@@ -106,7 +106,7 @@ export function framingSet(kind: AnalysisKind, domain: DomainId): FramingSet {
           'Who notices first, and what do they notice?',
           'Who is helped by it that you have not been counting?',
         ],
-        hint: "The first thing that would be different in someone else's week",
+        hint: "The first thing that would be different in someone else’s week",
       };
     case 'strategies':
       return {
@@ -137,7 +137,7 @@ export function framingSet(kind: AnalysisKind, domain: DomainId): FramingSet {
     case 'monitoring':
       return {
         kind,
-        question: "How will you know it's working before it's done?",
+        question: "How will you know it’s working before it’s done?",
         framings: MONITOR_FRAMINGS,
         fullPrompts: [
           'What would you point at, in a month, to show it is working?',
@@ -145,7 +145,7 @@ export function framingSet(kind: AnalysisKind, domain: DomainId): FramingSet {
           'What number, if any, would you trust?',
           'How will you tell a hard week from a bad sign?',
         ],
-        hint: "What counts as proof, and how often you'll look",
+        hint: "What counts as proof, and how often you’ll look",
       };
   }
 }

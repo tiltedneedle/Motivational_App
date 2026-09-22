@@ -74,7 +74,7 @@ describe('the concern band is a band, not a column in a table', () => {
 
     const softened = buildDawnBrief({ ...base, soften: true }, ids());
     expect(softened.today).not.toContain('No negotiation');
-    expect(softened.today).toContain("When you're ready");
+    expect(softened.today).toContain("When you’re ready");
     // And it is still their move, in their words.
     expect(softened.today.toLowerCase()).toContain('out the back door at 6:40');
   });

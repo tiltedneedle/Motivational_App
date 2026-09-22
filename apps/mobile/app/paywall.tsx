@@ -220,18 +220,6 @@ export default function Paywall() {
             </Card>
           </View>
 
-          {problem ? (
-            <Body testID="paywall-problem" style={{ color: day.ink }}>
-              {problem}
-            </Body>
-          ) : null}
-
-          <InkButton testID="paywall-continue" label={busy ? 'One moment…' : 'Continue'} busy={busy} onPress={() => void buy()} />
-          {/*
-            Tertiary, and it always works. PRD §7.13: "Not now always returns
-            the user to where they were with nothing lost."
-          */}
-          <TextButton testID="paywall-not-now" label="Not now" onPress={notNow} />
           {/* PRD §7.13: the way to the platform's own subscription page, always. */}
           <TextButton testID="paywall-manage" label="Manage subscription" onPress={() => void Linking.openURL(manageSubscriptionUrl())} />
 
@@ -240,6 +228,27 @@ export default function Paywall() {
             here.
           </Body>
         </ScrollView>
+
+        {/*
+          Both answers, always on the glass. The offer is longer than a phone
+          — a hundred and forty-six points longer at 390 × 844 — and with the
+          buttons at the end of the scroll the way out sat half below the fold
+          under a whole Continue, which is the shape of a screen that is
+          trying something on. Neither of them moves now.
+        */}
+        <View style={{ paddingBottom: 18, gap: 8 }}>
+          {problem ? (
+            <Body testID="paywall-problem" style={{ color: day.ink }}>
+              {problem}
+            </Body>
+          ) : null}
+          <InkButton testID="paywall-continue" label={busy ? 'One moment…' : 'Continue'} busy={busy} onPress={() => void buy()} />
+          {/*
+            Tertiary, and it always works. PRD §7.13: "Not now always returns
+            the user to where they were with nothing lost."
+          */}
+          <TextButton testID="paywall-not-now" label="Not now" onPress={notNow} />
+        </View>
       </SafeAreaView>
     </Studio>
   );

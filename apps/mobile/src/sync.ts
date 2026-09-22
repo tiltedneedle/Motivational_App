@@ -23,8 +23,18 @@ import { TABLE_ORDER, fromRows, toRows, type Row, type SyncBundle } from '@morro
 import { DEFAULT_PROFILE } from '@morrow/core';
 import { currentSession, plain, supabase } from './supabase';
 
+/**
+ * What a device has already put on the account, row by row: a fingerprint
+ * per row, keyed by the identity the upsert matches on. Held for the life of
+ * a launch and nowhere else — a fingerprint that outlived a reinstall, or a
+ * wipe of the account, would be a row silently never sent, and the first
+ * push of a launch costing one full copy is a price worth paying for a fact
+ * that cannot go stale.
+ */
+export type Sent = Record<string, string>;
+
 export type SyncOutcome =
-  | { ok: true; rows: number }
+  | { ok: true; rows: number; sent?: Sent }
   /** `error` is for the person; `detail` is the service's own words, for a log; `conflict` means another device copied since. */
   | { ok: false; error: string; detail?: string; conflict?: true; closed?: true; rows: number };
 
@@ -97,7 +107,7 @@ function timezone(): string {
  */
 export async function pushAll(
   bundle: SyncBundle,
-  opts: { device: string; reconcile?: boolean; deadlineMs?: number; lastPushAt?: string | null; force?: boolean },
+  opts: { device: string; reconcile?: boolean; deadlineMs?: number; lastPushAt?: string | null; force?: boolean; sent?: Sent },
 ): Promise<SyncOutcome> {
   const c = await supabase();
   const session = await currentSession();
@@ -133,8 +143,34 @@ export async function pushAll(
   const budget = opts.deadlineMs ?? 90_000;
   const overdue = () => Date.now() - startedAt > budget;
   let written = 0;
+  /**
+   * Only what has changed since the last copy that landed.
+   *
+   * Every backgrounding used to send every row of every table — a year of
+   * ledger, a Book and all its editions, ten times a day, to say that one
+   * move was done. The device still decides the whole shape (the prune below
+   * reads every row, so nothing dropped is left behind); what goes over the
+   * wire is the rows whose own contents differ from the ones this launch
+   * already sent.
+   *
+   * The person's answer to a conflict (`force`) sends everything: their word
+   * is that this device is the copy, and a delta against an account they have
+   * just decided to replace would leave the other phone's rows standing.
+   */
+  const previously = opts.force ? undefined : opts.sent;
+  const sent: Sent = {};
   for (const { table, rows } of tables) {
-    for (const part of chunks(rows, 200)) {
+    const changed: Row[] = [];
+    for (const row of rows) {
+      const id = identity(table, row);
+      const mark = fingerprint(row);
+      sent[id] = mark;
+      // The profile row carries this push's own stamp, so it always differs
+      // and always goes — which is the point: the stamp is how another
+      // device knows who copied last.
+      if (!previously || previously[id] !== mark) changed.push(row);
+    }
+    for (const part of chunks(changed, 200)) {
       if (overdue()) return { ok: false, error: TOOK_TOO_LONG, rows: written };
       const { error } = await c.from(table).upsert(part, { onConflict: CONFLICT[table] ?? 'id' });
       if (error) {
@@ -154,7 +190,7 @@ export async function pushAll(
   // phone's first push knows nothing about what the account holds, and this
   // pass used to delete the whole Book off the account when a replacement
   // phone signed in with one two-minute line on it.
-  if (!opts.reconcile) return { ok: true, rows: written };
+  if (!opts.reconcile) return { ok: true, rows: written, sent };
   for (const { table, rows } of [...tables].reverse()) {
     if (table === 'profiles') continue;
     if (overdue()) return { ok: false, error: TOOK_TOO_LONG, rows: written };
@@ -168,7 +204,37 @@ export async function pushAll(
       if (error) return { ok: false, error: plain(error.message), detail: `${table}: ${error.message}`, rows: written };
     }
   }
-  return { ok: true, rows: written };
+  return { ok: true, rows: written, sent };
+}
+
+/**
+ * The identity an upsert matches a row by, as one string — the row's id
+ * ordinarily, and the conflict target where a table has one (a day summary
+ * is one per day, a present pick one per card in a half). Keyed by anything
+ * narrower, two different rows would share a fingerprint and the second
+ * would never be sent.
+ */
+function identity(table: string, row: Row): string {
+  const cols = (CONFLICT[table] ?? KEY[table] ?? 'id').split(',');
+  return `${table}:${cols.map((c) => String(row[c.trim()] ?? '')).join('\u0001')}`;
+}
+
+/**
+ * A row's contents in a dozen characters. Two passes with different mixes,
+ * and the length beside them: enough that two rows of a person's writing do
+ * not collide, and small enough that a Book's worth of them is a few tens of
+ * kilobytes of memory rather than a second copy of the Book.
+ */
+function fingerprint(row: Row): string {
+  const s = JSON.stringify(row);
+  let a = 0x811c9dc5;
+  let b = 0x9e3779b9;
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    a = Math.imul(a ^ c, 16777619);
+    b = Math.imul(b + c, 2654435761) ^ (b >>> 13);
+  }
+  return `${(a >>> 0).toString(36)}${(b >>> 0).toString(36)}${s.length.toString(36)}`;
 }
 
 const TOOK_TOO_LONG = 'That took too long. Check the connection and try again; nothing was lost.';

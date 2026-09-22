@@ -178,6 +178,18 @@ renders every screen from a seeded store at phone size into `scripts/shots/`
 (`DARK=1` for the night studio, `W=375 H=667` for a smaller phone), and
 `pnpm test:a11y` runs the same screens through axe (`DARK=1` there too).
 
+Those are full-page renders, which stack a pinned footer over the bottom of
+the page. For one screen exactly as the phone shows it — the viewport, and a
+readout of how far the content runs past the fold:
+
+```bash
+pnpm view /seal-day seal-day
+```
+
+It writes `scripts/shots/view/seal-day.png` and prints the overflow. The
+evening's stone spent a while cut in half by its own hold bar because the
+full-page shot made that look like a screenshot artefact.
+
 ## What needs a key
 
 Everything runs on local fallbacks without one. To go beyond them:

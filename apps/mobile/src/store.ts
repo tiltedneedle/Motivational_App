@@ -14,7 +14,7 @@ import { scheduler, syncNotices } from './notify';
 import type { Notice } from '@morrow/core';
 import { billing, type BillingResult, type PlanId } from './billing';
 import { FUNCTIONS_URL, deleteAccount, functionHeaders, hasSupabase, sessionState, signOut } from './supabase';
-import { newDeviceId, pullAll, pushAll, stampAccount, restoreAccount, CLOSED } from './sync';
+import { newDeviceId, pullAll, pushAll, stampAccount, restoreAccount, CLOSED, type Sent } from './sync';
 import { track, analyticsConsent } from './analytics';
 import {
   DEFAULT_PROFILE,
@@ -2224,9 +2224,15 @@ const store = create<MorrowState>()(
           // choice was still owed, and Settings showed the account as settled.
           pushInFlight = (async () => {
             try {
-              const out = await pushAll(bundleOf(get()), { device: get().deviceId, reconcile: true, force: true });
+              // One reading of the store, used for both the push and the
+              // record of what landed: taken twice, the record could describe
+              // a bundle the account never saw.
+              const forced = bundleOf(get());
+              const out = await pushAll(forced, { device: get().deviceId, reconcile: true, force: true });
               if (!out.ok) return { ok: false as const, error: out.error };
               markPushed(set, get);
+              // Everything went; the next push may be a delta against it.
+              lastPushed = { userId: get().account?.userId ?? null, shape: bundleShape(forced), sent: out.sent };
               return { ok: true as const };
             } finally {
               pushInFlight = null;
@@ -2275,13 +2281,16 @@ const store = create<MorrowState>()(
               device: get().deviceId,
               reconcile: Boolean(get().account?.lastPushAt),
               lastPushAt: get().account?.lastPushAt ?? null,
+              // Only against the same account, and only what this launch has
+              // already put there.
+              sent: lastPushed.userId && lastPushed.userId === get().account?.userId ? lastPushed.sent : undefined,
             });
             if (!out.ok) {
               if (out.closed) set((st) => (st.account ? { account: { ...st.account, closedAt: new Date().toISOString() } } : {}));
               return { ok: false as const, error: out.error, ...(out.conflict ? { conflict: true as const } : {}) };
             }
             markPushed(set, get);
-            lastPushed = { userId: get().account?.userId ?? null, shape };
+            lastPushed = { userId: get().account?.userId ?? null, shape, sent: out.sent };
             return { ok: true as const };
           } finally {
             pushInFlight = null;
@@ -2673,8 +2682,13 @@ let pushInFlight: Promise<{ ok: true } | { ok: false; error: string; conflict?: 
 type Set = (partial: Partial<MorrowState> | ((s: MorrowState) => Partial<MorrowState>)) => void;
 
 /** A push landed: this device is the account's latest copy, and remembers it per account. */
-/** The copy that last landed on the account, by its shape — a hash of the bundle, per launch. */
-let lastPushed: { userId: string | null; shape: string } = { userId: null, shape: '' };
+/**
+ * The copy that last landed on the account, per launch: its whole shape (so
+ * a push with nothing changed sends nothing at all) and a fingerprint per
+ * row (so a push with one thing changed sends one row). Cleared by a change
+ * of account, and never written to disk — see `Sent`.
+ */
+let lastPushed: { userId: string | null; shape: string; sent?: Sent } = { userId: null, shape: '' };
 
 /** A cheap hash of a bundle: the same bytes give the same string. */
 function bundleShape(bundle: unknown): string {

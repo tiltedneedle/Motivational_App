@@ -80,15 +80,26 @@ export function MoveStone({
   const seated = status === 'done';
   const parked = status === 'skip';
 
+  /**
+   * The four per cent the spec asks for while it is being pulled ("follows
+   * the finger, enlarges 4%"): the stone comes up off the page under the
+   * thumb and settles back down with it, driven by the travel itself so
+   * there is no second animation to keep in step. Under reduce motion the
+   * travel is held at zero, so this is too.
+   */
+  const lifted = dy.interpolate({ inputRange: [-64, -8, 0, 8], outputRange: [1.04, 1.04, 1, 1], extrapolate: 'clamp' });
+
   const stone = (
     <Animated.View
       style={{
         transform: [
-          { translateY: parked ? -10 : seated ? 0 : -6 },
+          // Parked on the rim, in the spec's own numbers: up 13, right 20,
+          // rolled 14 degrees, and at 72% (the Stone's `parked`).
+          { translateY: parked ? -13 : seated ? 0 : -6 },
           { translateY: dy },
-          { translateX: parked ? 14 : 0 },
+          { translateX: parked ? 20 : 0 },
           { rotate: parked ? '14deg' : '0deg' },
-          { scale: parked ? 0.92 : 1 },
+          { scale: parked ? 0.92 : lifted },
         ],
       }}
     >

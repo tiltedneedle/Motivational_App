@@ -67,10 +67,13 @@ function check(name, condition, detail = '') {
   const ok = Boolean(condition);
   if (!ok) failures += 1;
   results.push(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail && !ok ? ` — ${detail}` : ''}`);
-  // E2E_TRACE=1 prints how long each check took to reach, for finding the slow step.
+  // E2E_TRACE=1 prints how long each check took to reach, for finding the
+  // slow step — and what a failing one saw, because a run that ends in the
+  // catch prints its results after the browser has closed, and a close that
+  // hangs takes the reason with it.
   if (process.env.E2E_TRACE) {
     const now = Date.now();
-    console.log(`${String(now - lastCheckAt).padStart(6)} ms  ${name}`);
+    console.log(`${String(now - lastCheckAt).padStart(6)} ms  ${ok ? '' : 'FAIL '}${name}${ok || !detail ? '' : ` — ${detail}`}`);
     lastCheckAt = now;
   }
   return ok;
@@ -130,6 +133,13 @@ async function main() {
     if (sessionStorage.getItem('insecure') === '1') Object.defineProperty(window, 'isSecureContext', { configurable: true, get: () => false });
     // The site kept on an iPhone's Home Screen, on request.
     if (sessionStorage.getItem('standalone') === '1') Object.defineProperty(navigator, 'standalone', { configurable: true, get: () => true });
+    // A phone's browser, on request: the notice about where the writing
+    // lives is for a phone that has not been installed, and nothing else.
+    if (sessionStorage.getItem('phone') === '1')
+      Object.defineProperty(navigator, 'userAgent', {
+        configurable: true,
+        get: () => 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
+      });
     if (sessionStorage.getItem('no-voice') === '1') {
       delete window.SpeechRecognition;
       delete window.webkitSpeechRecognition;
@@ -359,13 +369,20 @@ async function main() {
     // after it: a reload leaves the entries it wants but not the answers the
     // undo walks, so "back" there is the browser's business rather than the
     // app's, and which entry it lands on depends on the machine.
+    // Armed before the back is pressed, or the back is the browser's and the
+    // check is about something else entirely.
+    const armedBefore = await page
+      .waitForFunction(() => (window.__morrowScreens ?? []).some((s) => s.canStepBack), null, { timeout: 5000 })
+      .then(() => true)
+      .catch(() => false);
+    check('the Interview arms its undo before the back', armedBefore, JSON.stringify(await page.evaluate(() => window.__morrowScreens ?? null)));
     await page.goBack({ waitUntil: 'commit' }).catch(() => {});
     await page.waitForTimeout(600);
     const whyBack = () => page.evaluate(() => JSON.stringify(window.__morrowBack ?? null));
     check(
       'the platform back undoes one answer rather than leaving',
       (await appears('screen-interview')) && (await text('interview-question')) !== 'How far?',
-      `${await text('interview-question')} · ${await whyBack()}`,
+      `${await text('interview-question')} · ${await whyBack()} · armed now: ${JSON.stringify(await page.evaluate(() => window.__morrowScreens ?? null))}`,
     );
     await tap('option-0'); // Finish a race, once more
     check('and the follow-up comes back', (await text('interview-question')) === 'How far?');
@@ -2482,11 +2499,16 @@ async function main() {
     await tap(`present-narrow-card-${fullCards[3]}`);
     await tap('present-narrow-continue');
     check('nine go through to the writing', await seen('screen-present-write'));
-    // The undo is a listener the screen adds on mount; pressing back before
-    // it is there is the browser's own back, which leaves the volume. A beat
-    // for the mount, and a beat for the answer (CI's machine is slower than
-    // this one, and this check was the only one that felt it).
-    await page.waitForTimeout(600);
+    // The undo is a promise the screen arms as it commits; the browser's
+    // back before that is the browser's own, and leaves the volume. Waited
+    // for rather than slept through: CI painted this screen and took the
+    // back 600 ms later with nothing armed, and the check could not tell
+    // that from the rule being wrong.
+    const armed = await page
+      .waitForFunction(() => (window.__morrowScreens ?? []).some((s) => s.canStepBack), null, { timeout: 5000 })
+      .then(() => true)
+      .catch(() => false);
+    check('the writing step arms its undo as it appears', armed, JSON.stringify(await page.evaluate(() => window.__morrowScreens ?? null)));
     const popsBefore = await page.evaluate(() => window.__morrowBack?.pops ?? 0);
     await page.goBack({ waitUntil: 'commit' }).catch(() => {});
     await page.waitForTimeout(1200);
@@ -2506,7 +2528,9 @@ async function main() {
             location.pathname +
             location.search +
             ' · ' +
-            JSON.stringify(window.__morrowBack ?? null),
+            JSON.stringify(window.__morrowBack ?? null) +
+            ' · armed now: ' +
+            JSON.stringify(window.__morrowScreens ?? null),
         ),
       );
     } else {
@@ -3314,6 +3338,103 @@ async function main() {
         await page.clock.runFor(1500);
         await page.waitForTimeout(800);
         check('and not on the Monday', !(await seen('today-sunday')));
+      }
+    }
+
+    // ---- two screens that need a finished Book behind them. The long walk
+    //      above ends with a store that has none — it has been reset, replanned
+    //      and half wiped by the sections before this — so both of these run
+    //      against the seeded store the screenshots and the axe pass use, which
+    //      is a person a fortnight in. Written the other way they simply never
+    //      ran, and said nothing about it.
+    await page.evaluate((s) => localStorage.setItem('morrow-v1', s), await readFile(join(ROOT, 'scripts', 'fixtures', 'seeded-state.json'), 'utf8'));
+    await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
+    await page.clock.runFor(1500);
+    await page.waitForTimeout(700);
+
+    // ---- the finish screen when a goal has no line to build a first step from:
+    //      the Book is still finished, and the gap is named rather than silent
+    {
+      const before = await page.evaluate(() => JSON.parse(localStorage.getItem('morrow-v1') ?? '{}').state ?? {});
+      const goal = (before.goals ?? []).find((g) => g.status !== 'dropped');
+      check('the seeded store has a Book and a goal to take a line from', Boolean(goal) && (before.books ?? []).length > 0, `${(before.goals ?? []).length} goals, ${(before.books ?? []).length} books`);
+      if (goal && (before.books ?? []).length > 0) {
+        await page.evaluate((id) => {
+          const k = 'morrow-v1';
+          const s = JSON.parse(localStorage.getItem(k) ?? '{}');
+          // The How line taken away, and the plan it built with it.
+          s.state.analyses = (s.state.analyses ?? []).filter((a) => !(a.goalId === id && a.kind === 'strategies'));
+          s.state.plans = (s.state.plans ?? []).filter((p) => p.goalId !== id);
+          localStorage.setItem(k, JSON.stringify(s));
+        }, goal.id);
+        await page.goto(`${BASE}/seal-book`, { waitUntil: 'networkidle' });
+        await page.clock.runFor(1500);
+        await page.waitForTimeout(800);
+        if (await seen('screen-seal-book')) {
+          const bar = page.locator('[data-testid="seal-hold"]').first();
+          const box = await bar.boundingBox();
+          await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+          await page.mouse.down();
+          await page.clock.runFor(2000);
+          await page.waitForTimeout(400);
+          await page.mouse.up();
+          await page.clock.runFor(1200);
+          await page.waitForTimeout(900);
+          check('a goal with no How line is named on the finish screen', await appears('seal-unplanned'), await where());
+          const said = await noticeText('seal-unplanned');
+          check('and the Book is finished all the same', /finished/i.test(said), said.slice(0, 120));
+          check('in the app\u2019s words, not the engine\u2019s', !/strategies|portrait|blueprint/i.test(said), said.slice(0, 160));
+          check('with a way to write the line now', await seen('seal-fix-plan'));
+          if (await seen('seal-fix-plan')) {
+            await tap('seal-fix-plan');
+            check('which opens that goal\u2019s own stone', await appears('screen-stone'), await where());
+          }
+        }
+      }
+    }
+
+    // ---- where the writing lives: the one notice a phone browser gets, once
+    //      (Safari clears a site's storage after a week without a visit)
+    {
+      const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('morrow-v1') ?? '{}'));
+      check('and still has it for the notice', Boolean(stored.state?.books?.length), `${stored.state?.books?.length ?? 0} books`);
+      if (stored.state?.books?.length) {
+        await page.evaluate(() => {
+          sessionStorage.setItem('phone', '1');
+          sessionStorage.removeItem('standalone');
+        });
+        await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
+        await page.clock.runFor(1500);
+        await page.waitForTimeout(800);
+        check('a phone browser is told where its writing lives', await seen('today-keep-notice'));
+        check(
+          'and given the two ways to keep it',
+          /Home Screen/i.test(await text('today-keep-notice')) && /account/i.test(await text('today-keep-notice')),
+          (await text('today-keep-notice')).slice(0, 120),
+        );
+        await tap('today-keep-done');
+        await page.waitForTimeout(500);
+        check('Got it puts it away', !(await seen('today-keep-notice')));
+        await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
+        await page.clock.runFor(1500);
+        await page.waitForTimeout(700);
+        check('and it does not come back on the next launch', !(await seen('today-keep-notice')));
+        // The same browser, kept on the Home Screen: no notice at all.
+        await page.evaluate(() => {
+          const k = 'morrow-v1';
+          const s = JSON.parse(localStorage.getItem(k) ?? '{}');
+          if (s.state) s.state.keepNoticeDismissed = false;
+          localStorage.setItem(k, JSON.stringify(s));
+          sessionStorage.setItem('standalone', '1');
+        });
+        await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
+        await page.clock.runFor(1500);
+        await page.waitForTimeout(700);
+        check('and a phone that has installed it is never told', !(await seen('today-keep-notice')));
+        await page.evaluate(() => {
+          sessionStorage.removeItem('phone');
+          sessionStorage.removeItem('standalone');
+        });
       }
     }
 

@@ -87,7 +87,9 @@ function energyFor(text: string): Move['energy'] {
  */
 export function isMinVersionStandIn(text: string | null | undefined): boolean {
   const t = (text ?? '').trim();
-  return t === 'Two minutes of it, wherever you are.' || t === 'Two minutes of it, and that counts.' || /^Two minutes: \S+, that's the whole ask\.$/.test(t);
+  // Either apostrophe: the line is written with the curly one now, and a
+  // plan built before that is still a plan with a small version in it.
+  return t === 'Two minutes of it, wherever you are.' || t === 'Two minutes of it, and that counts.' || /^Two minutes: \S+, that['’]s the whole ask\.$/.test(t);
 }
 
 /** A two-minute version, cut from the user's own line where possible. */
@@ -98,7 +100,7 @@ export function minVersionOf(line: string): string {
   // moved" from "moved from the kitchen table"; a verb list this short is a
   // list of things that can be done for two minutes, not of stems.
   const verb = t.match(MIN_VERB);
-  if (verb?.[1]) return `Two minutes: ${verb[1].toLowerCase()}, that's the whole ask.`;
+  if (verb?.[1]) return `Two minutes: ${verb[1].toLowerCase()}, that’s the whole ask.`;
   return 'Two minutes of it, and that counts.';
 }
 
@@ -294,7 +296,7 @@ const WEEKDAY = /\b(?:mon|tues|wednes|thurs|fri|satur|sun)day\b/i;
  * the distance, and the last one is the date they set, when they set one.
  */
 function milestoneTitle(index: number, count: number, daysIn: number, onTheirDate: boolean): string {
-  if (index === count - 1) return onTheirDate ? 'The date you set' : "The season's end";
+  if (index === count - 1) return onTheirDate ? 'The date you set' : 'The season’s end';
   const weeks = Math.max(1, Math.round(daysIn / 7));
   return weeks === 1 ? 'One week in' : `${weeksInWords(weeks)} weeks in`;
 }

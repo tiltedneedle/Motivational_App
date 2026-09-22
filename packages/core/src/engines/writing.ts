@@ -23,7 +23,7 @@ export const NUDGES: string[] = [
   'What does your body know how to do now?',
   'What do you not have to think about any more?',
   'Where is the money, and how does it feel?',
-  "What did you make that didn't exist before?",
+  "What did you make that didn’t exist before?",
 ];
 
 /** Never the same one twice in a row. */
@@ -58,7 +58,7 @@ export const DOORWAY: Record<WritingKind, { eyebrow: string; prompt: string; not
     note: 'Then one line: what that moment taught you that you still believe.',
   },
   memory_broke: {
-    eyebrow: "The time it didn't hold",
+    eyebrow: "The time it didn’t hold",
     prompt: 'A time you tried this, or something like it, and it did not last. What happened, honestly, and what you decided about yourself afterwards.',
     note: 'Then one line: what you would tell that version of you, now that you know more.',
   },

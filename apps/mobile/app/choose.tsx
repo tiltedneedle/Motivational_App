@@ -104,7 +104,7 @@ export default function Choose() {
           <Rise index={4} reducedMotion={reduced} style={{ gap: 8, marginTop: 2 }}>
             <InkButton
               testID="choose-explore"
-              label={CHOOSER_COPY['explore.label'] ?? "Not sure? Let's explore."}
+              label={CHOOSER_COPY['explore.label'] ?? 'Not sure? Let’s explore.'}
               compact
               onPress={() => router.push('/explore')}
               style={{ backgroundColor: 'transparent' }}

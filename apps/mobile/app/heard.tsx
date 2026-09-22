@@ -214,7 +214,7 @@ export default function Heard() {
                     labelHidden
                     value={row.name}
                     onChangeText={(t) => rename(i, t)}
-                    placeholder="Name it the way you'd say it to a friend"
+                    placeholder="Name it the way you’d say it to a friend"
                   />
                 ) : null}
               </View>

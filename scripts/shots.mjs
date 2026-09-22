@@ -171,7 +171,21 @@ for (const name of names) {
   const file = join(OUT, `${name}.png`);
   await page.screenshot({ path: file, fullPage: true });
   if (process.env.FULL) await page.setViewportSize({ width: W, height: H });
-  console.log(`${name.padEnd(14)} ${route}`);
+  // How far this screen runs past the fold at this size, printed beside it.
+  // A full-page shot hides the question entirely — it lays a pinned footer
+  // over the bottom of the page, which reads as a screenshot artefact. It is
+  // not always a fault (a long reading is meant to scroll), but the evening's
+  // stone spent a while cut in half by its own hold bar, and this is how that
+  // shows up without opening every screen by hand.
+  const past = await page.evaluate(() => {
+    let max = 0;
+    for (const el of document.querySelectorAll('*')) {
+      const cs = getComputedStyle(el);
+      if ((cs.overflowY === 'auto' || cs.overflowY === 'scroll') && el.clientHeight > 200) max = Math.max(max, el.scrollHeight - el.clientHeight);
+    }
+    return max;
+  });
+  console.log(`${name.padEnd(14)} ${route}${past > 0 ? `   — ${past} pt past the fold` : ''}`);
 }
 
 await browser.close();

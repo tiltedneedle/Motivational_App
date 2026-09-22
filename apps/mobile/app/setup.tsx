@@ -193,7 +193,7 @@ export default function Setup() {
             {customOpen ? (
               <UserField testID="setup-custom" label="Something else" value={custom} onChangeText={setCustom} placeholder="In a word or two" autoFocus autoCapitalize="sentences" maxLength={40} />
             ) : (
-              <OptionTile testID="setup-area-custom" glyph="custom" tint={accent.violet} title="Something else…" role="button" onPress={() => setCustomOpen(true)} compact />
+              <OptionTile testID="setup-area-custom" glyph="custom" tint={domainMeta('custom').ink} title="Something else…" role="button" onPress={() => setCustomOpen(true)} compact />
             )}
           </View>
         ) : null}

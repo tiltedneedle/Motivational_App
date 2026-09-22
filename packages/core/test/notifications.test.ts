@@ -252,7 +252,7 @@ describe('what one day is allowed to contain', () => {
 
   it('softens the morning for the gentle register and never pushes', () => {
     const gentle = planNotices({ ...base, persona: 'gentle' }).find((n) => n.moment === 'wake');
-    expect(gentle?.body).toContain("When you're ready");
+    expect(gentle?.body).toContain("When you’re ready");
     const fierce = planNotices({ ...base, persona: 'fierce' }).find((n) => n.moment === 'wake');
     // Whatever the register, a notification is not the place to be pushed.
     expect(fierce?.body).not.toMatch(/No negotiation|no excuses/i);

@@ -994,9 +994,9 @@ describe('helpers', () => {
     const p = proposeIdentity('I am out the back door before the kettle boils, every Tuesday');
     // The clause is the user's, verbatim, and carries none of the framing.
     expect(p.clause).toBe('out the back door before the kettle boils, every Tuesday');
-    expect(p.framing).toBe("I'm becoming someone who is");
+    expect(p.framing).toBe("I’m becoming someone who is");
     expect(identityLineText(p)).toBe(
-      "I'm becoming someone who is out the back door before the kettle boils, every Tuesday",
+      "I’m becoming someone who is out the back door before the kettle boils, every Tuesday",
     );
   });
 
@@ -1025,7 +1025,7 @@ describe('helpers', () => {
     // they said they want to be, in the words they chose, with a framing
     // that ends at "who" because the clause carries its own verb.
     expect(portrait.identityLine).toBe('calls her mum on Wednesdays');
-    expect(portrait.identityFraming).toBe("I'm becoming someone who");
+    expect(portrait.identityFraming).toBe("I’m becoming someone who");
     expect(proposeIdentity('').clause).toBe('');
     expect(identityLineText(proposeIdentity(''))).toBe('');
   });
@@ -1195,7 +1195,7 @@ describe('a plan whose first step the user put a week away', () => {
     expect(validatePlan(plan, two as never, '2026-09-05')).toEqual([]);
 
     // Milestone titles say how far along, and never rewrite the goal's name.
-    expect(plan.milestones.map((m) => m.title)).toEqual(['Four weeks in', 'Eight weeks in', "The season's end"]);
+    expect(plan.milestones.map((m) => m.title)).toEqual(['Four weeks in', 'Eight weeks in', 'The season’s end']);
     const dated = buildPlan({ goal: { ...goal, targetDate: '2027-03-14' }, analyses: two } as never, { today: '2026-09-05', newId });
     expect(dated.milestones[dated.milestones.length - 1]!.title).toBe('The date you set');
     for (const ms of [...plan.milestones, ...dated.milestones]) expect(ms.title).not.toMatch(/half marathon|without stopping/i);

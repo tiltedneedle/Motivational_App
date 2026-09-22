@@ -17,17 +17,20 @@
  *
  * "First" is a matter of registration order: listeners on one target run in
  * the order they were added, and the container adds its own when it mounts.
- * This module is imported by the root layout for exactly that reason — the
- * route screens that use the hook are lazy chunks, loaded long after the
- * container has subscribed, and a listener registered from one of them ran
- * second and saw the screen already gone.
+ * So this module is imported by the app's entry (`index.js`), before the
+ * router exists at all. Imported from the root layout instead it was a coin
+ * toss — with async routes the container mounts and subscribes while the
+ * layout's chunk is still being fetched — and on the loads it lost, the
+ * router answered the pop first, reset the navigator, and this handler ran
+ * two milliseconds later to find the screen that had promised an undo
+ * already unmounted. Three loads in twelve here, and four CI runs.
  *
  * A back that leaves the document — a screen opened by typing its URL, with
  * nothing of the app's behind it — fires no popstate and is not the app's to
  * intercept; that is the browser's, the same as on any site.
  */
 import { useNavigation, usePathname } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 
 interface Handler {
@@ -48,6 +51,14 @@ export function setAppPath(_next: string): void {
 
 /** The screens mounted right now that use this, the one on top last. */
 const mounted: { current: Handler }[] = [];
+
+/**
+ * The last screen to arm or disarm, and when — evidence, for the same
+ * reason `note` exists. A pop that arrives to an empty stack is either a
+ * screen that was never armed or one the router tore down in the same event,
+ * and those are different faults with the same symptom.
+ */
+let lastChange: { path: string; armed: boolean; at: number } | null = null;
 
 // The step forward fires a popstate of its own, which is likewise kept from
 // the container: by the time it lands, the browser is back where the
@@ -100,15 +111,38 @@ let pops = 0;
 function note(what: { landing: string; screens: string[]; acted: boolean }): void {
   if (Platform.OS !== 'web' || typeof window === 'undefined') return;
   pops += 1;
+  const since = lastChange ? { ...lastChange, msAgo: Date.now() - lastChange.at } : null;
   // The count matters as much as the rest: a back that leaves the document
   // never reaches this listener at all, and without a count a check cannot
   // tell that from a pop this handler saw and stood aside from.
-  (window as unknown as { __morrowBack?: unknown }).__morrowBack = { ...what, pops };
+  (window as unknown as { __morrowBack?: unknown }).__morrowBack = { ...what, pops, since };
 }
 
 if (Platform.OS === 'web' && typeof window !== 'undefined') {
   window.addEventListener('popstate', onPopState);
+  // What is armed at this moment, read rather than kept: a check that means
+  // to press the browser's back on a screen that has promised an undo can
+  // wait for the promise instead of guessing at how long a commit takes.
+  // Costs nothing until something asks.
+  Object.defineProperty(window, '__morrowScreens', {
+    configurable: true,
+    get: () => mounted.map((m) => ({ path: m.current.path, canStepBack: m.current.canStepBack })),
+  });
 }
+
+/**
+ * A screen's promise is armed in the commit that puts it on the glass, not a
+ * beat later: a layout effect, not a passive one.
+ *
+ * CI painted the Present writing step, took the browser's back six hundred
+ * milliseconds afterwards, and this handler found an empty stack — the
+ * passive effect had not been given its slot on a loaded machine, so for
+ * that stretch the screen was plainly there and its undo did not exist, and
+ * the browser did what it does with a screen that promised nothing: it left,
+ * with the writing in it. Off the web it stays passive; nothing there can
+ * outrun a commit.
+ */
+const useArm = Platform.OS === 'web' ? useLayoutEffect : useEffect;
 
 export function usePlatformBack(canStepBack: boolean, stepBack: () => void): void {
   const navigation = useNavigation();
@@ -160,11 +194,13 @@ export function usePlatformBack(canStepBack: boolean, stepBack: () => void): voi
     return off;
   }, [navigation]);
 
-  useEffect(() => {
+  useArm(() => {
     mounted.push(latest);
+    lastChange = { path: latest.current.path, armed: true, at: Date.now() };
     return () => {
       const at = mounted.indexOf(latest);
       if (at >= 0) mounted.splice(at, 1);
+      lastChange = { path: latest.current.path, armed: false, at: Date.now() };
     };
   }, []);
 }

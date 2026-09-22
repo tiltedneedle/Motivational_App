@@ -43,7 +43,7 @@ const REGISTER: Record<Persona, { open: (s: string) => string; push: (s: string)
     // form printed "When you're ready: Start with Thursday: at 6:40" — two
     // colons and a capital mid-sentence, on the one register that is supposed
     // to read as somebody speaking gently.
-    push: (s) => `When you're ready, ${lowerFirst(s)}`,
+    push: (s) => `When you’re ready, ${lowerFirst(s)}`,
   },
   straight: {
     open: (s) => s,
@@ -271,8 +271,8 @@ export interface Chip {
 }
 
 export const CHIPS: Chip[] = [
-  { id: 'stuck', label: "I'm stuck" },
-  { id: 'dont-feel', label: "I don't feel like it" },
+  { id: 'stuck', label: 'I’m stuck' },
+  { id: 'dont-feel', label: 'I don’t feel like it' },
   { id: 'changed', label: 'Something changed' },
   { id: 'celebrate', label: 'Celebrate with me' },
 ];
@@ -478,18 +478,12 @@ export function replyToText(text: string, ctx: ChipContext): CoachReply {
   // back to them before the question. Otherwise one of four questions, chosen
   // by the text rather than at random, so the same message gets the same
   // reply and the coach does not look like it is shuffling cards.
-  const words = new Set(
-    text
-      .toLowerCase()
-      .split(/[^a-z']+/)
-      .filter((w) => w.length >= 4 && !STOP.has(w)),
-  );
-  const touched = ctx.analyses.find((a) =>
-    a.line
-      .toLowerCase()
-      .split(/[^a-z']+/)
-      .some((w) => w.length >= 4 && words.has(w)),
-  );
+  // A phone types the curly apostrophe, so "doesn’t" split into "doesn"
+  // and "t" here and walked straight past a stop list that knows "doesn't".
+  // One apostrophe before the split, and the list means what it says.
+  const plainer = (s: string): string[] => s.toLowerCase().replace(/[‘’]/g, "'").split(/[^a-z']+/);
+  const words = new Set(plainer(text).filter((w) => w.length >= 4 && !STOP.has(w)));
+  const touched = ctx.analyses.find((a) => plainer(a.line).some((w) => w.length >= 4 && words.has(w)));
   const ask = QUESTIONS[hash(text) % QUESTIONS.length]!;
   if (touched && isQuotable(touched)) {
     const line = touched.line.trim();

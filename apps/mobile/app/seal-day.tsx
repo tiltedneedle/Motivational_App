@@ -183,11 +183,20 @@ export default function SealDay() {
             />
           </View>
 
-          <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 44 }}>
-            {/* PRD 8.5: "completion drops the stone with a spring, two rings pulse out". The rings reach 1.8×, inside the scroll view's edge. */}
-            <SealBurst size={110} color={accent.coral} play={sealed} reduced={reduced} reach={1.8} />
+          {/*
+            PRD 8.5: "completion drops the stone with a spring, two rings pulse
+            out". The rings reach 1.8×, inside the scroll view's edge.
+
+            Sized so the whole ritual stands on one screen. At a hundred and
+            ten points the writing ran eighty points past the fold on a 390 ×
+            844 phone and the object of the evening was cut in half by its own
+            button — the stone every night ends on, and the two rings that
+            pulse out of it, half behind the bar.
+          */}
+          <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 20 }}>
+            <SealBurst size={76} color={accent.coral} play={sealed} reduced={reduced} reach={1.8} />
             <Settle reduced={reduced} play={sealed ? 1 : 0}>
-              <Stone size={110} domain="health" polish={sealed ? 1 : 0.6} seated={sealed} />
+              <Stone size={76} domain="health" polish={sealed ? 1 : 0.6} seated={sealed} />
             </Settle>
           </View>
         </ScrollView>

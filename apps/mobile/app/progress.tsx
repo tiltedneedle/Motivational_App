@@ -16,8 +16,10 @@ import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Circle, Defs, Ellipse, G, RadialGradient, Stop } from 'react-native-svg';
 import {
   almanac,
+  domainMeta,
   consistencyCaption,
   detectReturns,
   formatDay,
@@ -252,6 +254,79 @@ function Bar({ value, low, high }: { value: number; low: number; high: number })
  * A year of days as a shelf of stones, grouped by month so a thumb can find
  * September without counting. Deliberately not a heatmap.
  */
+/**
+ * The polish a day can have, so a month's worth of them can share a handful
+ * of gradients: quiet, and then one step per piece of evidence up to full.
+ */
+const POLISH = [0.25, 0.6, 0.75, 0.9, 1] as const;
+const nearest = (p: number): number => POLISH.reduce((a, b) => (Math.abs(b - p) < Math.abs(a - p) ? b : a), POLISH[0]);
+const polishOf = (m: AlmanacMark): number => nearest(m.quiet ? 0.25 : Math.min(1, 0.6 + m.evidence * 0.15));
+const fadeOf = (m: AlmanacMark, today: string): number => (m.day > today ? 0.18 : m.quiet && m.day !== today ? 0.42 : 1);
+
+/**
+ * A run of days as one drawing.
+ *
+ * The same stone, to the pixel — the gradient at 32%/26%, the shading lobe,
+ * the specular ellipse, the white ring on a day that was closed — but drawn
+ * once per month instead of once per day. A `Stone` is two SVG contexts and
+ * three gradients of its own; a year of them came to seven hundred and
+ * thirty-one drawings and eleven hundred gradients on this one screen, eight
+ * thousand elements, which is fine on a laptop and is not what a five-year-old
+ * Android should be asked to lay out. Here it is one drawing a month, and the
+ * gradients are shared by every day on the shelf that has the same polish.
+ *
+ * The ids carry the shelf's own name because two SVGs in one document may not
+ * share a definition on the native side.
+ */
+function Shelf({ id, marks, size, gap, today }: { id: string; marks: AlmanacMark[]; size: number; gap: number; today: string }) {
+  const colors = domainMeta('custom').gradient;
+  const r = size / 2;
+  // The contact shadow falls below the stone's own box, as it does in Stone
+  // (where it is absolutely positioned); the negative margin keeps the row's
+  // alignment on the stones themselves.
+  const pad = Math.ceil(size * 0.5);
+  const width = marks.length * size + Math.max(0, marks.length - 1) * gap;
+  return (
+    <Svg width={width} height={size + pad} style={{ marginBottom: -pad }} pointerEvents="none">
+      <Defs>
+        {POLISH.map((p) => {
+          // Stone's own arithmetic: saturate with polish, and never past 1.
+          const shade = Math.max(0, Math.min(1, (0.55 + 0.5 * p) * (0.97 + 0.05 * p)));
+          return (
+            <RadialGradient key={p} id={`${id}p${String(p).replace('.', '')}`} cx="32%" cy="26%" r="75%">
+              <Stop offset="0%" stopColor={colors[0]} stopOpacity={shade} />
+              <Stop offset="24%" stopColor={colors[1]} stopOpacity={shade} />
+              <Stop offset="60%" stopColor={colors[2]} stopOpacity={1} />
+              <Stop offset="100%" stopColor={colors[3]} stopOpacity={1} />
+            </RadialGradient>
+          );
+        })}
+        <RadialGradient id={`${id}sh`} cx="70%" cy="78%" r="60%">
+          <Stop offset="0%" stopColor="#000000" stopOpacity={0.42} />
+          <Stop offset="100%" stopColor="#000000" stopOpacity={0} />
+        </RadialGradient>
+        <RadialGradient id={`${id}cs`} cx="50%" cy="50%" r="50%">
+          <Stop offset="0%" stopColor={colors[3]} stopOpacity={0.26} />
+          <Stop offset="100%" stopColor={colors[3]} stopOpacity={0} />
+        </RadialGradient>
+      </Defs>
+      {marks.map((m, i) => {
+        const cx = i * (size + gap) + r;
+        const p = polishOf(m);
+        return (
+          <G key={m.day} opacity={fadeOf(m, today)}>
+            <Ellipse cx={cx} cy={r + size * 0.55} rx={size * 0.55} ry={size * 0.32} fill={`url(#${id}cs)`} />
+            <Circle cx={cx} cy={r} r={r} fill={`url(#${id}p${String(p).replace('.', '')})`} />
+            <Circle cx={cx} cy={r} r={r} fill={`url(#${id}sh)`} />
+            <Ellipse cx={cx - r * 0.32} cy={r - r * 0.52} rx={r * 0.3} ry={r * 0.18} fill="#FFFFFF" opacity={0.34 + 0.38 * p} />
+            {m.sealed ? <Circle cx={cx} cy={r} r={r * 0.98} fill="none" stroke="#FFFFFF" strokeOpacity={0.22} strokeWidth={0.8} /> : null}
+          </G>
+        );
+      })}
+    </Svg>
+  );
+}
+
 function Almanac({ marks, today }: { marks: AlmanacMark[]; today: string }) {
   const months = useMemo(() => {
     const out: { name: string; marks: AlmanacMark[] }[] = [];
@@ -283,46 +358,35 @@ function Almanac({ marks, today }: { marks: AlmanacMark[]; today: string }) {
         const quiet = month.marks.filter((m) => m.quiet && m.day <= today).length;
         const ahead = month.marks.filter((m) => m.day > today).length;
         const summary = `${month.name}: ${plural(sealed, 'day')} closed, ${quiet} quiet, ${ahead} to come`;
+        // Today keeps an element of its own, so a screen reader can find it
+        // and the coral ring has something to sit on; the days either side of
+        // it are one drawing each.
+        const at = month.marks.findIndex((m) => m.day === today);
+        const mark = at >= 0 ? month.marks[at] : null;
+        const before = at >= 0 ? month.marks.slice(0, at) : month.marks;
+        const after = at >= 0 ? month.marks.slice(at + 1) : [];
         return (
         <View key={month.name} style={{ flexDirection: 'row', alignItems: 'center', gap: 0 }}>
           <Label style={{ fontSize: 10, width: LABEL }}>{month.name}</Label>
           <View accessible accessibilityRole="image" accessibilityLabel={summary} style={{ flexDirection: 'row', gap: GAP, alignItems: 'center' }}>
-            {month.marks.map((m) => (
+            {before.length > 0 ? <Shelf id={`${month.name}a`} marks={before} size={stone} gap={GAP} today={today} /> : null}
+            {mark ? (
               <View
-                key={m.day}
-                {...(m.day === today
-                  ? {
-                      accessible: true,
-                      accessibilityRole: 'image' as const,
-                      accessibilityLabel: m.sealed
-                        ? `Today, closed, ${plural(m.evidence, 'entry', 'entries')} in the ledger`
-                        : m.quiet
-                          ? 'Today, nothing in the ledger yet'
-                          : `Today, ${plural(m.evidence, 'entry', 'entries')} in the ledger`,
-                    }
-                  : { importantForAccessibility: 'no' as const, 'aria-hidden': true })}
-                style={{
-                  // Three weights on the shelf: a day not yet here is a
-                  // shadow, a quiet day is a dull stone, a day with
-                  // something in it is the stone at full weight. At eight
-                  // points the polish alone cannot tell them apart, so the
-                  // opacity carries it, on both studios.
-                  opacity: m.day > today ? 0.18 : m.quiet && m.day !== today ? 0.42 : 1,
-                  borderRadius: 999,
-                  padding: m.day === today ? 1.5 : 0,
-                  borderWidth: m.day === today ? 1.5 : 0,
-                  borderColor: accent.coral,
-                }}
+                accessible
+                accessibilityRole="image"
+                accessibilityLabel={
+                  mark.sealed
+                    ? `Today, closed, ${plural(mark.evidence, 'entry', 'entries')} in the ledger`
+                    : mark.quiet
+                      ? 'Today, nothing in the ledger yet'
+                      : `Today, ${plural(mark.evidence, 'entry', 'entries')} in the ledger`
+                }
+                style={{ borderRadius: 999, padding: 1.5, borderWidth: 1.5, borderColor: accent.coral }}
               >
-                <Stone
-                  size={stone}
-                  domain="custom"
-                  // Polish is what the day held; seating is the person closing it.
-                  polish={m.quiet ? 0.25 : Math.min(1, 0.6 + m.evidence * 0.15)}
-                  seated={m.sealed}
-                />
+                <Stone size={stone} domain="custom" polish={polishOf(mark)} seated={mark.sealed} />
               </View>
-            ))}
+            ) : null}
+            {after.length > 0 ? <Shelf id={`${month.name}b`} marks={after} size={stone} gap={GAP} today={today} /> : null}
           </View>
         </View>
         );

@@ -265,7 +265,11 @@ function Interview() {
           />
         ))}
         {/* always last, always outlined: the only place anyone types */}
-        <OptionTile testID="option-custom" glyph="custom" tint={accent.violet} title="Something else…" role="button" onPress={() => setCustomOpen((v) => !v)} compact />
+        {/* The escape hatch takes the colour of the thing it makes: a custom
+            area is the pearl stone, not the craft one. It was violet, which
+            both miscoded it and put the one lilac circle in the product on
+            the busiest screen of the first run (PRD 8.10, rule 1). */}
+        <OptionTile testID="option-custom" glyph="custom" tint={domainMeta('custom').ink} title="Something else…" role="button" onPress={() => setCustomOpen((v) => !v)} compact />
         {customOpen ? (
           <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8, backgroundColor: day.surface, borderRadius: radius.field, paddingHorizontal: 14, paddingBottom: 8 }}>
             <View style={{ flex: 1 }}>

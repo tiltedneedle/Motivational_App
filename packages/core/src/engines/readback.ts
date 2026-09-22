@@ -46,8 +46,17 @@ const DOMAIN_HINTS: Record<Exclude<DomainId, 'custom'>, RegExp> = {
   home: /\b(kitchen|home|house|flat|rooms?|garden|move|moves|moving|moved|cook|cooks|cooking|clean|cleans|cleaning|table|doors?|shelf|shelves|walls?|windows?)\b/i,
 };
 
-/** Signals that a clause is about wanting something, not just describing. */
-const WANT = /\b(i(?:'| a)?m|i|we)\b.{0,24}\b(want|will|would|can|could|finally|no longer|don't|do not|stop|start|again|becom\w*|keep|hold|make|earn|run|write|save|call|sleep|build|learn|move)\b/i;
+/**
+ * Signals that a clause is about wanting something, not just describing.
+ *
+ * Both apostrophes, everywhere one can appear: a phone's keyboard types the
+ * curly one by default, so "I’m" and "don’t" are what most of this
+ * product's writing actually contains, and a rule that only knew "I'm"
+ * behaved differently on a laptop than on the phone it was written for.
+ * `safety.ts` has been careful about this since it was written; these two
+ * were not.
+ */
+const WANT = /\b(i(?:['’]| a)?m|i|we)\b.{0,24}\b(want|will|would|can|could|finally|no longer|don['’]t|do not|stop|start|again|becom\w*|keep|hold|make|earn|run|write|save|call|sleep|build|learn|move)\b/i;
 
 const CONCRETE = /\b(\d|£|\$|€|km|minutes?|hours?|weeks?|months?|every|morning|night|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i;
 
@@ -105,7 +114,7 @@ export function domainOf(text: string): DomainId {
  * it is not one that would carry the sentence on ("that I", "when I").
  */
 const SPOKEN_JOIN =
-  /\s+(?:and then|and|but|so|because|then)\s+(?=(?:i|i'm|i've|i'll|i'd|we|we're|we'll|my|our|the|there|there's|it|it's|she|he|they|you|a|an|nobody|everyone|someone)\b)|(?<!\b(?:and|but|so|because|then|that|if|when|where|which|while|as|than|or|what|how|why|whether|unless|until|before|after|once|since|though|although|like|says?|said|think|thought|know|knew|hope|wish|suppose|guess|mean|meant))\s+(?=(?:i|i'm|i've|i'll|i'd|there's|that's)\b)/gi;
+  /\s+(?:and then|and|but|so|because|then)\s+(?=(?:i|i['’]m|i['’]ve|i['’]ll|i['’]d|we|we['’]re|we['’]ll|my|our|the|there|there['’]s|it|it['’]s|she|he|they|you|a|an|nobody|everyone|someone)\b)|(?<!\b(?:and|but|so|because|then|that|if|when|where|which|while|as|than|or|what|how|why|whether|unless|until|before|after|once|since|though|although|like|says?|said|think|thought|know|knew|hope|wish|suppose|guess|mean|meant))\s+(?=(?:i|i['’]m|i['’]ve|i['’]ll|i['’]d|there['’]s|that['’]s)\b)/gi;
 
 /** Clauses longer than this are spoken, or breathless, and are cut at their joins. */
 const SPOKEN_WORDS = 26;

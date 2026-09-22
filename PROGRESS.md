@@ -3086,6 +3086,127 @@ first run, the home with its loop, the sign-in with Google, the five-lens review
 folded in, 558 end-to-end checks, `pnpm verify` green. What remains needs either
 hardware, a credential, or a product call — plus the items the rebuild opened:
 
+0i. **The back, actually fixed (2026-09-22, night)** — the eighth and last
+   turn on this. The rule was right and the arming was right; the *order* was
+   a coin toss. This module answers the browser's Back by taking the popstate
+   before expo-router's own listener sees it, and "before" is nothing but the
+   order two listeners were added in. It was imported from the root layout —
+   which, with async routes, is a chunk still being fetched while the router's
+   container mounts and subscribes. On the loads where the router got there
+   first it answered the pop by resetting the navigator, and this handler ran
+   two milliseconds later to find the screen that had promised an undo already
+   unmounted: `screens: []`, which is exactly what CI had been reporting for
+   four runs.
+   Measured rather than argued: a probe that opens the Present volume, arms
+   its undo and presses the browser's Back, twenty times in a row, with the
+   handler recording when a screen last armed or disarmed. **Nine held of
+   twelve** — and every failure carried `since: {armed: false, msAgo: 2–5}`,
+   the screen torn down in the same event, a few milliseconds ahead of the
+   handler. The fix is one file: `apps/mobile/entry.js` is the app's entry
+   now, and it imports `platform-back` before `expo-router/entry`, so the
+   listener is registered before the router exists. **Thirty-four of
+   thirty-four** after it.
+   The file is called `entry.js` for a reason worth keeping: the exported
+   chunk takes the entry file's name, and three places look for
+   `entry-<hash>.js` — the first-load size ceiling in `build-web.mjs`, the
+   service worker's build stamp, and `check-sw.mjs`. Called `index.js` for an
+   hour it shipped as one of eight `index-*.js` chunks, the ceiling silently
+   measured nothing, and the worker check said "no entry bundle in dist".
+
+0h. **The apostrophe, and the two readers that did not know it
+   (2026-09-22, night)** — the account screen was being read for its look when
+   its privacy sentence turned out to say "anyone's" while the paywall two
+   screens over said "phone’s". Pulling that thread found something worth
+   more than the typography.
+   - **One product, one apostrophe.** Every line a person reads is set with
+     the typographic apostrophe now: the forty faults and virtues, the
+     chooser, the Interview's own asides ("I’m listening…", "Here’s what I
+     heard."), the framings and their hints, the Portrait's "I’m becoming
+     someone who", the coach's keys and its "When you’re ready", the plan's
+     "that’s the whole ask" and "The season’s end", two fields and the
+     account's own paragraph. The lists the app matches the person's typing
+     against keep the typewriter form on purpose — see below.
+   - **A phone types the curly one.** `safety.ts` has known that since it was
+     written: every contraction in it is `['’]`, both forms, because a
+     screener that missed "I don’t want to be here" on the device most of
+     this writing happens on would be the worst bug in the product. Two other
+     readers of the same writing did not know it. The read-back's `WANT` and
+     its spoken-join splitter (`readback.ts`) matched only `i'm`, `don't`,
+     `there's`, `that's`, so a sentence typed on a phone was split
+     differently from the same sentence typed on a laptop; and the coach
+     tokenised on `[^a-z']`, which cut "doesn’t" into "doesn" and "t" and
+     walked both straight past a stop list that knows "doesn't". Both fixed:
+     the regexes take either apostrophe, and the coach folds the curly one
+     onto the typewriter one before it splits, so its stop list means what it
+     says. The small-version reader in `blueprint.ts` takes either too, so a
+     plan built before tonight still reads as a plan with a small version.
+   - **No new guard for it.** `check-copy.mjs` earns its rules by having seen
+     the same mistake ship twice; this one shipped once, in one file, and a
+     rule that fires on nothing is what that file warns against.
+
+0g. **The back that CI could not arm (2026-09-22, night)** — the seventh CI
+   cycle on the browser's back, and the last. The rule was right; the promise
+   was late. A screen registered its undo in a passive effect, so between the
+   paint that put the Present writing step on the glass and the effect that
+   armed it there was a stretch — six hundred milliseconds and more on a
+   loaded runner — when the screen was plainly there and its undo did not
+   exist. The browser did what it does with a screen that promised nothing:
+   it left, with the writing in it. The handler's own note said so
+   (`screens: []`), and the check could not tell that from the rule being
+   wrong. Screens arm in a layout effect now, in the commit that paints them,
+   and the check waits for the arming rather than sleeping through it — with
+   `window.__morrowScreens` to say what is armed, so a failure is evidence
+   and not a bare false.
+
+0f. **What the screens actually look like, and what a push actually sends
+   (2026-09-22, night)** — six things, each one found by looking rather than
+   by testing.
+   - **The evening's stone was cut in half by its own button.** The seal
+     screen ran eighty points past the fold on a 390 × 844 phone, so the
+     stone the day closes on — and the two rings that pulse out of it — sat
+     behind the hold bar, every night. The stone is 76 pt now with twenty
+     points of air around it, and the whole ritual stands on one screen with
+     nothing to scroll.
+   - **The hold bar had a coral chip in the corner.** The fill rested at two
+     per cent, which reads as a drawing mistake rather than an invitation. It
+     rests at nothing; the fill belongs to the hold.
+   - **The one lilac circle in the product is gone.** "Something else…" wore
+     `accent.violet` on the Interview and on set-up — violet is the craft
+     stone's colour, so it miscoded the tile as well as breaking the
+     anti-template rule (§8.10, 1). It takes the pearl of the custom domain
+     now, which is the colour of the stone it actually makes.
+   - **The Almanac is one drawing a month.** A year of days was seven hundred
+     and thirty-one SVG contexts and eleven hundred gradients — eight
+     thousand elements on one screen. A `Shelf` draws a run of days in a
+     single SVG with the gradients shared by polish, pixel for pixel the same
+     stone (the 32%/26% gradient, the shading lobe, the specular ellipse, the
+     white ring on a day that was closed); today keeps an element of its own
+     so a screen reader can still find it and the coral ring has something to
+     sit on. **8168 elements → 2409, 731 SVGs → 16, 1096 gradients → 95.**
+   - **A push sends what changed.** Every backgrounding used to send every row
+     of every table — a year of ledger and a Book and all its editions, to say
+     that one move was done. `pushAll` now carries a fingerprint per row,
+     keyed by the identity the upsert matches on, and sends only the rows
+     whose contents differ from the ones this launch already put there. The
+     profile row always travels, because its stamp is how another device knows
+     who copied last; the prune still reads every row, so nothing dropped is
+     left behind; and the person's answer to a conflict (`force`) sends
+     everything. The fingerprints live for a launch and are never written to
+     disk — one that outlived a reinstall would be a row silently never sent.
+     Five tests against a scripted account (`src/sync.test.ts`) hold all of
+     it, including the prune.
+   - **Two more walks in the end-to-end suite**, both of them things a person
+     meets and no check had ever seen: the notice a phone browser gets about
+     where its writing lives (the user agent is scripted, so the run can be
+     that phone — shown once, put away by "Got it", never shown again, and
+     never shown at all to a browser kept on the Home Screen), and the finish
+     screen when a goal has no How line to build a first step from (the Book is
+     finished all the same, the gap is named in the app's words rather than the
+     engine's, and the button opens that goal's own stone).
+   - **And the drag's four per cent** (§8.5: "follows the finger, enlarges
+     4%"), with the parked stone moved onto the spec's own rim — up 13, right
+     20, rolled 14 degrees.
+
 0e. **The motion the spec names, finished (2026-09-22, evening)** — the
    owner: "work towards animations and motion now… overall motions should be
    top notch". Against PRD §8.5–8.6 two signature pieces were missing and are
@@ -3152,20 +3273,20 @@ hardware, a credential, or a product call — plus the items the rebuild opened:
    divider on the sign-in screen stood alone above the one door there was.)
 
 0b. **After the third turn (2026-09-22, evening)** — what was seen and left, on
-   purpose or for the next turn. Left: (a) a delta push (every backgrounding still
-   sends every row of every table; a push with nothing changed now sends nothing,
-   which removes the common case; the fix is a dirty set per table); (b) the
-   Almanac as one SVG per month with shared gradients (366 memoised Stones today;
-   fine on a laptop, worth doing before a low-end Android build); (c) the e2e
-   sections still missing — the Sunday card, the keep notice, the storage banner's
-   Start again, the runner's Stop/resume, the seal screen with a goal missing its
-   line — and a pinned check count; the a11y pass over the account UI (it needs a
-   configured build); (d) `freezeOnBlur` on the Stack (screens beneath still render;
-   `useSnapshot` removed the keystroke re-renders, which was the cost that
-   mattered); (e) the goal chip's "flight" to the Goal header (PRD 8.5) — the header
-   settles in instead; (f) the migrations 0014 and 0015 and the delete-account
-   function are written and pass the Postgres test but are **not yet applied to the
-   live project** (`pnpm db:push` and a function deploy, with the owner's CLI login);
+   purpose or for the next turn. Left: (a) **done** — the push sends only the rows
+   whose contents changed since the last copy that landed (0f); (b) **done** — the
+   Almanac is one SVG per month with shared gradients (0f); (c) **done** — the
+   e2e sections that were missing are written: the Sunday card, the storage
+   banner's Start again, the runner's Stop/resume, the keep notice (a phone's
+   user agent, scripted) and the finish screen with a goal missing its How line.
+   Still open there: a pinned check count, and the a11y pass over the account UI
+   (it needs a configured build); (d) `freezeOnBlur` on the Stack is **left off
+   on purpose**: it freezes a blurred screen by suspending it, which tears down
+   that screen's effects — including the undo it has just armed (0g) — and the
+   cost it would save was the keystroke re-renders, which `useSnapshot` already
+   removed; (e) **done** — the goal chip's flight to the Goal header (PRD 8.5),
+   with the hold's five ticks beside it; (f) **done** — migrations 0014 and 0015
+   are applied to the live project and `delete-account` is redeployed;
    (g) on a real phone: the voice room on iOS 18 and Android 12 with the new stretch
    handling, the notification channel, the media-library save on Android 10–12, the
    session store's first sign-in, the edge swipe held while a step can be undone.

@@ -22,6 +22,7 @@
     "test:motion": "node scripts/check-motion.mjs",
     "test:eval": "pnpm --filter @morrow/core test:eval",
     "build:web": "node scripts/build-web.mjs",
+    "view": "node scripts/viewshot.mjs",
     "build:web:offline": "node scripts/build-web.mjs --offline",
     "db:push": "node scripts/db-push.mjs",
     "db:find": "node scripts/db-find.mjs",

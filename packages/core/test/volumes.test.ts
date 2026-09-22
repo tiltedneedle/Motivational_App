@@ -226,7 +226,7 @@ describe('the decks as written', () => {
     for (const key of ['heading', 'past.line', 'present.line', 'future.line', 'explore.label', 'footer']) {
       expect(CHOOSER_COPY[key]).toBeTruthy();
     }
-    expect(CHOOSER_COPY['explore.label']).toBe("Not sure? Let's explore.");
+    expect(CHOOSER_COPY['explore.label']).toBe("Not sure? Let’s explore.");
     // The suggested order is the source's, with both halves of Present named.
     expect(EXPLAINER_COPY['order.steps']).toContain('faults');
     expect(EXPLAINER_COPY['order.steps']).toContain('virtues');

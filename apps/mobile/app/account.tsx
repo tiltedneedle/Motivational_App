@@ -258,7 +258,7 @@ export default function Account() {
           <Statement style={{ fontSize: 27, lineHeight: 33 }}>Keep the Book somewhere a lost phone cannot reach.</Statement>
           <Body>
             That is all an account does: a copy of your writing, for a new phone or a cleared one. Nothing you write is
-            used for anything else — not for advertising, not for anyone&apos;s model — and you can delete the account and
+            used for anything else — not for advertising, not for anyone’s model — and you can delete the account and
             its copy from You, the last tab, without asking anyone.
           </Body>
 

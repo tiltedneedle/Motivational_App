@@ -33,7 +33,7 @@ export const HORIZONS = ['Three months', 'Six months', 'A year', 'No deadline'] 
 export const ADMIRE_OPTIONS = [
   'Someone in my family',
   'A friend',
-  "Someone I've only read about",
+  "Someone I’ve only read about",
 ] as const;
 
 /** The last option on the admire question: nobody is written down, and the Interview goes on. */
@@ -352,14 +352,14 @@ export function guessLine(s: InterviewState): string {
   if (s.stage === 'summary') {
     return s.drafts.length === 1
       ? 'One goal, held clearly.'
-      : `${plural(s.drafts.length, 'goal')}. I think I've got you.`;
+      : `${plural(s.drafts.length, 'goal')}. I think I’ve got you.`;
   }
   const area = currentArea(s);
   if (!area) return '';
   const bits = [area.label.toLowerCase()];
   if (s.branchLabel) bits.push(s.branchLabel.toLowerCase());
   if (s.followAnswer) bits.push(s.followAnswer.toLowerCase());
-  return bits.length === 1 ? `${area.label}. I'm listening…` : `I'm seeing ${bits.join(' → ')}…`;
+  return bits.length === 1 ? `${area.label}. I’m listening…` : `I’m seeing ${bits.join(' → ')}…`;
 }
 
 export interface Question {
@@ -428,7 +428,7 @@ export function question(s: InterviewState): Question {
     case 'summary':
       return {
         stage: 'summary',
-        prompt: "Here's what I heard.",
+        prompt: "Here’s what I heard.",
         options: [],
         multi: false,
         customHint: '',
