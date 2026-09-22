@@ -513,7 +513,7 @@ export default function Write() {
                     // the page is mounted synchronously and focused before
                     // anything is awaited; a spoken room does not want the
                     // keyboard over the transcript at all.
-                    if (mode === 'type' || canListen === false) {
+                    if (Platform.OS === 'web' && (mode === 'type' || canListen === false)) {
                       flushSync(() => {
                         setSession(startWriting(kind, track, 'type'));
                         setPhase('writing');
@@ -578,6 +578,7 @@ export default function Write() {
                   clearDraft(kind);
                   setSession(startWriting(kind, track, mode));
                   setClosedBy(null);
+                  setEndedEarly(false);
                   setPhase('doorway');
                 }}
               />
@@ -603,6 +604,7 @@ export default function Write() {
                 onPress={() => {
                   setPaused(false);
                   setSession(startWriting(kind, track, mode));
+                  setEndedEarly(false);
                   setPhase('doorway');
                 }}
               />

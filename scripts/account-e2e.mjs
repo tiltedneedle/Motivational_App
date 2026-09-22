@@ -167,15 +167,18 @@ try {
     }
     return false;
   };
-  // The store is seeded; the session is NOT put in storage. It arrives the
-  // way the email's link delivers it: in the fragment of the URL that opens
-  // the app (\`morrow://#access_token=…&refresh_token=…\`), which the root
-  // layout hands to the auth server.
+  // The store is seeded, and the session is put where supabase-js keeps it
+  // — the state a real device is in after a real sign-in. (It used to
+  // arrive in the URL's fragment as tokens; the app no longer honours
+  // tokens in a URL, since under PKCE no real flow delivers them that way
+  // and a crafted link could sign a device into a stranger's account.)
+  const ref = new URL(URL_).hostname.split('.')[0];
   await page.addInitScript(
-    ({ s }) => {
+    ({ s, key, sess }) => {
       if (!localStorage.getItem('morrow-v1') && !localStorage.getItem('e2e-wiped')) localStorage.setItem('morrow-v1', JSON.stringify(s));
+      if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify(sess));
     },
-    { s: seed },
+    { s: seed, key: `sb-${ref}-auth-token`, sess: session },
   );
   const tap = async (id) => {
     const el = page.locator(`[data-testid="${id}"]`).first();
@@ -186,10 +189,9 @@ try {
   const seen = async (id) => (await page.locator(`[data-testid="${id}"]`).count()) > 0;
   const text = async (id) => (await page.locator(`[data-testid="${id}"]`).first().innerText()).trim();
 
-  const linkUrl = `${BASE}/#access_token=${encodeURIComponent(session.access_token)}&refresh_token=${encodeURIComponent(session.refresh_token)}&expires_in=${session.expires_in ?? 3600}&token_type=bearer&type=magiclink`;
-  await page.goto(linkUrl, { waitUntil: 'networkidle' });
-  const signedIn = await settle(async () => await seen('screen-account'), 20_000);
-  check('the link in the email signs the app in and lands on the account screen', signedIn);
+  await page.goto(`${BASE}/account`, { waitUntil: 'networkidle' });
+  const signedIn = await settle(async () => await seen('account-signed-in'), 20_000);
+  check('a device holding a session opens the account screen signed in', signedIn && (await seen('screen-account')));
   check('which shows the signed-in state', await seen('account-signed-in'));
   await page.goto(`${BASE}/settings`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(2500);

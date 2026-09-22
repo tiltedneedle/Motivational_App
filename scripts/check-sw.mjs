@@ -125,7 +125,12 @@ await page.goto(`${BASE}/today`, { waitUntil: 'load' }).catch(() => {});
 await page.waitForTimeout(2500);
 const opened = await page.locator('[data-testid="screen-today"], [data-testid="screen-welcome"]').count();
 check('with no server the app still opens', opened > 0, (await page.locator('body').innerText().catch(() => '')).slice(0, 120));
+// A screen that arrives on demand (async routes): its chunk was followed
+// from the entry and kept, so it opens with no server too.
+await page.goto(`${BASE}/settings`, { waitUntil: 'load' }).catch(() => {});
+await page.waitForTimeout(2500);
+check('and so does a screen whose code arrives on demand', (await page.locator('[data-testid="screen-settings"]').count()) > 0, (await page.locator('body').innerText().catch(() => '')).slice(0, 120));
 
 await browser.close();
-console.log(failures ? `${failures} failed` : '8/8 service-worker checks passed');
+console.log(failures ? `${failures} failed` : '9/9 service-worker checks passed');
 process.exit(failures ? 1 : 0);

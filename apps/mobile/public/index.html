@@ -31,10 +31,8 @@
     <meta name="twitter:title" content="Morrow — meet who you’re becoming" />
     <meta name="twitter:description" content="Write your future in your own words, then live by it, one ordinary day at a time." />
     <meta name="twitter:image" content="https://selfauthoring00.vercel.app/og.png" />
-    <!-- The un-media'd one is driven by the app: the browser's chrome follows a dark room. -->
+    <!-- One meta, set by the script below from the chosen appearance and then by the app as the room on top changes. -->
     <meta name="theme-color" content="#F1F0EC" />
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F1F0EC" />
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#17181C" />
     <meta name="color-scheme" content="light dark" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -54,7 +52,8 @@
           var a = raw ? (JSON.parse(raw).state || {}).profile.appearance : 'light';
           var dark = a === 'dark' || (a === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
           document.documentElement.style.background = dark ? '#17181c' : '#f1f0ec';
-          document.documentElement.setAttribute('data-morrow-dark', dark ? '1' : '0');
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute('content', dark ? '#17181C' : '#F1F0EC');
         } catch (e) {
           document.documentElement.style.background = '#f1f0ec';
         }

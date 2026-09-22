@@ -21,7 +21,7 @@ type Stage = 'email' | 'code' | 'done';
 
 export default function Account() {
   const router = useRouter();
-  const { next: nextParam } = useLocalSearchParams<{ next?: string }>();
+  const { next: nextParam, settled } = useLocalSearchParams<{ next?: string; settled?: string }>();
   // A web sign-in through Google comes back here cold, with the `next` it
   // left with kept in the tab; read once, on mount.
   const [next] = useState<string | undefined>(() => (typeof nextParam === 'string' ? nextParam : (takeSignInNext() ?? undefined)));
@@ -35,10 +35,11 @@ export default function Account() {
   const signInNotice = useMorrow((s) => s.signInNotice);
   const setSignInNotice = useMorrow((s) => s.setSignInNotice);
   /** Both the phone and the account hold writing: their call. */
-  const [conflict, setConflict] = useState(false);
+  const [conflict, setConflict] = useState(() => settled === 'conflict');
   const account = useMorrow((s) => s.account);
 
-  const [stage, setStage] = useState<Stage>('email');
+  // Arrived from the sign-in screen with the copy already settled there.
+  const [stage, setStage] = useState<Stage>(() => (typeof settled === 'string' && settled !== 'failed' ? 'done' : 'email'));
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
@@ -87,9 +88,9 @@ export default function Account() {
     setStage('code');
   };
 
-  const [pulled, setPulled] = useState(false);
+  const [pulled, setPulled] = useState(() => settled === 'pulled');
   /** What the sign-in moved, so the line under it is true of it. */
-  const [moved, setMoved] = useState<'pushed' | 'pulled' | 'nothing'>('nothing');
+  const [moved, setMoved] = useState<'pushed' | 'pulled' | 'nothing'>(() => (settled === 'pushed' || settled === 'pulled' ? settled : 'nothing'));
   const hasBook = useMorrow((s) => s.books.length > 0);
 
   /** Signed in: the copy, one way or the other, with the button held busy throughout. */
@@ -209,6 +210,11 @@ export default function Account() {
         <TopBar
           back={{
             onPress: () => {
+              // A Book brought back lands on Today, whatever asked: the path is done.
+              if (pulled) {
+                router.replace('/today');
+                return;
+              }
               // On the way to the finish, back is the sign-in screen's plan, not the stack under it.
               if (next === '/seal-book' && topGoalId) {
                 router.replace(`/portrait?goal=${topGoalId}&next=/seal-book`);
@@ -242,8 +248,8 @@ export default function Account() {
             <View testID="account-signed-in" style={{ gap: 12 }}>
               <Rule />
               <Body style={{ color: day.ink }}>
-                Signed in{account.email ? ` as ${account.email}` : ''}. The copy on the account is the one this button brings back;
-                if this phone already has writing, it goes up instead.
+                Signed in{account.email ? ` as ${account.email}` : ''}. This button brings the account’s copy here; if this phone
+                already has writing of its own you will be asked which copy to keep.
               </Body>
               <InkButton testID="account-bring-back" label={busy ? 'One moment…' : 'Bring my Book back'} busy={busy} onPress={() => void bringBack()} />
               <Notice testID="account-problem" kind="error" text={problem} />

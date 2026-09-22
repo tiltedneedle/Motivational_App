@@ -42,9 +42,13 @@ if (r.status) process.exit(r.status);
  * ceiling is a little above where it now sits, so a dependency that creeps
  * back in is a failed build, not a slower demo.
  */
+// With async routes on the web the first load is the entry plus the shared
+// `__common` chunk; the forty screens arrive on demand. The ceiling covers
+// the pair.
 const ENTRY_CEILING_KB = 2900;
 const dir = join('apps', 'mobile', 'dist', '_expo', 'static', 'js', 'web');
 const entry = readdirSync(dir).find((f) => f.startsWith('entry-'));
+const common = readdirSync(dir).find((f) => f.startsWith('__common-'));
 
 /**
  * The fonts, started with the entry rather than after it. expo-font adds
@@ -70,21 +74,32 @@ const FONTS = ['Outfit_400Regular', 'Outfit_500Medium', 'Outfit_600SemiBold', 'O
     // no fonts in this build: nothing to preload
   }
   if (found.length) {
-    const links = found
-      .map((p) => '/' + p.split(/[\\/]/).slice(3).join('/'))
-      .map((href) => `    <link rel="preload" as="font" type="font/ttf" crossorigin href="${href}" />`)
-      .join('\n');
+    // The rules themselves, in the element expo-font keeps its own in
+    // (`expo-generated-fonts`): its loader finds a rule for the family
+    // already there and adds nothing, so each font is fetched once. A
+    // `<link rel=preload>` was discarded under the service worker and the
+    // font fetched twice. `document.fonts.load` starts each one with the
+    // page rather than after the bundle has run.
+    const faces = found.map((p) => {
+      const href = '/' + p.split(/[\\/]/).slice(3).join('/');
+      const family = FONTS.find((f) => p.replace(/\\/g, '/').includes(`/${f}.`));
+      return { family, href };
+    });
+    const css = faces.map((f) => `@font-face{font-family:${JSON.stringify(f.family)};src:url(${JSON.stringify(f.href)});font-display:auto}`).join('');
+    const kick = `<script>try{if(document.fonts){${JSON.stringify(faces.map((f) => f.family))}.forEach(function(f){document.fonts.load('16px "'+f+'"')})}}catch(e){}</script>`;
     const page = readFileSync(html, 'utf8');
-    if (!page.includes('rel="preload" as="font"')) {
-      writeFileSync(html, page.replace('<link rel="manifest"', `${links}\n    <link rel="manifest"`));
-      console.log(`${found.length} fonts preloaded in index.html`);
+    if (!page.includes('id="expo-generated-fonts"')) {
+      writeFileSync(html, page.replace('<link rel="manifest"', `<style id="expo-generated-fonts">${css}</style>\n    ${kick}\n    <link rel="manifest"`));
+      console.log(`${found.length} fonts declared in index.html`);
     }
   }
 }
 if (entry) {
-  const raw = statSync(join(dir, entry)).size;
-  const wire = brotliCompressSync(readFileSync(join(dir, entry))).length;
-  console.log(`entry chunk ${Math.round(raw / 1024)} KB, ${Math.round(wire / 1024)} KB over the wire (brotli)`);
+  const files = [entry, ...(common ? [common] : [])];
+  const raw = files.reduce((n, f) => n + statSync(join(dir, f)).size, 0);
+  const wire = files.reduce((n, f) => n + brotliCompressSync(readFileSync(join(dir, f))).length, 0);
+  const routes = readdirSync(dir).filter((f) => !files.includes(f) && f.endsWith('.js')).length;
+  console.log(`first load ${Math.round(raw / 1024)} KB, ${Math.round(wire / 1024)} KB over the wire (brotli); ${routes} chunks on demand`);
   if (raw / 1024 > ENTRY_CEILING_KB) {
     console.error(`FAIL  the entry chunk is over ${ENTRY_CEILING_KB} KB — something heavy joined the first load`);
     process.exit(1);

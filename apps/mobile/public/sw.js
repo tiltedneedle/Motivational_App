@@ -65,10 +65,25 @@ async function keepShell(res) {
     // browser, printing). Named inside the entry as string literals; kept
     // with it, so an old page outlives a deploy and the app opens offline
     // whole rather than only as far as its first screen.
-    for (const src of scripts.filter((s) => /\.js$/.test(s))) {
-      const text = await cache.match(src).then((r) => (r ? r.text() : '')).catch(() => '');
-      const lazy = [...new Set([...text.matchAll(/static\/js\/web\/([A-Za-z0-9_-]+\.js)/g)].map((m) => `/_expo/static/js/web/${m[1]}`))].filter((p) => !scripts.includes(p));
-      if (lazy.length) await cache.addAll(lazy).catch(() => undefined);
+    // Followed through the chunks they name in turn (a route's chunk names
+    // the chunks it loads), with a bound, so the whole bundle is on the
+    // device after one visit.
+    const seen = new Set(scripts);
+    let frontier = scripts.filter((s) => /\.js$/.test(s));
+    for (let round = 0; round < 4 && frontier.length; round++) {
+      const next = [];
+      for (const src of frontier) {
+        const text = await cache.match(src).then((r) => (r ? r.text() : '')).catch(() => '');
+        for (const m of text.matchAll(/static\/js\/web\/([A-Za-z0-9_+%()[\]-]+\.js)/g)) {
+          const p = `/_expo/static/js/web/${m[1]}`;
+          if (!seen.has(p)) {
+            seen.add(p);
+            next.push(p);
+          }
+        }
+      }
+      if (next.length) await cache.addAll(next).catch(() => undefined);
+      frontier = next;
     }
   }
   // A new deploy, and this was not the first: tell every open page.
@@ -76,6 +91,15 @@ async function keepShell(res) {
     const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     for (const c of clients) c.postMessage({ type: 'morrow:new-version' });
   }
+}
+
+/** A fresh shell seen too late to keep: say so to the open pages, and change nothing. */
+async function noteShell(res) {
+  if (!/text\/html/i.test(res.headers.get('content-type') || '')) return;
+  const next = hash(await res.text());
+  if (next === (await version())) return;
+  const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+  for (const c of clients) c.postMessage({ type: 'morrow:new-version' });
 }
 
 self.addEventListener('install', (event) => {
@@ -107,21 +131,24 @@ self.addEventListener('fetch', (event) => {
       (async () => {
         const shell = await caches.open(SHELL);
         const cached = await shell.match('/index.html');
-        const net = fetch(req).then(async (res) => {
-          // Kept before the page is handed over, so the statics it asks for
-          // next land in the cache named for this shell, not the last one.
+        const raw = fetch(req);
+        // Kept before the page is handed over, so the statics it asks for
+        // next land in the cache named for this shell, not the last one.
+        const keep = async (res) => {
           if (res.ok) await keepShell(res.clone()).catch(() => undefined);
           return res;
-        });
-        if (!cached) return net.catch(() => Response.error());
+        };
+        if (!cached) return raw.then(keep).catch(() => Response.error());
         // A connection that is up but not answering — lie-fi, a captive
         // portal — used to hold a blank ground for the browser's whole
         // timeout while a complete shell sat on the device. Three seconds,
-        // then the cached one; the fetch still lands and records the deploy.
+        // then the cached one. A network answer that lands after that is
+        // only noted (the page is told a newer build shipped): kept, it
+        // would retire the statics the page just served is still loading.
         const timer = new Promise((resolve) => setTimeout(() => resolve(null), 3000));
-        const first = await Promise.race([net.catch(() => null), timer]);
-        if (first) return first;
-        event.waitUntil(net.catch(() => undefined));
+        const first = await Promise.race([raw.catch(() => null), timer]);
+        if (first) return keep(first);
+        event.waitUntil(raw.then((res) => (res.ok ? noteShell(res.clone()) : undefined)).catch(() => undefined));
         return cached;
       })(),
     );

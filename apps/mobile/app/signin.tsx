@@ -69,8 +69,14 @@ export default function SignIn() {
     await setAccount();
     const synced = await afterSignIn();
     track({ name: 'account_signed_in', method, pulled: synced.ok && synced.pulled });
-    if (!synced.ok) setProblem(synced.error);
-    router.replace((to ? `/account?next=${to}` : '/account') as never);
+    // The outcome goes with the person to the account screen: a choice
+    // still owed shows as the two choices there, a pull as "your Book is
+    // back", a failure as the line under the button. Set on this screen
+    // alone it was on a screen being replaced.
+    const outcome = !synced.ok ? (synced.conflict ? 'conflict' : 'failed') : synced.pulled ? 'pulled' : synced.moved;
+    if (!synced.ok && !synced.conflict) setSignInNotice(synced.error);
+    const q = [to ? `next=${to}` : '', `settled=${outcome}`].filter(Boolean).join('&');
+    router.replace(`/account?${q}` as never);
   };
 
   const google = async () => {

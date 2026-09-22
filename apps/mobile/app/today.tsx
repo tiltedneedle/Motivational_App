@@ -593,7 +593,7 @@ export default function Today() {
             pulled forward — the work that was asked for is closed, and saying
             so is what makes the seal at the end of it mean anything.
           */}
-          {!now && done.length > 0 ? (
+          {!now && done.some((m) => m.status === 'done' || m.scheduledFor === today) ? (
             <Card
               testID="day-done-card"
               style={{

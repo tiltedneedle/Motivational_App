@@ -23,8 +23,11 @@ export default function SealDay() {
   const analyses = useMorrow((s) => s.analyses);
   // A day already sealed opens on what was written, so sealing it again is
   // visibly an edit of that and not an empty form that would replace it.
-  const today = useMorrow((s) => s.days[dayOf(new Date(), s.profile.dayBoundaryHour)]);
-  const day = useMorrow((s) => dayOf(new Date(), s.profile.dayBoundaryHour));
+  // Captured once, at mount: the evening this screen opened for. Read from
+  // the clock on every render it flipped at the boundary while the proof
+  // was being typed, and the hold closed the new day with tonight's words.
+  const [day] = useState(() => dayOf(new Date(), useMorrow.getState().profile.dayBoundaryHour));
+  const today = useMorrow((s) => s.days[day]);
   const draft = useMorrow((s) => s.dayDraft);
   const saveDraft = useMorrow((s) => s.saveDayDraft);
   const clearDraft = useMorrow((s) => s.clearDayDraft);

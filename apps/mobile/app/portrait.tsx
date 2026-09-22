@@ -115,7 +115,7 @@ export default function PortraitScreen() {
   return (
     <Studio testID="screen-portrait">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
-        <TopBar back={{ onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'portrait-back' }} where="Your plan" />
+        <TopBar back={{ onPress: goBack, testID: 'portrait-back' }} where="Your plan" />
         {onPath ? <ProgressBar value={4.2 / 5} label="Step 5 of 5 · Finish your Book" testID="portrait-progress" style={{ paddingTop: 4, paddingBottom: 6 }} /> : null}
         <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 20 }}>
           <Rise index={0} reducedMotion={reduced} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>

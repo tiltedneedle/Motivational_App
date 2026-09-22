@@ -51,6 +51,8 @@ export default function NewMove() {
   // needs a plan to sit in. Said here, with the door, rather than refused
   // after the person has picked one of their own lines.
   const planless = Boolean(goalId && source && !state.plans.some((p) => p.goalId === goalId));
+  const entitled = state.profile.entitled === true;
+  const makePortraitAndPlan = useMorrow((s) => s.makePortraitAndPlan);
 
   const back = () => (router.canGoBack() ? router.back() : router.dismissTo('/today'));
 
@@ -122,11 +124,20 @@ export default function NewMove() {
 
           {mode === 'move' && goals.length && planless ? (
             <View testID="new-move-planless" style={{ gap: 12, alignItems: 'flex-start' }}>
-              <Body>
-                This goal is written and waiting for its plan. The free plan builds one plan; Pro builds one for every goal, and
-                then a move can go under this one.
-              </Body>
-              <Chip testID="new-move-see-pro" label="See what Pro adds" onPress={() => router.push(`/paywall?moment=second-blueprint&from=/today`)} />
+              {entitled ? (
+                <>
+                  <Body>This goal is written and waiting for its plan. Build it, and its first moves land on Today — then a move of your own can go under it.</Body>
+                  <Chip testID="new-move-build-plan" label="Build the plan" onPress={() => goalId && makePortraitAndPlan(goalId)} />
+                </>
+              ) : (
+                <>
+                  <Body>
+                    This goal is written and waiting for its plan. The free plan builds one plan; Pro builds one for every goal, and
+                    then a move can go under this one.
+                  </Body>
+                  <Chip testID="new-move-see-pro" label="See what Pro adds" onPress={() => router.push(`/paywall?moment=second-blueprint&from=/today`)} />
+                </>
+              )}
             </View>
           ) : mode === 'move' && goals.length ? (
             <>

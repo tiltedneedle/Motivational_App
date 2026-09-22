@@ -99,11 +99,15 @@ export default function RootLayout() {
     }
     const vv = (window as { visualViewport?: VisualViewport }).visualViewport;
     const root = document.getElementById('root');
+    let wasUp = false;
     const onViewport = () => {
       if (!vv || !root) return;
-      const keyboardUp = vv.height < window.innerHeight - 120;
+      // At scale 1 only: pinch-zoom shrinks the visual viewport too, and
+      // this used to squash the app into the top half of a zoomed page.
+      const keyboardUp = vv.scale === 1 && vv.height < window.innerHeight - 120;
       root.style.height = keyboardUp ? `${Math.round(vv.height)}px` : '';
-      if (keyboardUp) window.scrollTo(0, 0);
+      if (keyboardUp && !wasUp) window.scrollTo(0, 0);
+      wasUp = keyboardUp;
     };
     vv?.addEventListener('resize', onViewport);
     vv?.addEventListener('scroll', onViewport);

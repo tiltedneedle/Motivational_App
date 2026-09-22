@@ -13,7 +13,7 @@ import { scheduler, syncNotices } from './notify';
 import type { Notice } from '@morrow/core';
 import { billing, type BillingResult, type PlanId } from './billing';
 import { FUNCTIONS_URL, deleteAccount, functionHeaders, hasSupabase, sessionState, signOut } from './supabase';
-import { pullAll, pushAll } from './sync';
+import { newDeviceId, pullAll, pushAll, stampAccount } from './sync';
 import { track } from './analytics';
 import {
   DEFAULT_PROFILE,
@@ -235,6 +235,12 @@ export interface AccountState {
   signedInAt: string;
   /** When the last full push landed, or null if none has yet. */
   lastPushAt: string | null;
+  /**
+   * Both this device and the account held writing at sign-in and the person
+   * has not yet said which copy to keep. Nothing is pushed while this is
+   * set; `resolveSignIn` clears it.
+   */
+  needsChoice?: boolean;
 }
 
 export interface ToastState {
@@ -284,6 +290,19 @@ export interface MorrowState {
   newVersionReady: boolean;
   /** The browser-storage notice on Today (Safari clears a site's storage after a week away) was dismissed. Device-only. */
   keepNoticeDismissed: boolean;
+  /**
+   * This install's name for itself, made once. Device-only: the account's
+   * profile row records which device copied last, and this is how a phone
+   * knows the stamp is its own across launches (a random id, so two
+   * browsers on one laptop are two devices).
+   */
+  deviceId: string;
+  /**
+   * When this device last pushed, per account it has been signed into.
+   * Kept across sign-out, so signing back in on the same phone is not read
+   * as a second device. Device-only.
+   */
+  lastSync: Record<string, string>;
   books: BookVersion[];
   portraits: Portrait[];
   plans: Plan[];
@@ -697,6 +716,8 @@ const EMPTY = {
   signInNotice: null as string | null,
   newVersionReady: false,
   keepNoticeDismissed: false,
+  deviceId: '',
+  lastSync: {} as Record<string, string>,
   books: [] as BookVersion[],
   portraits: [] as Portrait[],
   plans: [] as Plan[],
@@ -1346,7 +1367,8 @@ const store = create<MorrowState>()(
         // every backgrounding, so a routine finished in the morning and opened
         // again at night — then interrupted by a notification on step one —
         // used to be recorded as step one, and the day lost its credit.
-        if (existing && practiceValue(existing) >= practiceValue(fresh)) return;
+        const upgrade = existing?.minimal && !fresh.minimal && fresh.stepsDone > 0;
+        if (existing && !upgrade && practiceValue(existing) >= practiceValue(fresh)) return;
         const log = fresh;
         const logs = [...s.practiceLogs.filter((l) => l.id !== existing?.id), log];
 
@@ -1438,7 +1460,10 @@ const store = create<MorrowState>()(
           // ledger's length.
           if (!before || before.status === status) return {};
           const touched = new Set<string>([day]);
-          if (before?.completedAt) touched.add(dayOf(new Date(before.completedAt), boundary));
+          // The day it was counted on (closedOn prefers the day stamped at
+          // the time), not the instant worked out again in today's zone.
+          const was = closedOn(before, boundary);
+          if (was) touched.add(was);
           if (before?.scheduledFor) touched.add(before.scheduledFor);
 
           const plans = s.plans.map((p) => ({
@@ -1994,7 +2019,10 @@ const store = create<MorrowState>()(
             userId: session.user.id,
             email: session.user.email ?? null,
             signedInAt: new Date().toISOString(),
-            lastPushAt: s.account?.userId === session.user.id ? s.account.lastPushAt : null,
+            // Carried across a sign-out and back in: `lastSync` remembers
+            // when this device last copied to this account.
+            lastPushAt: s.account?.userId === session.user.id ? s.account.lastPushAt : (s.lastSync[session.user.id] ?? null),
+            ...(s.account?.userId === session.user.id && s.account.needsChoice ? { needsChoice: true } : {}),
           },
         }));
       },
@@ -2011,12 +2039,23 @@ const store = create<MorrowState>()(
         const b = pulled.bundle;
         const accountHas = hasWriting(b);
         const deviceHas = hasSubstance(s);
+        const userId = get().account?.userId ?? null;
         if (!accountHas) {
           if (!hasWriting(s)) return { ok: true, pulled: false, moved: 'nothing' as const };
           const pushed = await get().pushToAccount();
           return pushed.ok ? { ok: true, pulled: false, moved: 'pushed' as const } : pushed;
         }
         if (deviceHas) {
+          // The account's copy may be this very device's — signed out and
+          // back in — in which case there is nothing to choose: the stamp
+          // names this device, or this device remembers copying to this
+          // account, and its writing is the newer.
+          const mine = pulled.stamp.by === get().deviceId || Boolean(userId && s.lastSync[userId]);
+          if (mine) {
+            const pushed = await get().pushToAccount();
+            return pushed.ok ? { ok: true, pulled: false, moved: 'pushed' as const } : pushed;
+          }
+          set((st) => (st.account ? { account: { ...st.account, needsChoice: true } } : {}));
           return {
             ok: false,
             conflict: true,
@@ -2024,21 +2063,36 @@ const store = create<MorrowState>()(
           };
         }
         takeBundle(set, s, b);
+        await inStep(set, get);
         return { ok: true, pulled: true, moved: 'pulled' as const };
       },
 
       resolveSignIn: async (choice) => {
         if (choice === 'push') {
           // Their word that this device is the copy: the prune may run, and
-          // another device's newer copy is replaced.
-          const out = await pushAll(bundleOf(get()), { reconcile: true, force: true });
+          // another device's newer copy is replaced. Through the same gate
+          // as every other push, so two never run at once.
+          if (pushInFlight) await pushInFlight.catch(() => undefined);
+          set((st) => (st.account ? { account: { ...st.account, needsChoice: false } } : {}));
+          pushInFlight = (async () => {
+            try {
+              const out = await pushAll(bundleOf(get()), { device: get().deviceId, reconcile: true, force: true });
+              if (!out.ok) return { ok: false as const, error: out.error };
+              markPushed(set, get);
+              return { ok: true as const };
+            } finally {
+              pushInFlight = null;
+            }
+          })();
+          const out = await pushInFlight;
           if (!out.ok) return { ok: false, error: out.error };
-          set((st) => (st.account ? { account: { ...st.account, lastPushAt: new Date().toISOString() } } : {}));
           return { ok: true, pulled: false, moved: 'pushed' as const };
         }
         const pulled = await pullAll(false);
         if (!pulled.ok) return { ok: false, error: pulled.error };
+        set((st) => (st.account ? { account: { ...st.account, needsChoice: false } } : {}));
         takeBundle(set, get(), pulled.bundle);
+        await inStep(set, get);
         return { ok: true, pulled: true, moved: 'pulled' as const };
       },
 
@@ -2048,6 +2102,12 @@ const store = create<MorrowState>()(
         // nothing to say about the account, and its default profile must not
         // land over the one the account already holds.
         if (!hasWriting(get()) && !get().account?.lastPushAt) return { ok: false, error: 'Nothing to copy yet.' };
+        // A choice still owed (both sides held writing at sign-in) stops
+        // every push until it is made: a background push used to run in
+        // the middle of it and prune the other phone's Book.
+        if (get().account?.needsChoice) {
+          return { ok: false, error: 'This phone and the account both have writing. Choose which copy to keep — under You.', conflict: true };
+        }
         // One at a time. iOS backgrounds with 'inactive' then 'background',
         // and two whole pushes ran at once, each pruning from its own snapshot.
         if (pushInFlight) return pushInFlight;
@@ -2055,9 +2115,13 @@ const store = create<MorrowState>()(
           try {
             // The prune runs only from a device that has copied up before,
             // and never over another device's newer copy.
-            const out = await pushAll(bundleOf(get()), { reconcile: Boolean(get().account?.lastPushAt), lastPushAt: get().account?.lastPushAt ?? null });
+            const out = await pushAll(bundleOf(get()), {
+              device: get().deviceId,
+              reconcile: Boolean(get().account?.lastPushAt),
+              lastPushAt: get().account?.lastPushAt ?? null,
+            });
             if (!out.ok) return { ok: false as const, error: out.error, ...(out.conflict ? { conflict: true as const } : {}) };
-            set((st) => (st.account ? { account: { ...st.account, lastPushAt: new Date().toISOString() } } : {}));
+            markPushed(set, get);
             return { ok: true as const };
           } finally {
             pushInFlight = null;
@@ -2286,7 +2350,8 @@ const store = create<MorrowState>()(
       clearSafety: () => set({ safetyPause: null }),
       // The storage flag survives a reset: with the latch closed the reset
       // cannot reach the disk, and a banner that went away said it had.
-      reset: () => set((s) => ({ profile: DEFAULT_PROFILE, ...EMPTY, storageError: s.storageError })),
+      // The device keeps its name through a reset: the install is the same.
+      reset: () => set((s) => ({ profile: DEFAULT_PROFILE, ...EMPTY, storageError: s.storageError, deviceId: s.deviceId || newDeviceId() })),
     }),
     {
       name: STORE_KEY,
@@ -2347,7 +2412,7 @@ const store = create<MorrowState>()(
         }
         // Safe either way now: with the latch closed this write is dropped
         // rather than persisted, so it cannot overwrite anything.
-        store.setState({ hydrated: true, storageError: broken });
+        store.setState({ hydrated: true, storageError: broken, ...(store.getState().deviceId ? {} : { deviceId: newDeviceId() }) });
       },
     },
   ),
@@ -2434,6 +2499,35 @@ function hasWriting(s: Pick<SyncBundle, 'texts' | 'goals' | 'analyses' | 'books'
 
 /** The push in progress, so a second call joins it rather than starting another. */
 let pushInFlight: Promise<{ ok: true } | { ok: false; error: string; conflict?: true }> | null = null;
+
+type Set = (partial: Partial<MorrowState> | ((s: MorrowState) => Partial<MorrowState>)) => void;
+
+/** A push landed: this device is the account's latest copy, and remembers it per account. */
+function markPushed(set: Set, get: () => MorrowState): void {
+  const at = new Date().toISOString();
+  const userId = get().account?.userId;
+  set((st) => ({
+    ...(st.account ? { account: { ...st.account, lastPushAt: at, needsChoice: false } } : {}),
+    ...(userId ? { lastSync: { ...st.lastSync, [userId]: at } } : {}),
+  }));
+}
+
+/**
+ * After a pull: this device holds the account's copy, and says so on the
+ * account's row, or its next push would be read as another device's
+ * overwrite of the copy it had just taken. A stamp that cannot be written
+ * (offline) leaves `lastPushAt` set anyway: the row's stamp is still the
+ * other device's, but it is not newer than this pull.
+ */
+async function inStep(set: Set, get: () => MorrowState): Promise<void> {
+  const stamped = await stampAccount(get().deviceId);
+  const at = stamped.ok ? stamped.at : new Date().toISOString();
+  const userId = get().account?.userId;
+  set((st) => ({
+    ...(st.account ? { account: { ...st.account, lastPushAt: at, needsChoice: false } } : {}),
+    ...(userId ? { lastSync: { ...st.lastSync, [userId]: at } } : {}),
+  }));
+}
 
 /**
  * Writing that is more than the first run's two-minute line: a Book, goals,
@@ -2825,8 +2919,11 @@ export function dayIsDone(s: MorrowState): boolean {
   const moves = todaysMoves(s);
   if (moves.length === 0) return false;
   const day = dayOf(new Date(), s.profile.dayBoundaryHour);
-  const scheduledToday = moves.filter((m) => m.scheduledFor === day || m.status !== 'todo');
-  return scheduledToday.length > 0 && moves.every((m) => m.status !== 'todo');
+  // Something was asked of today: dated today, or finished today. A move
+  // parked on an earlier day is neither, and a list of only those is not
+  // a day closed.
+  const asked = moves.filter((m) => m.scheduledFor === day || m.status === 'done');
+  return asked.length > 0 && moves.every((m) => m.status !== 'todo');
 }
 
 export function consistency(s: MorrowState) {
@@ -2869,7 +2966,10 @@ export function firstRunOf(s: MorrowState): FirstRunStep {
     // A Fifteen with words in it. The clock can close over an empty page,
     // and an empty text counted as the future written.
     hasIdeal: (latestText(s.texts, 'ideal')?.body.trim().length ?? 0) > 0,
-    readBackOpen: s.readBackDraft !== null && s.readBackDraft.rows.some((r) => r.state === 'kept'),
+    readBackOpen:
+      s.readBackDraft !== null &&
+      s.readBackDraft.source === (latestText(s.texts, 'ideal')?.body ?? '') &&
+      s.readBackDraft.rows.some((r) => r.state === 'kept'),
     hasTitle: s.bookTitle.trim().length > 0,
     consented: Boolean(s.profile.consentedAt),
     // Only the lines the plan can use. A line the screen held out of the

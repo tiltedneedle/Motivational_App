@@ -10,7 +10,7 @@
  * app; row level security is what protects the rows) and they are the only
  * secrets-shaped things the app ever holds. Nothing else lives in the bundle.
  */
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { authStorage } from './session-store';
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
 
@@ -60,7 +60,9 @@ export function supabase(): Promise<SupabaseClient | null> {
         // long as the browser's own limit, with nothing said.
         global: { fetch: fetchWithDeadline },
         auth: {
-          storage: AsyncStorage,
+          // Encrypted at rest on a phone (session-store.ts); the browser's
+          // own storage on the web.
+          storage: authStorage(),
           autoRefreshToken: true,
           persistSession: true,
           detectSessionInUrl: false,
@@ -212,6 +214,12 @@ export async function signInFromUrl(url: string | null | undefined): Promise<Aut
   const result = signInFromUrlOnce(url);
   handled.set(url, result);
   if (handled.size > 8) handled.delete(handled.keys().next().value as string);
+  // A failure the connection caused is not remembered: the code was never
+  // spent, and the same link tapped again once the network is back should
+  // exchange it.
+  void result.then((r) => {
+    if (r && !r.ok && /connection|too long/i.test(r.error)) handled.delete(url);
+  });
   return result;
 }
 

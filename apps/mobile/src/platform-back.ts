@@ -118,7 +118,10 @@ export function usePlatformBack(canStepBack: boolean, stepBack: () => void): voi
       // app itself asked for (set-up sending a finished person to Today) is
       // not, and preventing it left the screen stuck one step back.
       const type = e.data?.action?.type;
-      if (type && type !== 'GO_BACK' && type !== 'POP' && type !== 'POP_TO') return;
+      // Only GO_BACK and POP: a dismiss the app asks for (POP_TO) is not
+      // an undo either, and treated as one it swallowed every dismissTo
+      // above a finished Interview, rewinding hidden answers a tap at a time.
+      if (type !== 'GO_BACK' && type !== 'POP') return;
       e.preventDefault();
       latest.current.stepBack();
     });

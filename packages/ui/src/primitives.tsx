@@ -92,6 +92,13 @@ export function usePalette() {
   return React.useContext(PaletteContext);
 }
 
+const themeStack: { night: boolean }[] = [];
+function applyTheme(): void {
+  const top = themeStack[themeStack.length - 1];
+  const meta = (globalThis as { document?: Document }).document?.querySelector('meta[name="theme-color"]:not([media])');
+  if (meta) meta.setAttribute('content', top?.night ? '#17181C' : '#F1F0EC');
+}
+
 export function Studio({
   dark = false,
   wide = false,
@@ -114,12 +121,21 @@ export function Studio({
   const isNight = dark || globalDark;
   const p = isNight ? (night as unknown as Palette) : day;
   const reduced = useReducedMotion();
-  // The browser's own chrome follows the room: Safari's tab bar stayed cream
-  // over the night studio.
+  // The browser's own chrome follows the room on top: Safari's tab bar
+  // stayed cream over the night studio. A stack, because the screen under a
+  // pushed one stays mounted: when the dark room is popped, the light
+  // screen beneath does not mount again, so the colour is restored from
+  // what is left on the stack.
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof document === 'undefined') return;
-    const meta = document.querySelector('meta[name="theme-color"]:not([media])');
-    if (meta) meta.setAttribute('content', isNight ? '#17181C' : '#F1F0EC');
+    const entry = { night: isNight };
+    themeStack.push(entry);
+    applyTheme();
+    return () => {
+      const at = themeStack.indexOf(entry);
+      if (at >= 0) themeStack.splice(at, 1);
+      applyTheme();
+    };
   }, [isNight]);
   return (
     <PaletteContext.Provider value={{ p, dark: isNight }}>
@@ -1011,6 +1027,21 @@ export function UserField({
   // inside itself; the page did not grow with the writing. Sized to the
   // content instead, so the page is the thing that scrolls.
   const [grown, setGrown] = useState<number | null>(null);
+  const fieldRef = useRef<{ style?: { height: string }; scrollHeight?: number } | null>(null);
+  // Measured with the box's own height let go first: a textarea's
+  // scrollHeight is never less than the height it was just given, so read
+  // as it was, the box grew sixteen pixels on every keystroke and never
+  // shrank when text was deleted. Stable, so react-native-web does not
+  // re-measure on every render.
+  const measure = useCallback(() => {
+    const el = fieldRef.current;
+    if (!el || !el.style) return;
+    const was = el.style.height;
+    el.style.height = 'auto';
+    const h = el.scrollHeight ?? 0;
+    el.style.height = was;
+    setGrown((prev) => (prev === h ? prev : h));
+  }, []);
   return (
     <View>
       {label && !labelHidden ? <Label style={{ marginBottom: 2 }}>{label}</Label> : null}
@@ -1033,9 +1064,7 @@ export function UserField({
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
       onSubmitEditing={onSubmitEditing}
-      {...(multiline && Platform.OS === 'web'
-        ? { onContentSizeChange: (e: { nativeEvent: { contentSize: { height: number } } }) => setGrown(Math.ceil(e.nativeEvent.contentSize.height)) }
-        : {})}
+      {...(multiline && Platform.OS === 'web' ? { onContentSizeChange: measure, ref: fieldRef as never } : {})}
       accessibilityLabel={label ?? placeholder}
       aria-invalid={Boolean(error)}
       // The hint stays a hint. It is still announced, and it no longer has to
@@ -1056,7 +1085,7 @@ export function UserField({
         borderBottomColor: focused ? accent.coral : value ? accent.coralSoftLine : p.line,
         paddingVertical: 8,
         minHeight: minHeight ?? (multiline ? 96 : 44),
-        ...(grown && multiline ? { height: Math.max(minHeight ?? 96, grown + 18) } : {}),
+        ...(grown && multiline ? { height: Math.max(minHeight ?? 96, grown + 2) } : {}),
         textAlignVertical: multiline ? 'top' : 'center',
         ...(Platform.OS === 'web' ? webOnlyStyle({ outlineStyle: 'none' }) : {}),
       }}

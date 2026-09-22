@@ -269,7 +269,6 @@ export function Screen({
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps={keyboard ? 'handled' : 'never'}
               keyboardDismissMode={keyboard ? 'on-drag' : 'none'}
-              automaticallyAdjustKeyboardInsets={keyboard}
               {...(Platform.OS === 'web' ? { tabIndex: 0 } : {})}
             >
               {body}
@@ -418,9 +417,10 @@ export function StreakPill({ count, week = 0, testID }: { count: number; week?: 
     <View
       testID={testID}
       accessible
-      // "image", not "text": react-native-web maps text to no role, and a
-      // name on a role-less element is ignored by NVDA and JAWS.
-      accessibilityRole="image"
+      // A group on the web (react-native-web maps "text" to no role, and a
+      // name on a role-less element is ignored by NVDA and JAWS); plain text
+      // on a phone, where "image" would add an image trait to live text.
+      {...labelledRole}
       accessibilityLabel={on ? `${count} day run` : `${week} of 7 days this week`}
       style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, paddingLeft: 10, paddingRight: 12, borderRadius: 999, backgroundColor: on ? accent.coralText : p.surface2 }}
     >
@@ -430,13 +430,16 @@ export function StreakPill({ count, week = 0, testID }: { count: number; week?: 
   );
 }
 
+/** The role a labelled group of text carries: `group` on the web, where a name needs a role; none on a phone. */
+const labelledRole = Platform.OS === 'web' ? ({ role: 'group' } as const) : ({ accessibilityRole: 'text' } as const);
+
 export type WeekDay = { key: string; letter: string; state: 'sealed' | 'today' | 'todaySealed' | 'empty' | 'future'; label: string };
 
 /** Seven dots for the week: a filled coral dot for a sealed day, a ring for today. */
 export function WeekStrip({ days, testID }: { days: WeekDay[]; testID?: string }) {
   const { p } = usePalette();
   return (
-    <View testID={testID} accessible accessibilityRole="image" accessibilityLabel={`This week: ${days.map((d) => d.label).join('; ')}`} style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+    <View testID={testID} accessible {...labelledRole} accessibilityLabel={`This week: ${days.map((d) => d.label).join('; ')}`} style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
       {days.map((d) => {
         const sealed = d.state === 'sealed' || d.state === 'todaySealed';
         const today = d.state === 'today' || d.state === 'todaySealed';
@@ -524,7 +527,7 @@ export function PathCard({
           const current = i === at && !s.done;
           const later = !s.done && !current;
           return (
-            <View key={s.label} accessible accessibilityRole="image" accessibilityLabel={`${s.label}${s.minutes ? `, ${s.minutes}` : ''}${s.done ? ', done' : current ? ', next' : ''}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <View key={s.label} accessible {...labelledRole} accessibilityLabel={`${s.label}${s.minutes ? `, ${s.minutes}` : ''}${s.done ? ', done' : current ? ', next' : ''}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <View
                 style={{
                   width: 22,

@@ -151,6 +151,9 @@ export default function Interview() {
         authored: d.custom,
       })),
     );
+    // A finished Interview claims no back: its history would otherwise
+    // answer a pop meant for the screen above it.
+    setHistory([]);
     router.push('/authoring');
   };
 

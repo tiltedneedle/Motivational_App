@@ -23,22 +23,18 @@ config.resolver.disableHierarchicalLookup = false;
  *
  * pnpm gives every workspace package its own resolution of a peer dependency,
  * and the peer context of `packages/ui` is not identical to the app's, so the
- * two resolved to physically different `react-native` trees at the same
- * version. Left alone, an import inside `@morrow/ui` picks up the second copy
- * and the bundle carries two React Natives — the same class of bug as two
- * copies of React, and a native build may only contain one of any native
- * module. `expo-doctor` reports it as duplicate native dependencies.
- *
- * Pinning them here is the resolver-level fix: `@morrow/ui` and the app end up
- * on the same instance no matter which node_modules is nearer.
+ * two once resolved to physically different `react-native` trees at the same
+ * version, and the bundle carried two React Natives. What actually keeps them
+ * to one copy is `nodeLinker: hoisted` in pnpm-workspace.yaml: every package
+ * lands once, at the workspace root, and `nodeModulesPaths` above reaches it.
+ * An `extraNodeModules` pin used to sit here pointing at
+ * apps/mobile/node_modules/<name> — paths that do not exist under the hoisted
+ * layout, and which Metro consults only after every node_modules lookup has
+ * failed — so it was inert, and is gone.
+ * The check that would catch a second copy is `expo-doctor` (duplicate
+ * native dependencies), which `pnpm verify` does not run but the README's
+ * native steps do.
  */
-const SINGLETONS = ['react', 'react-dom', 'react-native', 'react-native-svg'];
-config.resolver.extraNodeModules = {
-  ...(config.resolver.extraNodeModules ?? {}),
-  ...Object.fromEntries(
-    SINGLETONS.map((name) => [name, path.resolve(projectRoot, 'node_modules', name)]),
-  ),
-};
 
 /**
  * The web bundle without react-native-reanimated.

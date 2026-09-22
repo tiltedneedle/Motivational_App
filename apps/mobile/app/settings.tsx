@@ -13,6 +13,7 @@ import { useLatestBook, useMorrow } from '../src/store';
 import { FloatingTabs, TAB_BAR_ROOM } from '../src/tabs';
 import { takeAway, takeawayNote } from '../src/takeaway';
 import { hasSupabase } from '../src/supabase';
+import { storageFailure } from '../src/storage';
 
 /**
  * The moments, in the words the person would use for them.
@@ -37,6 +38,9 @@ export default function Settings() {
   const setProfile = useMorrow((s) => s.setProfile);
   const reset = useMorrow((s) => s.reset);
   const storageError = useMorrow((s) => s.storageError);
+  // Only an unreadable store blocks a delete (its writes are dropped); after
+  // a failed write the store still saves, and the delete would land.
+  const storeUnreadable = storageError && storageFailure()?.kind === 'read';
   const fewerNotifications = useMorrow((s) => s.fewerNotifications);
   const account = useMorrow((s) => s.account);
   const restore = useMorrow((s) => s.restore);
@@ -609,7 +613,7 @@ export default function Settings() {
                 </View>
               </View>
             ) : (
-              storageError ? (
+              storeUnreadable ? (
                 <Body testID="settings-delete-blocked" style={{ fontSize: 13 }}>
                   Nothing is being saved on this device right now, so nothing can be deleted from it either. Copy out what is open first; the banner at the top has the way out.
                 </Body>

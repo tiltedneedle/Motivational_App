@@ -30,24 +30,33 @@ export type SyncOutcome =
 
 const ANOTHER_DEVICE = 'Another phone or browser has copied to this account since this one last did. Bring that copy here first, or replace it with this one — under You.';
 
-/**
- * This install's name for itself, made once and kept beside the store. Not
- * the person, not the phone model: a random id, so two browsers on one
- * laptop are two devices.
- */
-let device: string | null = null;
-export function deviceId(): string {
-  if (device) return device;
-  try {
-    const g = globalThis as { localStorage?: Storage };
-    const had = g.localStorage?.getItem('morrow-device');
-    if (had) return (device = had);
-    const made = `dev_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`;
-    g.localStorage?.setItem('morrow-device', made);
-    return (device = made);
-  } catch {
-    return (device = `dev_${Math.random().toString(36).slice(2, 10)}`);
+/** A fresh name for an install. The store keeps it (`deviceId`), so a phone is the same device across launches. */
+export function newDeviceId(): string {
+  return `dev_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`;
+}
+
+/** Whether the account holds any writing at all: a goal, a text, or an edition. */
+async function accountHasWriting(c: NonNullable<Awaited<ReturnType<typeof supabase>>>, uid: string): Promise<boolean> {
+  for (const table of ['goals', 'authoring_texts', 'book_versions'] as const) {
+    const { count, error } = await c.from(table).select('id', { count: 'exact', head: true }).eq('user_id', uid);
+    if (!error && (count ?? 0) > 0) return true;
   }
+  return false;
+}
+
+/**
+ * Mark this device as the one in step with the account — after it has
+ * pulled the account's copy, so its next push is not read as another
+ * device's overwrite. Only the stamp; nothing else on the row changes.
+ */
+export async function stampAccount(device: string): Promise<{ ok: true; at: string } | { ok: false; error: string }> {
+  const c = await supabase();
+  const session = await currentSession();
+  if (!c || !session) return { ok: false, error: NOT_SIGNED_IN };
+  const at = new Date().toISOString();
+  const { error } = await c.from('profiles').update({ pushed_by: device, pushed_at: at }).eq('id', session.user.id);
+  if (error) return { ok: false, error: plain(error.message) };
+  return { ok: true, at };
 }
 
 const NOT_SIGNED_IN = 'Not signed in, so nothing was sent. Everything is still on this device.';
@@ -69,28 +78,38 @@ function timezone(): string {
  * Rows are chunked; a Book with a year of ledger entries is a few thousand
  * rows and one request of that size is one request that times out.
  */
-export async function pushAll(bundle: SyncBundle, opts: { reconcile?: boolean; deadlineMs?: number; lastPushAt?: string | null; force?: boolean } = {}): Promise<SyncOutcome> {
+export async function pushAll(
+  bundle: SyncBundle,
+  opts: { device: string; reconcile?: boolean; deadlineMs?: number; lastPushAt?: string | null; force?: boolean },
+): Promise<SyncOutcome> {
   const c = await supabase();
   const session = await currentSession();
   if (!c || !session) return { ok: false, error: NOT_SIGNED_IN, rows: 0 };
 
   const uid = session.user.id;
-  // Another device's newer copy is a stop, not something to write over. The
+  // Another device's copy is a stop, not something to write over. The
   // profile row says who copied last and when; if that was not this device
   // and it was after this device's own last copy, the person is asked
   // (Settings, the account screen) rather than the other phone's evenings
-  // quietly pruned. `force` is their answer.
+  // quietly pruned. A device that has never copied up, against an account
+  // that already holds writing, is the same stop whether or not the row is
+  // stamped (a copy made before the stamp existed has none). `force` is
+  // the person's answer.
   if (!opts.force) {
     const { data, error } = await c.from('profiles').select('pushed_by, pushed_at').eq('id', uid).maybeSingle();
-    if (!error && data && data.pushed_by && data.pushed_by !== deviceId() && data.pushed_at) {
-      const theirs = Date.parse(String(data.pushed_at));
-      const mine = opts.lastPushAt ? Date.parse(opts.lastPushAt) : 0;
-      if (Number.isFinite(theirs) && theirs > mine) {
-        return { ok: false, conflict: true, error: ANOTHER_DEVICE, rows: 0 };
-      }
+    if (error && !/PGRST116|0 rows/i.test(error.message)) return { ok: false, error: plain(error.message), detail: error.message, rows: 0 };
+    const stampedBy = data?.pushed_by ? String(data.pushed_by) : null;
+    const stampedAt = data?.pushed_at ? Date.parse(String(data.pushed_at)) : NaN;
+    const mine = opts.lastPushAt ? Date.parse(opts.lastPushAt) : 0;
+    if (stampedBy && stampedBy !== opts.device && Number.isFinite(stampedAt) && stampedAt > mine) {
+      return { ok: false, conflict: true, error: ANOTHER_DEVICE, rows: 0 };
+    }
+    if (!opts.lastPushAt && (!stampedBy || stampedBy !== opts.device)) {
+      const held = await accountHasWriting(c, uid);
+      if (held) return { ok: false, conflict: true, error: ANOTHER_DEVICE, rows: 0 };
     }
   }
-  const tables = toRows(bundle, uid, timezone(), { id: deviceId(), at: new Date().toISOString() });
+  const tables = toRows(bundle, uid, timezone(), { id: opts.device, at: new Date().toISOString() });
   const startedAt = Date.now();
   const budget = opts.deadlineMs ?? 90_000;
   const overdue = () => Date.now() - startedAt > budget;
@@ -187,7 +206,9 @@ async function allOf(
  * own Book is a merge, not a pull, and the honest thing is to say so rather
  * than let one silently win.
  */
-export async function pullAll(localHasWriting: boolean): Promise<{ ok: true; bundle: SyncBundle } | { ok: false; error: string; detail?: string }> {
+export async function pullAll(
+  localHasWriting: boolean,
+): Promise<{ ok: true; bundle: SyncBundle; stamp: { by: string | null; at: string | null } } | { ok: false; error: string; detail?: string }> {
   const c = await supabase();
   const session = await currentSession();
   if (!c || !session) return { ok: false, error: NOT_SIGNED_IN };
@@ -218,7 +239,9 @@ export async function pullAll(localHasWriting: boolean): Promise<{ ok: true; bun
     }
     tables[table] = rows;
   }
-  return { ok: true, bundle: fromRows(tables, DEFAULT_PROFILE) };
+  const row = tables.profiles?.[0] as Record<string, unknown> | undefined;
+  const stamp = { by: row?.pushed_by ? String(row.pushed_by) : null, at: row?.pushed_at ? String(row.pushed_at) : null };
+  return { ok: true, bundle: fromRows(tables, DEFAULT_PROFILE), stamp };
 }
 
 function* chunks<T>(items: T[], size: number): Generator<T[]> {
