@@ -8,7 +8,7 @@
   },
   "scripts": {
     "typecheck": "pnpm -r typecheck",
-    "test": "pnpm -r --filter ./packages/** --filter mobile test",
+    "test": "pnpm -r --filter \"./packages/**\" --filter mobile test",
     "test:functions": "node scripts/check-functions.mjs",
     "test:deps": "node scripts/check-deps.mjs",
     "test:dates": "node scripts/check-dates.mjs",
