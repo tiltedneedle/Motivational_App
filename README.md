@@ -22,12 +22,17 @@ App Store, open it, accept the licence. Then:
 # copy this folder to the Mac (without node_modules), or push it and clone it
 cd morrow
 corepack enable          # picks up pnpm 11 from package.json
-pnpm install
+pnpm install             # Node 24 (`.nvmrc`); Node 22.13+ also works
 cd apps/mobile
 npx expo run:ios
 ```
 
 The first run generates the `ios/` folder and compiles (about ten minutes).
+The App Store's Xcode is 27, whose SDK requires the scene life cycle;
+`app.json` opts in through `expo-build-properties` (`enableSceneSupport`).
+If the photo picker or the Google sign-in sheet presents oddly on a device
+(a known SDK 57 edge with scene support, fixed in SDK 58), build with
+Xcode 26 instead until the project moves to SDK 58.
 It opens in the iPhone Simulator. Nothing else to configure: the icon, the
 splash and the notification settings are in `app.json` and the assets are
 committed.
@@ -125,7 +130,10 @@ Scan the QR code. Everything runs in Expo Go except home-screen widgets.
 
 Either Android Studio (an emulator or a phone with USB debugging, JDK 17,
 `ANDROID_HOME` set) and `npx expo run:android`, or the cloud:
-`npm i -g eas-cli && eas login && eas build -p android --profile development`.
+`npm i -g eas-cli && eas login && cd apps/mobile && eas build:configure && eas build -p android --profile preview`.
+`eas build:configure` runs once, by the account owner, and writes the EAS
+project id into `app.json`; `apps/mobile/eas.json` has the `preview`
+(internal APK) and `production` profiles.
 
 ## Check the tree
 

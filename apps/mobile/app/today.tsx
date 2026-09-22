@@ -178,6 +178,20 @@ export default function Today() {
   // with nothing behind it.
   const settledIn = Object.values(state.days).some((d) => Boolean(d.sealedAt));
 
+  // A phone browser that is not installed and not signed in: the one notice
+  // about where the writing lives, once, after the Book (Safari's seven-day
+  // rule; PRD §10.4's "local-first" needs the person to know that).
+  const dismissKeepNotice = useMorrow((s) => s.dismissKeepNotice);
+  const keepNotice =
+    Platform.OS === 'web' &&
+    !state.keepNoticeDismissed &&
+    !state.account &&
+    Boolean(book) &&
+    typeof navigator !== 'undefined' &&
+    /iP(hone|ad|od)|Android/i.test(navigator.userAgent) &&
+    !(navigator as { standalone?: boolean }).standalone &&
+    !(typeof window !== 'undefined' && window.matchMedia?.('(display-mode: standalone)').matches);
+
   // Read for its change, not its value: the layout ticks it on foreground
   // and at the boundary, and this screen renders again on the new day.
   useMorrow((s) => s.clockDay);
@@ -514,6 +528,19 @@ export default function Today() {
             this the stone was a picture and the check a mystery, and the
             fastest way to lose somebody is a screen they cannot read.
           */}
+          {keepNotice ? (
+            <View testID="today-keep-notice" style={{ marginTop: 16, backgroundColor: day.surface2, borderRadius: radius.card, padding: 18, gap: 10 }}>
+              <Label style={{ color: accent.coralText }}>Where this lives</Label>
+              <Body style={{ fontSize: 14 }}>
+                Your writing is kept in this browser. Safari clears a site’s storage after a week without a visit, so either add
+                Morrow to your Home Screen (Share → Add to Home Screen), or sign in and a copy lives on your account.
+              </Body>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {hasSupabase && !state.account ? <Chip testID="today-keep-signin" label="Sign in" onPress={() => router.push('/signin')} /> : null}
+                <Chip testID="today-keep-done" label="Got it" ghost onPress={dismissKeepNotice} />
+              </View>
+            </View>
+          ) : null}
           {book && !state.profile.todayIntroSeen ? (
             <View testID="today-intro" style={{ marginTop: 16, backgroundColor: day.surface2, borderRadius: radius.card, padding: 18, gap: 10 }}>
               <Label style={{ color: accent.coralText }}>This is Today</Label>
@@ -577,7 +604,7 @@ export default function Today() {
               }}
             >
               <Label style={{ color: accent.coralText }}>Done for today</Label>
-              <Statement style={{ fontSize: 26, lineHeight: 30 }}>
+              <Statement level={2} style={{ fontSize: 26, lineHeight: 30 }}>
                 {done.filter((m) => m.status === 'done').length === done.length
                   ? 'Everything you asked of today is closed.'
                   : 'Today is closed.'}

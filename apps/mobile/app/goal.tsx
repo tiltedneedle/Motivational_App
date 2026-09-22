@@ -41,7 +41,7 @@ import {
   TopBar,
 } from '@morrow/ui';
 import { analysisPlan } from './stone';
-import { analysesFor, pendingLetGo, useGoals, useMorrow, cardText } from '../src/store';
+import { analysesFor, cardText, darkOf, pendingLetGo, useGoals, useMorrow } from '../src/store';
 
 export default function GoalScreen() {
   const reduced = useReducedMotion();
@@ -50,6 +50,7 @@ export default function GoalScreen() {
   const state = useMorrow((s) => s);
   const goals = useGoals();
   const entitled = state.profile.entitled === true;
+  const dark = useMorrow(darkOf);
   const makePortraitAndPlan = useMorrow((s) => s.makePortraitAndPlan);
   // Never fall back to another goal. An id that no longer resolves means the
   // goal was dropped, and showing a different one in its place attributes
@@ -142,7 +143,7 @@ export default function GoalScreen() {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 16, gap: 20 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
             <View style={{ flex: 1, gap: 6 }}>
-              <Label style={{ color: meta.ink }}>{goal.horizon}</Label>
+              <Label style={{ color: dark ? meta.inkNight : meta.ink }}>{goal.horizon}</Label>
               {/* Their name for it, when they named it — as the Portrait shows it. */}
               {goal.titleAuthored === false ? (
                 <Statement testID="goal-title">{goal.title}</Statement>
@@ -310,7 +311,7 @@ export default function GoalScreen() {
                     accessibilityLabel={pathLabel}
                   />
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
-                    <Label testID="goal-path-here" style={{ color: meta.ink }}>
+                    <Label testID="goal-path-here" style={{ color: dark ? meta.inkNight : meta.ink }}>
                       You are here
                     </Label>
                     <Label style={{ color: day.ink2 }}>{daysLeftLabel}</Label>
@@ -367,7 +368,7 @@ export default function GoalScreen() {
                   {(current ? [current] : []).map((ms) => (
                     <View key={ms.id} style={{ gap: 4 }}>
                       <Label style={{ color: accent.coralText }}>{milestoneLabel(ms)}</Label>
-                      <Statement style={{ fontSize: 22, lineHeight: 27 }}>{ms.title}</Statement>
+                      <Statement level={2} style={{ fontSize: 22, lineHeight: 27 }}>{ms.title}</Statement>
                       {/*
                         "In your words" is only true when a Monitoring line is
                         behind it. Without one the plan carries a placeholder, and
@@ -493,7 +494,7 @@ export default function GoalScreen() {
                 accessibilityLabel={pathLabel}
               />
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
-                <Label testID="goal-path-here" style={{ color: meta.ink }}>
+                <Label testID="goal-path-here" style={{ color: dark ? meta.inkNight : meta.ink }}>
                   You are here
                 </Label>
                 <Label style={{ color: day.ink2 }}>{daysLeftLabel}</Label>
@@ -550,7 +551,7 @@ export default function GoalScreen() {
               {(current ? [current] : []).map((ms) => (
                 <View key={ms.id} style={{ gap: 4 }}>
                   <Label style={{ color: accent.coralText }}>{milestoneLabel(ms)}</Label>
-                  <Statement style={{ fontSize: 22, lineHeight: 27 }}>{ms.title}</Statement>
+                  <Statement level={2} style={{ fontSize: 22, lineHeight: 27 }}>{ms.title}</Statement>
                   {/*
                     "In your words" is only true when a Monitoring line is
                     behind it. Without one the plan carries a placeholder, and

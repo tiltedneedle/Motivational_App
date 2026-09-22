@@ -61,6 +61,20 @@ async function keepShell(res) {
   if (scripts.length) {
     const cache = await caches.open(`morrow-static-${next}`);
     await cache.addAll(scripts).catch(() => undefined);
+    // The chunks the entry loads on demand (the account library, the
+    // browser, printing). Named inside the entry as string literals; kept
+    // with it, so an old page outlives a deploy and the app opens offline
+    // whole rather than only as far as its first screen.
+    for (const src of scripts.filter((s) => /\.js$/.test(s))) {
+      const text = await cache.match(src).then((r) => (r ? r.text() : '')).catch(() => '');
+      const lazy = [...new Set([...text.matchAll(/static\/js\/web\/([A-Za-z0-9_-]+\.js)/g)].map((m) => `/_expo/static/js/web/${m[1]}`))].filter((p) => !scripts.includes(p));
+      if (lazy.length) await cache.addAll(lazy).catch(() => undefined);
+    }
+  }
+  // A new deploy, and this was not the first: tell every open page.
+  if (prev !== 'boot') {
+    const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const c of clients) c.postMessage({ type: 'morrow:new-version' });
   }
 }
 
@@ -90,14 +104,26 @@ self.addEventListener('fetch', (event) => {
 
   if (req.mode === 'navigate') {
     event.respondWith(
-      fetch(req)
-        .then(async (res) => {
+      (async () => {
+        const shell = await caches.open(SHELL);
+        const cached = await shell.match('/index.html');
+        const net = fetch(req).then(async (res) => {
           // Kept before the page is handed over, so the statics it asks for
           // next land in the cache named for this shell, not the last one.
           if (res.ok) await keepShell(res.clone()).catch(() => undefined);
           return res;
-        })
-        .catch(() => caches.open(SHELL).then((shell) => shell.match('/index.html')).then((hit) => hit ?? Response.error())),
+        });
+        if (!cached) return net.catch(() => Response.error());
+        // A connection that is up but not answering — lie-fi, a captive
+        // portal — used to hold a blank ground for the browser's whole
+        // timeout while a complete shell sat on the device. Three seconds,
+        // then the cached one; the fetch still lands and records the deploy.
+        const timer = new Promise((resolve) => setTimeout(() => resolve(null), 3000));
+        const first = await Promise.race([net.catch(() => null), timer]);
+        if (first) return first;
+        event.waitUntil(net.catch(() => undefined));
+        return cached;
+      })(),
     );
     return;
   }
@@ -109,7 +135,11 @@ self.addEventListener('fetch', (event) => {
           (hit) =>
             hit ??
             fetch(req).then((res) => {
-              if (res.ok) cache.put(req, res.clone()).catch(() => undefined);
+              // Only what a static is. A chunk from a deploy that has gone
+              // came back as index.html with a 200, and that HTML was cached
+              // under the script's name for good.
+              const type = res.headers.get('content-type') || '';
+              if (res.ok && /javascript|font|image|css|json|octet-stream/i.test(type)) cache.put(req, res.clone()).catch(() => undefined);
               return res;
             }),
         ),

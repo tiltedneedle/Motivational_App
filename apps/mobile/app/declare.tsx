@@ -22,7 +22,7 @@ import { Image, Platform, ScrollView, View, useWindowDimensions } from 'react-na
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatDay, sealedOn } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Rule, Statement, Stone, Studio, TextButton, TopBar, UserField, UserText, fitLine, night } from '@morrow/ui';
-import { saveWallpaper, shareWallpaper } from '../src/wallpaper';
+import { canShareFilesOnWeb, saveWallpaper, shareWallpaper } from '../src/wallpaper';
 import { useGoals, useLatestBook, useMorrow } from '../src/store';
 import { track, useFirstRunStep } from '../src/analytics';
 
@@ -200,7 +200,7 @@ export default function Declare() {
               label={busy ? 'Making it…' : Platform.OS === 'web' ? 'Download it' : 'Keep it in Photos'}
               onPress={() => void run('save')}
             />
-            {Platform.OS !== 'web' ? (
+            {Platform.OS !== 'web' || canShareFilesOnWeb() ? (
               <TextButton testID="declare-share" label={witness.trim() ? 'Share it — for ' + witness.trim() : 'Share it'} onPress={() => void run('share')} />
             ) : null}
           </View>

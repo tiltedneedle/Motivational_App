@@ -212,7 +212,7 @@ export default function PracticeBuilder() {
                         const next = DURATION_CHIPS[Math.max(0, (at < 0 ? 2 : at) - 1)]!;
                         setStep(i, { seconds: next });
                       }}
-                      style={({ pressed }) => ({ width: 40, height: 36, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}
+                      style={({ pressed }) => ({ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}
                     >
                       <Text style={{ fontFamily: fonts.sansMedium, fontSize: 18, lineHeight: 22, color: day.ink2 }}>−</Text>
                     </Pressable>
@@ -231,7 +231,7 @@ export default function PracticeBuilder() {
                         const next = DURATION_CHIPS[Math.min(DURATION_CHIPS.length - 1, (at < 0 ? 2 : at) + 1)]!;
                         setStep(i, { seconds: next });
                       }}
-                      style={({ pressed }) => ({ width: 40, height: 36, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}
+                      style={({ pressed }) => ({ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}
                     >
                       <Text style={{ fontFamily: fonts.sansMedium, fontSize: 18, lineHeight: 22, color: day.ink2 }}>+</Text>
                     </Pressable>

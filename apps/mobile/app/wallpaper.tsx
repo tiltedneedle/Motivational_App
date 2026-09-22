@@ -14,7 +14,7 @@ import { Platform, ScrollView, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatDay, sealedOn } from '@morrow/core';
 import { Body, Chip, InkButton, Label, Statement, Stone, Studio, UserText, fitLine, night, TopBar } from '@morrow/ui';
-import { WALLPAPER, saveWallpaper, shareWallpaper } from '../src/wallpaper';
+import { WALLPAPER, canShareFilesOnWeb, saveWallpaper, shareWallpaper } from '../src/wallpaper';
 import { useGoals, useLatestBook, useMorrow } from '../src/store';
 
 export default function Wallpaper() {
@@ -116,7 +116,7 @@ export default function Wallpaper() {
               label={busy ? 'Making it…' : Platform.OS === 'web' ? 'Download' : 'Save to Photos'}
               onPress={() => void run('save')}
             />
-            {Platform.OS !== 'web' ? <Chip testID="wallpaper-share" label="Share" ghost onPress={() => void run('share')} /> : null}
+            {Platform.OS !== 'web' || canShareFilesOnWeb() ? <Chip testID="wallpaper-share" label="Share" ghost onPress={() => void run('share')} /> : null}
           </View>
           {note ? (
             <Body testID="wallpaper-note" style={{ color: night.ink2, textAlign: 'center' }}>
@@ -128,7 +128,9 @@ export default function Wallpaper() {
               ? 'Photos → the image → Share → Use as Wallpaper.'
               : Platform.OS === 'android'
                 ? 'Share it to your wallpaper app, or set it from the gallery.'
-                : 'Send the file to your phone and set it from Photos.'}
+                : canShareFilesOnWeb()
+                  ? 'Share → Save Image puts it in Photos; set it from there.'
+                  : 'Send the file to your phone and set it from Photos.'}
           </Body>
         </ScrollView>
       </SafeAreaView>

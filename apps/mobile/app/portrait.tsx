@@ -19,7 +19,7 @@ import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { analysisPlan, domainMeta } from '@morrow/core';
 import { Body, Card, InkButton, Label, ProgressBar, Quoted, Rise, Rule, Statement, Stone, Studio, TextButton, TopBar, UserField, UserText, accent, day, useReducedMotion } from '@morrow/ui';
-import { useGoals, useMorrow } from '../src/store';
+import { darkOf, useGoals, useMorrow } from '../src/store';
 import { useFirstRunStep } from '../src/analytics';
 import { hasSupabase } from '../src/supabase';
 
@@ -35,6 +35,7 @@ export default function PortraitScreen() {
   // The path's step label belongs to the first run, not to a plan reread later.
   const onPath = useMorrow((s) => s.books.length === 0);
   const reduced = useReducedMotion();
+  const dark = useMorrow(darkOf);
 
   const goal = goalId ? goals.find((g) => g.id === goalId) : goals[0];
   const portrait = goal ? portraits.find((p) => p.goalId === goal.id) : undefined;
@@ -120,7 +121,7 @@ export default function PortraitScreen() {
           <Rise index={0} reducedMotion={reduced} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
             <Stone size={44} domain={goal.domain} polish={1} />
             <View style={{ flex: 1 }}>
-              <Label style={{ color: meta.ink }}>Your plan, in your words</Label>
+              <Label style={{ color: dark ? meta.inkNight : meta.ink }}>Your plan, in your words</Label>
               {/* Their name for it, when they named it. */}
               {goal.titleAuthored === false ? (
                 <Body testID="portrait-title" style={{ fontSize: 21, color: day.ink }}>

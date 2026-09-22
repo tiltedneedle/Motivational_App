@@ -18,7 +18,7 @@
  * against the person's own text, so a model that invents is caught the same
  * way whichever provider it came from.
  */
-import Anthropic from 'npm:@anthropic-ai/sdk@0.68.0';
+import Anthropic from 'npm:@anthropic-ai/sdk@0.127.0';
 
 export type Provider =
   | { kind: 'anthropic'; apiKey: string; model: string }
@@ -48,7 +48,9 @@ export interface JsonAsk {
 /** Ask, and get the parsed object back (or null when nothing usable came). */
 export async function askJson(p: Provider, ask: JsonAsk): Promise<Record<string, unknown> | null> {
   if (p.kind === 'anthropic') {
-    const client = new Anthropic({ apiKey: p.apiKey });
+    // A deadline, like the other branch: the app gives up at twenty seconds,
+    // and a stalled call used to spend until the platform killed the function.
+    const client = new Anthropic({ apiKey: p.apiKey, timeout: 25_000, maxRetries: 1 });
     const res = await client.messages.create({
       model: p.model,
       max_tokens: ask.maxTokens,

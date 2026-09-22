@@ -104,7 +104,16 @@ export const TABLE_ORDER = [
 ] as const;
 
 /** One person has one Book with many editions; the row above the editions. */
-export const BOOK_ID = 'book_main';
+/**
+ * The Book row's id, one per person. It was one constant for everybody —
+ * `books.id` is the table's primary key, not a per-person one — so the
+ * second person who ever finished a Book had their push refused on the
+ * books table, and nothing after it (the editions, the plan, the ledger)
+ * ever reached the account.
+ */
+export const bookIdFor = (userId: string): string => `book_${userId}`;
+/** The id the first builds used for everybody. Kept so a pull recognises an old row. */
+export const LEGACY_BOOK_ID = 'book_main';
 
 const orNull = <T>(v: T | undefined): T | null => (v === undefined ? null : v);
 
@@ -116,7 +125,7 @@ const orNull = <T>(v: T | undefined): T | null => (v === undefined ? null : v);
  * profile row carries and the store does not, so it is passed in rather than
  * read from a global — this function has no globals.
  */
-export function toRows(bundle: SyncBundle, userId: string, timezone: string): TableRows[] {
+export function toRows(bundle: SyncBundle, userId: string, timezone: string, device?: { id: string; at: string }): TableRows[] {
   const p = bundle.profile;
   // What is actually in the bundle, so a pointer at something that is not —
   // a dropped goal's practice, an undone move's ledger row, a replaced plan's
@@ -160,6 +169,9 @@ export function toRows(bundle: SyncBundle, userId: string, timezone: string): Ta
           reduced_motion: p.reducedMotion,
           appearance: p.appearance ?? 'system',
           write_when: p.writeWhen ?? 'evening',
+          // Which device copied, and when: the next device to push reads
+          // these and stops when they are newer than its own last copy.
+          ...(device ? { pushed_by: device.id, pushed_at: device.at } : {}),
           // A push from a signed-in device is a person still here: a soft
           // delete inside its week is undone by it.
           deleted_at: null,
@@ -262,7 +274,7 @@ export function toRows(bundle: SyncBundle, userId: string, timezone: string): Ta
       rows: latest
         ? [
             {
-              id: BOOK_ID,
+              id: bookIdFor(userId),
               user_id: userId,
               title: latest.title,
               title_framing: latest.titleFraming ?? null,
@@ -277,7 +289,7 @@ export function toRows(bundle: SyncBundle, userId: string, timezone: string): Ta
       rows: books.map((b) => ({
         id: b.id,
         user_id: userId,
-        book_id: BOOK_ID,
+        book_id: bookIdFor(userId),
         version: b.version,
         track: b.track,
         sealed_at: b.sealedAt,

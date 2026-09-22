@@ -2,7 +2,7 @@
 <html lang="%LANG_ISO_CODE%">
   <head>
     <meta charset="utf-8" />
-    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <!--
       The web shell (Expo reads this in place of its own template). What it
       adds over the default: the studio ground as the first paint in both
@@ -10,7 +10,12 @@
       phone keep the site on its home screen as an app, and `viewport-fit`
       so the studio runs under an iPhone's notch when it does.
     -->
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
+    <!--
+      `interactive-widget=resizes-content`: Android Chrome shrinks the layout
+      viewport for the keyboard, so a screen's footer button stays above it.
+      iOS Safari ignores this; the root layout handles it there.
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="description" content="Write your future in your own words, then live by it, one ordinary day at a time." />
     <!-- The card a shared link shows, in a chat or a feed. -->
     <meta property="og:type" content="website" />
@@ -26,6 +31,8 @@
     <meta name="twitter:title" content="Morrow — meet who you’re becoming" />
     <meta name="twitter:description" content="Write your future in your own words, then live by it, one ordinary day at a time." />
     <meta name="twitter:image" content="https://selfauthoring00.vercel.app/og.png" />
+    <!-- The un-media'd one is driven by the app: the browser's chrome follows a dark room. -->
+    <meta name="theme-color" content="#F1F0EC" />
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F1F0EC" />
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#17181C" />
     <meta name="color-scheme" content="light dark" />
@@ -36,23 +43,39 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <title>%WEB_TITLE%</title>
+    <script>
+      // The first paint in the appearance the person chose (light unless
+      // they said otherwise), read from the store before the bundle runs:
+      // a dark frame under a light app was a flash on every open of a
+      // dark-scheme phone.
+      (function () {
+        try {
+          var raw = localStorage.getItem('morrow-v1');
+          var a = raw ? (JSON.parse(raw).state || {}).profile.appearance : 'light';
+          var dark = a === 'dark' || (a === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.style.background = dark ? '#17181c' : '#f1f0ec';
+          document.documentElement.setAttribute('data-morrow-dark', dark ? '1' : '0');
+        } catch (e) {
+          document.documentElement.style.background = '#f1f0ec';
+        }
+      })();
+    </script>
     <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
     <style id="expo-reset">
       /* These styles make the body full-height */
       html,
       body {
         height: 100%;
+        /* No rubber-banding of the document: a drag past the top of a dark
+           room used to reveal a cream strip of body above it. */
+        overscroll-behavior: none;
       }
       /* These styles disable body scrolling if you are using <ScrollView> */
       body {
         overflow: hidden;
-        /* The ground, before the bundle arrives: no white flash on a dark phone. */
-        background: #f1f0ec;
-      }
-      @media (prefers-color-scheme: dark) {
-        body {
-          background: #17181c;
-        }
+        /* The ground, before the bundle arrives: the script above picks the
+           appearance; light is the default. */
+        background: transparent;
       }
       /* These styles make the root element full-height */
       #root {
@@ -69,10 +92,24 @@
     <div id="root"></div>
     <script>
       // Offline after the first load (sw.js). Not under an automated browser:
-      // the walks must see the server, not a cache.
+      // the walks must see the server, not a cache. The registration is asked
+      // to look for a new deploy whenever the tab comes back into view and
+      // every half hour, so a tab left open for days learns a newer Morrow
+      // shipped rather than failing to fetch chunks that no longer exist.
       if ('serviceWorker' in navigator && !navigator.webdriver) {
         window.addEventListener('load', function () {
-          navigator.serviceWorker.register('/sw.js').catch(function () {});
+          navigator.serviceWorker
+            .register('/sw.js')
+            .then(function (reg) {
+              var check = function () {
+                reg.update().catch(function () {});
+              };
+              document.addEventListener('visibilitychange', function () {
+                if (document.visibilityState === 'visible') check();
+              });
+              setInterval(check, 30 * 60 * 1000);
+            })
+            .catch(function () {});
         });
       }
     </script>

@@ -5,6 +5,7 @@
  */
 import { useIsFocused, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { flushSync } from '../src/flush';
 import { AccessibilityInfo, Animated, AppState, Easing, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -507,11 +508,24 @@ export default function Write() {
                   testID="write-begin"
                   label={`Begin · ${Math.round(targetSeconds(kind, track) / 60)} minutes`}
                   onPress={() => {
+                    // A typed room opens with the keyboard up. iOS Safari
+                    // raises it only for a focus() inside the tap itself, so
+                    // the page is mounted synchronously and focused before
+                    // anything is awaited; a spoken room does not want the
+                    // keyboard over the transcript at all.
+                    if (mode === 'type' || canListen === false) {
+                      flushSync(() => {
+                        setSession(startWriting(kind, track, 'type'));
+                        setPhase('writing');
+                      });
+                      inputRef.current?.focus();
+                      return;
+                    }
                     void (async () => {
                       const chosen = await gate(mode);
                       setSession(startWriting(kind, track, chosen));
                       setPhase('writing');
-                      setTimeout(() => inputRef.current?.focus(), 60);
+                      if (chosen === 'type') setTimeout(() => inputRef.current?.focus(), 60);
                     })();
                   }}
                 />
@@ -692,7 +706,7 @@ export default function Write() {
             },
           }}
           right={
-            <Label testID="write-remaining" style={{ color: night.ink3 }} accessibilityLabel={`${formatRemaining(remaining(session))} left`}>
+            <Label testID="write-remaining" style={{ color: night.ink3 }} accessibilityLabel={hideClock ? 'Clock hidden' : `${formatRemaining(remaining(session))} left`}>
               {hideClock ? 'Clock hidden' : `${formatRemaining(remaining(session))} left`}
             </Label>
           }
@@ -711,8 +725,8 @@ export default function Write() {
             color={accent.coral}
             track="rgba(255,255,255,0.12)"
             width={3}
-            accessibilityLabel={held ? 'The clock is paused' : 'Time left in this session'}
-            valueText={`${formatRemaining(remaining(session))} left, ${words} words`}
+            accessibilityLabel={held ? 'The clock is paused' : hideClock ? 'Words so far' : 'Time left in this session'}
+            valueText={hideClock ? `${words} words` : `${formatRemaining(remaining(session))} left, ${words} words`}
           >
             <Animated.View style={{ transform: [{ translateY: bob }] }}>
               <Stone size={64} domain="health" polish={polish(words)} />

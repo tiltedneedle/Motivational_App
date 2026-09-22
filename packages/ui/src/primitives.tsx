@@ -33,6 +33,34 @@ import { Arrive, usePress } from './motion';
  */
 export function announce(text: string): void {
   if (!text) return;
+  if (Platform.OS === 'web') {
+    // react-native-web's announceForAccessibility is an empty function
+    // (0.21), so every step change was silent there: a live region of our
+    // own, cleared and refilled a frame apart so the same words twice are
+    // said twice.
+    try {
+      const doc = (globalThis as { document?: Document }).document;
+      if (!doc) return;
+      let region = doc.getElementById('morrow-announce');
+      if (!region) {
+        region = doc.createElement('div');
+        region.id = 'morrow-announce';
+        region.setAttribute('aria-live', 'polite');
+        region.setAttribute('aria-atomic', 'true');
+        region.setAttribute('role', 'status');
+        region.style.cssText = 'position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;';
+        doc.body.appendChild(region);
+      }
+      region.textContent = '';
+      const node = region;
+      setTimeout(() => {
+        node.textContent = text;
+      }, 40);
+    } catch {
+      // no DOM to speak into
+    }
+    return;
+  }
   try {
     AccessibilityInfo.announceForAccessibility(text);
   } catch {
@@ -86,6 +114,13 @@ export function Studio({
   const isNight = dark || globalDark;
   const p = isNight ? (night as unknown as Palette) : day;
   const reduced = useReducedMotion();
+  // The browser's own chrome follows the room: Safari's tab bar stayed cream
+  // over the night studio.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const meta = document.querySelector('meta[name="theme-color"]:not([media])');
+    if (meta) meta.setAttribute('content', isNight ? '#17181C' : '#F1F0EC');
+  }, [isNight]);
   return (
     <PaletteContext.Provider value={{ p, dark: isNight }}>
       {/*
@@ -972,6 +1007,10 @@ export function UserField({
   const { p } = usePalette();
   const [focused, setFocused] = useState(false);
   const hint = [label && placeholder ? placeholder : null, error ?? null].filter(Boolean).join('. ');
+  // On the web a multiline textarea is exactly its min-height and scrolls
+  // inside itself; the page did not grow with the writing. Sized to the
+  // content instead, so the page is the thing that scrolls.
+  const [grown, setGrown] = useState<number | null>(null);
   return (
     <View>
       {label && !labelHidden ? <Label style={{ marginBottom: 2 }}>{label}</Label> : null}
@@ -994,6 +1033,9 @@ export function UserField({
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
       onSubmitEditing={onSubmitEditing}
+      {...(multiline && Platform.OS === 'web'
+        ? { onContentSizeChange: (e: { nativeEvent: { contentSize: { height: number } } }) => setGrown(Math.ceil(e.nativeEvent.contentSize.height)) }
+        : {})}
       accessibilityLabel={label ?? placeholder}
       aria-invalid={Boolean(error)}
       // The hint stays a hint. It is still announced, and it no longer has to
@@ -1007,10 +1049,14 @@ export function UserField({
         // Focus is shown by the line this field already has, not by a box
         // drawn around it. A coral rectangle on a coral-underlined field reads
         // as an error, and the browser's own ring is amber, which is worse.
+        // At rest the line is the hairline; coral is the focused one — a
+        // change a keyboard user can see across four fields, where a point
+        // of thickness on the same colour was not.
         borderBottomWidth: focused ? 3 : 2,
-        borderBottomColor: focused ? accent.coral : accent.coralSoftLine,
+        borderBottomColor: focused ? accent.coral : value ? accent.coralSoftLine : p.line,
         paddingVertical: 8,
         minHeight: minHeight ?? (multiline ? 96 : 44),
+        ...(grown && multiline ? { height: Math.max(minHeight ?? 96, grown + 18) } : {}),
         textAlignVertical: multiline ? 'top' : 'center',
         ...(Platform.OS === 'web' ? webOnlyStyle({ outlineStyle: 'none' }) : {}),
       }}
@@ -1390,7 +1436,7 @@ export function Toast({
           onPress={onAction}
           accessibilityRole="button"
           accessibilityLabel={actionLabel}
-          style={{ paddingVertical: 7, paddingHorizontal: 14, borderRadius: radius.chip, backgroundColor: '#FFFFFF' }}
+          style={{ minHeight: 44, justifyContent: 'center', paddingVertical: 10, paddingHorizontal: 14, borderRadius: radius.chip, backgroundColor: '#FFFFFF' }}
         >
           <Text style={{ fontFamily: fonts.sansBold, fontSize: 13, color: night.ground }}>{actionLabel}</Text>
         </Pressable>

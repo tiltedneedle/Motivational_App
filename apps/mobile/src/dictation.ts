@@ -74,6 +74,7 @@ type WebRecognition = {
   /** Chrome 139+: keep the sound on the device. Unknown to older browsers. */
   processLocally?: boolean;
   onresult: ((ev: { resultIndex: number; results: ArrayLike<{ isFinal: boolean; 0?: { transcript: string } }> }) => void) | null;
+  onstart?: (() => void) | null;
   onend: (() => void) | null;
   onerror: ((ev: { error?: string }) => void) | null;
   start(): void;
@@ -381,12 +382,46 @@ function webDictation(): Dictation {
     },
 
     async permission() {
-      if (!webRecognitionClass()) return 'unavailable';
+      const R = webRecognitionClass();
+      if (!R) return 'unavailable';
       await checkOnDevice();
-      // The browser asks for the microphone on the first `start()`, which
-      // would be on the clock. Asking through getUserMedia here brings the
-      // dialog forward to the doorway, and the stream is closed at once:
-      // nothing is recorded.
+      // WebKit's "use Speech Recognition?" is a separate question from the
+      // microphone's, raised on the first `start()` — which was on the
+      // clock, after the doorway's microphone prompt had been answered. A
+      // throwaway recogniser asks it here and stops the moment it starts.
+      const ua = (globalThis as unknown as { navigator?: { userAgent?: string } }).navigator?.userAgent ?? '';
+      if (/AppleWebKit/.test(ua) && !/Chrom(e|ium)|Edg\//.test(ua)) {
+        return new Promise<'granted' | 'refused' | 'unavailable'>((resolve) => {
+          try {
+            const r = new R();
+            let settled = false;
+            const done = (v: 'granted' | 'refused' | 'unavailable') => {
+              if (settled) return;
+              settled = true;
+              try {
+                r.abort();
+              } catch {
+                // already stopped
+              }
+              resolve(v);
+            };
+            r.onstart = () => done('granted');
+            r.onerror = (ev) => {
+              const code = String(ev?.error ?? '');
+              done(code === 'not-allowed' || code === 'service-not-allowed' ? 'refused' : code === 'audio-capture' ? 'unavailable' : 'granted');
+            };
+            r.onend = () => done('granted');
+            r.start();
+            setTimeout(() => done('granted'), 8000);
+          } catch {
+            resolve('granted');
+          }
+        });
+      }
+      // Elsewhere the microphone is the one permission, and the browser asks
+      // for it on the first `start()`, which would be on the clock. Asking
+      // through getUserMedia here brings the dialog forward to the doorway,
+      // and the stream is closed at once: nothing is recorded.
       const media = (globalThis as unknown as { navigator?: { mediaDevices?: { getUserMedia?: (c: { audio: boolean }) => Promise<{ getTracks(): { stop(): void }[] }> } } }).navigator?.mediaDevices;
       if (!media?.getUserMedia) return 'granted';
       try {

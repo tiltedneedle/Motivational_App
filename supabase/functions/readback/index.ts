@@ -109,8 +109,12 @@ Deno.serve(async (req) => {
   let limit = 7;
   try {
     const body = await req.json();
-    text = String(body?.text ?? '');
-    limit = Math.min(9, Math.max(3, Number(body?.limit ?? 7)));
+    // Bounded: the key ships in the app, and a 2 MB body was a full-context
+    // request billed before the answer came back. Twenty thousand characters
+    // is four sittings of the fifteen minutes.
+    text = String(body?.text ?? '').slice(0, 20_000);
+    const n = Number(body?.limit);
+    limit = Number.isFinite(n) ? Math.min(9, Math.max(3, Math.round(n))) : 7;
   } catch {
     return json({ error: 'bad json' }, 400);
   }

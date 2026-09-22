@@ -6,7 +6,7 @@
  * first.
  */
 import { Redirect, useIsFocused, useLocalSearchParams, useRouter } from 'expo-router';
-import { ScrollView, View } from 'react-native';
+import { Platform, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Body, GhostButton, InkButton, Label, Rise, Settle, Statement, Stone, Studio, TextButton, useReducedMotion } from '@morrow/ui';
 import { useHasBegun, useLatestBook, useMorrow } from '../src/store';
@@ -56,7 +56,7 @@ export default function Welcome() {
             {hasSupabase && !account && !here ? (
               <TextButton testID="welcome-bring-back" label="I already have an account" onPress={() => router.push('/signin')} style={{ alignSelf: 'center' }} />
             ) : null}
-            <Label style={{ textAlign: 'center', marginTop: 2 }}>{hasSupabase ? 'No sign-up wall. Your writing stays on this phone' : 'No sign-up. Everything stays on this phone'}</Label>
+            <Label style={{ textAlign: 'center', marginTop: 2 }}>{hasSupabase ? `No sign-up wall. Your writing stays ${Platform.OS === 'web' ? 'in this browser' : 'on this phone'}` : `No sign-up. Everything stays ${Platform.OS === 'web' ? 'in this browser' : 'on this phone'}`}</Label>
           </Rise>
         </ScrollView>
       </SafeAreaView>

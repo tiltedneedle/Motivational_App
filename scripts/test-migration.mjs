@@ -612,12 +612,17 @@ ${one}`;
   );
   await as(ALICE, `update public.profiles set display_name = 'Alice' where id = $1`, [ALICE]);
   check('but can still change the rest of the profile', true);
-  // The service role carries no JWT claims; that is what lets it through.
+  // The service role, as PostgREST presents it (claims with role service_role): let through.
   await db.exec('reset role');
-  await db.query(`select set_config('request.jwt.claims', '', false)`);
+  await db.query(`select set_config('request.jwt.claims', '{"role":"service_role"}', false)`);
   await db.query(`update public.profiles set entitlement = 'pro' where id = $1`, [ALICE]);
   const entitled = await as(ALICE, `select entitlement from public.profiles where id = $1`, [ALICE]);
   check('the billing webhook can', entitled.rows[0]?.entitlement === 'pro');
+  // And a direct connection with no claims at all (this runner) too.
+  await db.exec('reset role');
+  await db.query(`select set_config('request.jwt.claims', '', false)`);
+  await db.query(`update public.profiles set entitlement = 'free' where id = $1`, [ALICE]);
+  check('and so can a direct connection', (await as(ALICE, `select entitlement from public.profiles where id = $1`, [ALICE])).rows[0]?.entitlement === 'free');
 
   // ---- scenes (PRD 7.8): no sourced detail, no scene.
   await asRejects(

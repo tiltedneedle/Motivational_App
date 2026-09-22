@@ -8,6 +8,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { accent, day, dayStudio, night, paper, setDark } from '../src/tokens';
+import { DOMAINS } from '@morrow/core';
 
 /** sRGB relative luminance, WCAG 2.x definition. */
 function luminance(hex: string): number {
@@ -102,6 +103,32 @@ describe('the domain accents', () => {
       expect(ratio(accent[name], day.ground)).toBeGreaterThanOrEqual(AA_LARGE);
     });
   }
+});
+
+/**
+ * The domains as core names them (types.ts DOMAINS): the ring around a goal's
+ * stone is drawn in `hex`, and two of them (mind, home) sat under 3:1 on the
+ * day ground while the type said every mark cleared it. Their `ink` and
+ * `inkNight` are set as small labels on each ground.
+ */
+describe('the domain marks and inks, as core names them', () => {
+  for (const d of Object.values(DOMAINS)) {
+    it(`${d.label}'s mark clears 3:1 on both grounds`, () => {
+      expect(ratio(d.hex, day.ground)).toBeGreaterThanOrEqual(AA_LARGE);
+      expect(ratio(d.hex, night.ground)).toBeGreaterThanOrEqual(AA_LARGE);
+    });
+    it(`${d.label}'s ink reads as small text on its ground`, () => {
+      expect(ratio(d.ink, day.ground)).toBeGreaterThanOrEqual(AA_BODY);
+      expect(ratio(d.inkNight, night.ground)).toBeGreaterThanOrEqual(AA_BODY);
+    });
+  }
+});
+
+/** The streak pill's number: white on the coral fill. */
+describe('the streak pill', () => {
+  it('reads white on its coral fill', () => {
+    expect(ratio('#FFFFFF', accent.coralText)).toBeGreaterThanOrEqual(AA_BODY);
+  });
 });
 
 describe('the status colours, which are also set as text', () => {

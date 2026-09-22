@@ -65,9 +65,12 @@ export class ErrorBoundary extends React.Component<Props, State> {
     // on the screen where it can be selected and copied by hand. It is their
     // writing and they are entitled to it whatever this platform can do.
     const out = await takeAway(raw, 'Morrow — everything on this device', 'morrow-everything.txt');
-    if (out.ok) this.setState({ exportError: out.how === 'shared' ? null : takeawayNote(out, 'everything') });
-    else if (out.how === 'dismissed') this.setState({ exportError: out.error });
-    else this.setState({ spilled: raw, exportError: null });
+    // Handed to the sheet, it went somewhere they chose. Anything else —
+    // a file, the clipboard, nothing — and the text is put on the screen as
+    // well, where it can be selected and copied by hand; a download that
+    // may or may not have landed is not enough here.
+    if (out.ok && out.how === 'shared') this.setState({ exportError: null });
+    else this.setState({ spilled: raw, exportError: out.ok ? takeawayNote(out, 'everything') : out.how === 'dismissed' ? out.error : null });
   };
 
   override componentDidCatch(error: Error, info: React.ErrorInfo) {

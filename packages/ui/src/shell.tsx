@@ -13,7 +13,7 @@
  *    every platform (emoji do not).
  */
 import React, { type ReactNode } from 'react';
-import { Platform, Pressable, ScrollView, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { accent, radius, shadow, type as fonts, webHover, webOnlyStyle } from './tokens';
@@ -255,21 +255,30 @@ export function Screen({
         <View style={{ paddingHorizontal: 22 }}>
           <TopBar back={back} where={where} help={help} right={right} />
         </View>
-        {scroll ? (
-          <ScrollView
-            style={{ flex: 1 }}
-            contentContainerStyle={[{ paddingHorizontal: 22, paddingTop: 6, paddingBottom: 24, gap: 14 }, contentStyle]}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps={keyboard ? 'handled' : 'never'}
-            keyboardDismissMode={keyboard ? 'on-drag' : 'none'}
-            {...(Platform.OS === 'web' ? { tabIndex: 0 } : {})}
-          >
-            {body}
-          </ScrollView>
-        ) : (
-          <View style={[{ flex: 1, paddingHorizontal: 22, paddingTop: 6, gap: 14 }, contentStyle]}>{body}</View>
-        )}
-        {foot}
+        {/*
+          The keyboard: on iOS the view is padded up by its height so the
+          footer's one button stays above it, and the scroll view adjusts its
+          insets for the field being typed into (the older screens did this;
+          the rebuilt shell did not).
+        */}
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          {scroll ? (
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={[{ paddingHorizontal: 22, paddingTop: 6, paddingBottom: 24, gap: 14 }, contentStyle]}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps={keyboard ? 'handled' : 'never'}
+              keyboardDismissMode={keyboard ? 'on-drag' : 'none'}
+              automaticallyAdjustKeyboardInsets={keyboard}
+              {...(Platform.OS === 'web' ? { tabIndex: 0 } : {})}
+            >
+              {body}
+            </ScrollView>
+          ) : (
+            <View style={[{ flex: 1, paddingHorizontal: 22, paddingTop: 6, gap: 14 }, contentStyle]}>{body}</View>
+          )}
+          {foot}
+        </KeyboardAvoidingView>
         {/* the ground under the footer, so a scrolled body does not show through it */}
         <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 0, backgroundColor: p.ground }} />
       </SafeAreaView>
@@ -409,12 +418,14 @@ export function StreakPill({ count, week = 0, testID }: { count: number; week?: 
     <View
       testID={testID}
       accessible
-      accessibilityRole="text"
+      // "image", not "text": react-native-web maps text to no role, and a
+      // name on a role-less element is ignored by NVDA and JAWS.
+      accessibilityRole="image"
       accessibilityLabel={on ? `${count} day run` : `${week} of 7 days this week`}
-      style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, paddingLeft: 10, paddingRight: 12, borderRadius: 999, backgroundColor: on ? accent.coralSoft : p.surface2 }}
+      style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, paddingLeft: 10, paddingRight: 12, borderRadius: 999, backgroundColor: on ? accent.coralText : p.surface2 }}
     >
-      <Glyph name="flame" size={18} color={on ? accent.coralText : p.ink3} />
-      <Text style={{ fontFamily: fonts.sansSemi, fontSize: 14, color: on ? accent.coralText : p.ink2 }}>{on ? `${count}` : `${week}/7`}</Text>
+      <Glyph name="flame" size={18} color={on ? '#FFFFFF' : p.ink3} />
+      <Text style={{ fontFamily: fonts.sansSemi, fontSize: 14, color: on ? '#FFFFFF' : p.ink2 }}>{on ? `${count}` : `${week}/7`}</Text>
     </View>
   );
 }
@@ -425,7 +436,7 @@ export type WeekDay = { key: string; letter: string; state: 'sealed' | 'today' |
 export function WeekStrip({ days, testID }: { days: WeekDay[]; testID?: string }) {
   const { p } = usePalette();
   return (
-    <View testID={testID} accessible accessibilityRole="text" accessibilityLabel={`This week: ${days.map((d) => d.label).join('; ')}`} style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+    <View testID={testID} accessible accessibilityRole="image" accessibilityLabel={`This week: ${days.map((d) => d.label).join('; ')}`} style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
       {days.map((d) => {
         const sealed = d.state === 'sealed' || d.state === 'todaySealed';
         const today = d.state === 'today' || d.state === 'todaySealed';
@@ -513,7 +524,7 @@ export function PathCard({
           const current = i === at && !s.done;
           const later = !s.done && !current;
           return (
-            <View key={s.label} accessible accessibilityRole="text" accessibilityLabel={`${s.label}${s.minutes ? `, ${s.minutes}` : ''}${s.done ? ', done' : current ? ', next' : ''}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <View key={s.label} accessible accessibilityRole="image" accessibilityLabel={`${s.label}${s.minutes ? `, ${s.minutes}` : ''}${s.done ? ', done' : current ? ', next' : ''}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <View
                 style={{
                   width: 22,

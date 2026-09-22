@@ -45,15 +45,7 @@ export async function saveWallpaper(ref: RefObject<unknown>, fileName = 'morrow-
   if (Platform.OS === 'web') {
     const data = await capture(ref, 'data-uri', size);
     if (!data) return { ok: false, error: NO_WAY };
-    try {
-      const a = globalThis.document.createElement('a');
-      a.href = data;
-      a.download = fileName;
-      a.click();
-      return { ok: true, how: 'downloaded' };
-    } catch {
-      return { ok: false, error: NO_WAY };
-    }
+    return downloadOnWeb(data, fileName);
   }
 
   const uri = await capture(ref, 'tmpfile', size);
@@ -70,9 +62,61 @@ export async function saveWallpaper(ref: RefObject<unknown>, fileName = 'morrow-
   }
 }
 
+/** Whether this browser can put a file on its share sheet (the way into Photos on a phone). */
+export function canShareFilesOnWeb(): boolean {
+  if (Platform.OS !== 'web') return false;
+  const nav = (globalThis as { navigator?: Navigator }).navigator;
+  try {
+    return typeof File !== 'undefined' && Boolean(nav?.canShare?.({ files: [new File([''], 'x.png', { type: 'image/png' })] }));
+  } catch {
+    return false;
+  }
+}
+
+/** A file, through an anchor the DOM holds for the click; a blob URL rather than a data: one, which some browsers refuse to download. */
+async function downloadOnWeb(data: string, fileName: string): Promise<WallpaperResult> {
+  try {
+    const doc = globalThis.document;
+    const blob = await (await fetch(data)).blob();
+    const href = URL.createObjectURL(blob);
+    const a = doc.createElement('a');
+    a.href = href;
+    a.download = fileName;
+    a.style.display = 'none';
+    doc.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      doc.body.removeChild(a);
+      URL.revokeObjectURL(href);
+    }, 1000);
+    return { ok: true, how: 'downloaded' };
+  } catch {
+    return { ok: false, error: NO_WAY };
+  }
+}
+
 /** Hand the wallpaper to the share sheet instead — the way onto Android's lock screen, among others. */
 export async function shareWallpaper(ref: RefObject<unknown>, fileName = 'morrow-lock-screen.png', title = 'Your lock screen', size: PrintSize = WALLPAPER): Promise<WallpaperResult> {
-  if (Platform.OS === 'web') return saveWallpaper(ref, fileName, size);
+  if (Platform.OS === 'web') {
+    // The share sheet with the file is the one route into Photos on a phone
+    // browser (Share → Save Image); a download of a data: URL landed in
+    // Files on an iPhone and nowhere at all from the Home Screen.
+    const data = await capture(ref, 'data-uri', size);
+    if (!data) return { ok: false, error: NO_WAY };
+    const nav = (globalThis as { navigator?: Navigator }).navigator;
+    try {
+      const blob = await (await fetch(data)).blob();
+      const file = new File([blob], fileName, { type: 'image/png' });
+      if (nav?.canShare?.({ files: [file] })) {
+        await nav.share({ files: [file], title });
+        return { ok: true, how: 'shared' };
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') return { ok: false, error: 'Not saved.' };
+      // no sheet for files here: a download instead
+    }
+    return downloadOnWeb(data, fileName);
+  }
   const uri = await capture(ref, 'tmpfile', size);
   if (!uri) return { ok: false, error: NO_WAY };
   try {

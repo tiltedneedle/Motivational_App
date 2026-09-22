@@ -8,7 +8,7 @@
  * the test compares the whole thing.
  */
 import { describe, expect, it } from 'vitest';
-import { BOOK_ID, TABLE_ORDER, fromRows, toRows, type SyncBundle } from '../src/engines/sync';
+import { bookIdFor, TABLE_ORDER, fromRows, toRows, type SyncBundle } from '../src/engines/sync';
 import { DEFAULT_PROFILE } from '../src/types';
 import type { BookVersion, Plan } from '../src/types';
 
@@ -320,10 +320,10 @@ describe('the store as rows', () => {
   it('keeps one Book above the editions, carrying the spine and its framing', () => {
     const books = tables.find((t) => t.table === 'books')!.rows;
     expect(books).toHaveLength(1);
-    expect(books[0]).toMatchObject({ id: BOOK_ID, title: 'the back door', title_framing: 'A year of', current_version: 1 });
+    expect(books[0]).toMatchObject({ id: bookIdFor(USER), title: 'the back door', title_framing: 'A year of', current_version: 1 });
     const versions = tables.find((t) => t.table === 'book_versions')!.rows;
     expect(versions[0]!.contents).toBe(book);
-    expect(versions[0]!.book_id).toBe(BOOK_ID);
+    expect(versions[0]!.book_id).toBe(bookIdFor(USER));
   });
 
   it('sends a pointer at something the device no longer has as null', () => {

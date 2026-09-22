@@ -280,6 +280,10 @@ export interface MorrowState {
   clockDay: string;
   /** What the root layout found when it handled a sign-in link. Not persisted; the account screen shows it once. */
   signInNotice: string | null;
+  /** A newer build has been deployed since this page loaded (the web). Not persisted. */
+  newVersionReady: boolean;
+  /** The browser-storage notice on Today (Safari clears a site's storage after a week away) was dismissed. Device-only. */
+  keepNoticeDismissed: boolean;
   books: BookVersion[];
   portraits: Portrait[];
   plans: Plan[];
@@ -565,7 +569,8 @@ export interface MorrowState {
   /** The person's answer to a conflict: bring the account's Book here, or replace the account's copy with this device's. */
   resolveSignIn: (choice: 'pull' | 'push') => Promise<{ ok: true; pulled: boolean; moved: 'pushed' | 'pulled' | 'nothing' } | { ok: false; error: string }>;
   /** Everything on the device, up. Safe to call on every launch. */
-  pushToAccount: () => Promise<{ ok: true } | { ok: false; error: string }>;
+  /** `conflict`: another device copied to the account since this one last did; `resolveSignIn` is the answer. */
+  pushToAccount: () => Promise<{ ok: true } | { ok: false; error: string; conflict?: true }>;
   signOutAccount: () => Promise<void>;
   /** The account and its copy, gone. The device keeps everything. */
   deleteAccountAndCopy: () => Promise<{ ok: true } | { ok: false; error: string }>;
@@ -605,6 +610,8 @@ export interface MorrowState {
   /** Note the day the clock says. A change re-renders every screen that reads `clockDay`. */
   tickClock: () => void;
   setSignInNotice: (text: string | null) => void;
+  setNewVersionReady: (ready: boolean) => void;
+  dismissKeepNotice: () => void;
   clearSafety: () => void;
   /** The helplines card, asked for. No pause, no "not about me". */
   showResources: () => void;
@@ -688,6 +695,8 @@ const EMPTY = {
   systemDark: false,
   clockDay: '',
   signInNotice: null as string | null,
+  newVersionReady: false,
+  keepNoticeDismissed: false,
   books: [] as BookVersion[],
   portraits: [] as Portrait[],
   plans: [] as Plan[],
@@ -2020,8 +2029,9 @@ const store = create<MorrowState>()(
 
       resolveSignIn: async (choice) => {
         if (choice === 'push') {
-          // Their word that this device is the copy: the prune may run.
-          const out = await pushAll(bundleOf(get()), { reconcile: true });
+          // Their word that this device is the copy: the prune may run, and
+          // another device's newer copy is replaced.
+          const out = await pushAll(bundleOf(get()), { reconcile: true, force: true });
           if (!out.ok) return { ok: false, error: out.error };
           set((st) => (st.account ? { account: { ...st.account, lastPushAt: new Date().toISOString() } } : {}));
           return { ok: true, pulled: false, moved: 'pushed' as const };
@@ -2043,9 +2053,10 @@ const store = create<MorrowState>()(
         if (pushInFlight) return pushInFlight;
         pushInFlight = (async () => {
           try {
-            // The prune runs only from a device that has copied up before.
-            const out = await pushAll(bundleOf(get()), { reconcile: Boolean(get().account?.lastPushAt) });
-            if (!out.ok) return { ok: false as const, error: out.error };
+            // The prune runs only from a device that has copied up before,
+            // and never over another device's newer copy.
+            const out = await pushAll(bundleOf(get()), { reconcile: Boolean(get().account?.lastPushAt), lastPushAt: get().account?.lastPushAt ?? null });
+            if (!out.ok) return { ok: false as const, error: out.error, ...(out.conflict ? { conflict: true as const } : {}) };
             set((st) => (st.account ? { account: { ...st.account, lastPushAt: new Date().toISOString() } } : {}));
             return { ok: true as const };
           } finally {
@@ -2213,6 +2224,8 @@ const store = create<MorrowState>()(
 
       setToast: (t) => set({ toast: t }),
       setSignInNotice: (text) => set({ signInNotice: text }),
+      setNewVersionReady: (ready) => set({ newVersionReady: ready }),
+      dismissKeepNotice: () => set({ keepNoticeDismissed: true }),
       tickClock: () => {
         const day = dayOf(new Date(), get().profile.dayBoundaryHour);
         if (day !== get().clockDay) set({ clockDay: day });
@@ -2285,7 +2298,7 @@ const store = create<MorrowState>()(
       // recovery path was the thing destroying the data. See src/storage.ts.
       storage: createJSONStorage(() => guardedStorage),
       partialize: (s) => {
-        const { hydrated: _h, toast: _t, storageError: _e, systemDark: _d, clockDay: _c, signInNotice: _n, ...rest } = s as MorrowState & Record<string, unknown>;
+        const { hydrated: _h, toast: _t, storageError: _e, systemDark: _d, clockDay: _c, signInNotice: _n, newVersionReady: _v, ...rest } = s as MorrowState & Record<string, unknown>;
         return rest as Partial<MorrowState>;
       },
       /**
@@ -2420,7 +2433,7 @@ function hasWriting(s: Pick<SyncBundle, 'texts' | 'goals' | 'analyses' | 'books'
 }
 
 /** The push in progress, so a second call joins it rather than starting another. */
-let pushInFlight: Promise<{ ok: true } | { ok: false; error: string }> | null = null;
+let pushInFlight: Promise<{ ok: true } | { ok: false; error: string; conflict?: true }> | null = null;
 
 /**
  * Writing that is more than the first run's two-minute line: a Book, goals,

@@ -101,6 +101,20 @@ for (const dir of [join(ROOT, 'scripts'), join(ROOT, 'supabase', 'functions')]) 
   }
 }
 
+// The words the rebuild retired, anywhere a person reads: the screens, and
+// the OS permission dialogs whose strings live in app.json — the one dialog
+// nobody can skip reading still said "the Fifteen" after every screen had
+// stopped.
+const RETIRED = /\b(?:the Fifteen|sittings?|Blueprint)\b/;
+{
+  const appJson = join(ROOT, 'apps', 'mobile', 'app.json');
+  const src = await readFile(appJson, 'utf8');
+  checked += 1;
+  src.split(/\r?\n/).forEach((raw, i) => {
+    if (/Permission"\s*:/.test(raw) && RETIRED.test(raw)) problems.push({ file: 'apps/mobile/app.json', line: i + 1, why: 'a retired name in a permission dialog' });
+  });
+}
+
 for (const p of problems) console.error(`FAIL  ${p.file}:${p.line} — ${p.why}`);
 if (problems.length) process.exit(1);
-console.log(`PASS  ${checked} files, no full stop on top of theirs, no stored day printed as prose, no regex missing its backslash`);
+console.log(`PASS  ${checked} files, no full stop on top of theirs, no stored day printed as prose, no regex missing its backslash, no retired name in a permission dialog`);

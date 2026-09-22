@@ -11,7 +11,8 @@ import { Newsreader_400Regular, Newsreader_400Regular_Italic, Newsreader_500Medi
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { day } from '@morrow/ui';
-import { useMorrow } from '../src/store';
+import { darkOf, useMorrow } from '../src/store';
+import { StatusBar } from 'expo-status-bar';
 import { signInFromUrl } from '../src/supabase';
 import { onNotificationOpened } from '../src/notify';
 import { armAnalytics, track } from '../src/analytics';
@@ -48,6 +49,8 @@ export default function RootLayout() {
     if (node) node.inert = paused;
   }, [paused]);
   const storageError = useMorrow((s) => s.storageError);
+  const dark = useMorrow(darkOf);
+  const newVersionReady = useMorrow((s) => s.newVersionReady);
   const [slowFonts, setSlowFonts] = useState(false);
   const [slowStore, setSlowStore] = useState(false);
 
@@ -75,6 +78,46 @@ export default function RootLayout() {
     });
     return () => sub.remove();
   }, [hydrated, syncNotifications]);
+
+  /**
+   * The web on a phone, three things the browser will not do by itself.
+   * Persistent storage is asked for once (Chromium honours it and stops
+   * evicting the site under pressure; elsewhere it is harmless). iOS Safari
+   * never shrinks the layout viewport for its keyboard, so the root is
+   * sized to the visual viewport while the keyboard is up and a screen's
+   * footer button stays reachable. And the service worker's word that a
+   * newer build has shipped is kept, so the line above the router can say
+   * so rather than the old page failing to fetch chunks that have gone.
+   */
+  const setNewVersionReady = useMorrow((s) => s.setNewVersionReady);
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined' || !hydrated) return;
+    try {
+      void (navigator as { storage?: { persist?: () => Promise<boolean> } }).storage?.persist?.();
+    } catch {
+      // not offered here
+    }
+    const vv = (window as { visualViewport?: VisualViewport }).visualViewport;
+    const root = document.getElementById('root');
+    const onViewport = () => {
+      if (!vv || !root) return;
+      const keyboardUp = vv.height < window.innerHeight - 120;
+      root.style.height = keyboardUp ? `${Math.round(vv.height)}px` : '';
+      if (keyboardUp) window.scrollTo(0, 0);
+    };
+    vv?.addEventListener('resize', onViewport);
+    vv?.addEventListener('scroll', onViewport);
+    const onMessage = (e: MessageEvent) => {
+      if (e.data && e.data.type === 'morrow:new-version') setNewVersionReady(true);
+    };
+    navigator.serviceWorker?.addEventListener?.('message', onMessage);
+    return () => {
+      vv?.removeEventListener('resize', onViewport);
+      vv?.removeEventListener('scroll', onViewport);
+      navigator.serviceWorker?.removeEventListener?.('message', onMessage);
+      if (root) root.style.height = '';
+    };
+  }, [hydrated, setNewVersionReady]);
 
   /**
    * The day, kept current. Ticked on foreground, when a tab comes back into
@@ -242,6 +285,12 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         {/*
+          The app is light by default whatever the phone's scheme; the status
+          bar has to be told, or on a dark-mode phone the clock and the
+          battery were white over the pale ground on every screen.
+        */}
+        <StatusBar style={dark ? 'light' : 'dark'} />
+        {/*
           While the resources card is up, the screen behind it is hidden from
           assistive technology. The card's own `accessibilityViewIsModal` only
           does this on iOS, so without it a screen-reader user on Android or the
@@ -252,6 +301,24 @@ export default function RootLayout() {
           Above the router, so it is on every screen and cannot be navigated
           away from. A store that will not save is not a per-screen problem.
         */}
+        {newVersionReady ? (
+          <View
+            testID="new-version"
+            accessibilityLiveRegion="polite"
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 18, paddingVertical: 10, backgroundColor: day.surface2 }}
+          >
+            <Text style={{ flex: 1, color: day.ink, fontSize: 14 }}>A newer Morrow is ready.</Text>
+            <Text
+              accessibilityRole="button"
+              onPress={() => {
+                if (typeof window !== 'undefined') window.location.reload();
+              }}
+              style={{ color: day.ink, fontSize: 14, fontWeight: '600', textDecorationLine: 'underline' }}
+            >
+              Reload
+            </Text>
+          </View>
+        ) : null}
         {storageError ? (
           <StorageWarning
             onExport={() => router.push('/settings')}

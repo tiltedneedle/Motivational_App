@@ -169,13 +169,21 @@ export async function onNotificationOpened(handler: (route: string) => void): Pr
 
     const sub = mod.addNotificationResponseReceivedListener((response: any) => {
       const route = routeFrom(response?.notification?.request?.content?.data);
-      if (route) handler(route);
+      if (route) {
+        mod.clearLastNotificationResponse?.();
+        handler(route);
+      }
     });
 
-    // Cold start: the tap that opened the app.
-    const last = await mod.getLastNotificationResponseAsync?.();
+    // Cold start: the tap that opened the app. Cleared once routed, so a
+    // layout mounted again (the error boundary's Try again) does not push
+    // the same screen a second time.
+    const last = mod.getLastNotificationResponse?.() ?? (await mod.getLastNotificationResponseAsync?.());
     const route = routeFrom(last?.notification?.request?.content?.data);
-    if (route) handler(route);
+    if (route) {
+      mod.clearLastNotificationResponse?.();
+      handler(route);
+    }
 
     return () => sub?.remove?.();
   } catch {

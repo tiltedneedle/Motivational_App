@@ -131,7 +131,7 @@ export default function BookScreen() {
           testID="book-page"
           showsVerticalScrollIndicator={false}
           style={{ flex: 1, backgroundColor: paper.ground, borderRadius: radius.card }}
-          contentContainerStyle={{ padding: 26, paddingBottom: 40 + TAB_BAR_ROOM, gap: 18 }}
+          contentContainerStyle={{ padding: 26, paddingBottom: 40, gap: 18 }}
         >
           {/*
             The spine.
@@ -398,7 +398,7 @@ export default function BookScreen() {
           320 pt screen, which put "Something moved" — the one that says the
           Book no longer describes them — half off the page.
         */}
-        <View style={{ gap: 10, paddingVertical: 14 }}>
+        <View style={{ gap: 10, paddingTop: 14, paddingBottom: 14 + TAB_BAR_ROOM - 24 }}>
           {fromSeal ? (
             /*
               Straight from the seal, the Book is the thing they made and Today

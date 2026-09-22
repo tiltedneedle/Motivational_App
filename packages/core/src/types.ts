@@ -752,7 +752,7 @@ export const DOMAINS: Record<Exclude<DomainId, 'custom'>, DomainMeta> = {
   mind: {
     id: 'mind',
     label: 'Mind & sleep',
-    hex: '#F09A12',
+    hex: '#C27B0C',
     ink: '#966009',
     inkNight: '#F09A12',
     gradient: ['#FFF3D2', '#FFC85E', '#F09A12', '#7A4A05'],
@@ -768,7 +768,7 @@ export const DOMAINS: Record<Exclude<DomainId, 'custom'>, DomainMeta> = {
   home: {
     id: 'home',
     label: 'Home',
-    hex: '#5E9E2E',
+    hex: '#5C9A2D',
     ink: '#477823',
     inkNight: '#5E9E2E',
     gradient: ['#E6F5D6', '#A9DC7A', '#5E9E2E', '#244A0E'],

@@ -16,7 +16,7 @@
  * transform cache, which does not know the env changed.
  */
 import { spawnSync } from 'node:child_process';
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { brotliCompressSync } from 'node:zlib';
 import { join } from 'node:path';
 
@@ -45,6 +45,42 @@ if (r.status) process.exit(r.status);
 const ENTRY_CEILING_KB = 2900;
 const dir = join('apps', 'mobile', 'dist', '_expo', 'static', 'js', 'web');
 const entry = readdirSync(dir).find((f) => f.startsWith('entry-'));
+
+/**
+ * The fonts, started with the entry rather than after it. expo-font adds
+ * its @font-face at runtime, once the bundle has run, so the seven files
+ * the app loads used to begin downloading a whole round trip after a
+ * 2.6 MB script — and the boot screen waited on them.
+ */
+const FONTS = ['Outfit_400Regular', 'Outfit_500Medium', 'Outfit_600SemiBold', 'Outfit_700Bold', 'Newsreader_400Regular', 'Newsreader_400Regular_Italic', 'Newsreader_500Medium'];
+{
+  const html = join('apps', 'mobile', 'dist', 'index.html');
+  const fontsDir = join('apps', 'mobile', 'dist', 'assets', '__node_modules', '@expo-google-fonts');
+  const found = [];
+  const walk = (d) => {
+    for (const name of readdirSync(d)) {
+      const p = join(d, name);
+      if (statSync(p).isDirectory()) walk(p);
+      else if (name.endsWith('.ttf') && FONTS.some((f) => name.startsWith(`${f}.`))) found.push(p);
+    }
+  };
+  try {
+    walk(fontsDir);
+  } catch {
+    // no fonts in this build: nothing to preload
+  }
+  if (found.length) {
+    const links = found
+      .map((p) => '/' + p.split(/[\\/]/).slice(3).join('/'))
+      .map((href) => `    <link rel="preload" as="font" type="font/ttf" crossorigin href="${href}" />`)
+      .join('\n');
+    const page = readFileSync(html, 'utf8');
+    if (!page.includes('rel="preload" as="font"')) {
+      writeFileSync(html, page.replace('<link rel="manifest"', `${links}\n    <link rel="manifest"`));
+      console.log(`${found.length} fonts preloaded in index.html`);
+    }
+  }
+}
 if (entry) {
   const raw = statSync(join(dir, entry)).size;
   const wire = brotliCompressSync(readFileSync(join(dir, entry))).length;

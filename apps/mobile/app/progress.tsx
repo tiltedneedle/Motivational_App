@@ -125,7 +125,7 @@ export default function Progress() {
               </Body>
             ) : (
               <>
-                <Statement testID="progress-returns" style={{ fontSize: 24, lineHeight: 30 }}>
+                <Statement testID="progress-returns" level={2} style={{ fontSize: 24, lineHeight: 30 }}>
                   {returns.length === 1 ? 'One return.' : `${returns.length} returns.`}
                 </Statement>
                 <Body>Most people never come back once.</Body>
@@ -217,6 +217,10 @@ function Bar({ value, low, high }: { value: number; low: number; high: number })
       accessibilityRole="progressbar"
       accessibilityLabel="Consistency"
       accessibilityValue={{ min: 0, max: 100, now: pct }}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={pct}
+      aria-valuetext={`${pct}`}
       style={{ height: 10, borderRadius: 999, backgroundColor: day.surface2, overflow: 'hidden', marginTop: 4 }}
     >
       {bandWidth > 0 ? (

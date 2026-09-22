@@ -25,8 +25,30 @@ import { currentSession, plain, supabase } from './supabase';
 
 export type SyncOutcome =
   | { ok: true; rows: number }
-  /** `error` is for the person; `detail` is the service's own words, for a log. */
-  | { ok: false; error: string; detail?: string; rows: number };
+  /** `error` is for the person; `detail` is the service's own words, for a log; `conflict` means another device copied since. */
+  | { ok: false; error: string; detail?: string; conflict?: true; rows: number };
+
+const ANOTHER_DEVICE = 'Another phone or browser has copied to this account since this one last did. Bring that copy here first, or replace it with this one — under You.';
+
+/**
+ * This install's name for itself, made once and kept beside the store. Not
+ * the person, not the phone model: a random id, so two browsers on one
+ * laptop are two devices.
+ */
+let device: string | null = null;
+export function deviceId(): string {
+  if (device) return device;
+  try {
+    const g = globalThis as { localStorage?: Storage };
+    const had = g.localStorage?.getItem('morrow-device');
+    if (had) return (device = had);
+    const made = `dev_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`;
+    g.localStorage?.setItem('morrow-device', made);
+    return (device = made);
+  } catch {
+    return (device = `dev_${Math.random().toString(36).slice(2, 10)}`);
+  }
+}
 
 const NOT_SIGNED_IN = 'Not signed in, so nothing was sent. Everything is still on this device.';
 
@@ -47,13 +69,28 @@ function timezone(): string {
  * Rows are chunked; a Book with a year of ledger entries is a few thousand
  * rows and one request of that size is one request that times out.
  */
-export async function pushAll(bundle: SyncBundle, opts: { reconcile?: boolean; deadlineMs?: number } = {}): Promise<SyncOutcome> {
+export async function pushAll(bundle: SyncBundle, opts: { reconcile?: boolean; deadlineMs?: number; lastPushAt?: string | null; force?: boolean } = {}): Promise<SyncOutcome> {
   const c = await supabase();
   const session = await currentSession();
   if (!c || !session) return { ok: false, error: NOT_SIGNED_IN, rows: 0 };
 
   const uid = session.user.id;
-  const tables = toRows(bundle, uid, timezone());
+  // Another device's newer copy is a stop, not something to write over. The
+  // profile row says who copied last and when; if that was not this device
+  // and it was after this device's own last copy, the person is asked
+  // (Settings, the account screen) rather than the other phone's evenings
+  // quietly pruned. `force` is their answer.
+  if (!opts.force) {
+    const { data, error } = await c.from('profiles').select('pushed_by, pushed_at').eq('id', uid).maybeSingle();
+    if (!error && data && data.pushed_by && data.pushed_by !== deviceId() && data.pushed_at) {
+      const theirs = Date.parse(String(data.pushed_at));
+      const mine = opts.lastPushAt ? Date.parse(opts.lastPushAt) : 0;
+      if (Number.isFinite(theirs) && theirs > mine) {
+        return { ok: false, conflict: true, error: ANOTHER_DEVICE, rows: 0 };
+      }
+    }
+  }
+  const tables = toRows(bundle, uid, timezone(), { id: deviceId(), at: new Date().toISOString() });
   const startedAt = Date.now();
   const budget = opts.deadlineMs ?? 90_000;
   const overdue = () => Date.now() - startedAt > budget;

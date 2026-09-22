@@ -27,7 +27,7 @@
  * intercept; that is the browser's, the same as on any site.
  */
 import { useNavigation, usePathname } from 'expo-router';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 
 interface Handler {
@@ -99,7 +99,10 @@ export function usePlatformBack(canStepBack: boolean, stepBack: () => void): voi
   // browser, which is still showing the previous screen's URL at that
   // moment. A later render may happen with another screen's path current.
   const pathname = usePathname();
-  const path = useRef(pathname).current;
+  // Captured once, at mount. (State rather than a ref read in render: the
+  // React Compiler skips a hook that reads a ref while rendering, and this
+  // hook is on every screen.)
+  const [path] = useState(pathname);
   // Read at the moment of the event, never from a closure that has gone
   // stale: a listener remade on every change was still one render behind on
   // Full's writing screen.

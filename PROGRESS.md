@@ -686,7 +686,7 @@ this list. Tick as done; on resume continue from the first unticked item.
       two doorways in a row; the tab bar only on Today; the coach before the Book;
       the streak pill at 0; "Not tonight" pushes a second Today; the mirror's
       promised question differs on the page.
-- [ ] Batch E, the web on a phone: Safari's 7-day storage eviction (persist(),
+- [x] Batch E, the web on a phone: Safari's 7-day storage eviction (persist(),
       an install/sign-in nudge, honest copy); the keyboard hiding the CTA
       (interactive-widget, visualViewport); a deploy breaking an open tab (vercel
       rewrites scoped, the SW not caching HTML as JS, lazy chunks precached, a
@@ -695,7 +695,7 @@ this list. Tick as done; on resume continue from the first unticked item.
       fonts preloaded and not gating first paint; the room's focus on iOS; Safari's
       speech permission on the doorway; Settings' notification copy on the web;
       overscroll, theme-color, http-equiv; the dictation 'network' retry loop.
-- [ ] Batch F: the a11y/shell, backend/security and dependency lenses (pending).
+- [x] Batch F: backend (0012+0013 applied live, a Book id per person, the device stamp, sign-in hardening, functions bounded and deployed), the shell's a11y (a live region on the web, roles, values, keyboard avoidance, growing fields, contrast, targets, one h1), tooling (scene support, status bar, SDK-pinned reanimated, CI, eas.json, engines, first paint).
 - [ ] Then: `pnpm verify` green, the journey re-walked, deploy, PROGRESS closed out.
 
 Nothing is half-done. Four audits are closed — 95, 37, 47, then 43 — the

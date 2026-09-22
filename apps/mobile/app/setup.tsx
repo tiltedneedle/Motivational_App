@@ -14,7 +14,7 @@
  */
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Platform, Pressable, Text, View } from 'react-native';
 import { AREAS, addCustomArea, beginBranches, domainMeta, initialInterview, toggleArea, type DomainId, type Persona } from '@morrow/core';
 import { Body, Glyph, Heading, Label, OptionTile, Screen, Slide, TextButton, UserField, accent, day, type as fonts, useReducedMotion } from '@morrow/ui';
 import { useMorrow } from '../src/store';
@@ -232,7 +232,7 @@ export default function Setup() {
             </Pressable>
             <View style={{ gap: 6, backgroundColor: day.surface2, borderRadius: 16, padding: 14 }}>
               <Body testID="setup-privacy" style={{ fontSize: 14, lineHeight: 20 }}>
-                Your writing stays on this phone. Only when you ask — a read-back of your phrases, a check on a piece of writing, a scene — does that piece go to an AI service, and it never writes a goal or a line of your Book.
+                Your writing stays {Platform.OS === 'web' ? 'in this browser' : 'on this phone'}. Only when you ask — a read-back of your phrases, a check on a piece of writing, a scene — does that piece go to an AI service, and it never writes a goal or a line of your Book.
               </Body>
               <TextButton testID="setup-details" label="What leaves the phone, and when" onPress={() => router.push('/consent?from=setup')} style={{ alignSelf: 'flex-start' }} />
             </View>

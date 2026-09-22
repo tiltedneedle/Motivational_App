@@ -77,11 +77,14 @@ Deno.serve(async (req) => {
     return json({ error: 'bad json' }, 400);
   }
 
-  const goalTitle = String(body.goalTitle ?? '');
-  const impactLine = String(body.impactLine ?? '');
-  const idealExcerpt = String(body.idealExcerpt ?? '');
-  const type = String(body.type ?? 'practice');
-  const tone = body.tone ?? null;
+  // Bounded, and the two enums checked: the prompt is built from these.
+  const goalTitle = String(body.goalTitle ?? '').slice(0, 200);
+  const impactLine = String(body.impactLine ?? '').slice(0, 500);
+  const idealExcerpt = String(body.idealExcerpt ?? '').slice(0, 4000);
+  const TYPES = ['practice', 'moment', 'tuesday', 'other_road'];
+  const TONES = ['warmer', 'simpler', 'closer'];
+  const type = TYPES.includes(String(body.type)) ? String(body.type) : 'practice';
+  const tone = TONES.includes(String(body.tone)) ? String(body.tone) : null;
 
   // Whichever model the secrets name (see _shared/llm.ts).
   const key = provider(MODEL);

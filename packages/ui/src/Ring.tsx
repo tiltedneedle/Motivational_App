@@ -62,6 +62,13 @@ export function Ring({
               now: segments > 1 ? Math.round(p * segments) : Math.round(p * 100),
               ...(valueText ? { text: valueText } : {}),
             },
+            // The aria spellings are what react-native-web forwards; it
+            // drops the object above, and the ring was a progress bar with
+            // no value on the web.
+            'aria-valuemin': 0,
+            'aria-valuemax': segments > 1 ? segments : 100,
+            'aria-valuenow': segments > 1 ? Math.round(p * segments) : Math.round(p * 100),
+            'aria-valuetext': valueText ?? `${Math.round(p * 100)} percent`,
           }
         : {})}
       style={[{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }, style]}

@@ -1,0 +1,53 @@
+# The gate, on every push and pull request. Vercel deploys main on its own,
+# so this is what stands between a red tree and the live site; a half-built
+# snapshot shipped once because nothing did.
+name: verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: npx playwright install --with-deps chromium
+      # The offline subset of `pnpm verify`: every EXPO_PUBLIC_* blank, so
+      # nothing here reaches the network and a run means the same thing on
+      # every machine.
+      - run: pnpm test:deps
+      - run: pnpm test:dates
+      - run: pnpm test:copy
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm test:eval
+      - run: pnpm test:functions
+      - run: pnpm test:sql
+      - run: pnpm test:migration
+      - run: pnpm test:authorship
+      - run: pnpm test:back
+      - run: pnpm build:web:offline
+      - run: pnpm test:e2e
+      - run: pnpm test:a11y
+      - run: pnpm test:cold
+      - run: pnpm test:sw
+      - run: pnpm test:motion
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-failure
+          path: e2e-failure.png
+          if-no-files-found: ignore

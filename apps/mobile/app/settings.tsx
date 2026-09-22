@@ -66,12 +66,24 @@ export default function Settings() {
   const [accountBusy, setAccountBusy] = useState(false);
   const [confirmingAccount, setConfirmingAccount] = useState(false);
 
+  const [accountConflict, setAccountConflict] = useState(false);
+  const resolveSignIn = useMorrow((s) => s.resolveSignIn);
   const backUp = async () => {
     setAccountBusy(true);
     setAccountNote(null);
     const out = await pushToAccount();
     setAccountBusy(false);
+    setAccountConflict(!out.ok && out.conflict === true);
     setAccountNote(out.ok ? 'Copied. The Book has a second home.' : out.error);
+  };
+  /** Another device copied since: bring its copy here, or replace it with this one. */
+  const settle = async (choice: 'pull' | 'push') => {
+    setAccountBusy(true);
+    setAccountNote(null);
+    const out = await resolveSignIn(choice);
+    setAccountBusy(false);
+    setAccountConflict(false);
+    setAccountNote(out.ok ? (out.pulled ? 'Brought here. This phone now holds the account’s copy.' : 'Copied. The account now holds this phone’s writing.') : out.error);
   };
 
   const removeAccount = async () => {
@@ -293,7 +305,7 @@ export default function Settings() {
               <Label style={{ fontSize: 11 }}>Morning</Label>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                 {MORNING_TIMES.map((t) => (
-                  <Chip key={t} testID={`day-morning-${t}`} label={clockLabel(t)} selected={state.profile.wakeTime === t} minHeight={40} onPress={() => setTimes({ wakeTime: t })} />
+                  <Chip key={t} testID={`day-morning-${t}`} label={clockLabel(t)} selected={state.profile.wakeTime === t} onPress={() => setTimes({ wakeTime: t })} />
                 ))}
               </View>
             </View>
@@ -301,7 +313,7 @@ export default function Settings() {
               <Label style={{ fontSize: 11 }}>Evening</Label>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                 {EVENING_TIMES.map((t) => (
-                  <Chip key={t} testID={`day-evening-${t}`} label={clockLabel(t)} selected={state.profile.eveningTime === t} minHeight={40} onPress={() => setTimes({ eveningTime: t })} />
+                  <Chip key={t} testID={`day-evening-${t}`} label={clockLabel(t)} selected={state.profile.eveningTime === t} onPress={() => setTimes({ eveningTime: t })} />
                 ))}
               </View>
             </View>
@@ -309,7 +321,7 @@ export default function Settings() {
               <Label style={{ fontSize: 11 }}>Sunday</Label>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                 {SUNDAY_HOURS.map((h) => (
-                  <Chip key={h} testID={`day-sunday-${h}`} label={`${h}:00`} selected={state.profile.sundayHour === h} minHeight={40} onPress={() => setTimes({ sundayHour: h })} />
+                  <Chip key={h} testID={`day-sunday-${h}`} label={`${h}:00`} selected={state.profile.sundayHour === h} onPress={() => setTimes({ sundayHour: h })} />
                 ))}
               </View>
             </View>
@@ -317,7 +329,7 @@ export default function Settings() {
               <Label style={{ fontSize: 11 }}>A day ends at</Label>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                 {DAY_ENDS.map((h) => (
-                  <Chip key={h} testID={`day-ends-${h}`} label={`${h} in the morning`} selected={state.profile.dayBoundaryHour === h} minHeight={40} onPress={() => setTimes({ dayBoundaryHour: h })} />
+                  <Chip key={h} testID={`day-ends-${h}`} label={`${h} in the morning`} selected={state.profile.dayBoundaryHour === h} onPress={() => setTimes({ dayBoundaryHour: h })} />
                 ))}
               </View>
               <Body style={{ fontSize: 13 }}>A night that runs past midnight still belongs to the evening before, until then.</Body>
@@ -341,7 +353,7 @@ export default function Settings() {
                     accessibilityLabel={`${WEEKDAY_NAMES[d].slice(0, 3)}, ${WEEKDAY_NAMES[d]} keeps the shift's hours`}
                     role="checkbox"
                     selected={state.profile.shiftDays.includes(d)}
-                    minHeight={40}
+                   
                     onPress={() =>
                       setTimes({
                         shiftDays: state.profile.shiftDays.includes(d)
@@ -357,13 +369,13 @@ export default function Settings() {
                   <Label style={{ fontSize: 11 }}>On those days, morning</Label>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                     {SHIFT_MORNINGS.map((t) => (
-                      <Chip key={t} testID={`day-shift-morning-${t}`} label={clockLabel(t)} selected={state.profile.shiftWakeTime === t} minHeight={40} onPress={() => setTimes({ shiftWakeTime: t })} />
+                      <Chip key={t} testID={`day-shift-morning-${t}`} label={clockLabel(t)} selected={state.profile.shiftWakeTime === t} onPress={() => setTimes({ shiftWakeTime: t })} />
                     ))}
                   </View>
                   <Label style={{ fontSize: 11 }}>And evening</Label>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                     {SHIFT_EVENINGS.map((t) => (
-                      <Chip key={t} testID={`day-shift-evening-${t}`} label={clockLabel(t)} selected={state.profile.shiftEveningTime === t} minHeight={40} onPress={() => setTimes({ shiftEveningTime: t })} />
+                      <Chip key={t} testID={`day-shift-evening-${t}`} label={clockLabel(t)} selected={state.profile.shiftEveningTime === t} onPress={() => setTimes({ shiftEveningTime: t })} />
                     ))}
                   </View>
                 </View>
@@ -381,14 +393,16 @@ export default function Settings() {
           <View style={{ gap: 10 }}>
             <Label>When Morrow speaks</Label>
             <Body testID="notify-state" style={{ fontSize: 14 }}>
-              {state.profile.notificationsOff
+              {Platform.OS === 'web'
+                ? 'This browser copy cannot send reminders; the phone app can. Nothing is scheduled here, and nothing is missed.'
+                : state.profile.notificationsOff
                 ? 'Nothing. You will hear from it when you open it, and not before.'
                 : muted.length === 0
                   ? 'A line in the morning, one in the evening, the Sunday reading, and a milestone when one lands. Never inside quiet hours, and never a count of what you missed.'
                   : `${plural(left.length, 'moment')} left: ${left.map((m) => MOMENT_WORDS[m]).join(', ')}.`}
             </Body>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              {state.profile.notificationsOff ? (
+              {Platform.OS === 'web' ? null : state.profile.notificationsOff ? (
                 <Chip
                   testID="notify-on"
                   label="Turn them back on"
@@ -520,6 +534,12 @@ export default function Settings() {
                       <Chip testID="settings-account-push" label={accountBusy ? 'Copying…' : 'Copy it now'} onPress={() => void backUp()} />
                       <Chip testID="settings-account-signout" label="Sign out" ghost onPress={() => void signOutAccount()} />
                     </View>
+                    {accountConflict ? (
+                      <View testID="settings-account-conflict" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                        <Chip testID="settings-account-pull" label="Bring that copy here" onPress={() => void settle('pull')} />
+                        <Chip testID="settings-account-replace" label="Replace it with this phone’s" ghost onPress={() => void settle('push')} />
+                      </View>
+                    ) : null}
                     {confirmingAccount ? (
                       <View style={{ gap: 8, backgroundColor: day.surface2, padding: 16, borderRadius: 18 }}>
                         <Body style={{ color: day.ink }}>

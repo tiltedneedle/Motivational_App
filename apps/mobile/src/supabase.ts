@@ -175,7 +175,13 @@ export async function sendCode(email: string): Promise<AuthResult> {
   const address = email.trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) return { ok: false, error: 'That does not look like an email address.' };
   try {
-    const { error } = await c.auth.signInWithOtp({ email: address, options: { shouldCreateUser: true } });
+    // On the web the email's link comes back to this browser, where the
+    // verifier is; sent to `morrow://` it was a dead end on a laptop.
+    const origin = Platform.OS === 'web' ? (globalThis as { location?: { origin?: string } }).location?.origin : undefined;
+    const { error } = await c.auth.signInWithOtp({
+      email: address,
+      options: { shouldCreateUser: true, ...(origin ? { emailRedirectTo: `${origin}/account` } : {}) },
+    });
     if (error) return { ok: false, error: plain(error.message) };
     return { ok: true };
   } catch (err) {
@@ -237,18 +243,11 @@ async function signInFromUrlOnce(url: string): Promise<AuthResult | null> {
       const { error: e } = await c.auth.exchangeCodeForSession(code);
       return e ? { ok: false, error: plain(e.message) } : { ok: true };
     }
-    const access = params.get('access_token');
-    const refresh = params.get('refresh_token');
-    if (access && refresh) {
-      const { error: e } = await c.auth.setSession({ access_token: access, refresh_token: refresh });
-      return e ? { ok: false, error: plain(e.message) } : { ok: true };
-    }
-    const hash = params.get('token_hash');
-    const type = params.get('type');
-    if (hash && (type === 'magiclink' || type === 'email' || type === 'signup')) {
-      const { error: e } = await c.auth.verifyOtp({ token_hash: hash, type: type === 'signup' ? 'signup' : 'magiclink' });
-      return e ? { ok: false, error: plain(e.message) } : { ok: true };
-    }
+    // Only a PKCE code is a sign-in this device started: it exchanges for
+    // nothing without the verifier kept here. Tokens or a token hash in a
+    // URL would sign this device into whoever's session they were — and the
+    // background copy would then push the person's writing into that
+    // account — so they are not honoured at all.
   } catch (err) {
     return { ok: false, error: plain(err instanceof Error ? err.message : 'no network') };
   }
@@ -385,7 +384,10 @@ export async function signOut(): Promise<void> {
   const c = await supabase();
   if (!c) return;
   try {
-    await c.auth.signOut();
+    // This device only. The default scope is every device, and signing out
+    // on a library computer used to sign the phone out too — silently, and
+    // with it every evening's copy from then on.
+    await c.auth.signOut({ scope: 'local' });
   } catch {
     // Signed out locally either way; the server's copy of the session expires.
   }

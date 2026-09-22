@@ -42,11 +42,7 @@
           "image": "./assets/splash.png",
           "imageWidth": 220,
           "resizeMode": "contain",
-          "backgroundColor": "#F1F0EC",
-          "dark": {
-            "image": "./assets/splash-dark.png",
-            "backgroundColor": "#17181C"
-          }
+          "backgroundColor": "#F1F0EC"
         }
       ],
       "expo-sharing",
@@ -61,7 +57,7 @@
       [
         "expo-speech-recognition",
         {
-          "microphonePermission": "Morrow listens so you can say the Fifteen instead of typing it. Nothing is recorded; only the words are kept.",
+          "microphonePermission": "Morrow listens so you can say your writing instead of typing it. Nothing is recorded; only the words are kept.",
           "speechRecognitionPermission": "Turns what you say into the words of your Book, on this phone where it can."
         }
       ],
@@ -71,6 +67,14 @@
           "icon": "./assets/notification-icon.png",
           "color": "#EA4B2E",
           "defaultChannel": "morrow"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "enableSceneSupport": true
+          }
         }
       ]
     ],
