@@ -3104,7 +3104,13 @@ hardware, a credential, or a product call — plus the items the rebuild opened:
    handler records its reasoning on `window.__morrowBack` (web only) so a
    check that fails says why. Verified by hand: Welcome → set-up step 4 →
    browser Back → step 3, URL unmoved; set-up → the privacy details → Back →
-   the details close and step 4 is untouched.
+   the details close and step 4 is untouched. **CI green on the first run
+   with the new rule** (565/565, and the deck's back among them), after five
+   red runs. The handler also counts the pops it is given, so a check can
+   tell a back the app saw and stood aside from — the browser's to finish —
+   from a back that left the document and never reached the app at all;
+   without the count the two look identical, and one of them failed blind
+   on CI for an afternoon.
 
 0c. **Google, as it stands (2026-09-22, evening)** — driven from a configured
    build to Google's own page: "Sign in to continue to
