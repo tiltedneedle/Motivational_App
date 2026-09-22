@@ -183,7 +183,23 @@ async function main() {
   // routes: the first visit to the writing room) arrives a beat after the
   // tap; this waits for it rather than reading the gap as its absence.
   const appears = (id, ms = 4000) => page.locator(`[data-testid="${id}"]`).first().waitFor({ state: 'attached', timeout: ms }).then(() => true, () => false);
-  const text = async (id) => (await page.locator(`[data-testid="${id}"]`).first().innerText()).trim();
+  /**
+   * What an element says, or `(no <id>)` when it is not there.
+   *
+   * Not a throw: a locator that timed out took the whole run with it — five
+   * hundred checks after it never ran, and CI reported "the run completed:
+   * false" for one element that arrived late or not at all. A missing
+   * element is a failed check with a legible reason, and the walk goes on.
+   */
+  const text = async (id) => {
+    const el = page.locator(`[data-testid="${id}"]`).first();
+    try {
+      await el.waitFor({ state: 'attached', timeout: 4000 });
+      return (await el.innerText()).trim();
+    } catch {
+      return `(no ${id})`;
+    }
+  };
 
   /**
    * axe-core over the screen as it is right now. `scripts/a11y.mjs` covers
@@ -352,6 +368,17 @@ async function main() {
     await tap('option-0'); // Finish a race, again
     check('the follow-up is asked again', (await text('interview-question')) === 'How far?');
 
+    // The browser's own Back is the same one-step undo, not an exit. Tested
+    // on the history the app itself pushed — before the reload below, not
+    // after it: a reload leaves the entries it wants but not the answers the
+    // undo walks, so "back" there is the browser's business rather than the
+    // app's, and which entry it lands on depends on the machine.
+    await page.goBack({ waitUntil: 'commit' }).catch(() => {});
+    await page.waitForTimeout(600);
+    check('the platform back undoes one answer rather than leaving', (await appears('screen-interview')) && (await text('interview-question')) !== 'How far?', await text('interview-question'));
+    await tap('option-0'); // Finish a race, once more
+    check('and the follow-up comes back', (await text('interview-question')) === 'How far?');
+
     // The Interview survives a kill: reloaded mid-way, it is on the same
     // question with the same answers behind it.
     await page.reload({ waitUntil: 'networkidle' });
@@ -359,12 +386,6 @@ async function main() {
     await page.waitForTimeout(600);
     check('a reload mid-Interview lands on the same question', (await text('interview-question')) === 'How far?', await text('interview-question'));
     check('with the answers so far kept', (await text('guess-line')).toLowerCase().includes('health'), await text('guess-line'));
-    // The browser's own Back is the same one-step undo, not an exit.
-    await page.goBack({ waitUntil: 'commit' }).catch(() => {});
-    await page.waitForTimeout(600);
-    check('the platform back undoes one answer rather than leaving', (await seen('screen-interview')) && (await text('interview-question')) !== 'How far?', await text('interview-question'));
-    await tap('option-0'); // Finish a race, once more
-    check('and the follow-up comes back', (await text('interview-question')) === 'How far?');
     // The helplines, one tap from the question.
     check('the Interview has "Need someone?" at its top', await seen('top-help'));
     await tap('top-help');
