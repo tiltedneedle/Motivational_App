@@ -107,6 +107,23 @@ function StoneScreen() {
   // the line when it is kept. Bound to the same state as the line, the
   // same text used to appear in two fields at once.
   const [whenWhere, setWhenWhere] = useState(resumed?.whenWhere ?? '');
+  /**
+   * What the fields held the moment this stone opened.
+   *
+   * "Nothing new to keep" has to be measured against this, not against what
+   * the store holds: a stone opened to be rewritten seeds itself blank
+   * (`fresh`) while the store still has the old line, and a stone opened from
+   * a sitting seeds itself from that. Measured against the store, both looked
+   * *changed* the moment they mounted, and took the one draft slot away from
+   * the stone the person was in the middle of.
+   */
+  const [seed] = useState(() => ({
+    line: (resumed?.line ?? (fresh ? '' : (existing?.line ?? ''))).trim(),
+    line2: (resumed?.line2 ?? (fresh ? '' : (existing?.line2 ?? ''))).trim(),
+    paragraph: (resumed?.paragraph ?? (fresh ? '' : (existing?.paragraph ?? ''))).trim(),
+    whenWhere: (resumed?.whenWhere ?? '').trim(),
+    framingId: resumed?.framingId ?? existing?.framingId ?? null,
+  }));
 
   /**
    * The Present volume feeds the plan (PRD §7.15). Each fault the person wrote
@@ -214,15 +231,21 @@ function StoneScreen() {
     // words already in the fields, and saving those as a sitting took the one
     // draft slot away from the stone the person was actually in the middle of.
     const unchanged =
-      !whenWhere.trim() &&
-      line.trim() === (existing?.line ?? '').trim() &&
-      line2.trim() === (existing?.line2 ?? '').trim() &&
-      paragraph.trim() === (existing?.paragraph ?? '').trim() &&
-      framingId === (existing?.framingId ?? null);
-    if (blank || unchanged) {
+      line.trim() === seed.line &&
+      line2.trim() === seed.line2 &&
+      paragraph.trim() === seed.paragraph &&
+      whenWhere.trim() === seed.whenWhere &&
+      framingId === seed.framingId;
+    // Blank: nothing to keep, and this stone's own sitting goes.
+    if (blank) {
       if (draft && draft.goalId === goalId && draft.kind === kind) clearDraft();
       return;
     }
+    // Nothing new: the fields still hold what they opened with, so this stone
+    // has nothing to write down — and, just as important, nothing to write
+    // *over*. Clearing here would throw away the sitting this stone had just
+    // resumed, which is the same fault from the other side.
+    if (unchanged) return;
     saveDraft({ goalId, kind, framingId, line, line2, paragraph, whenWhere });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [goalId, kind, framingId, line, line2, paragraph, whenWhere]);

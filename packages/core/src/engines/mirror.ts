@@ -109,10 +109,12 @@ export function mirrorDomain(text: string, hint?: DomainId | null): DomainId | n
 export function mirrorLocally(text: string, hint?: DomainId | null): Mirror {
   const source = (text ?? '').trim();
   const domain = mirrorDomain(source, hint);
-  // The question may lean on the area they came for even when the line does
-  // not name it; the note may not, because the note is a claim about what
-  // they wrote and the question is only a question.
-  const bank = QUESTIONS[domain ?? (hint && hint !== 'custom' ? hint : 'custom')];
+  // Where the line names no domain the question is the neutral one. Leaning
+  // on the area they came for looked more relevant and was not: somebody who
+  // set up on Home and wrote "I want to finish what I start this year" was
+  // asked "What is the one corner you would fix first?" — the same wrong
+  // question, arrived at from the other direction.
+  const bank = QUESTIONS[domain ?? 'custom'];
   const question = bank[hash(source) % bank.length]!;
   const note = domain ? `This sounds like it is about ${DOMAIN_NAME[domain]}. Your words, kept as you wrote them.` : 'Your words, kept as you wrote them.';
 

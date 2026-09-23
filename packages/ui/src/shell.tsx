@@ -332,7 +332,11 @@ export function Screen({
               >
                 {body}
               </ScrollView>
-              <ScrollFade edge="top" height={10} />
+              {/* At the bottom only. The top of a scroll sits under the
+                  screen's own header, where a cut reads as the header's edge;
+                  at the bottom it sits above a button, where it reads as a
+                  fault — and a fade painted at the top of a screen nobody has
+                  scrolled is a band over the first line of it. */}
               <ScrollFade edge="bottom" />
             </View>
           ) : (

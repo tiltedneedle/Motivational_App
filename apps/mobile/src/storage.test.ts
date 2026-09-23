@@ -259,12 +259,15 @@ describe('a store too big for one Android row', () => {
 
     expect(await guardedStorage.getItem('morrow-v1')).toBe(null);
     expect(hasFailed()).toBe(true);
-    const kept = await quarantinedRaw();
-    expect(kept, 'the readable parts were kept').toBeTruthy();
-    expect(kept!.length).toBeGreaterThan(500_000);
+    // Each readable part under its own quarantine key: a rejoined copy would
+    // be one row of the same size, which is the thing that could not be read.
+    const copies = () => [...disk.entries()].filter(([k]) => k.startsWith(QUARANTINE_PREFIX));
+    expect(copies().length, 'the readable parts were kept').toBe(2);
+    expect(copies().reduce((n, [, v]) => n + v.length, 0)).toBeGreaterThan(500_000);
+    expect(await quarantinedRaw()).toBeTruthy();
 
     await clearLatchAndReplace();
-    expect(await quarantinedRaw(), 'starting again leaves the copy behind').toBeTruthy();
+    expect(copies().length, 'starting again leaves the copies behind').toBe(2);
     expect(hasFailed()).toBe(false);
   });
 });

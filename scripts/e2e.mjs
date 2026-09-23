@@ -3416,9 +3416,11 @@ async function main() {
           /Home Screen/i.test(keepSays) && /copy of its own/i.test(keepSays) && /stays in Safari/i.test(keepSays),
           keepSays.replace(/\s+/g, ' ').slice(0, 160),
         );
+        // Whichever this build has, named as the screen that has it names
+        // it: the notice pointed at a "Copy it out" that exists nowhere.
         check(
-          'and given the way that does keep this one',
-          /account/i.test(keepSays) || /Copy it out/i.test(keepSays),
+          'and given the way that does keep this one, by its own name',
+          /account/i.test(keepSays) || /Export everything/.test(keepSays),
           keepSays.replace(/\s+/g, ' ').slice(0, 160),
         );
         await tap('today-keep-done');

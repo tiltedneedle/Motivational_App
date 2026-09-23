@@ -45,7 +45,17 @@ import type { SafetyRisk } from '../types';
  * and "don't want to wake up at 5am" is another. A stop, the end of the
  * text, or one of the few continuations that keep the meaning.
  */
-const CLAUSE_END = String.raw`(?=\s*(?:[.,;:!?)\]…—-]|$)|\s+(?:any\s?more|any\s+longer|at\s+all|like\s+this|tomorrow|tonight|today|this\s+(?:morning|afternoon|evening|week|weekend|month|year)|these\s+days|lately|again|because|if|so|honestly|really|sometimes|most\s+days|some\s+days|pretending|as\s+if|with\s+(?:any\s+of\s+)?(?:it|this|life|things))\b|\s+(?:and|but)\s+(?:i|we|it|there|that|this|nobody|no\s+one|nothing|everyone|everything)\b)`;
+const CLAUSE_END = String.raw`(?=\s*(?:[.,;:!?)\]…—-]|$)|\s+(?:any\s?more|any\s+longer|at\s+all|like\s+this|tomorrow|tonight|today|this\s+(?:morning|afternoon|evening|week|weekend|month|year)|these\s+days|lately|again|because|if|so|honestly|really|sometimes|most\s+days|some\s+days|pretending|as\s+if|with\s+(?:any\s+of\s+)?(?:it|this|life|things))\b)`;
+
+/**
+ * The same, and a new clause after it counts as an ending: "and" or "but"
+ * followed by a subject. Only for the phrases that mean one thing — "I do
+ * not want to be here and I do not know what to do" returned nothing at all,
+ * while "I do not want to wake up and I have to go to work" is a hard Monday
+ * and must keep returning nothing. So the wide ending is spelled separately
+ * and used only where the object of the sentence cannot be read two ways.
+ */
+const CLAUSE_END_WIDE = String.raw`(?=\s*(?:[.,;:!?)\]…—-]|$)|\s+(?:any\s?more|any\s+longer|at\s+all|like\s+this|tomorrow|tonight|today|this\s+(?:morning|afternoon|evening|week|weekend|month|year)|these\s+days|lately|again|because|if|so|honestly|really|sometimes|most\s+days|some\s+days|pretending|as\s+if|with\s+(?:any\s+of\s+)?(?:it|this|life|things))\b|\s+(?:and|but)\s+(?:i|we|it|there|that|this|nobody|no\s+one|nothing|everyone|everything)\b)`;
 
 /**
  * "and" or "but" followed by a subject is a new clause, not the phrase
@@ -59,8 +69,11 @@ const CLAUSE_END = String.raw`(?=\s*(?:[.,;:!?)\]…—-]|$)|\s+(?:any\s?more|an
  * more" and "I ended it so I could breathe" both raised the suicide card.
  * "I want to end it because I cannot do this any more" still says what it
  * says, and keeps the loose ending through its own pattern below.
+ * Nor a new clause after "and": "We ended it and I am fine" is a breakup
+ * too, and the bare "end it" is the one pattern here weak enough to be
+ * carried by whatever follows it.
  */
-const CLAUSE_END_PLAIN = String.raw`(?=\s*(?:[.,;:!?)\]…—-]|$)|\s+(?:any\s?more|any\s+longer|at\s+all|like\s+this|tomorrow|tonight|today|this\s+(?:morning|afternoon|evening|week|weekend|month|year)|these\s+days|lately|again|honestly|really|sometimes|most\s+days|some\s+days|pretending|as\s+if|with\s+(?:any\s+of\s+)?(?:it|this|life|things))\b|\s+(?:and|but)\s+(?:i|we|it|there|that|this|nobody|no\s+one|nothing|everyone|everything)\b)`;
+const CLAUSE_END_PLAIN = String.raw`(?=\s*(?:[.,;:!?)\]…—-]|$)|\s+(?:any\s?more|any\s+longer|at\s+all|like\s+this|tomorrow|tonight|today|this\s+(?:morning|afternoon|evening|week|weekend|month|year)|these\s+days|lately|again|honestly|really|sometimes|most\s+days|some\s+days|pretending|as\s+if|with\s+(?:any\s+of\s+)?(?:it|this|life|things))\b)`;
 const re = (source: string) => new RegExp(source, 'i');
 
 const CRISIS = [
@@ -99,15 +112,32 @@ const CRISIS = [
   // "want to end it" when the clause stops there; "end it all on a high
   // note" carries on into something.
   re(String.raw`\b(?:want(?:ed|ing|s)?\s+to|wanna)\s+end\s+it(?:\s+all)?` + CLAUSE_END),
+  // Any intent, not only "want to". Taking because/if/so off the bare "end
+  // it" spared the breakups and took "I have decided to end it because I
+  // cannot carry this any more" with them — which is the sentence this list
+  // exists for. "We ended it because…" still has no intent verb in front of
+  // it, so it still says nothing.
+  re(
+    String.raw`\b(?:going\s+to|gonna|about\s+to|plan(?:ning)?\s+to|decided\s+to|ready\s+to|will|should\s+just)\s+end\s+(?:it|things|everything)` +
+      CLAUSE_END,
+  ),
   re(String.raw`\bwant\s+(?:it\s+all|everything|all\s+of\s+it)\s+to\s+(?:be\s+over|end|stop)` + CLAUSE_END),
   // "there is no point anymore" with nothing it is the point of.
   re(String.raw`\b(?:no\s+point|there(?:['’]s|\s+is)\s+no\s+point)\s+(?:any\s?more|any\s+longer|in\s+anything|to\s+anything)` + CLAUSE_END),
   // "kms" is how it is typed at night, and it is also how a runner writes
   // kilometres — "I want to run 10 kms this month", "kms twice a week" and
   // "5 kms before work" all raised the card, in an app whose own example goal
-  // is a five kilometre race. A number in front of it, or a cadence behind
-  // it, and it is the distance.
-  /(?<!\d\s)(?<!\b(?:few|several|some|many|couple|two|three|four|five|six|seven|eight|nine|ten|twelve|fifteen|twenty|thirty|forty|fifty|hundred)\s)\bkms\b(?!\s+(?:twice|thrice|per|each|every|a\s+(?:day|week|month)|this\s+(?:week|month|year)|before|after|away|from|of\b|to\b))/i,
+  // is a five kilometre race.
+  //
+  // Guarding it by what follows was worse than the fault: "this week" matched
+  // inside "this weekend", and "to", "before" and "after" are the ordinary
+  // next words of the disclosure, so "I might kms this weekend" and "I am
+  // going to kms after work" returned nothing at all. It is the verb sense
+  // that is wanted, so the verb sense is what is written down: said of
+  // oneself, with the intent in front of it — or the word on its own, which
+  // is how it is usually sent.
+  re(String.raw`\b(?:i|we)\s+(?:want(?:ed)?\s+to|wanna|(?:am|are|is)\s+going\s+to|going\s+to|gonna|might|may|will|should|just|maybe|nearly|almost)?\s*kms\b`),
+  /^\s*kms\b(?:\s+(?:rn|right\s+now|fr|tbh|honestly|today|tonight|already|again))?\s*[.!?]*\s*$/i,
   // "rather die than wear that" is hyperbole; "rather die" alone, and
   // "rather be dead" however it goes on, are not.
   /\brather\s+(?:not\s+(?:exist|be\s+alive|be\s+here|wake\s+up)|be\s+dead|die(?!\s+than))\b/i,
@@ -118,9 +148,22 @@ const CRISIS = [
   // down. The clause has to stop there, so the charity jump off the bridge
   // into the river, and the swimmer who walks into the sea at dawn, are left
   // alone.
+  // Said of oneself: without that, "my son is nearly going to step in front of
+  // a bus" and "he is about to walk into traffic" — a parent writing about a
+  // toddler — raised the card and held that writing out of their own Book.
+  // And without the sea and the cliff, which cannot be told from a swimmer and
+  // a coasteer in a product full of them; the thought-about form above still
+  // carries both.
   re(
-    String.raw`\b(?:going\s+to|gonna|about\s+to|plan(?:ning)?\s+to|ready\s+to|nearly|almost)\s+(?:step|jump|walk|drive)\s+(?:out\s+)?(?:in\s+front\s+of(?:\s+(?:a|the)\s+(?:train|bus|lorry|truck|car|van|tram))?|into\s+(?:traffic|the\s+(?:road|river|sea|canal|water))|off\s+(?:a|the)\s+(?:bridge|roof|cliff|balcony|building))` +
+    String.raw`\b(?:i|we)\b(?:['’]m|['’]re|\s+am|\s+are)?\s+(?:going\s+to|gonna|about\s+to|plan(?:ning)?\s+to)\s+(?:step|jump|walk|drive)\s+(?:out\s+)?(?:in\s+front\s+of(?:\s+(?:a|the)\s+(?:train|bus|lorry|truck|car|van|tram))?|into\s+traffic|off\s+(?:a|the)\s+(?:bridge|roof|balcony|building))` +
       CLAUSE_END,
+  ),
+  // The water is the one a swimmer writes too, so there the sentence has to
+  // stop dead: "I am going to walk into the sea." is this, and "… into the
+  // sea tomorrow" or "… at dawn every morning this year" is a swim. The
+  // thought-about form above keeps the loose ending for all of them.
+  re(
+    String.raw`\b(?:i|we)\b(?:['’]m|['’]re|\s+am|\s+are)?\s+(?:going\s+to|gonna|about\s+to|plan(?:ning)?\s+to)\s+(?:step|jump|walk|drive)\s+(?:out\s+)?into\s+the\s+(?:sea|water|river|canal|road)(?=\s*(?:[.!?]|$))`,
   ),
   /\b(?:hang|hanging|hung|shoot|shooting|drown|drowning|burn|burning|burnt|burned)\s+my ?self(?![\w-])(?!\s+(?:out\s+to\s+dry|on\s+the\s+(?:oven|iron|pan|hob|stove|kettle)|with\s+the\s+(?:iron|kettle|oven|pan)|making|cooking))/i,
   /\b(?:took|take|taking|taken)\s+(?:all|too\s+many)\s+(?:of\s+)?(?:my|the)\s+(?:pills|tablets|meds|medication)\b/i,
@@ -129,7 +172,12 @@ const CRISIS = [
   // "do not want", "don't want", "didn't want", "doesn't want" — and only when
   // the clause ends there: "don't want to wake up at 5am", "didn't want to go
   // on the trip", "don't want to live in this flat" are a hard week, not this.
-  re(String.raw`\b(?:do|does|did)(?:\s+not|n['’]?t)\s+(?:want\s+to|wanna)\s+(?:be\s+here|be\s+alive|be\s+around|live|wake\s+up|exist|go\s+on|carry\s+on)` + CLAUSE_END),
+  // Split by how many ways the object can be read. "Be here", "be alive",
+  // "be around", "exist" mean one thing, and a new clause after them is still
+  // that thing; "live", "wake up", "go on", "carry on" are all ordinary in a
+  // hard week, so for those the clause has to actually stop.
+  re(String.raw`\b(?:do|does|did)(?:\s+not|n['’]?t)\s+(?:want\s+to|wanna)\s+(?:be\s+here|be\s+alive|be\s+around|exist)` + CLAUSE_END_WIDE),
+  re(String.raw`\b(?:do|does|did)(?:\s+not|n['’]?t)\s+(?:want\s+to|wanna)\s+(?:live|wake\s+up|go\s+on|carry\s+on)` + CLAUSE_END),
   re(String.raw`\bnot\s+want(?:ing)?\s+to\s+(?:be\s+here|be\s+alive|be\s+around|live|wake\s+up|exist)` + CLAUSE_END),
   // Wishes. "wish I was here when the kids were small" and "wish I was born in
   // the 90s" are ordinary; the wish that counts is not to be.
@@ -161,7 +209,15 @@ const CRISIS = [
   // written and it returned nothing: "not wake up" was on the list of things
   // a person can not want to do, and only directly after "want to". Not after
   // a modal, so "I did not wake up." stays a late morning.
-  re(String.raw`(?<!\b(?:did|does|do|could|would|will|can|might|may|should)\s)\bnot\s+wake\s+up` + CLAUSE_END),
+  // The modal is not always the word before "not" ("would simply not wake
+  // up"), it is not always on the list ("must not", "had better not"), and
+  // "to not wake up" is the split infinitive of an ordinary sleep sentence.
+  // With the loose ending this read "I am trying to not wake up so much in
+  // the night" as a crisis, which is a person's first line about their sleep.
+  re(
+    String.raw`(?<!\b(?:did|does|do|could|would|will|shall|can|must|might|may|should|better|to)\s(?:just\s|simply\s|really\s|still\s|ever\s)?)\bnot\s+wake\s+up` +
+      CLAUSE_END_PLAIN,
+  ),
 ];
 
 interface ConcernPattern {

@@ -341,7 +341,7 @@ export default function RootLayout() {
           this device right now." is the one sentence that must be readable.
         */}
         {newVersionReady ? (
-          <SafeAreaView edges={['top', 'left', 'right']}>
+          <SafeAreaView edges={['top', 'left', 'right']} style={{ backgroundColor: day.surface2 }}>
           <View
             testID="new-version"
             accessibilityLiveRegion="polite"
@@ -360,8 +360,10 @@ export default function RootLayout() {
           </View>
           </SafeAreaView>
         ) : null}
+        {/* The fill is on the wrapper: an inset outside the banner's own
+            background left a strip of page ground under the clock. */}
         {storageError ? (
-          <SafeAreaView edges={['top', 'left', 'right']}>
+          <SafeAreaView edges={['top', 'left', 'right']} style={{ backgroundColor: '#CB3014' }}>
           <StorageWarning
             onExport={() => router.push('/settings')}
             onFresh={() => {

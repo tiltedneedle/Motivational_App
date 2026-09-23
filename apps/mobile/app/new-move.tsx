@@ -107,6 +107,8 @@ export default function NewMove() {
                     onPress={() => {
                       setGoalId(g.id);
                       setPicked(null);
+                      // A refusal belongs to the goal it was about.
+                      setProblem(null);
                     }}
                   />
                 ))}

@@ -750,6 +750,13 @@ describe('safety', () => {
       'I want to go to sleep and not wake up',
       'I do not want to be here and I do not know what to do',
       'I want to end it because I cannot do this any more',
+      // The review of that change (2026-09-23): the guards it added were
+      // eating the disclosures they were guarding.
+      'I might kms this weekend',
+      'I am going to kms after work',
+      'I have decided to end it because I cannot carry this any more',
+      'I am going to end it so it stops',
+      'I will end it if nothing changes by Friday',
     ]) {
       expect(screen(t).risk, t).toBe('crisis');
     }
@@ -770,9 +777,29 @@ describe('safety', () => {
       'kms twice a week',
       'I want to run 5 kms before work and not think about it',
       // And the ones the widened patterns must still leave alone.
+      'We ended it and I am fine',
+      'I want to end it with the gym membership and I will call them',
+      'I could not wake up this morning',
+      'The baby would not wake up for the feed',
+      'I am going to jump off the bridge into the river for the charity swim',
+      'I am going to drive into town and pick up the parts',
+      'I did 8 kms this morning',
       'I did not wake up until noon',
       'I am going to walk into the sea at dawn every morning this year',
       'I do not want to wake up and go to work',
+      // And the same review: every one of these was read as a crisis.
+      'my son is nearly going to step in front of a bus',
+      'He is about to walk into traffic, honestly',
+      'I am ready to jump off a cliff, honestly',
+      'I am going to walk into the sea tomorrow',
+      'I am going to jump off the cliff again',
+      'She would simply not wake up.',
+      'I am trying to not wake up so much in the night',
+      'I told the kids to not wake up so early at the weekend',
+      'He had better not wake up again tonight',
+      'I do not want to wake up and I have to go to work',
+      'kms on Saturday',
+      'I want to do kms at the weekend',
     ]) {
       expect(screen(t).risk, t).not.toBe('crisis');
     }

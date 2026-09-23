@@ -109,7 +109,8 @@ async function stock(html, next) {
     }
   }
   // Now, and not before: this build's chunks are on the device, and the one
-  // before it is kept for the pages still running on it.
+  // before it is kept for the pages still running on it — and the fetch
+  // handler looks in every statics cache, or keeping it would mean nothing.
   const keys = await caches.keys();
   const statics = keys.filter((k) => k.startsWith('morrow-static-') && k !== `morrow-static-${next}`);
   const stale = statics.slice(0, Math.max(0, statics.length - 1));
@@ -185,20 +186,24 @@ self.addEventListener('fetch', (event) => {
 
   if (STATIC.test(url.pathname)) {
     event.respondWith(
-      statics().then((cache) =>
-        cache.match(req).then(
-          (hit) =>
-            hit ??
-            fetch(req).then((res) => {
-              // Only what a static is. A chunk from a deploy that has gone
-              // came back as index.html with a 200, and that HTML was cached
-              // under the script's name for good.
-              const type = res.headers.get('content-type') || '';
-              if (res.ok && /javascript|font|image|css|json|octet-stream/i.test(type)) cache.put(req, res.clone()).catch(() => undefined);
-              return res;
-            }),
-        ),
-      ),
+      (async () => {
+        const cache = await statics();
+        // This build's cache first, then any other build's: a tab still
+        // running the build before this one asks for its own chunks by name,
+        // and those live in the cache named for that build. Keeping that
+        // cache and never looking in it is the same as deleting it — and the
+        // server no longer has the file either, so the SPA fallback hands
+        // back index.html with a 200, which is not a script.
+        const hit = (await cache.match(req)) ?? (await caches.match(req));
+        if (hit) return hit;
+        const res = await fetch(req);
+        // Only what a static is. A chunk from a deploy that has gone came
+        // back as index.html with a 200, and that HTML was cached under the
+        // script's name for good.
+        const type = res.headers.get('content-type') || '';
+        if (res.ok && /javascript|font|image|css|json|octet-stream/i.test(type)) cache.put(req, res.clone()).catch(() => undefined);
+        return res;
+      })().catch(() => Response.error()),
     );
     return;
   }

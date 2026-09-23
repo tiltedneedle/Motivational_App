@@ -560,7 +560,7 @@ export default function Today() {
               */}
               <Body style={{ fontSize: 14 }}>
                 Your writing is kept in this browser, and Safari clears a site’s storage after a week without a visit.
-                {hasSupabase ? ' Sign in and a copy lives on your account.' : ' Under You, “Copy it out” saves a copy you keep.'}
+                {hasSupabase ? ' Sign in and a copy lives on your account.' : ' Under You, “Export everything” saves a copy you keep.'}
               </Body>
               <Body style={{ fontSize: 14, color: day.ink2 }}>
                 Adding Morrow to your Home Screen (Share → Add to Home Screen) keeps what you write there from being cleared, but

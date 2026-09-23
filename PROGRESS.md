@@ -3192,6 +3192,32 @@ hardware, a credential, or a product call — plus the items the rebuild opened:
      away on navigation while the turns it cost are kept against the daily cap.
      Either the thread should persist or the turn should not — and which of
      those is right is a decision about what the coach is, not a bug.
+   - **And then the same treatment for the fixes themselves.** Three lenses over
+     this pass's own diff (533k tokens, fifteen minutes) found **twenty**
+     defects in it, six of them in the screener. Every one was reproduced by
+     running the engine before it was touched. The widenings had each been right
+     about the sentence they were written for and wrong about several they were
+     not: guarding "kms" by what follows it meant "this week" matched inside
+     "this weekend", so "I might kms this weekend" returned nothing at all, and
+     "to", "before" and "after" ate the rest; taking because/if/so off the bare
+     "end it" spared the breakups and took "I have decided to end it because I
+     cannot carry this any more" with them; the stated-method pattern had no
+     subject, so "my son is nearly going to step in front of a bus" raised the
+     card on a parent writing about a toddler; the "not wake up" lookbehind was
+     one word wide, so "I am trying to not wake up so much in the night" — a
+     first line about sleep — was read as a crisis; and the new clause end made
+     "I do not want to wake up and I have to go to work" one. All six are
+     rewritten, and the two blocks that pin this engine hold **fifty-eight
+     sentences** between them now, thirty-one of them ordinary writing that
+     must never raise the card.
+     Also from that review: "Start again" asked whether *any* store had a
+     quarantine copy rather than this one; the kept previous statics cache was
+     never looked in, so keeping it meant nothing; the banners' inset sat
+     outside their own background, so the notch strip painted the page ground;
+     the stone's "nothing new" rule measured against the store rather than
+     against what the fields opened with, which is a different thing for a
+     rewrite; and the notice named a button ("Copy it out") that does not exist.
+     A review of a pass's own diff is the cheapest sweep there is.
 
 0i. **The back, actually fixed (2026-09-22, night)** — the eighth and last
    turn on this. The rule was right and the arming was right; the *order* was

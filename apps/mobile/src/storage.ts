@@ -87,13 +87,15 @@ async function readWhole(name: string): Promise<string | null> {
  * one atomic write: until it lands, every part it names is still whole.
  */
 async function writeWhole(name: string, value: string): Promise<void> {
-  const previous = await currentGen(name);
   if (value.length <= PART) {
     await AsyncStorage.setItem(name, value);
     await dropParts(name);
     return;
   }
-  const gen = previous === 'a' ? 'b' : 'a';
+  // Asked only when this write is going to be split: on the web every write
+  // takes the branch above, and reading the key back before each one would
+  // be a whole store read per keystroke.
+  const gen = (await currentGen(name)) === 'a' ? 'b' : 'a';
   const count = Math.ceil(value.length / PART);
   const rows: [string, string][] = Array.from({ length: count }, (_, i) => [partKey(name, gen, i), value.slice(i * PART, (i + 1) * PART)]);
   await AsyncStorage.multiSet(rows);
@@ -252,10 +254,14 @@ export function openStorage(): void {
 export async function clearLatchAndReplace(): Promise<void> {
   try {
     // The button's own label says "the earlier copy stays on it under another
-    // name". Where the read failed in a way that left no copy, that was a
-    // promise the app could not keep, so one is made here before anything is
-    // removed — two taps used to be the end of a year of writing.
-    if (!(await quarantinedRaw())) await quarantineWhatever(STORE_KEY);
+    // name", so one is made here before anything is removed — two taps used to
+    // be the end of a year of writing. Always, not only when there is no
+    // quarantine at all: the latch can also be closed from outside (the
+    // store's own merge threw on a shape it could not take) with the bytes
+    // sitting readable on the disk, and a copy of some *other* failure from
+    // months ago would have answered for them. `quarantine` keeps one copy of
+    // the same bytes, so asking twice costs nothing.
+    await quarantineWhatever(STORE_KEY);
     await AsyncStorage.removeItem(STORE_KEY);
     await dropParts(STORE_KEY);
   } catch {
@@ -371,9 +377,15 @@ async function quarantineWhatever(key: string): Promise<void> {
     }
     const mine = (await AsyncStorage.getAllKeys()).filter((k) => k.startsWith(`${key}#`)).sort();
     if (!mine.length) return;
-    const rows = await AsyncStorage.multiGet(mine);
-    const joined = rows.map(([, v]) => v ?? '').join('');
-    if (joined) await quarantine(key, joined);
+    // One at a time, each in its own catch: the thing that threw is usually a
+    // single row, and `multiGet` gives up on all of them for the sake of one.
+    // Each part is kept under its own quarantine key rather than rejoined,
+    // because a rejoined copy is a row of the same size that could not be
+    // read back either.
+    for (const k of mine) {
+      const part = await AsyncStorage.getItem(k).catch(() => null);
+      if (part) await quarantine(k, part);
+    }
   } catch {
     // Nothing further to try; the latch above is what protects the original.
   }
