@@ -10,7 +10,7 @@
  * it just notices.
  */
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { DURATION_CHIPS, durationLabel, scheduleLabel, suggestSteps, totalSeconds, type Practice } from '@morrow/core';
@@ -58,6 +58,21 @@ export default function PracticeBuilder() {
   const [days, setDays] = useState<number[]>([1, 3, 5]);
   const [minVersion, setMinVersion] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  /**
+   * The form fills itself when the line it cuts from appears.
+   *
+   * The steps were cut once, at mount. The screen's own "no source" block
+   * says "Write it, and this form comes back already filled in", and the
+   * button next to it goes to the stone and back — to a form still empty,
+   * because this component never unmounted. It watches the line instead, and
+   * only ever fills a form nobody has typed in.
+   */
+  const sourceId = source?.id ?? null;
+  useEffect(() => {
+    if (source && steps.length === 0) setSteps(suggestSteps(source));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sourceId]);
 
   const schedule: Practice['schedule'] = { type: 'days', days };
   const kind: Practice['kind'] = steps.length > 1 ? 'routine' : 'habit';

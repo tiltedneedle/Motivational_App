@@ -67,6 +67,62 @@ describe('proposing a replan', () => {
 });
 
 describe('applying a replan', () => {
+  /**
+   * The sweep (2026-09-23). Two moves overdue, the person accepts one
+   * re-date and keeps the other where it is: the whole replan was thrown
+   * away, with the engine's own sentence on the screen, because the gate
+   * asked the date rule about every move in the plan rather than about the
+   * ones this replan was responsible for. Replan is the only way a plan can
+   * change after the Book is sealed, so the effect was that a replan could
+   * only ever be applied by accepting every row of it.
+   */
+  it('keeps a move the person left where it was, and applies the rest', () => {
+    const p = plan();
+    const LATER = '2026-09-23';
+    const stale = { ...p, moves: p.moves.map((m) => ({ ...m, scheduledFor: '2026-09-15' })) };
+    const changes = proposeReplan(stale, { done: 0, planned: 4, newId: sequentialIds(), today: LATER });
+    const moved = changes.filter((c) => c.op === 'move');
+    expect(moved.length, 'more than one date has passed').toBeGreaterThan(1);
+    const next = applyReplan(stale, [moved[0]!], sequentialIds(), analyses, LATER);
+    // The one they accepted moved; the ones they kept are untouched.
+    expect(next.moves.find((m) => m.id === moved[0]!.id)?.scheduledFor).not.toBe('2026-09-15');
+    expect(next.moves.filter((m) => m.scheduledFor === '2026-09-15').length).toBeGreaterThan(0);
+  });
+
+  /**
+   * The sweep (2026-09-23). A week with nothing dated ahead proposes one
+   * "the same move again, next week" row per move; accepting them all put
+   * every one of them on tomorrow, which is the shape of week the replan is
+   * there to undo.
+   */
+  it('spreads the moves it adds rather than stacking them on tomorrow', () => {
+    const p = plan();
+    const parked = { ...p, moves: p.moves.map((m) => ({ ...m, status: 'done' as const, scheduledFor: '2026-09-11' })) };
+    const changes = proposeReplan(parked, { done: 3, planned: 3, newId: sequentialIds(), today: TODAY });
+    const adds = changes.filter((c) => c.op === 'add');
+    expect(adds.length, 'more than one row to add').toBeGreaterThan(1);
+    const next = applyReplan(parked, adds, sequentialIds(), analyses, TODAY);
+    const added = next.moves.filter((m) => !p.moves.some((o) => o.id === m.id));
+    expect(added.length).toBe(adds.length);
+    expect(new Set(added.map((m) => m.scheduledFor)).size, 'each on its own day').toBe(added.length);
+  });
+
+  it('still refuses a date this replan itself put in the past', () => {
+    const p = plan();
+    const LATER = '2026-09-23';
+    const stale = { ...p, moves: p.moves.map((m) => ({ ...m, scheduledFor: '2026-09-15' })) };
+    const first = stale.moves[0]!;
+    expect(() =>
+      applyReplan(
+        stale,
+        [{ op: 'move', target: 'move', id: first.id, before: first.scheduledFor, after: '2026-09-01', reason: 'test', sourceLineId: first.sourceLineId } as never],
+        sequentialIds(),
+        analyses,
+        LATER,
+      ),
+    ).toThrow(BlueprintInvalid);
+  });
+
   it('puts the result through the gate', () => {
     // The whole reason the gate was added: an accepted change that claims a
     // line the person never wrote must not be stored.

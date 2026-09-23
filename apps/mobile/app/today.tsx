@@ -549,9 +549,22 @@ export default function Today() {
           {keepNotice ? (
             <View testID="today-keep-notice" style={{ marginTop: 16, backgroundColor: day.surface2, borderRadius: radius.card, padding: 18, gap: 10 }}>
               <Label style={{ color: accent.coralText }}>Where this lives</Label>
+              {/*
+                The advice used to offer the Home Screen and the account as
+                two ways to do the same thing. They are not. An iPhone gives a
+                Home Screen web app its own storage, so the icon opens an
+                empty Morrow — and the writing stays in Safari, which is the
+                copy the seven-day rule then clears. Following the app's own
+                instruction was the way to lose the Book; doing nothing was
+                safer. It says which is which now.
+              */}
               <Body style={{ fontSize: 14 }}>
-                Your writing is kept in this browser. Safari clears a site’s storage after a week without a visit, so either add
-                Morrow to your Home Screen (Share → Add to Home Screen), or sign in and a copy lives on your account.
+                Your writing is kept in this browser, and Safari clears a site’s storage after a week without a visit.
+                {hasSupabase ? ' Sign in and a copy lives on your account.' : ' Under You, “Copy it out” saves a copy you keep.'}
+              </Body>
+              <Body style={{ fontSize: 14, color: day.ink2 }}>
+                Adding Morrow to your Home Screen (Share → Add to Home Screen) keeps what you write there from being cleared, but
+                an iPhone gives it a copy of its own: this writing stays in Safari.
               </Body>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                 {hasSupabase && !state.account ? <Chip testID="today-keep-signin" label="Sign in" onPress={() => router.push('/signin')} /> : null}
@@ -725,7 +738,7 @@ export default function Today() {
                 status={now.status}
                 label={now.title}
                 reducedMotion={reduced}
-                onSeat={() => setStatus(now.id, now.status === 'done' ? 'todo' : 'done')}
+                onSeat={() => setStatus(now.id, now.status === 'todo' ? 'done' : 'todo')}
                 onPark={() => {
                   setStatus(now.id, 'skip');
                   setToast({ text: `${now.title} · not today`, kind: 'park', undoId: now.id });
@@ -815,7 +828,13 @@ export default function Today() {
                       status={m.status}
                       label={m.title}
                       reducedMotion={reduced}
-                      onSeat={() => setStatus(m.id, m.status === 'done' ? 'todo' : 'done')}
+                      // Three states, not two: a tap on a stone that has been
+                      // set aside puts it back in the day (PRD 7.6), and used
+                      // to mark it done — striking the move through, writing a
+                      // row into the Evidence Ledger in the person's own words
+                      // for work they had explicitly set aside, and raising the
+                      // Consistency Score on it.
+                      onSeat={() => setStatus(m.id, m.status === 'todo' ? 'done' : 'todo')}
                       onPark={() => {
                         setStatus(m.id, 'skip');
                         setToast({ text: `${m.title} · not today`, kind: 'park', undoId: m.id });

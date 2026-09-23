@@ -3407,10 +3407,19 @@ async function main() {
         await page.clock.runFor(1500);
         await page.waitForTimeout(800);
         check('a phone browser is told where its writing lives', await seen('today-keep-notice'));
+        // The notice must say which of the two actually moves the writing:
+        // adding to the Home Screen opens a copy of its own on an iPhone, and
+        // the notice used to offer it as an equal way to keep this one.
+        const keepSays = await text('today-keep-notice');
         check(
-          'and given the two ways to keep it',
-          /Home Screen/i.test(await text('today-keep-notice')) && /account/i.test(await text('today-keep-notice')),
-          (await text('today-keep-notice')).slice(0, 120),
+          'and told plainly that the Home Screen starts its own copy',
+          /Home Screen/i.test(keepSays) && /copy of its own/i.test(keepSays) && /stays in Safari/i.test(keepSays),
+          keepSays.replace(/\s+/g, ' ').slice(0, 160),
+        );
+        check(
+          'and given the way that does keep this one',
+          /account/i.test(keepSays) || /Copy it out/i.test(keepSays),
+          keepSays.replace(/\s+/g, ' ').slice(0, 160),
         );
         await tap('today-keep-done');
         await page.waitForTimeout(500);

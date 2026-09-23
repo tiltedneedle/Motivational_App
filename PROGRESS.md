@@ -3086,6 +3086,113 @@ first run, the home with its loop, the sign-in with Google, the five-lens review
 folded in, 558 end-to-end checks, `pnpm verify` green. What remains needs either
 hardware, a credential, or a product call — plus the items the rebuild opened:
 
+0j. **The sweep (2026-09-23)** — one read-only pass over the whole app in six
+   lenses (the engines, the store, the screens, safety, the web build, the PRD),
+   then three adversaries told to refute what it found. 34 findings, 32 survived
+   refutation, and then every one of them was read by hand before anything was
+   changed — one turned out to be a decision the code already documents, and is
+   left as it is. What the suite could not see, because the suite tests what the
+   app does and this was a pass over what it *should* do.
+   - **The screener, five times.** Run against the engine rather than argued,
+     before and after. It returned *nothing at all* for "I am going to step in
+     front of a train", "I am going to jump off the bridge", "I am going to walk
+     into the sea" (only the thinking-about form had ever been written down),
+     for "I want to go to sleep and not wake up" (the commonest phrasing there
+     is: "not wake up" was on the list only directly after "want to"), and for
+     "I do not want to be here and I do not know what to do" (the clause-end
+     list had no way to say "the sentence ended and another began"). And it
+     raised the suicide card on "I want to run 10 kms this month" and "kms twice
+     a week" — in an app whose own example goal is a five kilometre race — and on
+     "We ended it because I could not carry it any more", which is a breakup.
+     Seventeen sentences are pinned now, including the ones the widened patterns
+     must still leave alone ("I did not wake up until noon", "I do not want to
+     wake up and go to work", "I am going to walk into the sea at dawn every
+     morning this year"). **Left alone on purpose:** "I hurt myself last night"
+     still returns nothing. The exclusion list names "last night", "yesterday"
+     and "last week" deliberately — "I hurt myself pretty badly at the gym last
+     week" is the sentence it is protecting — and the file's own reasoning is
+     that a card which fires on ordinary writing teaches people to dismiss the
+     one that matters.
+   - **A replan could only be applied whole.** Two moves overdue, accept one
+     re-date and keep the other where it is, tap Apply: the whole replan was
+     thrown away and the engine's own sentence printed on the screen
+     ("Blueprint rejected: move … is scheduled in the past"). The gate asked the
+     date rule about every move in the plan rather than about the ones the
+     replan was responsible for. Replan is the only way a plan changes after the
+     Book is sealed.
+   - **Two ways to lose a year of writing.** A sharded write put the new
+     generation's parts over the old ones under the same keys, and `multiSet` is
+     not atomic anywhere: reaped on the background flush, or one row refused for
+     space, and the manifest named a set that was half new and half old. That
+     splice parses as nothing, so the next launch quarantined it and opened
+     empty and latched — on exactly the store the module exists to protect. Two
+     generations now, swapped by the manifest, which is one row and therefore
+     one atomic write. And a read that *threw* latched without keeping a copy,
+     while the banner's own button promised "the earlier copy stays on it under
+     another name": two taps and writing that was still whole on the disk was
+     gone. It keeps what it can read first, and "Start again" will not delete
+     the last copy.
+   - **Following the app's advice was how you lost the Book.** Today told a
+     person on an iPhone to add Morrow to the Home Screen *or* sign in, as two
+     ways to do one thing. An iPhone gives a Home Screen web app its own
+     storage: the icon opens an empty Morrow and the writing stays in Safari,
+     which is the copy the seven-day rule then clears. It says which is which.
+   - **A parked stone, tapped, marked the move done** — striking it through,
+     writing a row into the Evidence Ledger in the person's own words for work
+     they had set aside, and raising the Consistency Score on it. Three states,
+     not two; and the parked stone's own hint says "put it back in the day".
+   - **The follow-up did not survive Back.** "Tuesdays at 7, in the kitchen",
+     typed into the follow-up the vague line opened, lived only in the draft —
+     one slot, which the stone that Back opens overwrote on mount from a line it
+     had not changed. Back joins it to the line as the button does, and a stone
+     with nothing new no longer takes the slot.
+   - **The first open after a deploy waited for the whole bundle.** The worker
+     had the new index.html in a second and then held it while it fetched 1.8 MB
+     of entry and common chunk and four rounds of everything they name. And the
+     new build deleted the statics cache the page that was running still needed.
+     Behind the page now, and the build before this one is kept.
+   - **And the rest, each with its own sequence:** four settings reset by every
+     "Bring my Book back" (the area, the notifications primer, Today's intro
+     card, the hidden clock); a crisis sitting counted as the device's writing at
+     sign-in though it never travels, so a person on a new phone was asked to
+     choose between their Book and nothing; closing a day nothing was asked of
+     lowered the Consistency Score; "Build the plan" on the new-move sheet
+     reported its refusal through a Toast that sheet does not render, so the
+     button did nothing at all; the writing room had no keyboard avoidance, so on
+     iOS the keyboard covered the only way out of it; the room went on saying the
+     sitting was out of the Book after the person said it was not about them; the
+     two root banners painted under the notch, including "Nothing is being saved
+     on this device right now."; the analytics id survived "Delete everything" in
+     memory, so the next person was the same person; accepted "the same move
+     again" rows all landed on tomorrow; the fortnight's twin of "On the 28th of
+     every month" landed on the 5th, carrying a sentence it contradicted; the
+     framing chosen on a Past event was thrown away on Keep (migration 0016,
+     applied live); the text export printed the column names ("motives",
+     "obstacles") where the PDF prints "Why" and "What gets in the way"; "Export
+     everything" left out the letter being written and used somebody else's day
+     boundary; and Progress and Today disagreed about which return this was.
+   - **The first thing the app says back was wrong.** Set-up: Health. First
+     line: "I want to be out the back door before the kettle boils, three
+     mornings a week." The read-back: "This sounds like it is about home", and
+     the question it kept for the fifteen minutes: "What is the one corner you
+     would fix first?" — on the strength of the word "door". "Door", "table" and
+     "move" say nothing about a home on their own and are off that list; the
+     question may still lean on the area they came for, because a question is
+     only a question, while the note is a claim about what they wrote.
+   - **A scroll that ends in a fade rather than a cut.** Content clipped
+     mid-element at a scroll's edge, an inch above a pinned button, reads as a
+     rendering fault — the paywall showed half a "Manage subscription" pill
+     behind Continue. One component at both edges of the shell's scroll and of
+     the three screens that keep their own. It fades to the ground's *own* edge
+     colour: the ground is a radial from above the screen, and faded to the
+     middle token the night studio grew a lighter band above the hold bar.
+   - **Two findings were refuted** by the adversaries and are not defects: the
+     Interview's question count, and a streak the home screen is supposed not to
+     have. **One more is left as a product decision:** a coach thread is thrown
+     away on navigation while the turns it cost are kept against the daily cap.
+     Either the thread should persist or the turn should not — and which of
+     those is right is a decision about what the coach is, not a bug.
+
 0i. **The back, actually fixed (2026-09-22, night)** — the eighth and last
    turn on this. The rule was right and the arming was right; the *order* was
    a coin toss. This module answers the browser's Back by taking the popstate

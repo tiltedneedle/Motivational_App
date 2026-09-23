@@ -10,11 +10,15 @@ export const WINDOW_DAYS = 28;
 export const DECAY = 0.93;
 
 /** A day's value: two-minute versions count fully, "not today" counts half. */
-export function dayValue(d: Pick<DaySummary, 'planned' | 'done' | 'partial' | 'skipped' | 'evidenceCount'>): number {
+export function dayValue(d: Pick<DaySummary, 'planned' | 'done' | 'partial' | 'skipped' | 'evidenceCount'> & { sealedAt?: string | null }): number {
   const planned = Math.max(0, d.planned);
   if (planned === 0) {
-    // No plan is not a failure. Evidence alone keeps the day alive.
-    return d.evidenceCount > 0 ? 1 : 0;
+    // No plan is not a failure. Evidence keeps the day alive — and so does
+    // closing it: the plan dates about three moves a week, so most days ask
+    // for nothing, and a person who came in on one of those and held the bar
+    // to close it was scoring a nought for the trouble. Showing up is the
+    // thing the score is supposed to be about.
+    return d.evidenceCount > 0 || d.sealedAt ? 1 : 0;
   }
   const credited = d.done + d.partial + d.skipped * 0.5;
   return Math.max(0, Math.min(1, credited / planned));

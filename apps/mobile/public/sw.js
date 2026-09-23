@@ -47,16 +47,38 @@ async function statics() {
  * navigation that lands on the worker file or the manifest is not kept.
  */
 async function keepShell(res) {
-  if (!/text\/html/i.test(res.headers.get('content-type') || '')) return;
+  if (!/text\/html/i.test(res.headers.get('content-type') || '')) return null;
   const html = await res.text();
   const next = hash(html);
   const shell = await caches.open(SHELL);
   const prev = await version();
   await shell.put('/index.html', new Response(html, { headers: res.headers }));
-  if (prev === next) return;
+  if (prev === next) return null;
   await shell.put(MARKER, new Response(next));
-  const keys = await caches.keys();
-  await Promise.all(keys.filter((k) => k.startsWith('morrow-static-') && k !== `morrow-static-${next}`).map((k) => caches.delete(k)));
+  // A new deploy, and this was not the first: tell every open page, now
+  // rather than after the bundle has been fetched — the banner is the point.
+  if (prev !== 'boot') {
+    const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const c of clients) c.postMessage({ type: 'morrow:new-version' });
+  }
+  return { html, next };
+}
+
+/**
+ * The bundle this shell names, fetched — behind the page, never in front of
+ * it.
+ *
+ * This used to run on the response path: the old worker took the navigation,
+ * had the new index.html in a second or two, and then held it while it pulled
+ * 1.8 MB of entry and common chunk and four rounds of everything they name.
+ * On mobile data the first open after a deploy was a blank ground for as long
+ * as that took.
+ *
+ * And the new cache is filled before any old one is dropped, because the page
+ * that is running right now is still on the build before this one and may yet
+ * ask for one of its chunks. The build before that can go.
+ */
+async function stock(html, next) {
   const scripts = [...html.matchAll(/(?:src|href)="(\/_expo\/static\/[^"]+)"/g)].map((m) => m[1]);
   if (scripts.length) {
     const cache = await caches.open(`morrow-static-${next}`);
@@ -86,11 +108,12 @@ async function keepShell(res) {
       frontier = next;
     }
   }
-  // A new deploy, and this was not the first: tell every open page.
-  if (prev !== 'boot') {
-    const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    for (const c of clients) c.postMessage({ type: 'morrow:new-version' });
-  }
+  // Now, and not before: this build's chunks are on the device, and the one
+  // before it is kept for the pages still running on it.
+  const keys = await caches.keys();
+  const statics = keys.filter((k) => k.startsWith('morrow-static-') && k !== `morrow-static-${next}`);
+  const stale = statics.slice(0, Math.max(0, statics.length - 1));
+  await Promise.all(stale.map((k) => caches.delete(k)));
 }
 
 /** A fresh shell seen too late to keep: say so to the open pages, and change nothing. */
@@ -105,7 +128,8 @@ async function noteShell(res) {
 self.addEventListener('install', (event) => {
   event.waitUntil(
     fetch('/index.html')
-      .then((res) => (res.ok ? keepShell(res) : undefined))
+      .then((res) => (res.ok ? keepShell(res) : null))
+      .then((kept) => (kept ? stock(kept.html, kept.next) : undefined))
       .catch(() => undefined),
   );
   self.skipWaiting();
@@ -135,7 +159,11 @@ self.addEventListener('fetch', (event) => {
         // Kept before the page is handed over, so the statics it asks for
         // next land in the cache named for this shell, not the last one.
         const keep = async (res) => {
-          if (res.ok) await keepShell(res.clone()).catch(() => undefined);
+          if (res.ok) {
+            const kept = await keepShell(res.clone()).catch(() => null);
+            // The page goes to the browser now; the bundle lands behind it.
+            if (kept) event.waitUntil(stock(kept.html, kept.next).catch(() => undefined));
+          }
           return res;
         };
         if (!cached) return raw.then(keep).catch(() => Response.error());

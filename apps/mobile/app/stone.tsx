@@ -169,11 +169,16 @@ function StoneScreen() {
    */
   const goBack = () => {
     // What is on the stone stays on the stone. Back used to turn the page
-    // and drop the line being typed (WCAG 3.3.7; NN/g: never lose input).
-    if (line.trim()) {
+    // and drop the line being typed (WCAG 3.3.7; NN/g: never lose input) —
+    // and then it went on dropping the follow-up, which is the sharper half
+    // of the answer: "Tuesdays at 7, in the kitchen" was held in the draft
+    // alone, and the draft is one slot. So the follow-up's words join the
+    // line here exactly as "Keep this line" joins them.
+    const kept = line.trim() && whenWhere.trim() ? `${line.trim()} — ${whenWhere.trim()}` : line;
+    if (kept.trim()) {
       write(goalId, kind, {
         framingId,
-        line,
+        line: kept,
         ...(kind === 'obstacles' ? { line2 } : {}),
         ...(track === 'full' && paragraph.trim() ? { paragraph } : {}),
       });
@@ -204,7 +209,17 @@ function StoneScreen() {
   // is drafted for a stone that is still blank, so opening one and leaving
   // leaves nothing behind.
   useEffect(() => {
-    if (!line.trim() && !line2.trim() && !paragraph.trim() && !whenWhere.trim() && framingId === null) {
+    const blank = !line.trim() && !line2.trim() && !paragraph.trim() && !whenWhere.trim() && framingId === null;
+    // Nothing new to keep: a stone that was written before opens with its own
+    // words already in the fields, and saving those as a sitting took the one
+    // draft slot away from the stone the person was actually in the middle of.
+    const unchanged =
+      !whenWhere.trim() &&
+      line.trim() === (existing?.line ?? '').trim() &&
+      line2.trim() === (existing?.line2 ?? '').trim() &&
+      paragraph.trim() === (existing?.paragraph ?? '').trim() &&
+      framingId === (existing?.framingId ?? null);
+    if (blank || unchanged) {
       if (draft && draft.goalId === goalId && draft.kind === kind) clearDraft();
       return;
     }

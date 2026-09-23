@@ -43,7 +43,14 @@ const DOMAIN_HINTS: Record<Exclude<DomainId, 'custom'>, RegExp> = {
   craft: /\b(write|writes|writing|wrote|pitch|pitches|books?|essays?|draft|drafts|portfolio|guitar|paint|paints|painting|code|coding|build|builds|building|ship|ships|shipping|launch|launches|study|studies|studying|learn|learns|learning|practice|practise|practising|practicing|play|plays|playing)\b/i,
   mind: /\b(calm|calmer|quiet|quieter|anxious|anxiety|spiral|spiralling|spiraling|meditate|meditation|meditating|pray|prayer|phones?|screens?|sleep|sleeps|sleeping|slept|bed|bedtime|rest|resting|restless|breathe|peace|peaceful|tired)\b/i,
   people: /\b(sam|mum|mom|dad|family|friend|friends|partner|wife|husband|kids|child|children|call|calls|calling|called|visit|visits|visiting|dinner|together|upstairs|love)\b/i,
-  home: /\b(kitchen|home|house|flat|rooms?|garden|move|moves|moving|moved|cook|cooks|cooking|clean|cleans|cleaning|table|doors?|shelf|shelves|walls?|windows?)\b/i,
+  // Without "door", "table" and "move", which say nothing about a home on
+  // their own and were deciding whole sentences by themselves: "I want to be
+  // out the back door before the kettle boils, three mornings a week" came
+  // back as "This sounds like it is about home", with "What is the one corner
+  // you would fix first?" kept for the fifteen minutes, from somebody who had
+  // just chosen Health. "Moving house" still matches on "house"; a kitchen
+  // table still matches on "kitchen".
+  home: /\b(kitchen|home|house|flat|rooms?|garden|cook|cooks|cooking|clean|cleans|cleaning|shelf|shelves|walls?|windows?)\b/i,
 };
 
 /**
@@ -78,6 +85,7 @@ export function domainMatches(text: string, domain: DomainId): boolean {
   if (domain === 'custom') return false;
   return DOMAIN_HINTS[domain].test(text);
 }
+
 
 export function domainOf(text: string): DomainId {
   let best: DomainId = 'custom';
@@ -312,7 +320,7 @@ function wantsFirst(a: { text: string; start: number }, b: { text: string; start
  * scores "I can see it from the table" for its "I … can" and is right to as
  * a hint; for the order of the list only the plain forms count.
  */
-const SAID_WANT = /\b(?:i|we)\s*(?:'d|'ll|'m|would|will|am|are|really|just|also|still)?\s*(?:want|wants|wanted|need|needs|like to|going to|gonna|intend|hope|plan|wish|aim|mean to|will be|'ll be|would be|am going|'m going|would like|'d like|would love|'d love)\b/i;
+const SAID_WANT = /\b(?:i|we)\s*(?:['’]d|['’]ll|['’]m|would|will|am|are|really|just|also|still)?\s*(?:want|wants|wanted|need|needs|like to|going to|gonna|intend|hope|plan|wish|aim|mean to|will be|['’]ll be|would be|am going|['’]m going|would like|['’]d like|would love|['’]d love)\b/i;
 
 /** How much of the read-back survived verification. Logged; a low ratio is a prompt bug. */
 export function verificationRate(proposed: number, verified: number): number {

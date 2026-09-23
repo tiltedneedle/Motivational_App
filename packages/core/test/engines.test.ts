@@ -743,6 +743,13 @@ describe('safety', () => {
       'kms',
       'I hurt myself when it gets bad.',
       'I am planning to end it all this weekend.',
+      // The sweep (2026-09-23): each of these returned nothing at all.
+      'I am going to step in front of a train',
+      'I am going to jump off the bridge',
+      'I am going to walk into the sea',
+      'I want to go to sleep and not wake up',
+      'I do not want to be here and I do not know what to do',
+      'I want to end it because I cannot do this any more',
     ]) {
       expect(screen(t).risk, t).toBe('crisis');
     }
@@ -754,6 +761,18 @@ describe('safety', () => {
       'I killed the project before it killed me',
       'my grandmother died in the spring and I still miss her',
       'the deadline is killing me',
+      // The sweep (2026-09-23): each of these raised the suicide card. The
+      // first two are the end of a relationship; the rest are kilometres, in
+      // an app whose own example goal is a five kilometre race.
+      'We ended it because I could not carry it any more',
+      'I ended it so I could breathe',
+      'I want to run 10 kms this month',
+      'kms twice a week',
+      'I want to run 5 kms before work and not think about it',
+      // And the ones the widened patterns must still leave alone.
+      'I did not wake up until noon',
+      'I am going to walk into the sea at dawn every morning this year',
+      'I do not want to wake up and go to work',
     ]) {
       expect(screen(t).risk, t).not.toBe('crisis');
     }

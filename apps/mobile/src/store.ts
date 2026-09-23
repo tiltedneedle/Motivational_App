@@ -644,7 +644,7 @@ export interface MorrowState {
   choosePastEvent: (id: string, analysed: boolean) => void;
   savePastAnalysis: (
     id: string,
-    fields: { whatHappened: string; shapedMe: string; stillBelieve: string },
+    fields: { whatHappened: string; shapedMe: string; stillBelieve: string; framingId?: string | null },
   ) => void;
   setPastJoinsBook: (id: string, joins: boolean) => void;
 
@@ -2177,7 +2177,14 @@ const store = create<MorrowState>()(
         set((st) => (st.account?.closedAt ? { account: { ...st.account, closedAt: null } } : {}));
         const b = pulled.bundle;
         const accountHas = hasWriting(b);
-        const deviceHas = hasSubstance(s);
+        // What this device would actually send, not what it holds. A sitting
+        // the safety screen flagged stays on the phone and is stripped from
+        // every bundle — the room says so in as many words — and it was still
+        // counted as this device's writing here. A person on a new phone who
+        // wrote one hard Fifteen and then signed in to bring their Book back
+        // was asked to choose between two copies, one of which was nothing,
+        // and told their phone's writing would be replaced.
+        const deviceHas = hasSubstance(bundleOf(s));
         const userId = get().account?.userId ?? null;
         if (!accountHas) {
           if (!hasWriting(s)) return { ok: true, pulled: false, moved: 'nothing' as const };
@@ -2397,6 +2404,7 @@ const store = create<MorrowState>()(
               whatHappened: '',
               shapedMe: '',
               stillBelieve: '',
+              framingId: null,
               joinsBook: false,
               safetyRisk: 'none',
               position: s.pastEvents.filter((v) => v.epochId === epochId).length,
@@ -2438,6 +2446,7 @@ const store = create<MorrowState>()(
                     whatHappened: fields.whatHappened.trim(),
                     shapedMe: fields.shapedMe.trim(),
                     stillBelieve: fields.stillBelieve.trim(),
+                    framingId: fields.framingId ?? v.framingId ?? null,
                     safetyRisk: risk,
                     // The choice stays theirs. A line written in crisis never
                     // reaches the Book whatever was chosen — the seal and the
@@ -2750,7 +2759,20 @@ function takeBundle(set: (partial: Partial<MorrowState>) => void, s: MorrowState
   const latest = b.books[b.books.length - 1];
   const mine = s.texts.filter((t) => t.kind === 'warmup' && !b.texts.some((x) => x.id === t.id));
   set({
-    profile: { ...DEFAULT_PROFILE, ...b.profile },
+    profile: {
+      ...DEFAULT_PROFILE,
+      ...b.profile,
+      // Four settings the account has no column for. `fromRows` fills them
+      // from its own defaults, so every "Bring my Book back" used to put
+      // Today's intro card and the notifications primer in front of somebody
+      // who had answered both, turn the clock back on in the middle of their
+      // fifteen minutes, and forget the area they set up with. They belong to
+      // the device either way — they are about this phone, not about them.
+      firstArea: s.profile.firstArea,
+      notificationsAsked: s.profile.notificationsAsked,
+      todayIntroSeen: s.profile.todayIntroSeen,
+      hideClock: s.profile.hideClock,
+    },
     goals: denseRanks(b.goals),
     texts: [...b.texts, ...mine],
     analyses: b.analyses,

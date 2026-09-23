@@ -298,6 +298,7 @@ const bundle: SyncBundle = {
       whatHappened: 'we moved in the middle of a term',
       shapedMe: 'I make friends slowly and keep them',
       stillBelieve: 'starting again is survivable',
+      framingId: 'p-tell',
       joinsBook: true,
       safetyRisk: 'none',
       position: 0,

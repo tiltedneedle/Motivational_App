@@ -89,6 +89,8 @@ export const PastEventRow = z.object({
   whatHappened: z.string().default(''),
   shapedMe: z.string().default(''),
   stillBelieve: z.string().default(''),
+  /** The framing they chose for it, when they chose one. Theirs, like every other framing. */
+  framingId: z.string().nullable().default(null),
   joinsBook: z.boolean().default(false),
   safetyRisk: SafetyRisk.default('none'),
   position: z.number().int().default(0),

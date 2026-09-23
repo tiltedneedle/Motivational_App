@@ -127,6 +127,13 @@ export function analyticsConsent(check: () => boolean): void {
 
 /** The device's analytics id, gone — with "Delete everything", so the person before and after are not one line. */
 export async function clearAnalyticsId(): Promise<void> {
+  // The one in memory as well as the one on the disk. Only the stored copy
+  // was removed, and `distinctId` returns the module's own `id` before it
+  // ever looks at storage — so everything the next person did was sent under
+  // the name of the person who had just asked to be forgotten, for as long
+  // as the app stayed open.
+  id = null;
+  queue = [];
   try {
     await AsyncStorage.removeItem(ID_KEY);
   } catch {

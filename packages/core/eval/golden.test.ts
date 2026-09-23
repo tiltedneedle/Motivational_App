@@ -407,7 +407,13 @@ describe.each(built)('$profile.id', (b) => {
       } else {
         const twin = plan.moves.find((m) => m.title === move.title && m.week === 1);
         expect(twin, `a week-two move has its week-one twin: "${move.title.slice(0, 40)}"`).toBeTruthy();
-        expect(daysBetween(twin!.scheduledFor!, move.scheduledFor!)).toBe(7);
+        // A week on — unless the sentence names its own day, in which case
+        // its own day is asked again from where week one landed. This used
+        // to assert seven days for everything, which put "On the 28th of
+        // every month" on the 5th, and the card carried the person's own
+        // sentence on a day it contradicted.
+        if (own) expect(move.scheduledFor, `week two keeps its own date: "${move.title.slice(0, 40)}"`).toBe(ownDate(move.title, twin!.scheduledFor!));
+        else expect(daysBetween(twin!.scheduledFor!, move.scheduledFor!)).toBe(7);
       }
     }
 

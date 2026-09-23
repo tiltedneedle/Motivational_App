@@ -23,7 +23,7 @@ import {
   type PaywallMoment,
   type PricePlan,
 } from '@morrow/core';
-import { Body, Card, Chip, InkButton, Label, Rule, Statement, Studio, TextButton, TopBar, UserText, accent, day } from '@morrow/ui';
+import { Body, Card, Chip, InkButton, Label, Rule, ScrollFade, Statement, Studio, TextButton, TopBar, UserText, accent, day } from '@morrow/ui';
 import { billing, manageSubscriptionUrl, type Offerings } from '../src/billing';
 import { useLatestBook, useMorrow } from '../src/store';
 
@@ -157,6 +157,7 @@ export default function Paywall() {
           }
         />
 
+        <View style={{ flex: 1 }}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 18, gap: 18 }}>
           {/*
             Their sentence, at the top, in the serif. It is the one thing on
@@ -228,6 +229,9 @@ export default function Paywall() {
             here.
           </Body>
         </ScrollView>
+        {/* The cut at the fold, softened: half a pill behind Continue read as a fault. */}
+        <ScrollFade />
+        </View>
 
         {/*
           Both answers, always on the glass. The offer is longer than a phone

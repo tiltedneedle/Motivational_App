@@ -39,7 +39,8 @@ await context.addInitScript((s) => {
 }, seed);
 const page = await context.newPage();
 let fails = 0;
-const check = (name, ok, detail = '') => { console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${ok ? '' : ' — ' + detail}`); if (!ok) fails++; };
+let ran = 0;
+const check = (name, ok, detail = '') => { ran++; console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${ok ? '' : ' — ' + detail}`); if (!ok) fails++; };
 const styleOf = (sel) => page.evaluate((s) => { const el = document.querySelector(s); if (!el) return null; const c = getComputedStyle(el); return { opacity: parseFloat(c.opacity), transform: c.transform }; }, sel);
 const scaleOf = (t) => { const m = /matrix\(([^,]+),/.exec(t ?? ''); return m ? parseFloat(m[1]) : 1; };
 
@@ -177,5 +178,6 @@ await still.close();
 
 await browser.close();
 server.close();
-console.log(fails ? `${fails} failed` : '12/12 motion checks passed');
+// Counted rather than claimed, as the worker's tally now is.
+console.log(fails ? `${fails} of ${ran} failed` : `${ran}/${ran} motion checks passed`);
 process.exit(fails ? 1 : 0);

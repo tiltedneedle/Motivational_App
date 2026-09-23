@@ -222,7 +222,13 @@ export function buildPlan(input: BuildInput, opts: BlueprintOptions): Plan {
     effort,
     energy: energyFor(text),
     ifThen: obstacles?.line2?.trim() ? ifThenOf(obstacles.line, obstacles.line2).sentence.replace(/^if/, 'If') : null,
-    scheduledFor: addDays(scheduled, (week - 1) * 7),
+    // A week on — unless the sentence names its own day, in which case its
+    // own day is asked again from where week one landed. "Tuesday" a week on
+    // is still a Tuesday, but "On the 28th of every month" a week on is the
+    // 5th, and the card then carried the person's own sentence on a day it
+    // contradicted. The rule this file states in as many words: the app never
+    // puts their sentence on a day it disagrees with.
+    scheduledFor: week === 1 ? scheduled : (ownDate(text, scheduled) ?? addDays(scheduled, (week - 1) * 7)),
     week,
     status: 'todo',
     completedAt: null,
@@ -347,6 +353,19 @@ export interface ValidateOptions {
    * replan checks authorship and dates but not these.
    */
   asNewPlan?: boolean;
+  /**
+   * Which moves the date rule applies to, when only some of them are this
+   * caller's doing.
+   *
+   * A plan in use is full of moves dated in the past — that is what a replan
+   * is for — and the person may keep any row of a replan where it is. Asked
+   * about the whole plan, the rule then refused the changes they had
+   * accepted, because of the ones they had not: the screen printed the
+   * engine's own sentence and nothing was applied. Applying a replan passes
+   * the moves it added or re-dated, so the rule still holds over everything
+   * that replan is responsible for.
+   */
+  datesFor?: ReadonlySet<string>;
 }
 
 /**
@@ -362,7 +381,7 @@ export function validatePlan(
   today: string,
   options: ValidateOptions = {},
 ): string[] {
-  const { asNewPlan = true } = options;
+  const { asNewPlan = true, datesFor } = options;
   const problems: string[] = [];
   const ids = new Set(analyses.map((a) => a.id));
 
@@ -373,7 +392,7 @@ export function validatePlan(
     // Only moves still to do. A move kept last Tuesday is supposed to be dated
     // last Tuesday, and calling that a broken plan would reject every plan that
     // has ever been used.
-    if (m.status === 'todo' && m.scheduledFor && daysBetween(today, m.scheduledFor) < 0) {
+    if (m.status === 'todo' && m.scheduledFor && daysBetween(today, m.scheduledFor) < 0 && (!datesFor || datesFor.has(m.id))) {
       problems.push(`move "${m.title.slice(0, 40)}" is scheduled in the past`);
     }
   }
@@ -570,6 +589,14 @@ export function applyReplan(
         throw new BlueprintInvalid([`added move is not in its source line: "${c.after.slice(0, 40)}"`]);
       }
       const base = plan.moves[0];
+      // Tomorrow, or the first day after it that this goal does not already
+      // have a move on. Every accepted row used to take tomorrow: a week
+      // where nothing was dated ahead proposes one row per move, and
+      // accepting all three put all three on one day — which is the shape of
+      // week the replan exists to undo.
+      const taken = new Set(moves.filter((m) => m.status === 'todo' && m.scheduledFor).map((m) => m.scheduledFor));
+      let when = addDays(today, 1);
+      for (let i = 0; i < 14 && taken.has(when); i++) when = addDays(when, 1);
       moves.push({
         id: newId('mv'),
         goalId: plan.goalId,
@@ -580,7 +607,7 @@ export function applyReplan(
         ifThen: base?.ifThen ?? null,
         // Dated, not null: an undated move never surfaces on Today, so an
         // accepted "room for one more" would quietly go nowhere.
-        scheduledFor: addDays(today, 1),
+        scheduledFor: when,
         // The week-one cap counts moves in week one. A move added during a
         // replan belongs to the week it was added to, not to the first.
         week: highestWeek(moves) + (weekIsFull(moves, highestWeek(moves)) ? 1 : 0),
@@ -594,7 +621,11 @@ export function applyReplan(
   }
 
   const next: Plan = { ...plan, version: plan.version + 1, moves };
-  const problems = validatePlan(next, analyses, today, { asNewPlan: false });
+  // The date rule over what this replan did, not over what it left alone: a
+  // move the person chose to keep where it was is not this replan's to refuse.
+  const before = new Map(plan.moves.map((m) => [m.id, m.scheduledFor]));
+  const datesFor = new Set(moves.filter((m) => !before.has(m.id) || before.get(m.id) !== m.scheduledFor).map((m) => m.id));
+  const problems = validatePlan(next, analyses, today, { asNewPlan: false, datesFor });
   if (problems.length) throw new BlueprintInvalid(problems);
   return next;
 }

@@ -37,43 +37,86 @@ import type { StateStorage } from 'zustand/middleware';
  * is written as parts (`<key>#0`, `<key>#1`, …) with a small manifest
  * under the key itself, and read back joined. Half a million UTF-16 units
  * is well under the window in UTF-8 for any text this app stores.
+ *
+ * Not on the web, which has no cursor window and no reason to split — and one
+ * reason not to: the inline script in `index.html` reads this key before the
+ * bundle runs, to set the night studio before the first paint, and a manifest
+ * is not a store. A person on dark who had written past half a megabyte got a
+ * cream flash on every open. Parts already written are still read back.
  */
-const PART = 500_000;
+const PART = Platform.OS === 'web' ? Number.POSITIVE_INFINITY : 500_000;
 const MANIFEST = '__morrow_parts';
+
+/** Where one generation of parts lives: `<key>#a#0`, `<key>#a#1`, … */
+const partKey = (name: string, gen: string, i: number): string => `${name}#${gen}#${i}`;
+
+interface Manifest {
+  [MANIFEST]: number;
+  /** 'a' or 'b'. Absent in a store written before generations. */
+  gen?: string;
+}
 
 /** The value under a key, joined if it was written as parts. */
 async function readWhole(name: string): Promise<string | null> {
   const raw = await AsyncStorage.getItem(name);
   if (raw === null) return null;
   if (!raw.startsWith(`{"${MANIFEST}"`)) return raw;
-  const parts = (JSON.parse(raw) as { [MANIFEST]: number })[MANIFEST];
-  const keys = Array.from({ length: parts }, (_, i) => `${name}#${i}`);
+  const manifest = JSON.parse(raw) as Manifest;
+  const parts = manifest[MANIFEST];
+  // A store written before generations keeps its flat `<key>#0` parts.
+  const keys = Array.from({ length: parts }, (_, i) => (manifest.gen ? partKey(name, manifest.gen, i) : `${name}#${i}`));
   const rows = await AsyncStorage.multiGet(keys);
   const pieces = rows.map(([, v]) => v);
   if (pieces.some((p) => p === null)) throw new Error('a part of the stored writing is missing');
   return pieces.join('');
 }
 
-/** The value written under a key: inline while it fits one row, as parts past that. */
+/**
+ * The value written under a key: inline while it fits one row, as parts past
+ * that — and the parts of a new generation never land on the old one's.
+ *
+ * `multiSet` is not atomic anywhere: the installed shim is
+ * `Promise.all(pairs.map(setItem))` and the iOS module loops and collects
+ * errors. Written over the same keys, a write cut short by the app being
+ * reaped on its background flush, or by one row refused for space, left the
+ * first part from the new generation and the rest from the old, with the
+ * manifest still saying how many there were. That splice parses as nothing,
+ * so the next launch quarantined it and opened the app empty and latched.
+ *
+ * Two generations, swapped by the manifest, which is one row and therefore
+ * one atomic write: until it lands, every part it names is still whole.
+ */
 async function writeWhole(name: string, value: string): Promise<void> {
+  const previous = await currentGen(name);
   if (value.length <= PART) {
     await AsyncStorage.setItem(name, value);
-    await dropParts(name, 0);
+    await dropParts(name);
     return;
   }
+  const gen = previous === 'a' ? 'b' : 'a';
   const count = Math.ceil(value.length / PART);
-  const rows: [string, string][] = Array.from({ length: count }, (_, i) => [`${name}#${i}`, value.slice(i * PART, (i + 1) * PART)]);
-  // The parts first, the manifest last: a write cut short leaves the old
-  // value readable under the key rather than a manifest with parts missing.
+  const rows: [string, string][] = Array.from({ length: count }, (_, i) => [partKey(name, gen, i), value.slice(i * PART, (i + 1) * PART)]);
   await AsyncStorage.multiSet(rows);
-  await AsyncStorage.setItem(name, JSON.stringify({ [MANIFEST]: count }));
-  await dropParts(name, count);
+  await AsyncStorage.setItem(name, JSON.stringify({ [MANIFEST]: count, gen } satisfies Manifest));
+  await dropParts(name, gen);
 }
 
-/** Parts beyond `from`, removed. */
-async function dropParts(name: string, from: number): Promise<void> {
+/** Which generation the stored manifest names, if any. */
+async function currentGen(name: string): Promise<string | null> {
   try {
-    const keys = (await AsyncStorage.getAllKeys()).filter((k) => k.startsWith(`${name}#`) && Number(k.slice(name.length + 1)) >= from);
+    const raw = await AsyncStorage.getItem(name);
+    if (!raw || !raw.startsWith(`{"${MANIFEST}"`)) return null;
+    return (JSON.parse(raw) as Manifest).gen ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Every part of this key except the generation named, removed. */
+async function dropParts(name: string, keep?: string): Promise<void> {
+  try {
+    const mine = `${name}#`;
+    const keys = (await AsyncStorage.getAllKeys()).filter((k) => k.startsWith(mine) && (!keep || !k.startsWith(`${mine}${keep}#`)));
     if (keys.length) await AsyncStorage.multiRemove(keys);
   } catch {
     // stale parts cost only space
@@ -208,8 +251,13 @@ export function openStorage(): void {
  */
 export async function clearLatchAndReplace(): Promise<void> {
   try {
+    // The button's own label says "the earlier copy stays on it under another
+    // name". Where the read failed in a way that left no copy, that was a
+    // promise the app could not keep, so one is made here before anything is
+    // removed — two taps used to be the end of a year of writing.
+    if (!(await quarantinedRaw())) await quarantineWhatever(STORE_KEY);
     await AsyncStorage.removeItem(STORE_KEY);
-    await dropParts(STORE_KEY, 0);
+    await dropParts(STORE_KEY);
   } catch {
     // Nothing further to try; the write that follows will say so if it fails.
   }
@@ -305,6 +353,33 @@ async function quarantine(key: string, raw: string | null): Promise<void> {
 }
 
 /**
+ * Whatever is still readable under a key, copied to the quarantine — for the
+ * failure where the key itself will not come back.
+ *
+ * The parts are copied individually and joined by hand, because the thing
+ * that threw is the join: one missing part must not stop the other three
+ * being kept. What lands under the quarantine key may be incomplete, and it
+ * is still a person's year of writing in their own words, which is the whole
+ * reason the copy exists.
+ */
+async function quarantineWhatever(key: string): Promise<void> {
+  try {
+    const head = await AsyncStorage.getItem(key).catch(() => null);
+    if (head && !head.startsWith(`{"${MANIFEST}"`)) {
+      await quarantine(key, head);
+      return;
+    }
+    const mine = (await AsyncStorage.getAllKeys()).filter((k) => k.startsWith(`${key}#`)).sort();
+    if (!mine.length) return;
+    const rows = await AsyncStorage.multiGet(mine);
+    const joined = rows.map(([, v]) => v ?? '').join('');
+    if (joined) await quarantine(key, joined);
+  } catch {
+    // Nothing further to try; the latch above is what protects the original.
+  }
+}
+
+/**
  * Every quarantined copy, gone. For "Delete everything": the confirmation
  * says nothing of the writing remains on the device, and a copy kept when
  * storage failed is still the writing.
@@ -353,6 +428,16 @@ export const guardedStorage: StateStorage = {
       }
       return raw;
     } catch (err) {
+      // Whatever can still be read, kept first.
+      //
+      // The bad-JSON branch above quarantines before it latches; this one did
+      // not, and it is reachable — an Android row too big for the cursor
+      // window, a part that did not survive a write. The banner then offered
+      // "Copy out the earlier copy" with nothing behind it, and "Start again
+      // on this device", whose own label promises "the earlier copy stays on
+      // it under another name". It did not. Two taps removed writing that was
+      // still whole on the disk.
+      await quarantineWhatever(name);
       latch('read', err instanceof Error ? err.message : 'the device would not open its own storage');
       return null;
     }
@@ -378,7 +463,7 @@ export const guardedStorage: StateStorage = {
     if (pending?.name === name) pending = null;
     try {
       await AsyncStorage.removeItem(name);
-      await dropParts(name, 0);
+      await dropParts(name);
     } catch {
       // Deleting is the one operation whose failure costs nothing.
     }

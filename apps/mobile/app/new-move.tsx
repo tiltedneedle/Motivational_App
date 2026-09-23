@@ -54,7 +54,6 @@ export default function NewMove() {
   const canBuild = canBuildBlueprint(entitlementOf(state, dayOf(new Date(), state.profile.dayBoundaryHour)));
   const entitled = canBuild.allowed;
   const makePortraitAndPlan = useMorrow((s) => s.makePortraitAndPlan);
-  const setToast = useMorrow((s) => s.setToast);
 
   const back = () => (router.canGoBack() ? router.back() : router.dismissTo('/today'));
 
@@ -134,10 +133,21 @@ export default function NewMove() {
                     label="Build the plan"
                     onPress={() => {
                       if (!goalId) return;
+                      setProblem(null);
                       const built = makePortraitAndPlan(goalId);
-                      if (!built.ok) setToast({ text: built.error, kind: 'info' });
+                      // On this screen, where the person can read it. The
+                      // refusal went to a Toast, and this sheet renders no
+                      // Toast — so a goal whose line the screen had flagged
+                      // could not be planned and the button did nothing at
+                      // all, twice, three times.
+                      if (!built.ok) setProblem(built.error);
                     }}
                   />
+                  {problem ? (
+                    <Body testID="new-move-problem" style={{ color: day.ink }}>
+                      {problem}
+                    </Body>
+                  ) : null}
                 </>
               ) : (
                 <>

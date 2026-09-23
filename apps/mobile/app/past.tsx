@@ -569,7 +569,7 @@ export default function Past() {
           label: ready ? 'Keep this one' : 'All three, in your words',
           disabled: !ready,
           onPress: () => {
-            saveAnalysis(event.id, { whatHappened: what, shapedMe: shaped, stillBelieve: believe });
+            saveAnalysis(event.id, { whatHappened: what, shapedMe: shaped, stillBelieve: believe, framingId });
             announce('Kept.');
             setWhat('');
             setShaped('');
@@ -692,7 +692,9 @@ export default function Past() {
                 setWhat(v.whatHappened);
                 setShaped(v.shapedMe);
                 setBelieve(v.stillBelieve);
-                setFramingId(null);
+                // Theirs, like the three boxes: it used to come back at none,
+                // which was the only place the choice was visible at all.
+                setFramingId(v.framingId ?? null);
                 setWritingFor(v.id);
                 setEditingId(v.id);
               }}

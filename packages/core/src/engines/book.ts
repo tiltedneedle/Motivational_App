@@ -15,7 +15,7 @@ import type {
   GoalAnalysis,
 } from '../types';
 import { ANALYSIS_ORDER } from '../types';
-import { framingLabel } from './framings';
+import { ANALYSIS_TITLES, framingLabel } from './framings';
 import { isQuotable } from './safety';
 import { ordinal, formatDay, plural, sealedOn, thenHalf } from '../ids';
 import { firstSentence, restOfIdeal } from './portrait';
@@ -339,7 +339,10 @@ export function bookToText(book: BookVersion, boundaryHour = 3): string {
   for (const c of book.chapters) {
     out.push(c.name.toUpperCase());
     for (const l of c.lines) {
-      out.push(`  ${l.kind}${l.framingLabel ? ` (${l.framingLabel})` : ''}`);
+      // The heading the person reads, not the column name. The text export
+      // printed "motives", "obstacles", "monitoring"; the PDF from the same
+      // screen prints "Why", "What gets in the way", "How I’ll know".
+      out.push(`  ${ANALYSIS_TITLES[l.kind]}${l.framingLabel ? ` (${l.framingLabel})` : ''}`);
       out.push(`  ${l.text}`);
       if (l.text2) {
         const half = thenHalf(l.text2);

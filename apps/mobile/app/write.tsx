@@ -6,7 +6,7 @@
 import { Redirect, useIsFocused, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { flushSync } from '../src/flush';
-import { AccessibilityInfo, Animated, AppState, Easing, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { AccessibilityInfo, Animated, AppState, Easing, KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   AREAS,
@@ -130,6 +130,8 @@ function Write() {
   const [endedEarly, setEndedEarly] = useState(false);
   /** The safety screen stopped this sitting going on to the read-back. */
   const [paused, setPaused] = useState(false);
+  /** The row the pause is about, so this screen can watch it be let go. */
+  const [pausedTextId, setPausedTextId] = useState<string | null>(null);
   // The person's own pause — the clock waits, the nudges wait, the recogniser
   // stops — as distinct from the safety pause above. WCAG 2.2.1: a time limit
   // has to be one a person can stop. Fifteen minutes of continuous writing is
@@ -440,10 +442,30 @@ function Write() {
       // The pause stays a pause: the card comes up over this screen, and when
       // they close it this screen says where they stand.
       setPaused(true);
+      const source = useMorrow.getState().safetyPause?.source;
+      setPausedTextId(source?.kind === 'text' ? source.id : null);
       return;
     }
     router.replace(after());
   };
+
+  /**
+   * The pause, let go.
+   *
+   * "This was not about me — keep my writing" clears the flag on the row and
+   * drops the pause, so the sitting is quotable and sealable again — and this
+   * screen went on saying "It is not going into the Book, and it does not have
+   * to", with "Write it again" under it, about writing that was now in the
+   * Book. It watches the row it paused on instead.
+   */
+  const stillFlagged = useMorrow((s) => (pausedTextId ? s.texts.find((t) => t.id === pausedTextId)?.safetyRisk === 'crisis' : true));
+  useEffect(() => {
+    if (!paused || !pausedTextId || stillFlagged) return;
+    setPaused(false);
+    setPausedTextId(null);
+    router.replace(after());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paused, pausedTextId, stillFlagged]);
 
   /**
    * The microphone is asked for here, on the doorway, so the OS dialog is not
@@ -739,6 +761,14 @@ function Write() {
         phone is in a hand at arm's length, so the words are set larger.
       */}
       {mode !== 'type' ? <KeepAwake tag="write" /> : null}
+      {/*
+        The keyboard, which iOS does not move the window for: the room had
+        neither this nor an inset on its scroll, so the bottom of the screen
+        — the nudge, the microphone row, and the one button out of the room
+        — sat behind the keyboard, and the caret went under it as soon as the
+        writing passed the fold. The shell does this on every other screen.
+      */}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
         {/*
           Leaving mid-sitting keeps the draft — the autosave already does, and
@@ -795,7 +825,12 @@ function Write() {
         </View>
 
         <View style={{ flex: 1, flexDirection: 'row', gap: 14 }}>
-          <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled">
+          <ScrollView
+            style={{ flex: 1 }}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
+            automaticallyAdjustKeyboardInsets
+          >
             <TextInput
               ref={inputRef}
               testID="write-input"
@@ -946,6 +981,7 @@ function Write() {
           )}
         </View>
       </SafeAreaView>
+      </KeyboardAvoidingView>
     </Studio>
   );
 }

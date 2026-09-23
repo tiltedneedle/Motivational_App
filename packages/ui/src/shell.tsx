@@ -15,7 +15,7 @@
 import React, { type ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Circle, Path, Rect } from 'react-native-svg';
+import Svg, { Circle, Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import { accent, radius, shadow, type as fonts, webHover, webOnlyStyle } from './tokens';
 import { Body, InkButton, Label, Rise, Statement, Studio, TopBar, TextButton, useHover, usePalette, useReducedMotion } from './primitives';
 import { usePress } from './motion';
@@ -200,6 +200,47 @@ export function ProgressBar({ value, label, testID, style }: { value: number; la
  * bottom with the one thing to do next. `footer` takes a node, so a screen
  * can put a note under its button; `cta` is the common case.
  */
+/**
+ * The soft edge of a scroll.
+ *
+ * A scroll region clips whatever crosses its edge, mid-word and mid-pill, and
+ * at the bottom that cut lands an inch above a pinned button — on the paywall
+ * it left half a "Manage subscription" behind Continue, which reads as a
+ * drawing fault rather than as "there is more below". Twenty-two points of
+ * the ground, fading out, says the true thing instead.
+ *
+ * Decoration: it takes no touches and is not in the accessibility tree. The
+ * ground is a radial gradient and this is a flat one, which is near enough at
+ * the extremes of the screen, where the radial has flattened out anyway.
+ */
+export function ScrollFade({ edge = 'bottom', height = 22, color }: { edge?: 'top' | 'bottom'; height?: number; color?: string }) {
+  const { p } = usePalette();
+  // The ground is a radial from above the screen, so at the bottom edge it is
+  // its outer stop and at the top its inner one — not the middle the `ground`
+  // token names. Faded to the middle, the night studio grew a lighter band
+  // above the hold bar, which is worse than the cut it replaced.
+  const c = color ?? (edge === 'bottom' ? p.groundBottom : p.groundTop);
+  const id = React.useMemo(() => `fd${Math.random().toString(36).slice(2, 9)}`, []);
+  return (
+    <View
+      pointerEvents="none"
+      aria-hidden
+      importantForAccessibility="no-hide-descendants"
+      style={{ position: 'absolute', left: 0, right: 0, height, ...(edge === 'top' ? { top: 0 } : { bottom: 0 }) }}
+    >
+      <Svg width="100%" height="100%">
+        <Defs>
+          <LinearGradient id={id} x1="0" y1={edge === 'bottom' ? '0' : '1'} x2="0" y2={edge === 'bottom' ? '1' : '0'}>
+            <Stop offset="0%" stopColor={c} stopOpacity={0} />
+            <Stop offset="100%" stopColor={c} stopOpacity={1} />
+          </LinearGradient>
+        </Defs>
+        <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${id})`} />
+      </Svg>
+    </View>
+  );
+}
+
 export function Screen({
   testID,
   back,
@@ -280,16 +321,20 @@ export function Screen({
         */}
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           {scroll ? (
-            <ScrollView
-              style={{ flex: 1 }}
-              contentContainerStyle={[{ paddingHorizontal: 22, paddingTop: 6, paddingBottom: 24, gap: 14 }, contentStyle]}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps={keyboard ? 'handled' : 'never'}
-              keyboardDismissMode={keyboard ? 'on-drag' : 'none'}
-              {...(Platform.OS === 'web' ? { tabIndex: 0 } : {})}
-            >
-              {body}
-            </ScrollView>
+            <View style={{ flex: 1 }}>
+              <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={[{ paddingHorizontal: 22, paddingTop: 6, paddingBottom: 24, gap: 14 }, contentStyle]}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps={keyboard ? 'handled' : 'never'}
+                keyboardDismissMode={keyboard ? 'on-drag' : 'none'}
+                {...(Platform.OS === 'web' ? { tabIndex: 0 } : {})}
+              >
+                {body}
+              </ScrollView>
+              <ScrollFade edge="top" height={10} />
+              <ScrollFade edge="bottom" />
+            </View>
           ) : (
             <View style={[{ flex: 1, paddingHorizontal: 22, paddingTop: 6, gap: 14 }, contentStyle]}>{body}</View>
           )}

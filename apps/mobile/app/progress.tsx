@@ -23,6 +23,7 @@ import {
   consistencyCaption,
   detectReturns,
   formatDay,
+  returnNumberToday,
   plural,
   dayOf,
   quotable,
@@ -125,11 +126,19 @@ export default function Progress() {
           {/* ---- returns */}
           <View style={{ gap: 8 }}>
             <Label>Returns</Label>
-            {returns.length === 0 && back.returning ? (
+            {/*
+              A return under way is named whatever the history holds. It used
+              to be shown only when there had never been one before, so on the
+              morning of a second return Today said "Return #2" and this page
+              said "One return." and listed the older one — the same morning,
+              counted twice, differently, on two screens.
+            */}
+            {back.returning ? (
               <Body testID="progress-return-today">
-                {`Back today, after ${back.gapDays} days away. Return #1 — it counts from the first thing you do.`}
+                {`Back today, after ${back.gapDays} days away. Return #${returnNumberToday(days, today)} — it counts from the first thing you do.`}
               </Body>
-            ) : returns.length === 0 ? (
+            ) : null}
+            {returns.length === 0 && back.returning ? null : returns.length === 0 ? (
               <Body>
                 No gaps to come back from yet. When there is one, coming back is the thing that gets counted.
               </Body>

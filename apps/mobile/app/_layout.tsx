@@ -9,7 +9,7 @@ import { AppState, Linking, Platform, View, Text, ActivityIndicator, useColorSch
 import { useFonts as useOutfit, Outfit_400Regular, Outfit_500Medium, Outfit_600SemiBold, Outfit_700Bold } from '@expo-google-fonts/outfit';
 import { Newsreader_400Regular, Newsreader_400Regular_Italic, Newsreader_500Medium } from '@expo-google-fonts/newsreader';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { day } from '@morrow/ui';
 import { darkOf, useMorrow } from '../src/store';
 import { StatusBar } from 'expo-status-bar';
@@ -333,7 +333,15 @@ export default function RootLayout() {
           Above the router, so it is on every screen and cannot be navigated
           away from. A store that will not save is not a per-screen problem.
         */}
+        {/*
+          Both banners sit above the router and therefore above every
+          SafeAreaView in the app, and the page asks for `viewport-fit=cover`:
+          on a notched iPhone, and on a Home Screen app, their first line was
+          painted behind the clock and the battery. "Nothing is being saved on
+          this device right now." is the one sentence that must be readable.
+        */}
         {newVersionReady ? (
+          <SafeAreaView edges={['top', 'left', 'right']}>
           <View
             testID="new-version"
             accessibilityLiveRegion="polite"
@@ -350,8 +358,10 @@ export default function RootLayout() {
               Reload
             </Text>
           </View>
+          </SafeAreaView>
         ) : null}
         {storageError ? (
+          <SafeAreaView edges={['top', 'left', 'right']}>
           <StorageWarning
             onExport={() => router.push('/settings')}
             onFresh={() => {
@@ -364,6 +374,7 @@ export default function RootLayout() {
               router.replace('/');
             }}
           />
+          </SafeAreaView>
         ) : null}
         <View
           ref={behind}

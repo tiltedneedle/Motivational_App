@@ -63,7 +63,9 @@ await context.addInitScript(() => Object.defineProperty(navigator, 'webdriver', 
 const page = await context.newPage();
 
 let failures = 0;
+let ran = 0;
 const check = (name, ok, detail = '') => {
+  ran += 1;
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${ok || !detail ? '' : ` — ${detail}`}`);
   if (!ok) failures += 1;
 };
@@ -102,10 +104,15 @@ deploy = 2;
 await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(1500);
 keys = await cacheKeys();
-const statics2 = keys.find((k) => k.startsWith('morrow-static-'));
-check('a new deploy gets a new statics cache and the old one is gone', !!statics2 && statics2 !== statics1 && !keys.includes(statics1), keys.join(','));
+const statics2 = keys.find((k) => k.startsWith('morrow-static-') && k !== statics1);
+// The new build's cache, and the one before it kept: the page that is running
+// while a new worker installs is still on the previous build and may yet ask
+// for one of its chunks. Deleting it there took the app apart under a tab
+// somebody had open. The build before *that* is what goes — two at most.
+check('a new deploy gets its own statics cache', !!statics2 && statics2 !== statics1, keys.join(','));
+check('and the one the running page is still using is kept', keys.includes(statics1), keys.join(','));
 const held2 = statics2 ? await cached(statics2) : [];
-check('the renamed entry is cached and the old name is not', held2.some((p) => p.endsWith(renamed)) && !held2.some((p) => p.endsWith(entry)), held2.join(','));
+check('the renamed entry is cached under the new build', held2.some((p) => p.endsWith(renamed)) && !held2.some((p) => p.endsWith(entry)), held2.join(','));
 
 await new Promise((resolve) => server.close(resolve));
 await page.goto(`${BASE}/today`, { waitUntil: 'load' }).catch(() => {});
@@ -119,5 +126,6 @@ await page.waitForTimeout(2500);
 check('and so does a screen whose code arrives on demand', (await page.locator('[data-testid="screen-settings"]').count()) > 0, (await page.locator('body').innerText().catch(() => '')).slice(0, 120));
 
 await browser.close();
-console.log(failures ? `${failures} failed` : '9/9 service-worker checks passed');
+// Counted rather than claimed: the tally said 9/9 whatever it had run.
+console.log(failures ? `${failures} of ${ran} failed` : `${ran}/${ran} service-worker checks passed`);
 process.exit(failures ? 1 : 0);

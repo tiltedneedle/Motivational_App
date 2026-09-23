@@ -174,11 +174,17 @@ export default function Settings() {
       stoneDraft: state.stoneDraft,
       dayDraft: state.dayDraft,
       readBackDraft: state.readBackDraft,
+      // The letter to the future they are part-way through. Every other draft
+      // was here and this one was not, so "Export everything" quietly left it
+      // behind.
+      letterDraft: state.letterDraft,
       bookTitle: state.bookTitle,
       bookTitleFraming: state.bookTitleFraming,
       iWill: state.iWill,
     };
-    const message = book ? `${bookToText(book)}\n\n---\n${JSON.stringify(payload, null, 2)}` : JSON.stringify(payload, null, 2);
+    // The person's own day boundary, as the Book screen's export passes:
+    // without it the dates in the export belong to somebody else's day.
+    const message = book ? `${bookToText(book, state.profile.dayBoundaryHour)}\n\n---\n${JSON.stringify(payload, null, 2)}` : JSON.stringify(payload, null, 2);
     // The sheet, a file, or the clipboard — whichever this device has. The
     // button used to do nothing at all on a browser with no share sheet, on
     // the one screen that promises the person their writing is theirs to

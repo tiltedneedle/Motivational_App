@@ -202,4 +202,69 @@ describe('a store too big for one Android row', () => {
     expect([...disk.keys()].filter((k) => k.startsWith('morrow-v1#')).length).toBe(0);
     expect(hasFailed()).toBe(false);
   });
+
+  /**
+   * The sweep (2026-09-23). `multiSet` is not atomic anywhere — the shim is
+   * `Promise.all(pairs.map(setItem))` — and the parts of the new generation
+   * used to land on the keys of the old one. Reaped on the background flush,
+   * or one row refused for space, and the manifest still named a set that was
+   * now half new and half old. The join of that parses as nothing: the app
+   * came up empty and latched, on the store the whole module exists for.
+   */
+  it('survives a parts write cut in half, with the previous copy still whole', async () => {
+    resetStorageLatch();
+    disk.clear();
+    const { openStorage } = await import('./storage');
+    openStorage();
+    const first = JSON.stringify({ state: { texts: [{ body: 'a'.repeat(1_200_000) }] } });
+    await guardedStorage.setItem('morrow-v1', first);
+    const gen1 = [...disk.keys()].filter((k) => k.startsWith('morrow-v1#')).sort();
+    expect(gen1.length).toBe(3);
+
+    // The second write, cut off after its first part.
+    const store = (await import('@react-native-async-storage/async-storage')).default;
+    const real = store.multiSet;
+    store.multiSet = (async (rows: readonly (readonly [string, string])[]) => {
+      const row = rows[0];
+      if (row) await store.setItem(row[0], row[1]);
+      throw new Error('quota');
+    }) as typeof store.multiSet;
+    const second = JSON.stringify({ state: { texts: [{ body: 'b'.repeat(1_200_000) }] } });
+    await Promise.resolve(guardedStorage.setItem('morrow-v1', second)).catch(() => undefined);
+    store.multiSet = real;
+
+    // The half-written generation is under its own keys; the manifest still
+    // names the whole one, and the store reads back as it was.
+    expect(await guardedStorage.getItem('morrow-v1')).toBe(first);
+    expect(hasFailed()).toBe(false);
+  });
+
+  /**
+   * The sweep (2026-09-23). A read that throws — a missing part, an Android
+   * row too big for the cursor window — latched without keeping a copy, so
+   * the banner offered "Copy out the earlier copy" with nothing behind it and
+   * "Start again on this device", whose label promises the earlier copy
+   * stays. It did not: two taps and the writing was gone.
+   */
+  it('keeps what it can when the read itself throws, and never starts again over the only copy', async () => {
+    resetStorageLatch();
+    disk.clear();
+    const { openStorage, quarantinedRaw, clearLatchAndReplace } = await import('./storage');
+    openStorage();
+    const big = JSON.stringify({ state: { texts: [{ body: 'c'.repeat(1_200_000) }] } });
+    await guardedStorage.setItem('morrow-v1', big);
+    // One part lost under the app's feet.
+    const parts = [...disk.keys()].filter((k) => k.startsWith('morrow-v1#')).sort();
+    disk.delete(parts[1]!);
+
+    expect(await guardedStorage.getItem('morrow-v1')).toBe(null);
+    expect(hasFailed()).toBe(true);
+    const kept = await quarantinedRaw();
+    expect(kept, 'the readable parts were kept').toBeTruthy();
+    expect(kept!.length).toBeGreaterThan(500_000);
+
+    await clearLatchAndReplace();
+    expect(await quarantinedRaw(), 'starting again leaves the copy behind').toBeTruthy();
+    expect(hasFailed()).toBe(false);
+  });
 });

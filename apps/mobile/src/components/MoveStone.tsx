@@ -140,7 +140,9 @@ export function MoveStone({
                 accessibilityValue: { min: 0, max: steps.total, now: steps.done },
               }
             : {})}
-          accessibilityHint="Double tap to seat. Long press for not today."
+          // A stone that has been set aside goes back in the day on a tap;
+          // the hint used to say "seat" there too, which is not what happens.
+          accessibilityHint={parked ? 'Double tap to put it back in the day.' : 'Double tap to seat. Long press for not today.'}
           accessibilityActions={[{ name: 'longpress', label: 'Not today' }]}
           onAccessibilityAction={(e) => {
             if (e.nativeEvent.actionName === 'longpress') {

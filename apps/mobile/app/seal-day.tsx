@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Platform, ScrollView, Share, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Chip, HoldBar, Label, Quoted, SealBurst, Settle, Statement, Stone, Studio, TopBar, UserField, accent, night, useReducedMotion } from '@morrow/ui';
+import { Chip, HoldBar, Label, Quoted, ScrollFade, SealBurst, Settle, Statement, Stone, Studio, TopBar, UserField, accent, night, useReducedMotion } from '@morrow/ui';
 import { dayOf } from '@morrow/core';
 import { feelSealed, feelTick } from '../src/feel';
 import { dictation } from '../src/dictation';
@@ -129,77 +129,81 @@ export default function SealDay() {
     <Studio dark testID="screen-seal-day">
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
         <TopBar back={{ label: 'Today', onPress: () => (router.canGoBack() ? router.back() : router.dismissTo('/today')), testID: 'seal-day-back' }} help={{ onPress: showResources }} />
-        <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 6, gap: 20 }}>
-          <Label style={{ color: night.ink3 }}>Close the day</Label>
-          <Statement style={{ color: night.ink }}>
-            {sealed ? 'Closed. See you at dawn.' : 'Quiet day or not, it goes in the ledger.'}
-          </Statement>
-
-          <View style={{ gap: 8 }}>
-            <Label style={{ color: night.ink3 }}>Today, in a word</Label>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              {WORDS.map((wd) => (
-                <Chip key={wd} testID={`mood-${wd}`} label={wd} selected={word === wd} onPress={() => setWord(wd)} />
-              ))}
+        <View style={{ flex: 1 }}>
+          <ScrollView automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 6, gap: 20 }}>
+            <Label style={{ color: night.ink3 }}>Close the day</Label>
+            <Statement style={{ color: night.ink }}>
+              {sealed ? 'Closed. See you at dawn.' : 'Quiet day or not, it goes in the ledger.'}
+            </Statement>
+  
+            <View style={{ gap: 8 }}>
+              <Label style={{ color: night.ink3 }}>Today, in a word</Label>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {WORDS.map((wd) => (
+                  <Chip key={wd} testID={`mood-${wd}`} label={wd} selected={word === wd} onPress={() => setWord(wd)} />
+                ))}
+              </View>
             </View>
-          </View>
-
-          <View style={{ gap: 8 }}>
-            <Label style={{ color: night.ink3 }}>One piece of proof</Label>
-            {/* Their own rule for what counts, in their face. */}
-            {rule ? <Quoted text={`Your rule: “${rule}”`} spans={[rule]} style={{ color: night.ink3, fontSize: 13, lineHeight: 19 }} /> : null}
-            <UserField
-              testID="seal-proof"
-              labelHidden
-              label="What actually happened today"
-              value={proof}
-              onChangeText={(t) => {
-                anchorRef.current = t;
-                setProof(t);
-              }}
-              placeholder="What actually happened"
-              multiline
-            />
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <Chip testID="seal-mic" label={listening ? 'Listening' : 'Say it instead'} selected={listening} role="checkbox" onPress={() => void listen()} />
-              {micNote ? (
-                <Label testID="seal-mic-note" style={{ color: night.ink3, flex: 1 }}>
-                  {micNote}
-                </Label>
-              ) : null}
+  
+            <View style={{ gap: 8 }}>
+              <Label style={{ color: night.ink3 }}>One piece of proof</Label>
+              {/* Their own rule for what counts, in their face. */}
+              {rule ? <Quoted text={`Your rule: “${rule}”`} spans={[rule]} style={{ color: night.ink3, fontSize: 13, lineHeight: 19 }} /> : null}
+              <UserField
+                testID="seal-proof"
+                labelHidden
+                label="What actually happened today"
+                value={proof}
+                onChangeText={(t) => {
+                  anchorRef.current = t;
+                  setProof(t);
+                }}
+                placeholder="What actually happened"
+                multiline
+              />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <Chip testID="seal-mic" label={listening ? 'Listening' : 'Say it instead'} selected={listening} role="checkbox" onPress={() => void listen()} />
+                {micNote ? (
+                  <Label testID="seal-mic-note" style={{ color: night.ink3, flex: 1 }}>
+                    {micNote}
+                  </Label>
+                ) : null}
+              </View>
             </View>
-          </View>
-
-          <View style={{ gap: 8 }}>
-            <Label style={{ color: night.ink3 }}>One thing you are glad of</Label>
-            <UserField
-              testID="seal-glad"
-              labelHidden
-              label="Something you are glad of"
-              value={gladOf}
-              onChangeText={setGladOf}
-              placeholder="Anything at all"
-              multiline
-            />
-          </View>
-
-          {/*
-            PRD 8.5: "completion drops the stone with a spring, two rings pulse
-            out". The rings reach 1.8×, inside the scroll view's edge.
-
-            Sized so the whole ritual stands on one screen. At a hundred and
-            ten points the writing ran eighty points past the fold on a 390 ×
-            844 phone and the object of the evening was cut in half by its own
-            button — the stone every night ends on, and the two rings that
-            pulse out of it, half behind the bar.
-          */}
-          <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 20 }}>
-            <SealBurst size={76} color={accent.coral} play={sealed} reduced={reduced} reach={1.8} />
-            <Settle reduced={reduced} play={sealed ? 1 : 0}>
-              <Stone size={76} domain="health" polish={sealed ? 1 : 0.6} seated={sealed} />
-            </Settle>
-          </View>
-        </ScrollView>
+  
+            <View style={{ gap: 8 }}>
+              <Label style={{ color: night.ink3 }}>One thing you are glad of</Label>
+              <UserField
+                testID="seal-glad"
+                labelHidden
+                label="Something you are glad of"
+                value={gladOf}
+                onChangeText={setGladOf}
+                placeholder="Anything at all"
+                multiline
+              />
+            </View>
+  
+            {/*
+              PRD 8.5: "completion drops the stone with a spring, two rings pulse
+              out". The rings reach 1.8×, inside the scroll view's edge.
+  
+              Sized so the whole ritual stands on one screen. At a hundred and
+              ten points the writing ran eighty points past the fold on a 390 ×
+              844 phone and the object of the evening was cut in half by its own
+              button — the stone every night ends on, and the two rings that
+              pulse out of it, half behind the bar.
+            */}
+            <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 20 }}>
+              <SealBurst size={76} color={accent.coral} play={sealed} reduced={reduced} reach={1.8} />
+              <Settle reduced={reduced} play={sealed ? 1 : 0}>
+                <Stone size={76} domain="health" polish={sealed ? 1 : 0.6} seated={sealed} />
+              </Settle>
+            </View>
+          </ScrollView>
+          {/* The cut at the fold, softened, as the shell does it. */}
+          <ScrollFade />
+        </View>
 
         <View style={{ paddingBottom: 22, gap: 8 }}>
           {sealed && witnessName.trim() ? (
