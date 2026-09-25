@@ -3086,6 +3086,32 @@ first run, the home with its loop, the sign-in with Google, the five-lens review
 folded in, 558 end-to-end checks, `pnpm verify` green. What remains needs either
 hardware, a credential, or a product call — plus the items the rebuild opened:
 
+0k. **The loop at step three (2026-09-25)** — reported from the app, with two
+   screenshots: Today offering "Carry on with what I heard", a read-back with
+   nothing on it — "Your goals are already named." over half a screen of
+   nothing — and its one button leading back to Today, which offered the same
+   step again. There was no way past step three of the first run.
+   Whether the read-back was still open was *inferred*: no goal carrying a
+   phrase of the Fifteen, no stones written, no title. A read-back that
+   produces nothing to keep — because the goals were already named in the
+   Interview, or because there was no whole phrase in the sitting to quote —
+   leaves exactly that state, so the inference read "nothing came of it" as
+   "it never happened". The code's own comment called ending it with nothing
+   kept "their choice"; there was nowhere to record the choice.
+   It is recorded now: `readBackDoneFor` holds the id of the Fifteen whose
+   read-back has been answered, whatever it produced, and a sitting left
+   part-way through still wins over it (rows kept and not yet named are the
+   thing that step exists to finish). A Fifteen written after it opens a new
+   read-back, because those are phrases the person has not been shown.
+   Two other things on that page, both of them the same fault in miniature:
+   with no rows it showed a question about what had been left out of a list
+   that was not there, and it now says what happened instead; and its button
+   was disabled whenever nothing was named *and* no goals existed, which on an
+   empty page is a locked door — it is "Back to today" there.
+   Walked end to end in the suite, last of all, because it takes the Book off
+   the device to stand where that person stood; and four tests over the store's
+   own reckoning of the path, which is the layer the fault was in.
+
 0j. **The sweep (2026-09-23)** — one read-only pass over the whole app in six
    lenses (the engines, the store, the screens, safety, the web build, the PRD),
    then three adversaries told to refute what it found. 34 findings, 32 survived

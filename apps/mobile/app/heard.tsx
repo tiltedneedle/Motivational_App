@@ -30,13 +30,14 @@ export default function Heard() {
 
   const savedRows = useMorrow((s) => s.readBackDraft);
   const saveRows = useMorrow((s) => s.saveReadBackDraft);
-  const clearRows = useMorrow((s) => s.clearReadBackDraft);
+  const markDone = useMorrow((s) => s.markReadBackDone);
   const [rows, setRows] = useState<Row[] | null>(null);
   const [leftOut, setLeftOut] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
 
   // The newest sitting that may be quoted. Never a crisis one.
-  const source = latestText(texts, 'ideal')?.body ?? '';
+  const latest = latestText(texts, 'ideal');
+  const source = latest?.body ?? '';
 
   useEffect(() => {
     let alive = true;
@@ -89,7 +90,10 @@ export default function Heard() {
   const unnamed = rows?.filter((r) => r.state === 'kept' && !r.name.trim()) ?? [];
 
   const done = () => {
-    clearRows();
+    // Answered, for this sitting — even when the answer was "nothing here".
+    // Only the draft used to be cleared, and the path then read the empty
+    // store as a read-back that had never happened and offered it again.
+    if (latest) markDone(latest.id);
     if (named.length) {
       addGoals(
         named.map((r) => ({
@@ -128,8 +132,17 @@ export default function Heard() {
         rows === null
           ? undefined
           : {
-              label: named.length ? `Keep ${named.length} and go on` : goals.length ? 'Go on with the goals I named' : 'Name at least one',
-              disabled: named.length === 0 && goals.length === 0,
+              // "Name at least one" is the right nudge when there is something
+              // to name. With nothing on the page it was a locked door, and
+              // for a person with no goals yet it was the only door.
+              label: named.length
+                ? `Keep ${named.length} and go on`
+                : goals.length
+                  ? 'Go on with the goals I named'
+                  : rows.length === 0
+                    ? 'Back to today'
+                    : 'Name at least one',
+              disabled: named.length === 0 && goals.length === 0 && rows.length > 0,
               onPress: done,
               testID: 'heard-continue',
             }
@@ -145,7 +158,7 @@ export default function Heard() {
       }
     >
       <Heading
-        title={rows === null ? 'Reading it back…' : rows.length === 0 ? 'Your goals are already named.' : `${rows.length === 1 ? 'One thing' : `${rows.length} things`} you said you want.`}
+        title={rows === null ? 'Reading it back…' : rows.length === 0 ? (goals.length ? 'Your goals are already named.' : 'Nothing to name from this one.') : `${rows.length === 1 ? 'One thing' : `${rows.length} things`} you said you want.`}
         line={rows && rows.length ? 'Your own phrases, verbatim. Keep the ones that are goals and give each a short name.' : undefined}
       />
 
@@ -221,13 +234,27 @@ export default function Heard() {
             );
           })}
 
-          {leftOut && named.length < 3 ? (
+          {/*
+            Nothing came back. It happens: a sitting whose sentences are all
+            about one goal already named, or one the coach could find no whole
+            phrase in. The page used to show a heading, a question about what
+            was left out, and half a screen of nothing.
+          */}
+          {rows.length === 0 && !error ? (
+            <Body testID="heard-nothing" style={{ color: day.ink2 }}>
+              {goals.length
+                ? 'There was nothing here to add to them. Your fifteen minutes are kept whole, and the Book quotes them as you wrote them.'
+                : 'Your fifteen minutes are kept whole. Naming goals happens in the Interview — Today has it waiting.'}
+            </Body>
+          ) : null}
+
+          {rows.length > 0 && leftOut && named.length < 3 ? (
             <Body testID="left-out" style={{ color: day.ink2 }}>
               {leftOut}
             </Body>
           ) : null}
 
-          <Label style={{ marginTop: 4, textAlign: 'center' }}>Every line is yours. I only sorted them.</Label>
+          {rows.length > 0 ? <Label style={{ marginTop: 4, textAlign: 'center' }}>Every line is yours. I only sorted them.</Label> : null}
         </View>
       )}
     </Screen>

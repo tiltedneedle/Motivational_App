@@ -396,6 +396,16 @@ export interface MorrowState {
   letterDraft: { body: string; days: number; updatedAt: string } | null;
   interviewDraft: InterviewDraft | null;
   readBackDraft: { rows: ReadBackRow[]; leftOut?: string; source: string; updatedAt: string } | null;
+  /**
+   * The id of the Fifteen whose read-back has been finished.
+   *
+   * Finishing it with nothing kept is an ordinary answer — the goals were
+   * already named, or the coach found nothing to quote — and it used to leave
+   * the store in exactly the state that means "never reached", so Today sent
+   * the person back to a page with nothing on it, and its one button sent
+   * them back to Today. A loop with no way out of the first run.
+   */
+  readBackDoneFor: string | null;
   /** The coach's single invitation to the Full track, once ever. */
   fullTrackInvited: boolean;
   bookTitle: string;
@@ -671,6 +681,8 @@ export interface MorrowState {
   clearInterviewDraft: () => void;
   saveReadBackDraft: (rows: ReadBackRow[], source: string, leftOut?: string) => void;
   clearReadBackDraft: () => void;
+  /** The read-back of this Fifteen is finished, whatever it produced. */
+  markReadBackDone: (textId: string) => void;
   /**
    * The person says the screen was wrong about their writing.
    *
@@ -773,6 +785,7 @@ const EMPTY = {
   letterDraft: null,
   interviewDraft: null,
   readBackDraft: null,
+  readBackDoneFor: null,
   fullTrackInvited: false,
   bookTitle: '',
   bookTitleFraming: null,
@@ -2489,6 +2502,7 @@ const store = create<MorrowState>()(
       clearInterviewDraft: () => set({ interviewDraft: null }),
       saveReadBackDraft: (rows, source, leftOut) => set({ readBackDraft: { rows, source, ...(leftOut ? { leftOut } : {}), updatedAt: new Date().toISOString() } }),
       clearReadBackDraft: () => set({ readBackDraft: null }),
+      markReadBackDone: (textId) => set({ readBackDraft: null, readBackDoneFor: textId }),
       reconsiderLatestFlag: () =>
         set((st) => {
           // The row the card is about, and only that row. A pause with no
@@ -3234,10 +3248,19 @@ export function firstRunOf(s: MorrowState): FirstRunStep {
     // used to skip the one step that turns their phrases into goals, for
     // good. A read-back seen and left with nothing kept was their choice.
     readBackOpen: (() => {
-      const ideal = latestText(s.texts, 'ideal')?.body ?? '';
+      const latest = latestText(s.texts, 'ideal');
+      const ideal = latest?.body ?? '';
       if (!ideal.trim()) return false;
+      // A sitting left part-way through is open whatever else is true: rows
+      // kept and not yet named are the thing this step exists to finish.
       const draft = s.readBackDraft;
       if (draft && draft.source === ideal) return draft.rows.some((r) => r.state === 'kept');
+      // Then: answered, for this Fifteen, whatever it produced. Without this
+      // the line below reads "nothing came of it" as "it never happened", and
+      // a read-back that offered nothing — the goals already named, or no
+      // whole phrase to quote — sent the person round the same two screens
+      // for ever, with no way past step three.
+      if (latest && s.readBackDoneFor === latest.id) return false;
       return !s.goals.some((g) => g.sourceSpan && ideal.includes(g.sourceSpan)) && s.analyses.length === 0 && !s.bookTitle.trim();
     })(),
     hasTitle: s.bookTitle.trim().length > 0,

@@ -408,7 +408,10 @@ async function main() {
     check('summary names the goal', (await page.locator('body').innerText()).includes('Half marathon'));
     check('and the button is the fifteen minutes, in plain words', (await text('interview-finish')).toLowerCase().includes('your future'), await text('interview-finish'));
     await tap('interview-finish');
-    check('authoring opening', await seen('screen-authoring'));
+    // The doorway of the Fifteen is a route chunk of its own, fetched on the
+    // tap: read as absent the instant after it, this failed on a loaded
+    // machine and nowhere else.
+    check('authoring opening', await appears('screen-authoring'));
 
     // ---- halfway along, the app opens on the next step, not the start
     await page.goto(`${BASE}/`, { waitUntil: 'networkidle' });
@@ -3447,6 +3450,55 @@ async function main() {
           sessionStorage.removeItem('standalone');
         });
       }
+    }
+
+    // ---- the read-back that finds nothing is still an answer
+    //
+    //      Reported from the app (2026-09-25) with two screenshots: Today
+    //      offering "Carry on with what I heard", a page with nothing on it,
+    //      and its one button leading back to Today, which offered it again.
+    //      No way past step three. Whether the read-back was still open used
+    //      to be inferred from the goals, and a read-back that produced
+    //      nothing leaves exactly the store that means "never reached".
+    //
+    //      Last, because it takes the Book off this device to stand where
+    //      that person stood.
+    {
+      await page.evaluate(() => {
+        const k = 'morrow-v1';
+        const s = JSON.parse(localStorage.getItem(k) ?? '{}');
+        const st = s.state;
+        st.books = [];
+        st.bookTitle = '';
+        st.bookTitleFraming = null;
+        st.analyses = [];
+        st.plans = [];
+        st.portraits = [];
+        st.readBackDraft = null;
+        st.readBackDoneFor = null;
+        const warm = st.texts.find((t) => t.kind === 'warmup') ?? st.texts[0];
+        const ideal = st.texts.find((t) => t.kind === 'ideal') ?? st.texts[0];
+        // A sitting with no whole phrase to quote: the read-back comes back empty.
+        st.texts = [
+          { ...warm, id: 'tx_warm_loop', kind: 'warmup', body: 'Anything can be done' },
+          { ...ideal, id: 'tx_ideal_loop', kind: 'ideal', body: 'Anything can be done.' },
+        ];
+        localStorage.setItem(k, JSON.stringify(s));
+      });
+      await page.goto(`${BASE}/today`, { waitUntil: 'networkidle' });
+      await page.clock.runFor(1500);
+      await page.waitForTimeout(700);
+      check('Today asks for the read-back of a Fifteen that has had none', (await text('today-begin')).includes('what I heard'), await text('today-begin'));
+      await tap('today-begin');
+      check('which opens it', await appears('screen-heard'));
+      await page.waitForTimeout(1200);
+      check('with nothing to keep, and it says so rather than standing empty', await seen('heard-nothing'), await noticeText('heard-nothing'));
+      check('and a button that works', !(await page.locator('[data-testid="heard-continue"]').first().isDisabled().catch(() => true)));
+      await tap('heard-continue');
+      await page.clock.runFor(1500);
+      await page.waitForTimeout(800);
+      check('which lands on Today', await seen('screen-today'));
+      check('and Today has moved on rather than asking again', !(await text('today-begin')).includes('what I heard'), await text('today-begin'));
     }
 
     // ---- the storage banner: an unreadable store is quarantined, offered back, and Start again writes again
