@@ -124,10 +124,81 @@ describe('the domain marks and inks, as core names them', () => {
   }
 });
 
-/** The streak pill's number: white on the coral fill. */
+/** The streak pill's number, on the coral fill it takes in each studio. */
 describe('the streak pill', () => {
-  it('reads white on its coral fill', () => {
-    expect(ratio('#FFFFFF', accent.coralText)).toBeGreaterThanOrEqual(AA_BODY);
+  it('reads white on its coral fill by day', () => {
+    expect(ratio(dayStudio.onInk, accent.coralText)).toBeGreaterThanOrEqual(AA_BODY);
+    expect(dayStudio.onInk).toBe('#FFFFFF');
+  });
+
+  /**
+   * The fill is `accent.coralText`, which the night studio answers with the
+   * lighter `coralNight`. The pill kept a fixed white through the swap and
+   * measured 3.28:1 there — the same control, legible in one studio and not
+   * in the other.
+   */
+  it('reads on the lighter coral the night studio fills it with', () => {
+    expect(ratio(night.onInk, accent.coralNight)).toBeGreaterThanOrEqual(AA_BODY);
+    expect(ratio('#FFFFFF', accent.coralNight)).toBeLessThan(AA_BODY);
+  });
+});
+
+/**
+ * The rule the palette's own comment states, measured in both studios: what
+ * is written on a control filled with an accent's `…Text` form is `onInk`.
+ */
+describe('a label on a filled accent, in either studio', () => {
+  const hues = ['coral', 'teal', 'violet', 'amber', 'rose', 'moss'] as const;
+  for (const hue of hues) {
+    it(`${hue} carries its label in both studios`, () => {
+      expect(ratio(dayStudio.onInk, accent[`${hue}Text`])).toBeGreaterThanOrEqual(AA_BODY);
+      expect(ratio(night.onInk, accent[`${hue}Night`])).toBeGreaterThanOrEqual(AA_BODY);
+    });
+  }
+});
+
+/**
+ * The hold bar: a coral fill sweeping left to right across a `surface2` track,
+ * under one centred label. The label used to turn white the moment the hold
+ * began — while the coral was still crossing, so most of it sat on the track,
+ * and in the day studio white on `surface2` is 1.06:1. It is the studio's own
+ * ink until the bar is full, which has to read on the track *and* on the coral
+ * the fill brings under it.
+ */
+describe('the hold bar while it is filling', () => {
+  it('sets its label legibly on the track and on the coral, in the day studio', () => {
+    expect(ratio(dayStudio.ink, dayStudio.surface2)).toBeGreaterThanOrEqual(AA_BODY);
+    expect(ratio(dayStudio.ink, accent.coral)).toBeGreaterThanOrEqual(AA_BODY);
+    // What it did before: a label with no colour against its own track.
+    expect(ratio('#FFFFFF', dayStudio.surface2)).toBeLessThan(AA_LARGE);
+  });
+
+  it('sets its label legibly on the track and on the coral, in the night studio', () => {
+    expect(ratio(night.ink, night.surface2)).toBeGreaterThanOrEqual(AA_BODY);
+    expect(ratio(night.ink, accent.coral)).toBeGreaterThanOrEqual(AA_LARGE);
+  });
+
+  it('turns white only once the bar is full coral', () => {
+    expect(ratio('#FFFFFF', accent.coral)).toBeGreaterThanOrEqual(AA_LARGE);
+  });
+});
+
+/**
+ * The toast is inverted against the studio it appears over. It was the night
+ * ground in both, which in the night studio is the ground itself: a pill with
+ * no edge, white text floating on the screen.
+ */
+describe('the toast', () => {
+  it('stands off the ground it sits on, in both studios', () => {
+    expect(ratio(dayStudio.ink, dayStudio.ground)).toBeGreaterThanOrEqual(AA_BODY);
+    expect(ratio(night.ink, night.ground)).toBeGreaterThanOrEqual(AA_BODY);
+    // The colour it used to take, against the night ground: no pill at all.
+    expect(ratio(night.ground, night.ground)).toBe(1);
+  });
+
+  it('carries its text and its action on that pill', () => {
+    expect(ratio(dayStudio.onInk, dayStudio.ink)).toBeGreaterThanOrEqual(AA_BODY);
+    expect(ratio(night.onInk, night.ink)).toBeGreaterThanOrEqual(AA_BODY);
   });
 });
 
@@ -218,7 +289,28 @@ describe('the field underline', () => {
     return `#${hex}`;
   };
   it('clears 3:1 at rest on the day ground and on a surface', () => {
-    expect(ratio(over(accent.coralSoftLine, day.ground), day.ground)).toBeGreaterThanOrEqual(3);
-    expect(ratio(over(accent.coralSoftLine, day.surface), day.surface)).toBeGreaterThanOrEqual(3);
+    expect(ratio(over(accent.coralSoftLine, dayStudio.ground), dayStudio.ground)).toBeGreaterThanOrEqual(3);
+    expect(ratio(over(accent.coralSoftLine, dayStudio.surface), dayStudio.surface)).toBeGreaterThanOrEqual(3);
+  });
+
+  /**
+   * And on the night ground, which this only ever measured by day. The line
+   * is the same coral in both studios — it is the ground under it that moves.
+   */
+  it('clears 3:1 at rest in the night studio too', () => {
+    expect(ratio(over(accent.coralSoftLine, night.ground), night.ground)).toBeGreaterThanOrEqual(3);
+    expect(ratio(over(accent.coralSoftLine, night.surface), night.surface)).toBeGreaterThanOrEqual(3);
+  });
+
+  /**
+   * The hairline an empty field wears, in each studio: 1.27:1 by day and
+   * 1.51:1 by night. Deliberately not held to 3:1 — it is not what identifies
+   * the field (the label above it is), and the line goes coral the moment
+   * anything is typed. What is pinned is that it is drawn at all in both, so
+   * one studio cannot lose its empty fields while the other keeps them.
+   */
+  it('draws a hairline before anything is typed, in either studio', () => {
+    expect(ratio(over(dayStudio.line, dayStudio.ground), dayStudio.ground)).toBeGreaterThan(1.2);
+    expect(ratio(over(night.line, night.ground), night.ground)).toBeGreaterThan(1.2);
   });
 });

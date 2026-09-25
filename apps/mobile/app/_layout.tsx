@@ -10,9 +10,10 @@ import { useFonts as useOutfit, Outfit_400Regular, Outfit_500Medium, Outfit_600S
 import { Newsreader_400Regular, Newsreader_400Regular_Italic, Newsreader_500Medium } from '@expo-google-fonts/newsreader';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { day } from '@morrow/ui';
+import { day, dayStudio, night } from '@morrow/ui';
 import { darkOf, useMorrow } from '../src/store';
 import { StatusBar } from 'expo-status-bar';
+import * as SystemUI from 'expo-system-ui';
 import { hasStoredSession, signInFromUrl } from '../src/supabase';
 import { setAppPath } from '../src/platform-back';
 import { onNotificationOpened } from '../src/notify';
@@ -51,6 +52,19 @@ export default function RootLayout() {
   }, [paused]);
   const storageError = useMorrow((s) => s.storageError);
   const dark = useMorrow(darkOf);
+  /**
+   * The window behind the app, on a phone.
+   *
+   * Android draws the activity's own background wherever the React root is
+   * not: under a keyboard as it opens, past the end of a list on an
+   * over-scroll, and between two screens. It is the theme's white, so the
+   * night studio flashed a white seam in all three places. The status bar is
+   * already told (below); this is the same instruction to the window.
+   */
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    SystemUI.setBackgroundColorAsync(dark ? night.ground : dayStudio.ground).catch(() => {});
+  }, [dark]);
   const newVersionReady = useMorrow((s) => s.newVersionReady);
   const [slowFonts, setSlowFonts] = useState(false);
   const [slowStore, setSlowStore] = useState(false);

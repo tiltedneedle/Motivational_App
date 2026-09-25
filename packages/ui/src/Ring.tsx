@@ -6,12 +6,14 @@
 import React from 'react';
 import { View, type ViewStyle } from 'react-native';
 import Svg, { Circle, G } from 'react-native-svg';
+import { usePalette } from './primitives';
 
 export interface RingProps {
   size: number;
   /** 0..1 */
   progress: number;
   color: string;
+  /** The unfilled arc. Defaults to the studio's own hairline. */
   track?: string;
   width?: number;
   /** Draws the ring as N arcs, for a routine's steps. */
@@ -36,7 +38,7 @@ export function Ring({
   size,
   progress,
   color,
-  track = 'rgba(23,24,28,0.10)',
+  track,
   width = 3,
   segments = 1,
   children,
@@ -45,6 +47,13 @@ export function Ring({
   accessibilityLabel,
   valueText,
 }: RingProps) {
+  // The default used to be a fixed ten per cent black — a hairline on the day
+  // ground and nothing at all on the night one, so a goal's ring, a move's
+  // ring and the rank stones showed only the filled arc in the night studio.
+  // The two screens that are always night passed their own white track and so
+  // looked right, which is why it went unseen.
+  const { p: palette } = usePalette();
+  const trackColor = track ?? palette.line;
   const r = (size - width) / 2;
   const c = 2 * Math.PI * r;
   const p = Math.max(0, Math.min(1, progress));
@@ -77,7 +86,7 @@ export function Ring({
         <G rotation={-90} originX={size / 2} originY={size / 2}>
           {segments <= 1 ? (
             <>
-              <Circle cx={size / 2} cy={size / 2} r={r} stroke={track} strokeWidth={width} fill="none" />
+              <Circle cx={size / 2} cy={size / 2} r={r} stroke={trackColor} strokeWidth={width} fill="none" />
               <Circle
                 cx={size / 2}
                 cy={size / 2}
@@ -101,7 +110,7 @@ export function Ring({
                   cx={size / 2}
                   cy={size / 2}
                   r={r}
-                  stroke={filled ? color : track}
+                  stroke={filled ? color : trackColor}
                   strokeWidth={width}
                   strokeLinecap="round"
                   fill="none"

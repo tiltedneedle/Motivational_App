@@ -120,6 +120,12 @@ export type Palette = typeof dayStudio;
  *
  * White is only legible on `…Text`, never on the mark, so a filled control that
  * carries a white label takes the text form as its fill.
+ *
+ * And white only *stays* legible on it in the day studio. `…Text` answers with
+ * `…Night` while the night studio is on — a lighter hue, chosen to be read as
+ * text on charcoal — and white on that is 3.3:1. What goes on a filled control
+ * is `onInk`, which is white by day and the night ground by night, for the same
+ * reason the ink button's label is.
  */
 const accentStudio = {
   coral: '#EA4B2E',

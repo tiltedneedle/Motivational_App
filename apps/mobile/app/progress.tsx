@@ -44,6 +44,7 @@ import {
   type as fonts,
   COLUMN,
   keyboardScroll,
+  usePalette,
   TopBar,
 } from '@morrow/ui';
 import { useConsistency, useSnapshot } from '../src/store';
@@ -228,6 +229,7 @@ export default function Progress() {
  * target, and not anybody else's number.
  */
 function Bar({ value, low, high }: { value: number; low: number; high: number }) {
+  const { p } = usePalette();
   const pct = Math.max(0, Math.min(100, value));
   const bandLeft = Math.max(0, Math.min(100, low));
   const bandWidth = Math.max(0, Math.min(100, high) - bandLeft);
@@ -250,7 +252,10 @@ function Bar({ value, low, high }: { value: number; low: number; high: number })
             width: `${bandWidth}%`,
             top: 0,
             bottom: 0,
-            backgroundColor: 'rgba(23,24,28,0.10)',
+            // The studio's hairline, not a fixed black: on the night
+            // studio's raised surface a ten per cent black band is 1.07:1,
+            // and the person's own eight-week range simply was not there.
+            backgroundColor: p.line,
           }}
         />
       ) : null}

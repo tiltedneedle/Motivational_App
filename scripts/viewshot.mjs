@@ -31,6 +31,7 @@ await mkdir(out, { recursive: true });
 const seed = JSON.parse(await readFile(join(ROOT, 'scripts', 'fixtures', 'seeded-state.json'), 'utf8'));
 const browser = await launchBrowser();
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: process.env.DARK ? 'dark' : 'light' });
+if (process.env.DARK) seed.state.profile.appearance = 'dark';
 await ctx.addInitScript((s) => localStorage.setItem('morrow-v1', JSON.stringify(s)), seed);
 const page = await ctx.newPage();
 await page.goto(`${BASE}${route}`, { waitUntil: 'networkidle' });

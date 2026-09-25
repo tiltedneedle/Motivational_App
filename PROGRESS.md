@@ -3086,6 +3086,65 @@ first run, the home with its loop, the sign-in with Google, the five-lens review
 folded in, 558 end-to-end checks, `pnpm verify` green. What remains needs either
 hardware, a credential, or a product call — plus the items the rebuild opened:
 
+0l. **One studio at a time (2026-09-25)** — the palettes swap globally (`day`
+   is a proxy that answers with `night` while the night studio is on), so most
+   of the product follows the setting without being asked. What that cannot
+   reach is a colour written down as a hex, and six controls had one.
+   - **The streak pill on Today.** Its fill is `accent.coralText`, which the
+     night studio answers with the lighter `coralNight`; the flame and the
+     number stayed a fixed white through the swap. 5.29:1 in the day studio,
+     3.28:1 in the night one — the same control, legible in one and not in the
+     other. They take `onInk` now, which is white by day and the night ground
+     by night. Measured in the running app: `rgb(255,255,255)` on
+     `rgb(203,48,20)` by day, `rgb(23,24,28)` on `rgb(237,97,71)` by night.
+   - **The toast.** Painted `night.ground` in both studios, which in the night
+     studio *is* the ground: a pill with no edge, white text apparently
+     floating on the screen, and a white Undo button as the only thing with a
+     shape. It is `p.ink` with `p.onInk` on it now — inverted against whichever
+     studio it appears over, which is what it always looked like by day.
+   - **The ring's track.** The default was a fixed ten per cent black: a
+     hairline on the day ground and nothing at all on the night one, so a
+     goal's ring, a move's ring and the rank stones showed only the filled arc
+     in the night studio. The two screens that are always night passed their
+     own white track and so looked right, which is why it went unseen. The
+     default is the studio's own `line` now, and the Ring reads the palette
+     rather than assuming one.
+   - **The consistency band on Progress.** The person's own eight-week range,
+     drawn as a ten per cent black band over `surface2` — 1.07:1 on the night
+     studio's raised surface. It is `p.line`.
+   - **The hold bar.** Its label turned white the moment the hold began, while
+     the coral was still crossing from the left, so most of a centred label sat
+     on the track: white on `surface2` is 1.06:1. It is the studio's own ink
+     until the bar is full. Only the two closing screens use it and both are
+     always night, so this was not visible in the product — it was a day-studio
+     hold bar waiting to happen.
+   - **The browser's own furniture.** `color-scheme` was never set, so a dark
+     Morrow on a light-scheme machine kept light scrollbars, a light caret and
+     a white autofill panel, and a light Morrow on a dark-scheme one kept dark
+     ones. The boot script in `index.html` sets it from the stored appearance
+     before the bundle runs, and `applyTheme` keeps it with the room on top —
+     which also now falls back to the chosen appearance between two screens
+     rather than to light, so the chrome no longer blinks pale on every
+     navigation.
+   And two things a phone would have shown and this machine cannot: the splash
+   screen had a `splash-dark.png` drawn and never wired up (`app.json` has the
+   `dark` variant now), and Android draws the activity's own white background
+   wherever the React root is not — under an opening keyboard, past the end of
+   a list, between two screens — so `expo-system-ui`, installed and unused,
+   paints the window to match (`_layout.tsx`, beside the status bar that was
+   already told).
+   Held by `scripts/check-studio.mjs`, in `pnpm verify` and in CI: every route
+   in both studios, twice over — once for an element whose background belongs
+   to the other studio, once for text in one studio's ink on the other
+   studio's ground. 84 checks, and the ink sweep was run inverted to prove it
+   finds text at all before being trusted to find none. Nine screens are the
+   night studio whatever the setting says and are skipped in the day pass;
+   `night.ground` is not treated as a night-only colour, because it is also
+   `day.ink` and every filled control in the product is painted with it.
+   The contrast suite grew from 44 checks to 64: what goes on a filled accent,
+   in both studios, for all six hues; the hold bar's label on its track and on
+   the coral; and the toast against the ground it sits on.
+
 0k. **The loop at step three (2026-09-25)** — reported from the app, with two
    screenshots: Today offering "Carry on with what I heard", a read-back with
    nothing on it — "Your goals are already named." over half a screen of

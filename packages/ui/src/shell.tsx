@@ -490,8 +490,13 @@ export function StreakPill({ count, week = 0, testID }: { count: number; week?: 
       accessibilityLabel={on ? `${count} day run` : `${week} of 7 days this week`}
       style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, paddingLeft: 10, paddingRight: 12, borderRadius: 999, backgroundColor: on ? accent.coralText : p.surface2 }}
     >
-      <Glyph name="flame" size={18} color={on ? '#FFFFFF' : p.ink3} />
-      <Text style={{ fontFamily: fonts.sansSemi, fontSize: 14, color: on ? '#FFFFFF' : p.ink2 }}>{on ? `${count}` : `${week}/7`}</Text>
+      {/*
+        `accent.coralText` is the deep coral by day and the light `coralNight`
+        by night, so a fixed white here was 5.3:1 in one studio and 3.3:1 in
+        the other. `onInk` is whichever of the two reads on a filled control.
+      */}
+      <Glyph name="flame" size={18} color={on ? p.onInk : p.ink3} />
+      <Text style={{ fontFamily: fonts.sansSemi, fontSize: 14, color: on ? p.onInk : p.ink2 }}>{on ? `${count}` : `${week}/7`}</Text>
     </View>
   );
 }

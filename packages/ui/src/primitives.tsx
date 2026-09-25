@@ -22,7 +22,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
-import { accent, day, focusRing, ground, inkEdge, isDark, motion, night, radius, shadow, size, subscribeDark, type as fonts, webHover, webOnlyStyle, type Palette } from './tokens';
+import { accent, day, dayStudio, focusRing, ground, inkEdge, isDark, motion, night, radius, shadow, size, subscribeDark, type as fonts, webHover, webOnlyStyle, type Palette } from './tokens';
 import { Arrive, usePress } from './motion';
 
 /**
@@ -94,9 +94,23 @@ export function usePalette() {
 
 const themeStack: { night: boolean }[] = [];
 function applyTheme(): void {
-  const top = themeStack[themeStack.length - 1];
-  const meta = (globalThis as { document?: Document }).document?.querySelector('meta[name="theme-color"]:not([media])');
-  if (meta) meta.setAttribute('content', top?.night ? '#17181C' : '#F1F0EC');
+  // Between two screens the stack is briefly empty. The appearance the person
+  // chose is still true then, so it answers rather than "light" — otherwise
+  // the browser chrome blinked pale on every navigation in the night studio.
+  const top = themeStack[themeStack.length - 1] ?? { night: isDark() };
+  const doc = (globalThis as { document?: Document }).document;
+  const meta = doc?.querySelector('meta[name="theme-color"]:not([media])');
+  if (meta) meta.setAttribute('content', top.night ? night.ground : dayStudio.ground);
+  // The scheme the browser draws its own furniture in — scrollbars, the
+  // caret, a select's menu, the autofill panel. The boot script in index.html
+  // sets it from the stored appearance; this keeps it with the room on top,
+  // so the writing room's dark scrollbar does not stay dark on Today.
+  if (doc) doc.documentElement.style.colorScheme = top.night ? 'dark' : 'light';
+  // And the document behind the app. The boot script paints it once from the
+  // stored appearance; changing the studio in Settings never repainted it, so
+  // the page under a night Morrow stayed cream for the rest of the session —
+  // the web's version of the window Android draws behind the root view.
+  if (doc) doc.documentElement.style.background = top.night ? night.ground : dayStudio.ground;
 }
 
 export function Studio({
@@ -1473,7 +1487,12 @@ export function HoldBar({
         style={{
           fontFamily: fonts.sansSemi,
           fontSize: 16,
-          color: done || holding ? '#FFFFFF' : p.ink,
+          // Only once the bar is full. The label is centred and the coral
+          // arrives from the left, so while it is still crossing, most of the
+          // label sits on the track — and in the day studio white on
+          // `surface2` is 1.06:1, which is not a label, it is a gap. The
+          // studio's own ink reads on the track and on the coral both.
+          color: done ? '#FFFFFF' : p.ink,
           textAlign: 'center',
         }}
       >
@@ -1544,6 +1563,7 @@ export function Toast({
   onAction?: () => void;
   testID?: string;
 }) {
+  const { p } = usePalette();
   // iOS ignores accessibilityLiveRegion, so a toast carrying Undo was
   // announced on Android and silent on VoiceOver — and Undo is the only way
   // back from parking a stone by accident. Announce it explicitly there.
@@ -1578,7 +1598,10 @@ export function Toast({
         paddingLeft: 18,
         paddingRight: 8,
         borderRadius: radius.chip,
-        backgroundColor: night.ground,
+        // Inverted against whichever studio is running. It was the night
+        // ground in both, so in the night studio the toast was the same
+        // colour as the screen behind it: white text on a pill with no edge.
+        backgroundColor: p.ink,
         opacity,
         transform: [{ translateY: y }],
       }}
@@ -1587,7 +1610,7 @@ export function Toast({
         // Two lines, not one. A move title plus "Added ·" is routinely longer
         // than a phone is wide, and the tail was simply cut off.
         numberOfLines={2}
-        style={{ flex: 1, fontFamily: fonts.sansMedium, fontSize: 14, color: '#FFFFFF' }}
+        style={{ flex: 1, fontFamily: fonts.sansMedium, fontSize: 14, color: p.onInk }}
       >
         {text}
       </Text>
@@ -1597,9 +1620,9 @@ export function Toast({
           onPress={onAction}
           accessibilityRole="button"
           accessibilityLabel={actionLabel}
-          style={{ minHeight: 44, justifyContent: 'center', paddingVertical: 10, paddingHorizontal: 14, borderRadius: radius.chip, backgroundColor: '#FFFFFF' }}
+          style={{ minHeight: 44, justifyContent: 'center', paddingVertical: 10, paddingHorizontal: 14, borderRadius: radius.chip, backgroundColor: p.onInk }}
         >
-          <Text style={{ fontFamily: fonts.sansBold, fontSize: 13, color: night.ground }}>{actionLabel}</Text>
+          <Text style={{ fontFamily: fonts.sansBold, fontSize: 13, color: p.ink }}>{actionLabel}</Text>
         </Pressable>
       ) : null}
     </Animated.View>

@@ -52,10 +52,17 @@
           var a = raw ? (JSON.parse(raw).state || {}).profile.appearance : 'light';
           var dark = a === 'dark' || (a === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
           document.documentElement.style.background = dark ? '#17181c' : '#f1f0ec';
+          // The appearance is the app's own setting, not the phone's, so the
+          // browser has to be told which one won. Without this a dark Morrow
+          // on a light-scheme machine kept light scrollbars, light form
+          // controls and a white autofill panel — and a light Morrow on a
+          // dark-scheme one kept dark ones.
+          document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
           var meta = document.querySelector('meta[name="theme-color"]');
           if (meta) meta.setAttribute('content', dark ? '#17181C' : '#F1F0EC');
         } catch (e) {
           document.documentElement.style.background = '#f1f0ec';
+          document.documentElement.style.colorScheme = 'light';
         }
       })();
     </script>
